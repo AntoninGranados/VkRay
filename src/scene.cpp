@@ -93,7 +93,7 @@ void Scene::drawUI(int &frameCount) {
 
         ImGui::TextDisabled("%zu", i);
         ImGui::SameLine();
-        if (selectedSphere < 0 && ImGui::TreeNode(buff)) {
+        if (ImGui::TreeNode(buff)) {
             sphereUI(frameCount, spheres[i]);
             selectedSphere = i;
             ImGui::TreePop();

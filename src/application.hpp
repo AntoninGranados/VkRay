@@ -61,6 +61,7 @@ private:
     void initScene();
     void drawUI(CommandBuffer commandBuffer);
     UBO fillUBO(UBO &ubo);
+    float lastTime = 0.0f;
 
     void rebuildPipeline();
 

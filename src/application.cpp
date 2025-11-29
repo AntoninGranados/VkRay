@@ -56,7 +56,8 @@ Application::Application() {
         for (size_t i = 0; i < 2; i++) {
             images[i] = engine.initImage(
                 extent.width, extent.height,
-                VK_FORMAT_B8G8R8A8_SRGB,
+                // Use float format to avoid quantizing every accumulation step
+                VK_FORMAT_R32G32B32A32_SFLOAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
@@ -147,15 +148,15 @@ void Application::initScene() {
         .mat.type = dielectric,
         .mat.albedo = { 0.95, 0.8, 0.9 },
         .mat.refraction_index = 1.5,
-    }, "Glass outer");
+    }, "Glass");
 
-    scene.pushSphere({
-        .center = { -2.0, 0.0, 0.0 },
-        .radius = (1.0 - 0.01) * 0.9,
-        .mat.type = dielectric,
-        .mat.albedo = { 0.9, 0.9, 0.9 },
-        .mat.refraction_index = 1.0 / 1.5,
-    }, "Glass inner");
+    // scene.pushSphere({
+    //     .center = { -2.0, 0.0, 0.0 },
+    //     .radius = (1.0 - 0.01) * 0.9,
+    //     .mat.type = dielectric,
+    //     .mat.albedo = { 0.9, 0.9, 0.9 },
+    //     .mat.refraction_index = 1.0 / 1.5,
+    // }, "Glass inner");
 
     scene.pushSphere({
         .center = { 0.0, 0.0, 0.0 },
@@ -177,7 +178,7 @@ void Application::initScene() {
         .radius = 3.0 - 0.01,
         .mat.type = emissive,
         .mat.albedo = { 1.0, 0.1, 0.04 },
-        .mat.intensity = 5.0,
+        .mat.intensity = 10.0,
     }, "Light");
 }
 
@@ -393,15 +394,21 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         Sphere* sphere = scene.getSelectedSphere();
         if (sphere != nullptr) {
             glm::mat4 model = glm::translate(glm::mat4(1.0), sphere->center);
+            // float prevScale[3] = { sphere->radius, sphere->radius, sphere->radius };
+            model = glm::scale(model, glm::vec3(sphere->radius));
 
             if (ImGuizmo::Manipulate(
                 glm::value_ptr(camera.getView()),
                 glm::value_ptr(camera.getProjection(engine.getWindow().get())),
-                ImGuizmo::OPERATION::TRANSLATE,
+                ImGuizmo::OPERATION::SCALE | ImGuizmo::OPERATION::TRANSLATE,
                 ImGuizmo::MODE::WORLD, 
                 glm::value_ptr(model)
             )) {
-                sphere->center = glm::vec3(model[3][0], model[3][1], model[3][2]);
+                float translation[3], rotation[3], scale[3];
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), translation, rotation, scale);
+                sphere->center = { translation[0], translation[1], translation[2] };
+                sphere->radius = (scale[0] + scale[1] + scale[2]) / 3.0f;
+
                 frameCount = 0;
             }
         }
@@ -455,7 +462,9 @@ void Application::drawUI(CommandBuffer commandBuffer) {
 }
 
 UBO Application::fillUBO(UBO &ubo) {
-    ubo.time = glfwGetTime();
+    if (frameCount <= 1)
+        lastTime = glfwGetTime();
+    ubo.time = glfwGetTime() - lastTime;
     ubo.frameCount = frameCount;
 
     VkExtent2D extent = engine.getExtent();
@@ -491,7 +500,8 @@ void Application::rebuildPipeline() {
             vertexInput.get(),
             { vertShader, fragShader },
             { setLayout },
-            pipeline
+            pipeline,
+            VK_FORMAT_R32G32B32A32_SFLOAT
         );
         engine.destroyGraphicsPipeline(pipeline);
         pipeline = newPipeline;
@@ -499,7 +509,9 @@ void Application::rebuildPipeline() {
         pipeline = engine.initGraphicsPipeline(
             vertexInput.get(),
             { vertShader, fragShader },
-            { setLayout }
+            { setLayout },
+            GraphicsPipeline(),
+            VK_FORMAT_R32G32B32A32_SFLOAT
         );
     }
 

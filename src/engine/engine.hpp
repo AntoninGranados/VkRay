@@ -108,7 +108,8 @@ public:
         VkPipelineVertexInputStateCreateInfo vertexInputInfo,
         std::vector<Shader> shaders,
         std::vector<DescriptorSetLayout> setLayouts,
-        GraphicsPipeline other = GraphicsPipeline()
+        GraphicsPipeline other = GraphicsPipeline(),
+        VkFormat colorFormat = VK_FORMAT_UNDEFINED
     );
     void destroyGraphicsPipeline(GraphicsPipeline &graphicsPipeline);
 

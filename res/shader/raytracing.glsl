@@ -76,7 +76,8 @@ layout(set = 0, binding = 1) buffer readonly SSBO {
 layout(set = 0, binding = 2) uniform sampler2D prevTex;
 
 // ================== UTILS ==================
-#define MAX_DEPTH 10
+#define MAX_BOUNCE_DEPTH 10
+#define SAMPLES_PER_PIXEL 4
 #define EPS 1e-3
 
 #define DEFAULT_MATERIAL                     Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0)
@@ -203,14 +204,15 @@ bool scatterEmissive(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
 
 bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
     vec2 p = hit.p.xz;
-    float scale = 0.3;
+    float scale = 0.5;
     // float t = sin(ubo.time)*0.5+0.5;
     vec2 ip = round(p / scale);
     // vec3 color = mix(vec3(0.8, 0.6, 0.2), vec3(0.2, 0.3, 0.5), t);
     vec3 color = vec3(0.2, 0.3, 0.5);
 
     if (int(ip.x + ip.y + 1) % 2 == 0) {
-        return scatterMetal(METAL_MATERIAL(color, 0.02), ray, hit, attenuation, scattered, seed);
+        return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.6), ray, hit, attenuation, scattered, seed);
+        // return scatterMetal(METAL_MATERIAL(color, 0.2), ray, hit, attenuation, scattered, seed);
     } else {
         return scatterLambertian(LAMBERTIAN_MATERIAL(color), ray, hit, attenuation, scattered, seed);
     }
@@ -357,7 +359,7 @@ vec4 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     float factor = 1;
 
     int i = 0;
-    for (; i < MAX_DEPTH; i++) {
+    for (; i < MAX_BOUNCE_DEPTH; i++) {
         if (hit.type != obj_None) {
             if (id < 0) {
                 id = 0;
@@ -386,7 +388,7 @@ vec4 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
             break;
         }
     }
-    if (i == MAX_DEPTH)
+    if (i == MAX_BOUNCE_DEPTH)
         color = vec3(0.0);
 
     color = min(max(color, vec3(0)), vec3(1));
@@ -405,14 +407,15 @@ void main() {
 
     vec2 uv = fragPos * 0.5 + 0.5;
     vec3 prevColor = texture(prevTex, uv).rgb;
+    if (ubo.frameCount <= 1) prevColor = vec3(0.0);
+
     vec4 currColor = vec4(0);
-    int samples = 2;
-    for (int i = 0; i < samples; i++) {
+    for (int i = 0; i < SAMPLES_PER_PIXEL; i++) {
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
         Ray ray = getRay(camera, fragPos + offset);
         currColor += traceRay(camera, ray, seed);
     }
-    currColor /= samples;
+    currColor /= SAMPLES_PER_PIXEL;
 
     float frame = float(max(ubo.frameCount, 1));
     vec3 mixedColor = mix(prevColor, currColor.rgb, 1.0 / frame);

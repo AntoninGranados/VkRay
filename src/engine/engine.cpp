@@ -166,13 +166,15 @@ GraphicsPipeline VkSmol::initGraphicsPipeline(
     VkPipelineVertexInputStateCreateInfo vertexInputInfo,
     std::vector<Shader> shaders,
     std::vector<DescriptorSetLayout> setLayouts,
-    GraphicsPipeline other
+    GraphicsPipeline other,
+    VkFormat colorFormat
 ) {
     // Dynamic Rendering Info
+    VkFormat format = colorFormat == VK_FORMAT_UNDEFINED ? *swapchain.getImageFormat() : colorFormat;
     VkPipelineRenderingCreateInfoKHR pipelineCreate{};
     pipelineCreate.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipelineCreate.colorAttachmentCount    = 1;
-    pipelineCreate.pColorAttachmentFormats = swapchain.getImageFormat();
+    pipelineCreate.pColorAttachmentFormats = &format;
 
     GraphicsPipeline pipeline;
     pipeline.init(
