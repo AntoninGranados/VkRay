@@ -398,10 +398,10 @@ void main() {
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
         Ray ray = getRay(camera, fragPos + offset);
         vec4 color = traceRay(camera, ray, seed);
-        currColor.xyz += color.xyz;
+        currColor.rgb += color.rgb;
         currColor.w = color.w;  // No interpolation on the ID
     }
-    currColor.xyz /= SAMPLES_PER_PIXEL;
+    currColor.rgb /= SAMPLES_PER_PIXEL;
 
     float frame = float(max(ubo.frameCount, 1));
     vec3 mixedColor = mix(prevColor, currColor.rgb, 1.0 / frame);

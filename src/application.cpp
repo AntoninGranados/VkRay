@@ -48,7 +48,8 @@ Application::Application() {
             sizeof(index_t) * indices.size(), (void*)indices.data()
         );
     
-        uniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBO));
+        raytracingUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(RaytracingUBO));
+        screenUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
     }
 
     {   // Image (image + view + sampler) creation
@@ -72,6 +73,7 @@ Application::Application() {
     engine.initDescriptorSetLayout(setLayout);
     
     screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     engine.initDescriptorSetLayout(screenSetLayout);
     
     {   // Pipeline creation
@@ -104,11 +106,11 @@ Application::Application() {
         for (size_t i = 0; i < 2; i++) {
             descriptorSets[i] = engine.initDescriptorSetList(
                 setLayout,
-                { &uniformBuffers, &storageBuffer, &combinedImageSampler[1-i] }
+                { &raytracingUniformBuffers, &storageBuffer, &combinedImageSampler[1-i] }
             );
             screenDescriptorSets[i] = engine.initDescriptorSetList(
                 screenSetLayout,
-                { &combinedImageSampler[i] }
+                { &combinedImageSampler[i], &screenUniformBuffers }
             );
         }
     }
@@ -129,7 +131,8 @@ Application::~Application() {
 
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
-    engine.destroyBufferList(uniformBuffers);
+    engine.destroyBufferList(raytracingUniformBuffers);
+    engine.destroyBufferList(screenUniformBuffers);
     scene.destroy(engine);
     
     engine.destroyGraphicsPipeline(pipeline);
@@ -213,6 +216,10 @@ void Application::run() {
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) {
             frameCount = 0;
         }
+
+        RaytracingUBO raytracingUBO;
+        ScreenUBO screenUBO;
+        fillUBOs(raytracingUBO, screenUBO);
         
         commandBuffer = engine.beginRecordingRender();
         {
@@ -251,11 +258,8 @@ void Application::run() {
                     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
                     {{ 0.0f, 0.0f, 0.0f, 1.0f }}
                 );
-
-                UBO ubo;
-                fillUBO(ubo);
                 
-                engine.fillBuffer(engine.getBuffer(uniformBuffers), &ubo);
+                engine.fillBuffer(engine.getBuffer(raytracingUniformBuffers), &raytracingUBO);
                 // engine.fillBuffer(engine.getBuffer(scene.getBufferList()), &ssbo);
                 scene.fillBuffer(engine);
                 engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pipeline.getLayout());
@@ -300,7 +304,8 @@ void Application::run() {
                     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
                     {{ 0.0f, 0.0f, 0.0f, 1.0f }}
                 );
-
+                
+                engine.fillBuffer(engine.getBuffer(screenUniformBuffers), &screenUBO);
                 engine.getDescriptorSet(screenDescriptorSets[frame]).bind(commandBuffer, screenPipeline.getLayout());
 
                 screenPipeline.bind(commandBuffer);
@@ -360,7 +365,7 @@ void Application::run() {
 }
 
 
-#include <future>
+// #include <future>
 void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -467,23 +472,26 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
 }
 
-UBO Application::fillUBO(UBO &ubo) {
+void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
+    // Raytracing UBO
     if (frameCount <= 1)
         lastTime = glfwGetTime();
-    ubo.time = glfwGetTime() - lastTime;
-    ubo.frameCount = frameCount;
+    raytracingUBO.time = glfwGetTime() - lastTime;
+    raytracingUBO.frameCount = frameCount;
 
     VkExtent2D extent = engine.getExtent();
-    ubo.screenSize = { (float)extent.width, (float)extent.height };
-    ubo.aspect = ubo.screenSize.x / ubo.screenSize.y;
+    raytracingUBO.screenSize = { (float)extent.width, (float)extent.height };
+    raytracingUBO.aspect = raytracingUBO.screenSize.x / raytracingUBO.screenSize.y;
 
-    ubo.tanHFov = camera.getTanHFov();
-    ubo.cameraPos = camera.getPosition();
-    ubo.cameraDir = camera.getDirection();
+    raytracingUBO.tanHFov = camera.getTanHFov();
+    raytracingUBO.cameraPos = camera.getPosition();
+    raytracingUBO.cameraDir = camera.getDirection();
 
-    ubo.timeOfDay = timeOfDay;
+    raytracingUBO.timeOfDay = timeOfDay;
 
-    return ubo;
+    // Screen UBO
+    screenUBO.sphereCount = scene.getSpheresCount();
+    screenUBO.sphereId = scene.getSelectedSphereId() + 1;
 }
 
 // TODO: make this function asynchronous ?

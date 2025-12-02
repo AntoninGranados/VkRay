@@ -15,7 +15,7 @@ struct ScreenVertex {
     glm::vec2 position;
 };
 
-struct UBO {
+struct RaytracingUBO {
     alignas(16) glm::vec3 cameraPos;
     alignas(16) glm::vec3 cameraDir;
 
@@ -27,6 +27,11 @@ struct UBO {
     float time;
 
     int timeOfDay;
+};
+
+struct ScreenUBO {
+    int sphereCount;
+    int sphereId;
 };
 
 class Application {
@@ -48,7 +53,7 @@ private:
     GraphicsPipeline pipeline, screenPipeline;
     
     Buffer vertexBuffer, indexBuffer;
-    bufferList_t uniformBuffers;
+    bufferList_t raytracingUniformBuffers, screenUniformBuffers;
 
     Scene scene;
     
@@ -60,7 +65,7 @@ private:
 
     void initScene();
     void drawUI(CommandBuffer commandBuffer);
-    UBO fillUBO(UBO &ubo);
+    void fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO);
     float lastTime = 0.0f;
 
     void rebuildPipeline();

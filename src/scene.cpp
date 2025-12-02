@@ -31,8 +31,8 @@ void Scene::fillBuffer(VkSmol &engine) {
 }
 
 Sphere* Scene::getSelectedSphere() {
-    if (selectedSphere < 0) return nullptr;
-    return &spheres[selectedSphere];
+    if (selectedSphereId < 0) return nullptr;
+    return &spheres[selectedSphereId];
 }
 
 void Scene::sphereUI(int &frameCount, Sphere &sphere) {
@@ -84,7 +84,7 @@ void Scene::drawUI(int &frameCount) {
     if (!ImGui::CollapsingHeader("Objects", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
-    selectedSphere = -1;
+    selectedSphereId = -1;
     for (size_t i = 0; i < spheres.size(); i++) {
         if (sphereNames[i].length() > 0)
             std::snprintf(buff, sizeof(buff), "%s", sphereNames[i].c_str());
@@ -95,7 +95,7 @@ void Scene::drawUI(int &frameCount) {
         ImGui::SameLine();
         if (ImGui::TreeNode(buff)) {
             sphereUI(frameCount, spheres[i]);
-            selectedSphere = i;
+            selectedSphereId = i;
             ImGui::TreePop();
         }
     }

@@ -44,6 +44,8 @@ public:
     void drawUI(int &frameCount);
 
     Sphere* getSelectedSphere();
+    int getSelectedSphereId() { return selectedSphereId; }
+    int getSpheresCount() { return spheres.size(); }
 
     bufferList_t getBufferList() { return storageBuffers; }
 
@@ -52,5 +54,5 @@ public:
     
     std::vector<Sphere> spheres;
     std::vector<std::string> sphereNames;
-    int selectedSphere = -1;
+    int selectedSphereId = -1;
 };
