@@ -21,8 +21,9 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
     lastX = x;
     lastY = y;
     
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
+    float zoomSensitivityFactor = glm::min(fov / 80.0f, 1.0f);
+    xoffset *= sensitivity * zoomSensitivityFactor;
+    yoffset *= sensitivity * zoomSensitivityFactor;
 
     yaw   += xoffset;
     pitch += yoffset;
@@ -82,7 +83,7 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
         change = true;
     }
     
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
         if (locked) resetMouse();
         locked = false;
     } else {

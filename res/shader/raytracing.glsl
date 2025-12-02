@@ -76,8 +76,8 @@ layout(set = 0, binding = 1) buffer readonly SSBO {
 layout(set = 0, binding = 2) uniform sampler2D prevTex;
 
 // ================== UTILS ==================
-#define MAX_BOUNCE_DEPTH 10
-#define SAMPLES_PER_PIXEL 4
+#define MAX_BOUNCE_DEPTH 10 // TODO: make it a uniform
+#define SAMPLES_PER_PIXEL 2 // TODO: make it a uniform
 #define EPS 1e-3
 
 #define DEFAULT_MATERIAL                     Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0)
@@ -88,23 +88,10 @@ layout(set = 0, binding = 2) uniform sampler2D prevTex;
 #define ANIMATED_MATERIAL                    Material(mat_Animated, vec3(0), 0.0, 0.0, 0.0)
 
 
-#define SPHERE_COUNT 10
-uint sphereCount = 0;
-Sphere spheres[SPHERE_COUNT];
-
 #define PLANE_COUNT 10
 uint planeCount = 0;
 Plane planes[PLANE_COUNT];
 
-
-bool pushSphere(in Sphere sphere) {
-    if (sphereCount >= SPHERE_COUNT) return false;
-
-    spheres[sphereCount] = sphere;
-    sphereCount++;
-    return true;
-    
-}
 bool pushPlane(in Plane plane) {
     if (planeCount >= PLANE_COUNT) return false;
 
@@ -234,7 +221,7 @@ bool scatter(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out 
 
 Material getMaterial(in Hit hit) {
     if (hit.type == obj_Sphere)
-        return spheres[hit.idx].mat;
+        return ssbo.spheres[hit.idx].mat;
     else if (hit.type == obj_Plane)
         return planes[hit.idx].mat;
     return DEFAULT_MATERIAL;
@@ -291,8 +278,8 @@ Hit intersection(in Ray ray) {
     int idx = -1;
     Enum type = obj_None;
 
-    for (int i = 0; i < sphereCount; i++) {
-        float new_t = raySphereIntersection(ray, spheres[i]);
+    for (int i = 0; i < ssbo.sphereCount; i++) {
+        float new_t = raySphereIntersection(ray, ssbo.spheres[i]);
         if (new_t >= EPS && new_t < t) {
             t = new_t;
             idx = i;
@@ -313,7 +300,7 @@ Hit intersection(in Ray ray) {
 
     vec3 normal;
     if (type == obj_Sphere)
-        normal = normalize(p - spheres[idx].center);
+        normal = normalize(p - ssbo.spheres[idx].center);
     else if (type == obj_Plane)
         normal = planes[idx].normal;
 
@@ -364,11 +351,11 @@ vec4 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
             if (id < 0) {
                 id = 0;
                 if (hit.type == obj_Sphere)
-                    id = float(hit.idx+1) / sphereCount;
+                    id = float(hit.idx+1) / ssbo.sphereCount;
             }
 
             // color = vec3(1.0/hit.t); // depth
-            // color = vec3(float(i)/sphereCount); // sphere id
+            // color = vec3(float(i)/ssbo.sphereCount); // sphere id
             // break;
 
             vec3 attenuation;
@@ -400,9 +387,6 @@ void main() {
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
 
-    for (int i = 0; i < ssbo.sphereCount; i++)
-        pushSphere(Sphere(ssbo.spheres[i].center, ssbo.spheres[i].radius, ssbo.spheres[i].mat));
-
     pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
 
     vec2 uv = fragPos * 0.5 + 0.5;
@@ -413,9 +397,11 @@ void main() {
     for (int i = 0; i < SAMPLES_PER_PIXEL; i++) {
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
         Ray ray = getRay(camera, fragPos + offset);
-        currColor += traceRay(camera, ray, seed);
+        vec4 color = traceRay(camera, ray, seed);
+        currColor.xyz += color.xyz;
+        currColor.w = color.w;  // No interpolation on the ID
     }
-    currColor /= SAMPLES_PER_PIXEL;
+    currColor.xyz /= SAMPLES_PER_PIXEL;
 
     float frame = float(max(ubo.frameCount, 1));
     vec3 mixedColor = mix(prevColor, currColor.rgb, 1.0 / frame);

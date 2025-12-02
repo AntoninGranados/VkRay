@@ -174,7 +174,7 @@ void Application::initScene() {
     }, "Metal");
 
     scene.pushSphere({
-        .center = { 0.0, 4.0, 9.0 },
+        .center = { 0.0, 2.0, 6.0 },
         .radius = 3.0 - 0.01,
         .mat.type = emissive,
         .mat.albedo = { 1.0, 0.1, 0.04 },
@@ -190,11 +190,6 @@ void Application::run() {
         frame = (frame + 1) % 2;
         frameCount++;
 
-        if (camera.isLocked())
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        else
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
         auto currentTime = std::chrono::high_resolution_clock::now();
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
@@ -206,9 +201,17 @@ void Application::run() {
         if (camera.processInput(engine.getWindow().get(), deltaTime)) {
             frameCount = 1;
         }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_TAB) == GLFW_PRESS && !camera.isLocked()) {
+        if (camera.isLocked())
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            camera.toggleLock();
+        else
+            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_H) == GLFW_PRESS) {
+            rebuildPipeline();
+            frameCount = 0;
+        }
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) {
+            frameCount = 0;
         }
         
         commandBuffer = engine.beginRecordingRender();
@@ -357,6 +360,7 @@ void Application::run() {
 }
 
 
+#include <future>
 void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -394,20 +398,19 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         Sphere* sphere = scene.getSelectedSphere();
         if (sphere != nullptr) {
             glm::mat4 model = glm::translate(glm::mat4(1.0), sphere->center);
-            // float prevScale[3] = { sphere->radius, sphere->radius, sphere->radius };
             model = glm::scale(model, glm::vec3(sphere->radius));
 
             if (ImGuizmo::Manipulate(
                 glm::value_ptr(camera.getView()),
                 glm::value_ptr(camera.getProjection(engine.getWindow().get())),
-                ImGuizmo::OPERATION::SCALE | ImGuizmo::OPERATION::TRANSLATE,
+                ImGuizmo::OPERATION::SCALE_X | ImGuizmo::OPERATION::TRANSLATE,
                 ImGuizmo::MODE::WORLD, 
                 glm::value_ptr(model)
             )) {
                 float translation[3], rotation[3], scale[3];
                 ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), translation, rotation, scale);
                 sphere->center = { translation[0], translation[1], translation[2] };
-                sphere->radius = (scale[0] + scale[1] + scale[2]) / 3.0f;
+                sphere->radius = scale[0];
 
                 frameCount = 0;
             }
@@ -438,17 +441,20 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Combo("##TimeOfDay", &timeOfDay, cycle, IM_ARRAYSIZE(cycle))) frameCount = 0;
         ImGui::PopItemWidth();
+
         ImGui::Separator();
         
         ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Button("Reload Shader", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+        if (ImGui::Button("Hot Reload Shader (H)", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            // std::async(&Application::rebuildPipeline, this);
             rebuildPipeline();
             frameCount = 0;
         }
         ImGui::PopItemWidth();
         
         ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Button("Reset Accumulation", ImVec2(ImGui::GetContentRegionAvail().x, 0))) frameCount = 0;
+        if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+            frameCount = 0;
         ImGui::PopItemWidth();
         ImGui::Separator();
         
@@ -480,15 +486,26 @@ UBO Application::fillUBO(UBO &ubo) {
     return ubo;
 }
 
+// TODO: make this function asynchronous ?
 void Application::rebuildPipeline() {
     engine.waitIdle();
 
-    Shader vertShader, fragShader;
+    std::string vertShaderPath = "./res/shader/vert.glsl";
+    Shader vertShader;
     try {
-        vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT,   "./res/shader/vert.glsl");
-        fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, "./res/shader/raytracing.glsl");
+        vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
-        std::cerr << "Failed to compile shader : pipeline not built" << std::endl;
+        std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
+        return;
+    }
+    
+    std::string fragShaderPath = "./res/shader/raytracing.glsl";
+    Shader fragShader;
+    try {
+        fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);
+    } catch (...) {
+        engine.destroyShader(vertShader);
+        std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
         return;
     }
 
@@ -517,4 +534,6 @@ void Application::rebuildPipeline() {
 
     engine.destroyShader(vertShader);
     engine.destroyShader(fragShader);
+
+    std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
 }

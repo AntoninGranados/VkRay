@@ -40,10 +40,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessenger::callback(
 ) {
     // Log the message based on it's severity
     switch (messageSeverity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT :    std::fprintf(stderr, "[%sERROR%s] %s\n", MSG_RED_B, MSG_RESET, pCallbackData->pMessage); break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT :  std::fprintf(stderr, "[%sWARNING%s] %s\n", MSG_YELLOW_B, MSG_RESET, pCallbackData->pMessage); break;
-        // case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT :  std::fprintf(stderr, "[%sVERBOSE%s] %s\n", MSG_MAGENTA_B, MSG_RESET, pCallbackData->pMessage); break;
-        // case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT :     std::fprintf(stderr, "[%sINFO%s] %s\n", MSG_CYAN_B, MSG_RESET, pCallbackData->pMessage); break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT :    std::fprintf(stderr, "[ERROR] %s\n", pCallbackData->pMessage); break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT :  std::fprintf(stderr, "[WARNING] %s\n", pCallbackData->pMessage); break;
+        // case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT :  std::fprintf(stderr, "[VERBOSE] %s\n", pCallbackData->pMessage); break;
+        // case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT :     std::fprintf(stderr, "[INFO] %s\n", pCallbackData->pMessage); break;
         default: break;
     }
     return VK_FALSE;
