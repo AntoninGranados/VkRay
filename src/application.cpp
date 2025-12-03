@@ -155,12 +155,12 @@ void Application::initScene() {
         .mat.refraction_index = 1.05,
     }, "Glass");
     
-    scene.pushSphere({
-        .center = { 0.0, 0.0, 0.0 },
-        .radius = 1.0 - 0.01,
-        .mat.albedo = { 0.2, 0.7, 0.2 },
-        .mat.type = lambertian,
-    }, "Diffuse");
+    // scene.pushSphere({
+    //     .center = { 0.0, 0.0, 0.0 },
+    //     .radius = 1.0 - 0.01,
+    //     .mat.albedo = { 0.2, 0.7, 0.2 },
+    //     .mat.type = lambertian,
+    // }, "Diffuse");
 
     scene.pushSphere({
         .center = { 2.0, 0.0, 0.0 },
@@ -184,6 +184,18 @@ void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while(!engine.shouldTerminate()) {
+        frame = (frame + 1) % 2;
+        frameCount++;
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
+
+        CommandBuffer commandBuffer;
+        
+        engine.beginFrame();
+
+
         const bool blockMouseInput = uiCapturesMouse || ImGui::GetIO().WantCaptureMouse;
         const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
         // TODO move this to the scene
@@ -202,17 +214,9 @@ void Application::run() {
                 scene.selectedSphereId = -1;
             }
         }
-
-        frame = (frame + 1) % 2;
-        frameCount++;
-
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        startTime = currentTime;
-
-        CommandBuffer commandBuffer;
-        
-        engine.beginFrame();
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            scene.selectedSphereId = -1;
+        }
 
         if (!blockMouseInput && !blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime)) {
             frameCount = 1;

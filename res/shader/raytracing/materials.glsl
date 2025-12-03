@@ -84,14 +84,14 @@ bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
     // vec3 color = mix(vec3(0.8, 0.6, 0.2), vec3(0.2, 0.3, 0.5), t);
     vec3 color = vec3(0.2, 0.3, 0.5);
 
-    // TODO make proper "gutter" normal on the edges of the "tiles"
+    // Artificial gutters on tile edges
     float s = 6.0;
     float inv_s = 1.0 / s;
     vec2 uv = p / scale;
     vec2 tile_uv = fract(uv - 0.5);
     vec2 centered = tile_uv - 0.5;
     vec2 edge_dist = 0.5 - abs(centered);
-    float gutter_width = 0.2 / s;
+    float gutter_width = 0.25 / s;
     vec2 border = step(edge_dist, vec2(gutter_width));
     if (border.x > 0.0 || border.y > 0.0) {
         vec2 falloff = clamp((gutter_width - edge_dist) * (1.0 / gutter_width), 0.0, 1.0) * border;

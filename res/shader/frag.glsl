@@ -27,15 +27,20 @@ void main() {
     vec2 stepV = texelSize * outlineWidth;
 
     float neighborMask = 0.0;
+    int count = 0;
     float sampleAlpha;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) continue;
-            sampleAlpha = texture(tex, uv + vec2(i, j) * stepV).a;
+            vec2 samplePos = uv + vec2(i, j) * stepV;
+            if (0 > samplePos.x || samplePos.x > 1) continue;
+            if (0 > samplePos.y || samplePos.y > 1) continue;
+            sampleAlpha = texture(tex, samplePos).a;
             neighborMask += step(targetMin, sampleAlpha) - step(targetMax, sampleAlpha);
+            count += 1;
         }
     }
-    neighborMask *= 0.125;
+    neighborMask /= count;
 
     float edgeAmount = centerMask > 0.5 ? 1.0 - neighborMask : neighborMask;
     float outline = smoothstep(0.0, feather, edgeAmount);

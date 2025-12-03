@@ -21,7 +21,7 @@ void Scene::fillBuffer(VkSmol &engine) {
     int offset = 16;
     void *data = malloc(offset + sizeof(Sphere) * MAX_CAPACITY);
     
-    int count = static_cast<int>(spheres.size());
+    unsigned int count = static_cast<unsigned int>(spheres.size());
     int selected = static_cast<int>(selectedSphereId);
     memcpy(static_cast<char*>(data) + 0, &count, sizeof(count));
     memcpy(static_cast<char*>(data) + sizeof(count), &selected, sizeof(selected));

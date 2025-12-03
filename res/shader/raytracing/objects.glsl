@@ -16,10 +16,13 @@ struct Plane {
     Material mat;
 };
 
-#define obj_None    Enum(0x0000)
-#define obj_Sphere  Enum(0x0001)
-#define obj_Plane   Enum(0x0002)
+struct Box {
+    vec3 cornerMin;
+    vec3 cornerMax;
+    Material mat;
+};
 
+// ================ RAY INTERSECTION ================
 float raySphereIntersection(in Ray ray, in Sphere sphere) {
     vec3 p = sphere.center - ray.origin;
     float dp = dot(ray.dir, p);
@@ -44,6 +47,49 @@ float rayPlaneIntersection(in Ray ray, in Plane plane) {
         if (t >= EPS) return t;
     }
     return -1;
+}
+
+float rayBoxIntersection(in Ray ray, in Box box) {
+    float tmin = 0.0;
+    float tmax = INFINITY;
+
+    float t1, t2;
+    for (int d = 0; d < 3; d++) {
+        t1 = (box.cornerMin[d] - ray.origin[d]) / ray.dir[d];
+        t2 = (box.cornerMax[d] - ray.origin[d]) / ray.dir[d];
+
+        tmin = max(tmin, min(min(t1, t2), tmax));
+        tmax = min(tmax, max(max(t1, t2), tmin));
+    }
+
+    if (tmin < tmax)
+        return tmin > 0 ? tmin : tmax;
+    return -1;
+}
+
+// ================ NORMALS ================
+vec3 sphereNormal(in Sphere sphere, in vec3 p) {
+    return normalize(p - sphere.center);
+}
+
+vec3 planeNormal(in Plane plane, in vec3 p) {
+    return plane.normal;
+}
+
+// TODO: optimize this !!
+vec3 boxNormal(in Box box, in vec3 p) {
+    vec3 normal = vec3(0, 0, 0);
+    for (int d = 0; d < 3; d++) {
+        if (abs(p[d] - box.cornerMin[d]) < EPS) {
+            normal[d] = 1;
+            break;
+        }
+        if (abs(p[d] - box.cornerMax[d]) < EPS) {
+            normal[d] = -1;
+            break;
+        }
+    }
+    return normal;
 }
 
 #endif

@@ -30,7 +30,7 @@ const std::vector<const char*> validationLayers = {
 */
 
 bool VkSmol::shouldTerminate() {
-    if (glfwGetKey(window.get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
+    // if (glfwGetKey(window.get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;    //! should not be forced
     return window.shouldClose();
 }
 

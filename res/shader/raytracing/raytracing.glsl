@@ -1,37 +1,12 @@
 #version 450
 
+#include "inputs.glsl"
 #include "utils.glsl"
 #include "materials.glsl"
 #include "objects.glsl"
+#include "global.glsl"
 #include "random.glsl"
 
-// ================== INPUTS/OUTPUTS ==================
-layout(location = 0) in vec2 fragPos;
-layout(location = 0) out vec4 outColor;
-
-layout(std140, set = 0, binding = 0) uniform UBO {
-    vec3 cameraPos;
-    vec3 cameraDir;
-
-    vec2 screenSize;
-    float aspect;
-    float tanHFov;
-    
-    int frameCount;
-    float time;
-
-    int timeOfDay;
-} ubo;
-layout(set = 0, binding = 1) buffer readonly SSBO {
-    int sphereCount;
-    int selectedSphereId;
-    Sphere spheres[];
-} ssbo;
-layout(set = 0, binding = 2) uniform sampler2D prevTex;
-
-#define PLANE_COUNT 10
-uint planeCount = 0;
-Plane planes[PLANE_COUNT];
 
 bool pushPlane(in Plane plane) {
     if (planeCount >= PLANE_COUNT) return false;
@@ -41,12 +16,12 @@ bool pushPlane(in Plane plane) {
     return true;
 }
 
-Material getMaterial(in Hit hit) {
-    if (hit.type == obj_Sphere)
-        return ssbo.spheres[hit.idx].mat;
-    else if (hit.type == obj_Plane)
-        return planes[hit.idx].mat;
-    return DEFAULT_MATERIAL;
+bool pushBox(in Box box) {
+    if (boxCount >= PLANE_COUNT) return false;
+
+    boxes[boxCount] = box;
+    boxCount++;
+    return true;
 }
 
 Ray getRay(Camera camera, vec2 ndc_pos) {
@@ -68,35 +43,38 @@ Ray getRay(Camera camera, vec2 ndc_pos) {
 }
 
 Hit intersection(in Ray ray) {
-    float t = INFINITY;
-    int idx = -1;
-    Enum type = obj_None;
+    float tFinal = INFINITY;
+    Object obj = OBJECT_NONE;
 
     for (int i = 0; i < ssbo.sphereCount; i++) {
-        float new_t = raySphereIntersection(ray, ssbo.spheres[i]);
-        if (new_t >= EPS && new_t < t) {
-            t = new_t;
-            idx = i;
-            type = obj_Sphere;
+        float t = raySphereIntersection(ray, ssbo.spheres[i]);
+        if (t >= EPS && t < tFinal) {
+            tFinal = t;
+            obj.type = obj_Sphere;
+            obj.id = i;
         }
     }
     
     for (int i = 0; i < planeCount; i++) {
-        float new_t = rayPlaneIntersection(ray, planes[i]);
-        if (new_t >= EPS && new_t < t) {
-            t = new_t;
-            idx = i;
-            type = obj_Plane;
+        float t = rayPlaneIntersection(ray, planes[i]);
+        if (t >= EPS && t < tFinal) {
+            tFinal = t;
+            obj.type = obj_Plane;
+            obj.id = i;
         }
     }
 
-    vec3 p = ray.origin + ray.dir * t;
+    for (int i = 0; i < boxCount; i++) {
+        float t = rayBoxIntersection(ray, boxes[i]);
+        if (t >= EPS && t < tFinal) {
+            tFinal = t;
+            obj.type = obj_Box;
+            obj.id = i;
+        }
+    }
 
-    vec3 normal;
-    if (type == obj_Sphere)
-        normal = normalize(p - ssbo.spheres[idx].center);
-    else if (type == obj_Plane)
-        normal = planes[idx].normal;
+    vec3 p = ray.origin + ray.dir * tFinal;
+    vec3 normal = getNormal(obj, p);
 
     bool front_face = true;
     if (dot(ray.dir, normal) > 0.0) {
@@ -104,7 +82,7 @@ Hit intersection(in Ray ray) {
         front_face = false;
     }
 
-    return Hit(p, normal, t, front_face, idx, type);
+    return Hit(p, normal, tFinal, front_face, obj);
 }
 
 vec3 skyColor(vec3 dir) {
@@ -134,11 +112,18 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
 
     int i = 0;
     for (; i < MAX_BOUNCE_DEPTH; i++) {
-        if (hit.type != obj_None) {
+        if (foundIntersection(hit)) {
             vec3 attenuation;
             Ray scattered;
 
-            bool isScattered = scatter(getMaterial(hit), ray, hit, attenuation, scattered, seed);
+            bool isScattered = scatter(
+                getMaterial(hit.object),
+                ray,
+                hit,
+                attenuation,
+                scattered,
+                seed
+            );
             color *= attenuation;
             if (!isScattered) {
                 break;
@@ -164,6 +149,7 @@ void main() {
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
 
     pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
+    pushBox(Box(vec3(-1, -1, -1),vec3( 1,  1,  1), METAL_MATERIAL(vec3(1.0, 0.6, 0.6), 0.01)));
 
     vec2 uv = fragPos * 0.5 + 0.5;
     vec3 prevColor = texture(prevTex, uv).rgb;
@@ -178,15 +164,14 @@ void main() {
     }
     currColor.rgb /= SAMPLES_PER_PIXEL;
 
-    float idFloat = 0.0;
+    float intersection = 0;
     if (ssbo.selectedSphereId >= 0) {
         float t = raySphereIntersection(getRay(camera, fragPos), ssbo.spheres[ssbo.selectedSphereId]);
         if (t > 0.0)
-            idFloat = 1.0;
-
+            intersection = 1;
     }
 
     float frame = float(max(ubo.frameCount, 1));
     vec3 mixedColor = mix(prevColor, currColor, 1.0 / frame);
-    outColor = vec4(mixedColor, idFloat);
+    outColor = vec4(mixedColor, intersection);
 }
