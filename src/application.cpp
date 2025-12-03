@@ -70,8 +70,10 @@ Application::Application() {
     }
     
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // sphere buffer
+    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // box buffer
+    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // object buffer
     engine.initDescriptorSetLayout(setLayout);
     
     screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -104,12 +106,15 @@ Application::Application() {
             { imageViews[1], samplers[1] }
         };
         
-        bufferList_t storageBuffer = scene.getBufferList();
+        std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            descriptorSets[i] = engine.initDescriptorSetList(
-                setLayout,
-                { &raytracingUniformBuffers, &storageBuffer, &combinedImageSampler[1-i] }
-            );
+            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
+            for (bufferList_t &buffers : storageBuffers) {
+                descriptors.push_back(&buffers);
+            }
+
+            descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
+
             screenDescriptorSets[i] = engine.initDescriptorSetList(
                 screenSetLayout,
                 { &combinedImageSampler[i], &screenUniformBuffers }
@@ -155,13 +160,6 @@ void Application::initScene() {
         .mat.refraction_index = 1.05,
     }, "Glass");
     
-    // scene.pushSphere({
-    //     .center = { 0.0, 0.0, 0.0 },
-    //     .radius = 1.0 - 0.01,
-    //     .mat.albedo = { 0.2, 0.7, 0.2 },
-    //     .mat.type = lambertian,
-    // }, "Diffuse");
-
     scene.pushSphere({
         .center = { 2.0, 0.0, 0.0 },
         .radius = 1.0 - 0.01,
@@ -177,6 +175,13 @@ void Application::initScene() {
         .mat.albedo = { 1.0, 0.1, 0.04 },
         .mat.intensity = 10.0,
     }, "Light");
+    
+    scene.pushBox({
+        .cornerMin = { -1.0,-1.0,-1.0 },
+        .cornerMax = {  1.0, 1.0, 1.0 },
+        .mat.type = lambertian,
+        .mat.albedo = { 1.0, 0.7, 0.7 },
+    }, "Test");
 }
 
 
@@ -195,8 +200,7 @@ void Application::run() {
         
         engine.beginFrame();
 
-
-        const bool blockMouseInput = uiCapturesMouse || ImGui::GetIO().WantCaptureMouse;
+        const bool blockMouseInput = uiCapturesMouse || ImGui::GetIO().WantCaptureMouse || ImGuizmo::IsUsing();
         const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
         // TODO move this to the scene
         if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
@@ -208,19 +212,18 @@ void Application::run() {
             const glm::vec2 screenSize = { static_cast<float>(width), static_cast<float>(height) };
             Ray ray = getRay(mousePos, screenSize, camera);
             Hit hit;
-            if (closestSphereHit(ray, scene.getSpheres(), hit)) {
-                scene.selectedSphereId = hit.idx;
-            } else {
-                scene.selectedSphereId = -1;
-            }
+            const auto &objects = scene.getObjects();
+            if (closestObjectHit(ray, objects, scene.getSpheres(), scene.getPlanes(), scene.getBoxes(), hit))
+                scene.setSelectedObject(hit.idx);
+            else
+                scene.setSelectedObject(-1);
         }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            scene.selectedSphereId = -1;
-        }
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            scene.setSelectedObject(-1);
 
-        if (!blockMouseInput && !blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime)) {
-            frameCount = 1;
-        }
+        if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
+            frameCount = 0;
+
         if (camera.isLocked() || blockMouseInput)
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         else
@@ -230,9 +233,7 @@ void Application::run() {
             rebuildPipeline();
             frameCount = 0;
         }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) {
-            frameCount = 0;
-        }
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) frameCount = 0;
 
         RaytracingUBO raytracingUBO;
         ScreenUBO screenUBO;
@@ -277,8 +278,7 @@ void Application::run() {
                 );
                 
                 engine.fillBuffer(engine.getBuffer(raytracingUniformBuffers), &raytracingUBO);
-                // engine.fillBuffer(engine.getBuffer(scene.getBufferList()), &ssbo);
-                scene.fillBuffer(engine);
+                scene.fillBuffers(engine);
                 engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pipeline.getLayout());
                 
                 pipeline.bind(commandBuffer);
@@ -420,27 +420,12 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImVec2 windowSize = ImGui::GetWindowSize();
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
-        
-        Sphere* sphere = scene.getSelectedSphere();
-        if (sphere != nullptr) {
-            glm::mat4 model = glm::translate(glm::mat4(1.0), sphere->center);
-            model = glm::scale(model, glm::vec3(sphere->radius));
 
-            if (ImGuizmo::Manipulate(
-                glm::value_ptr(camera.getView()),
-                glm::value_ptr(camera.getProjection(engine.getWindow().get())),
-                ImGuizmo::OPERATION::SCALE_X | ImGuizmo::OPERATION::TRANSLATE,
-                ImGuizmo::MODE::WORLD, 
-                glm::value_ptr(model)
-            )) {
-                float translation[3], rotation[3], scale[3];
-                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), translation, rotation, scale);
-                sphere->center = { translation[0], translation[1], translation[2] };
-                sphere->radius = scale[0];
-
-                frameCount = 0;
-            }
-        }
+        scene.drawGuizmo(
+            frameCount,
+            camera.getView(),
+            camera.getProjection(engine.getWindow().get())
+        );
     }
     ImGui::End();
     ImGui::PopStyleVar(2);

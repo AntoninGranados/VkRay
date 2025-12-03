@@ -4,11 +4,11 @@
 #include "utils.glsl"
 #include "random.glsl"
 
-#define mat_Lambertian  Enum(0x0000)
-#define mat_Metal       Enum(0x0001)
-#define mat_Dielectric  Enum(0x0002)
-#define mat_Emissive    Enum(0x0003)
-#define mat_Animated    Enum(0x0004)
+#define mat_Lambertian  Enum(0)
+#define mat_Metal       Enum(1)
+#define mat_Dielectric  Enum(2)
+#define mat_Emissive    Enum(3)
+#define mat_Animated    Enum(4)
 struct Material {
     Enum type;
     vec3 albedo;
@@ -84,9 +84,8 @@ bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
     // vec3 color = mix(vec3(0.8, 0.6, 0.2), vec3(0.2, 0.3, 0.5), t);
     vec3 color = vec3(0.2, 0.3, 0.5);
 
-    // Artificial gutters on tile edges
+    // Artificial gutters on tile edges //! this is absolute magic
     float s = 6.0;
-    float inv_s = 1.0 / s;
     vec2 uv = p / scale;
     vec2 tile_uv = fract(uv - 0.5);
     vec2 centered = tile_uv - 0.5;

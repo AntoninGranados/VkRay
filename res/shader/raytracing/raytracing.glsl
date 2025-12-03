@@ -16,13 +16,13 @@ bool pushPlane(in Plane plane) {
     return true;
 }
 
-bool pushBox(in Box box) {
-    if (boxCount >= PLANE_COUNT) return false;
-
-    boxes[boxCount] = box;
-    boxCount++;
-    return true;
-}
+// bool pushBox(in Box box) {
+//     if (boxCount >= PLANE_COUNT) return false;
+// 
+//     boxes[boxCount] = box;
+//     boxCount++;
+//     return true;
+// }
 
 Ray getRay(Camera camera, vec2 ndc_pos) {
     vec3 forward = normalize(camera.dir);
@@ -46,15 +46,15 @@ Hit intersection(in Ray ray) {
     float tFinal = INFINITY;
     Object obj = OBJECT_NONE;
 
-    for (int i = 0; i < ssbo.sphereCount; i++) {
-        float t = raySphereIntersection(ray, ssbo.spheres[i]);
+    for (int i = 0; i < objectBuffer.objectCount; i++) {
+        float t = rayObjectIntersection(ray, objectBuffer.objects[i]);
         if (t >= EPS && t < tFinal) {
             tFinal = t;
-            obj.type = obj_Sphere;
-            obj.id = i;
+            obj = objectBuffer.objects[i];
         }
     }
     
+    /*
     for (int i = 0; i < planeCount; i++) {
         float t = rayPlaneIntersection(ray, planes[i]);
         if (t >= EPS && t < tFinal) {
@@ -72,6 +72,7 @@ Hit intersection(in Ray ray) {
             obj.id = i;
         }
     }
+    */
 
     vec3 p = ray.origin + ray.dir * tFinal;
     vec3 normal = getNormal(obj, p);
@@ -108,7 +109,6 @@ vec3 skyColor(vec3 dir) {
 vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     Hit hit = intersection(ray);
     vec3 color = vec3(1);
-    float factor = 1;
 
     int i = 0;
     for (; i < MAX_BOUNCE_DEPTH; i++) {
@@ -149,7 +149,7 @@ void main() {
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
 
     pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
-    pushBox(Box(vec3(-1, -1, -1),vec3( 1,  1,  1), METAL_MATERIAL(vec3(1.0, 0.6, 0.6), 0.01)));
+    // pushBox(Box(vec3(-1, -1, -1),vec3( 1,  1,  1), METAL_MATERIAL(vec3(1.0, 0.6, 0.6), 0.01)));
 
     vec2 uv = fragPos * 0.5 + 0.5;
     vec3 prevColor = texture(prevTex, uv).rgb;
@@ -165,8 +165,8 @@ void main() {
     currColor.rgb /= SAMPLES_PER_PIXEL;
 
     float intersection = 0;
-    if (ssbo.selectedSphereId >= 0) {
-        float t = raySphereIntersection(getRay(camera, fragPos), ssbo.spheres[ssbo.selectedSphereId]);
+    if (objectBuffer.selectedObjectId >= 0) {
+        float t = rayObjectIntersection(getRay(camera, fragPos), objectBuffer.objects[objectBuffer.selectedObjectId]);
         if (t > 0.0)
             intersection = 1;
     }

@@ -1,5 +1,7 @@
 #include "objects.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 
 Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera &camera) {
@@ -39,12 +41,71 @@ float raySphereIntersection(const Ray &ray, const Sphere &sphere) {
     return t >= 0.0f ? t : -1.0f;
 }
 
-bool closestSphereHit(const Ray &ray, const std::vector<Sphere> &spheres, Hit &hit) {
+float rayPlaneIntersection(const Ray &ray, const Plane &plane) {
+    const float denom = glm::dot(plane.normal, ray.dir);
+    if (std::abs(denom) <= 1e-6f) return -1.0f;
+
+    const float t = glm::dot(plane.point - ray.origin, plane.normal) / denom;
+    return t >= 0.0f ? t : -1.0f;
+}
+
+float rayBoxIntersection(const Ray &ray, const Box &box) {
+    float tmin = 0.0f;
+    float tmax = std::numeric_limits<float>::infinity();
+
+    for (int i = 0; i < 3; ++i) {
+        const float dir = ray.dir[i];
+        if (std::abs(dir) < 1e-8f) {
+            if (ray.origin[i] < box.cornerMin[i] || ray.origin[i] > box.cornerMax[i]) return -1.0f;
+            continue;
+        }
+
+        const float invD = 1.0f / dir;
+        float t0 = (box.cornerMin[i] - ray.origin[i]) * invD;
+        float t1 = (box.cornerMax[i] - ray.origin[i]) * invD;
+        if (invD < 0.0f) std::swap(t0, t1);
+
+        if (t0 > tmin) tmin = t0;
+        if (t1 < tmax) tmax = t1;
+        if (tmax < tmin) return -1.0f;
+    }
+
+    if (tmin >= 0.0f) return tmin;
+    return tmax >= 0.0f ? tmax : -1.0f;
+}
+
+float rayObjectIntersection(
+    const Ray &ray,
+    const Object &obj,
+    const std::vector<Sphere> &spheres,
+    const std::vector<Plane> &planes,
+    const std::vector<Box> &boxes
+) {
+    switch (obj.type) {
+        case SPHERE:
+            return raySphereIntersection(ray, spheres[obj.id]);
+        case PLANE:
+            return rayPlaneIntersection(ray, planes[obj.id]);
+        case BOX:
+            return rayBoxIntersection(ray, boxes[obj.id]);
+        default: break;
+    }
+    return -1.0f;
+}
+
+bool closestObjectHit(
+    const Ray &ray,
+    const std::vector<Object> &objects,
+    const std::vector<Sphere> &spheres,
+    const std::vector<Plane> &planes,
+    const std::vector<Box> &boxes,
+    Hit &hit
+) {
     float closest_t = std::numeric_limits<float>::infinity();
     int closest_idx = -1;
 
-    for (size_t i = 0; i < spheres.size(); ++i) {
-        const float t = raySphereIntersection(ray, spheres[i]);
+    for (size_t i = 0; i < objects.size(); ++i) {
+        const float t = rayObjectIntersection(ray, objects[i], spheres, planes, boxes);
         if (t >= 0.0f && t < closest_t) {
             closest_t = t;
             closest_idx = static_cast<int>(i);
@@ -53,10 +114,8 @@ bool closestSphereHit(const Ray &ray, const std::vector<Sphere> &spheres, Hit &h
 
     if (closest_idx < 0) return false;
 
-    const glm::vec3 p = ray.origin + closest_t * ray.dir;
-
     hit = {
-        .p = p,
+        .p = ray.origin + closest_t * ray.dir,
         .t = closest_t,
         .idx = closest_idx,
     };

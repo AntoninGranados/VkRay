@@ -17,23 +17,40 @@ public:
     void destroy(VkSmol &engine);
 
     void pushSphere(Sphere sphere, std::string name = "No Name");
-    void fillBuffer(VkSmol &engine);
+    void pushBox(Box box, std::string name = "No Name");
+    void fillBuffers(VkSmol &engine);
     
-    void sphereUI(int &frameCount, const int &sphereId);
+    void drawSphereGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj, const int &sphereId);
+    void drawBoxGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj, const int &boxId);
+    void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj);
+
+    void drawMaterialUI(int &frameCount, Material &mat);
+    void drawSphereUI(int &frameCount, const int &sphereId);
+    void drawBoxUI(int &frameCount, const int &boxId);
     void drawInformationUI(int &frameCount);
     void drawSelectedUI(int &frameCount);
 
-    Sphere* getSelectedSphere();
-    int getSelectedSphereId() { return selectedSphereId; }
+    Object* getSelectedObject();
+    void setSelectedObject(int id) { selectedObjectId = id; };
+    int getSelectedObjectId() { return selectedObjectId; }
     int getSpheresCount() { return spheres.size(); }
-    std::vector<Sphere> getSpheres() { return spheres; }
+    const std::vector<Sphere>& getSpheres() const { return spheres; }
+    const std::vector<Plane>& getPlanes() const { return planes; }
+    const std::vector<Box>& getBoxes() const { return boxes; }
+    const std::vector<Object>& getObjects() const { return objects; }
 
-    bufferList_t getBufferList() { return storageBuffers; }
+    std::vector<bufferList_t> getBufferLists() { return { sphereBuffers, boxBuffers, objectBuffers }; }
 
-    int selectedSphereId = -1;
 private:
-    bufferList_t storageBuffers;
+    bufferList_t sphereBuffers, boxBuffers, objectBuffers;
     
     std::vector<Sphere> spheres;
     std::vector<std::string> sphereNames;
+    std::vector<Plane> planes;
+    std::vector<std::string> planeNames;
+    std::vector<Box> boxes;
+    std::vector<std::string> boxNames;
+    
+    int selectedObjectId = -1;
+    std::vector<Object> objects;
 };

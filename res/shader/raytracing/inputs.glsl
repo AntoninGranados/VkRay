@@ -20,29 +20,23 @@ layout(std140, set = 0, binding = 0) uniform UBO {
 
     int timeOfDay;
 } ubo;
-layout(set = 0, binding = 1) buffer readonly SSBO {
-    uint sphereCount;
-    int selectedSphereId;
+
+layout(set = 0, binding = 1) uniform sampler2D prevTex;
+
+layout(set = 0, binding = 2) buffer readonly SphereBuffer {
     Sphere spheres[];
-} ssbo;
-/*
-layout(set = 0, binding = 1) buffer readonly SSBO {
+} sphereBuffer;
+layout(set = 0, binding = 3) buffer readonly BoxBuffer {
+    Box boxes[];
+} boxBuffer;
+layout(set = 0, binding = 4) buffer readonly ObjectBuffer {
     uint objectCount;
     int selectedObjectId;
     Object objects[];
-    Sphere spheres[];
-    Plane planes[];
-    Box boxes[];
-} ssbo;
-*/
-layout(set = 0, binding = 2) uniform sampler2D prevTex;
+} objectBuffer;
 
 #define PLANE_COUNT 10
 uint planeCount = 0;
 Plane planes[PLANE_COUNT];
-
-#define BOX_COUNT 10
-uint boxCount = 0;
-Box boxes[BOX_COUNT];
 
 #endif
