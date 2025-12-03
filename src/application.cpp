@@ -20,6 +20,7 @@ Application::Application() {
         [](GLFWwindow* window, double x, double y) {
             ImGui_ImplGlfw_CursorPosCallback(window, x, y);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
             if (app->camera.cursorPosCallback(window, x, y))
                 app->frameCount = 1;
         }
@@ -29,6 +30,7 @@ Application::Application() {
         [](GLFWwindow* window, double xoffset, double yoffset) {
             ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
             if (app->camera.scrollCallback(window, xoffset, yoffset))
                 app->frameCount = 1;
         }
@@ -150,17 +152,9 @@ void Application::initScene() {
         .radius = 1.0 - 0.01,
         .mat.type = dielectric,
         .mat.albedo = { 0.95, 0.8, 0.9 },
-        .mat.refraction_index = 1.5,
+        .mat.refraction_index = 1.05,
     }, "Glass");
-
-    // scene.pushSphere({
-    //     .center = { -2.0, 0.0, 0.0 },
-    //     .radius = (1.0 - 0.01) * 0.9,
-    //     .mat.type = dielectric,
-    //     .mat.albedo = { 0.9, 0.9, 0.9 },
-    //     .mat.refraction_index = 1.0 / 1.5,
-    // }, "Glass inner");
-
+    
     scene.pushSphere({
         .center = { 0.0, 0.0, 0.0 },
         .radius = 1.0 - 0.01,
@@ -190,6 +184,25 @@ void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while(!engine.shouldTerminate()) {
+        const bool blockMouseInput = uiCapturesMouse || ImGui::GetIO().WantCaptureMouse;
+        const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
+        // TODO move this to the scene
+        if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            double xpos, ypos;
+            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+            int width, height;
+            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+            const glm::vec2 mousePos = { xpos, ypos };
+            const glm::vec2 screenSize = { static_cast<float>(width), static_cast<float>(height) };
+            Ray ray = getRay(mousePos, screenSize, camera);
+            Hit hit;
+            if (closestSphereHit(ray, scene.getSpheres(), hit)) {
+                scene.selectedSphereId = hit.idx;
+            } else {
+                scene.selectedSphereId = -1;
+            }
+        }
+
         frame = (frame + 1) % 2;
         frameCount++;
 
@@ -201,10 +214,10 @@ void Application::run() {
         
         engine.beginFrame();
 
-        if (camera.processInput(engine.getWindow().get(), deltaTime)) {
+        if (!blockMouseInput && !blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime)) {
             frameCount = 1;
         }
-        if (camera.isLocked())
+        if (camera.isLocked() || blockMouseInput)
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         else
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -371,6 +384,9 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui_ImplGlfw_NewFrame();
     
     ImGui::NewFrame();
+    ImGuiIO& io = ImGui::GetIO();
+    uiCapturesMouse = io.WantCaptureMouse;
+    uiCapturesKeyboard = io.WantCaptureKeyboard;
 
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::BeginFrame();
@@ -392,6 +408,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGuiWindowFlags_NoFocusOnAppearing |
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoNavFocus |
+        ImGuiWindowFlags_NoMouseInputs |
         ImGuiWindowFlags_NoDocking
     );
     {
@@ -463,10 +480,12 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PopItemWidth();
         ImGui::Separator();
         
-        scene.drawUI(frameCount);
+        scene.drawInformationUI(frameCount);
     }
     ImGui::End();
     
+    scene.drawSelectedUI(frameCount);
+
     ImGui::Render();
     
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
@@ -490,8 +509,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.timeOfDay = timeOfDay;
 
     // Screen UBO
-    screenUBO.sphereCount = scene.getSpheresCount();
-    screenUBO.sphereId = scene.getSelectedSphereId() + 1;
+    // screenUBO.XXX = ...;
 }
 
 // TODO: make this function asynchronous ?
@@ -507,7 +525,7 @@ void Application::rebuildPipeline() {
         return;
     }
     
-    std::string fragShaderPath = "./res/shader/raytracing.glsl";
+    std::string fragShaderPath = "./res/shader/raytracing/raytracing.glsl";
     Shader fragShader;
     try {
         fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);

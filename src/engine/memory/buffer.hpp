@@ -50,3 +50,4 @@ private:
 
     void* bufferMapped;
 };
+

@@ -93,12 +93,12 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
     return change;
 }
 
-glm::mat4 Camera::getView() {
-    glm::mat4 view = glm::lookAt(position, position+direction, up);
+glm::mat4 Camera::getView() const {
+    glm::mat4 view = glm::lookAt(position, position + direction, up);
     return view;
 }
 
-glm::mat4 Camera::getProjection(GLFWwindow* window) {
+glm::mat4 Camera::getProjection(GLFWwindow* window) const {
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     float aspect = static_cast<float>(width) / static_cast<float>(height);

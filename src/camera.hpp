@@ -13,13 +13,13 @@ public:
     bool scrollCallback(GLFWwindow *window, double xoffset, double yoffset);
     bool processInput(GLFWwindow *window, float deltaTime);
     
-    float getTanHFov() { return glm::tan(glm::radians(fov) * 0.5); }
-    float getFov() { return fov; }
-    glm::vec3 getPosition() { return position; }
-    glm::vec3 getDirection() { return direction; }
-    glm::vec3 getUp() { return up; }
-    glm::mat4 getView();
-    glm::mat4 getProjection(GLFWwindow* window);
+    float getTanHFov() const { return glm::tan(glm::radians(fov) * 0.5); }
+    float getFov() const { return fov; }
+    glm::vec3 getPosition() const { return position; }
+    glm::vec3 getDirection() const { return direction; }
+    glm::vec3 getUp() const { return up; }
+    glm::mat4 getView() const;
+    glm::mat4 getProjection(GLFWwindow* window) const;
 
     bool isLocked() { return locked; }
     void toggleLock() { locked = !locked; }

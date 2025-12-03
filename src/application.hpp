@@ -7,7 +7,8 @@
 
 #include "./engine/engine.hpp"
 #include "./camera.hpp"
-#include "./scene.hpp"
+#include "./scene/scene.hpp"
+#include "./scene/objects.hpp"
 
 typedef uint16_t index_t;
 
@@ -30,8 +31,6 @@ struct RaytracingUBO {
 };
 
 struct ScreenUBO {
-    int sphereCount;
-    int sphereId;
 };
 
 class Application {
@@ -61,7 +60,9 @@ private:
     int frameCount = 0;
 
     Camera camera = Camera(glm::vec3(0.0f, 5.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    int timeOfDay = 2;
+    int timeOfDay = 1;
+    bool uiCapturesMouse = false;
+    bool uiCapturesKeyboard = false;
 
     void initScene();
     void drawUI(CommandBuffer commandBuffer);
