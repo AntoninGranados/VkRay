@@ -28,14 +28,17 @@ void main() {
 
     float neighborMask = 0.0;
     int count = 0;
+    vec2 samplePos;
     float sampleAlpha;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) continue;
-            vec2 samplePos = uv + vec2(i, j) * stepV;
-            if (0 > samplePos.x || samplePos.x > 1) continue;
-            if (0 > samplePos.y || samplePos.y > 1) continue;
+            
+            samplePos = uv + vec2(i, j) * stepV;
             sampleAlpha = texture(tex, samplePos).a;
+            if (0 > samplePos.x || samplePos.x > 1) sampleAlpha = 0.0;
+            if (0 > samplePos.y || samplePos.y > 1) sampleAlpha = 0.0;
+
             neighborMask += step(targetMin, sampleAlpha) - step(targetMax, sampleAlpha);
             count += 1;
         }

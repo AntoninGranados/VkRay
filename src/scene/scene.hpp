@@ -5,9 +5,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "objects.hpp"
 #include "../engine/engine.hpp"
+#include "../camera.hpp"
 #include "../imgui/ImGuizmo.h"
+#include "../imgui/imgui.h"
+
+#include "object/object.hpp"
+#include "object/sphere.hpp"
+#include "object/plane.hpp"
+#include "object/box.hpp"
 
 #define MAX_CAPACITY 8  // TODO: realloc buffer instead of using a fixed max capacity
 
@@ -16,41 +22,23 @@ public:
     void init(VkSmol &engine);
     void destroy(VkSmol &engine);
 
-    void pushSphere(Sphere sphere, std::string name = "No Name");
-    void pushBox(Box box, std::string name = "No Name");
+    void pushSphere(std::string name, glm::vec3 center, float radius, Material mat);
+    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
+    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
     void fillBuffers(VkSmol &engine);
     
-    void drawSphereGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj, const int &sphereId);
-    void drawBoxGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj, const int &boxId);
     void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj);
-
-    void drawMaterialUI(int &frameCount, Material &mat);
-    void drawSphereUI(int &frameCount, const int &sphereId);
-    void drawBoxUI(int &frameCount, const int &boxId);
-    void drawInformationUI(int &frameCount);
+    void drawNewObjectUI(int &frameCount);
     void drawSelectedUI(int &frameCount);
 
-    Object* getSelectedObject();
-    void setSelectedObject(int id) { selectedObjectId = id; };
-    int getSelectedObjectId() { return selectedObjectId; }
-    int getSpheresCount() { return spheres.size(); }
-    const std::vector<Sphere>& getSpheres() const { return spheres; }
-    const std::vector<Plane>& getPlanes() const { return planes; }
-    const std::vector<Box>& getBoxes() const { return boxes; }
-    const std::vector<Object>& getObjects() const { return objects; }
+    void clearSelection() { selectedObjectId = -1; }
+    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera);
 
-    std::vector<bufferList_t> getBufferLists() { return { sphereBuffers, boxBuffers, objectBuffers }; }
+    std::vector<bufferList_t> getBufferLists() { return { sphereBuffers, planeBuffers, boxBuffers, objectBuffers }; }
 
 private:
-    bufferList_t sphereBuffers, boxBuffers, objectBuffers;
-    
-    std::vector<Sphere> spheres;
-    std::vector<std::string> sphereNames;
-    std::vector<Plane> planes;
-    std::vector<std::string> planeNames;
-    std::vector<Box> boxes;
-    std::vector<std::string> boxNames;
+    bufferList_t sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
     
     int selectedObjectId = -1;
-    std::vector<Object> objects;
+    std::vector<Object*> objects;
 };

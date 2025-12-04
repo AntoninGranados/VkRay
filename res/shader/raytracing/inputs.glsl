@@ -26,17 +26,16 @@ layout(set = 0, binding = 1) uniform sampler2D prevTex;
 layout(set = 0, binding = 2) buffer readonly SphereBuffer {
     Sphere spheres[];
 } sphereBuffer;
-layout(set = 0, binding = 3) buffer readonly BoxBuffer {
+layout(set = 0, binding = 3) buffer readonly PlaneBuffer {
+    Plane planes[];
+} planeBuffer;
+layout(set = 0, binding = 4) buffer readonly BoxBuffer {
     Box boxes[];
 } boxBuffer;
-layout(set = 0, binding = 4) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 5) buffer readonly ObjectBuffer {
     uint objectCount;
     int selectedObjectId;
     Object objects[];
 } objectBuffer;
-
-#define PLANE_COUNT 10
-uint planeCount = 0;
-Plane planes[PLANE_COUNT];
 
 #endif

@@ -8,22 +8,6 @@
 #include "random.glsl"
 
 
-bool pushPlane(in Plane plane) {
-    if (planeCount >= PLANE_COUNT) return false;
-
-    planes[planeCount] = plane;
-    planeCount++;
-    return true;
-}
-
-// bool pushBox(in Box box) {
-//     if (boxCount >= PLANE_COUNT) return false;
-// 
-//     boxes[boxCount] = box;
-//     boxCount++;
-//     return true;
-// }
-
 Ray getRay(Camera camera, vec2 ndc_pos) {
     vec3 forward = normalize(camera.dir);
     vec3 right   = normalize(cross(forward, camera.up));
@@ -54,26 +38,6 @@ Hit intersection(in Ray ray) {
         }
     }
     
-    /*
-    for (int i = 0; i < planeCount; i++) {
-        float t = rayPlaneIntersection(ray, planes[i]);
-        if (t >= EPS && t < tFinal) {
-            tFinal = t;
-            obj.type = obj_Plane;
-            obj.id = i;
-        }
-    }
-
-    for (int i = 0; i < boxCount; i++) {
-        float t = rayBoxIntersection(ray, boxes[i]);
-        if (t >= EPS && t < tFinal) {
-            tFinal = t;
-            obj.type = obj_Box;
-            obj.id = i;
-        }
-    }
-    */
-
     vec3 p = ray.origin + ray.dir * tFinal;
     vec3 normal = getNormal(obj, p);
 
@@ -148,8 +112,7 @@ void main() {
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
 
-    pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
-    // pushBox(Box(vec3(-1, -1, -1),vec3( 1,  1,  1), METAL_MATERIAL(vec3(1.0, 0.6, 0.6), 0.01)));
+    // pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
 
     vec2 uv = fragPos * 0.5 + 0.5;
     vec3 prevColor = texture(prevTex, uv).rgb;

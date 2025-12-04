@@ -52,7 +52,6 @@ float schlick_approx(float cosine, float ri) {
     r0 = r0*r0;
     return r0 + (1-r0) * pow((1 - cosine),5);
 }
-
 bool scatterDielectric(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
     float ri = hit.front_face ? (1.0/mat.refraction_index) : mat.refraction_index;
 

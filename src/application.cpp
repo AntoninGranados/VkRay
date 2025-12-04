@@ -20,7 +20,9 @@ Application::Application() {
         [](GLFWwindow* window, double x, double y) {
             ImGui_ImplGlfw_CursorPosCallback(window, x, y);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
+            const bool cameraLocked = app->camera.isLocked();
+            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse || ImGuizmo::IsUsing()))
+                return;
             if (app->camera.cursorPosCallback(window, x, y))
                 app->frameCount = 1;
         }
@@ -72,6 +74,7 @@ Application::Application() {
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // sphere buffer
+    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // plane buffer
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // box buffer
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // object buffer
     engine.initDescriptorSetLayout(setLayout);
@@ -152,36 +155,88 @@ Application::~Application() {
 void Application::initScene() {
     scene.init(engine);
 
-    scene.pushSphere({
-        .center = { -2.0, 0.0, 0.0 },
-        .radius = 1.0 - 0.01,
-        .mat.type = dielectric,
-        .mat.albedo = { 0.95, 0.8, 0.9 },
-        .mat.refraction_index = 1.05,
-    }, "Glass");
-    
-    scene.pushSphere({
-        .center = { 2.0, 0.0, 0.0 },
-        .radius = 1.0 - 0.01,
-        .mat.type = metal,
-        .mat.albedo = { 0.8, 0.6, 0.2 },
-        .mat.fuzz = 0.01,
-    }, "Metal");
+    scene.pushSphere(
+        "Glass",
+        glm::vec3(-2.0, 0.0, 0.0),
+        1.0 - 0.01,
+        Material {
+            .type = DIELECTRIC,
+            .albedo = { 0.95, 0.8, 0.9 },
+            .refraction_index = 1.05,
+        }
+    );
 
-    scene.pushSphere({
-        .center = { 0.0, 2.0, 6.0 },
-        .radius = 3.0 - 0.01,
-        .mat.type = emissive,
-        .mat.albedo = { 1.0, 0.1, 0.04 },
-        .mat.intensity = 10.0,
-    }, "Light");
+    scene.pushSphere(
+        "Metal",
+        glm::vec3( 2.0, 0.0, 0.0),
+        1.0 - 0.01,
+        Material {
+            .type = METAL,
+            .albedo = { 0.8, 0.6, 0.2 },
+            .fuzz = 0.01,
+        }
+    );
+
+    scene.pushBox(
+        "Left",
+        glm::vec3(4.0,-4.0,-4.0),
+        glm::vec3(4.1, 4.0, 4.0),
+        Material {
+            .type = LAMBERTIAN,
+            .albedo = { 1.0, 0.0, 0.0 },
+        }
+    );
     
-    scene.pushBox({
-        .cornerMin = { -1.0,-1.0,-1.0 },
-        .cornerMax = {  1.0, 1.0, 1.0 },
-        .mat.type = lambertian,
-        .mat.albedo = { 1.0, 0.7, 0.7 },
-    }, "Test");
+    scene.pushBox(
+        "Right",
+        glm::vec3(-4.1,-4.0,-4.0),
+        glm::vec3(-4.0, 4.0, 4.0),
+        Material {
+            .type = LAMBERTIAN,
+            .albedo = { 0.0, 1.0, 0.0 },
+        }
+    );
+    
+    scene.pushBox(
+        "Top",
+        glm::vec3(-4.0, 4.0,-4.0),
+        glm::vec3( 4.0, 4.1, 4.0),
+        Material {
+            .type = LAMBERTIAN,
+            .albedo = { 1.0, 1.0, 1.0 },
+        }
+    );
+    
+    scene.pushBox(
+        "Bottom",
+        glm::vec3(-4.0,-4.1,-4.0),
+        glm::vec3( 4.0,-4.0, 4.0),
+        Material {
+            .type = LAMBERTIAN,
+            .albedo = { 1.0, 1.0, 1.0 },
+        }
+    );
+    
+    scene.pushBox(
+        "Back",
+        glm::vec3(-4.0,-4.0, 4.0),
+        glm::vec3( 4.0, 4.0, 4.1),
+        Material {
+            .type = LAMBERTIAN,
+            .albedo = { 1.0, 1.0, 1.0 },
+        }
+    );
+    
+    scene.pushBox(
+        "Light",
+        glm::vec3(-1.0, 3.9,-1.0),
+        glm::vec3( 1.0, 4.0, 1.0),
+        Material {
+            .type = EMISSIVE,
+            .albedo = { 1.0, 1.0, 1.0 },
+            .intensity = 100.0,
+        }
+    );
 }
 
 
@@ -200,26 +255,19 @@ void Application::run() {
         
         engine.beginFrame();
 
-        const bool blockMouseInput = uiCapturesMouse || ImGui::GetIO().WantCaptureMouse || ImGuizmo::IsUsing();
+        const bool cameraDragging = !camera.isLocked();
+        const bool blockMouseInput = ImGuizmo::IsUsing() || (!cameraDragging && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
         const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
-        // TODO move this to the scene
+
         if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             double xpos, ypos;
             glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
             int width, height;
             glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-            const glm::vec2 mousePos = { xpos, ypos };
-            const glm::vec2 screenSize = { static_cast<float>(width), static_cast<float>(height) };
-            Ray ray = getRay(mousePos, screenSize, camera);
-            Hit hit;
-            const auto &objects = scene.getObjects();
-            if (closestObjectHit(ray, objects, scene.getSpheres(), scene.getPlanes(), scene.getBoxes(), hit))
-                scene.setSelectedObject(hit.idx);
-            else
-                scene.setSelectedObject(-1);
+            scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera);
         }
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            scene.setSelectedObject(-1);
+            scene.clearSelection();
 
         if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
             frameCount = 0;
@@ -469,7 +517,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PopItemWidth();
         ImGui::Separator();
         
-        scene.drawInformationUI(frameCount);
+        scene.drawNewObjectUI(frameCount);
     }
     ImGui::End();
     

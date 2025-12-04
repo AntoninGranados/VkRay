@@ -8,7 +8,7 @@
 #include "./engine/engine.hpp"
 #include "./camera.hpp"
 #include "./scene/scene.hpp"
-#include "./scene/objects.hpp"
+#include "./scene/object/object.hpp"
 
 typedef uint16_t index_t;
 

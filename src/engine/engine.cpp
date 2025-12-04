@@ -1,7 +1,8 @@
 #include "engine.hpp"
 
-const uint32_t WIDTH = 1200;
-const uint32_t HEIGHT = 900;
+// TODO: get this values from the application (and pass them in the engine.init)
+const uint32_t WIDTH = 960;
+const uint32_t HEIGHT = 540;
 
 const uint32_t MAX_FRAME_IN_FLIGHT = 2; // Number of frames that can be worked on in parallele by the CPU
 
@@ -30,7 +31,6 @@ const std::vector<const char*> validationLayers = {
 */
 
 bool VkSmol::shouldTerminate() {
-    // if (glfwGetKey(window.get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;    //! should not be forced
     return window.shouldClose();
 }
 
