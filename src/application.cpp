@@ -255,8 +255,7 @@ void Application::run() {
         
         engine.beginFrame();
 
-        const bool cameraDragging = !camera.isLocked();
-        const bool blockMouseInput = ImGuizmo::IsUsing() || (!cameraDragging && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
+        const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
         const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
 
         if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
@@ -268,6 +267,9 @@ void Application::run() {
         }
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
             scene.clearSelection();
+        
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_U) == GLFW_PRESS)
+            uiToggled = true;
 
         if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
             frameCount = 0;
@@ -434,6 +436,8 @@ void Application::run() {
 
 // #include <future>
 void Application::drawUI(CommandBuffer commandBuffer) {
+    if (!uiToggled) return;
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     
@@ -487,6 +491,35 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
     ImGui::End();
 
+    ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
+    ImGui::SetNextWindowSize({ 300, 500 });
+    ImGui::Begin("Outputs",
+        nullptr,
+        ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground
+    );
+    {
+        for (auto notification : notifications) {
+            const char* label = nullptr;
+            ImVec4 color;
+            switch (notification.first) {
+                case MessageType::INFO:    label = "[INFO]";    color = { 0.55, 0.91, 0.99, 1.00 }; break;
+                case MessageType::WARNING: label = "[WARNING]"; color = { 1.00, 0.72, 0.42, 1.00 }; break;
+                case MessageType::ERROR:   label = "[ERROR]";   color = { 1.00, 0.33, 0.33, 1.00 }; break;
+                default: continue;
+            }
+
+            std::string line = std::string(label) + " " + notification.second;
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + ImGui::GetContentRegionAvail().x);
+            ImGui::TextUnformatted(line.c_str());
+            ImGui::PopTextWrapPos();
+
+            const ImVec2 textPos = ImGui::GetItemRectMin();
+            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::ColorConvertFloat4ToU32(color), label);
+        }
+        ImGui::SetScrollHereY(1.0f);
+    }
+    ImGui::End();
+
     ImGui::SetNextWindowBgAlpha(0.5f);
     ImGui::Begin("Information");
     {
@@ -515,6 +548,12 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
             frameCount = 0;
+        ImGui::PopItemWidth();
+        ImGui::Separator();
+        
+        ImGui::PushItemWidth(-FLT_MIN);
+        if (ImGui::Button("Hide UI (U to show again)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+            uiToggled = false;
         ImGui::PopItemWidth();
         ImGui::Separator();
         
@@ -559,7 +598,11 @@ void Application::rebuildPipeline() {
     try {
         vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
-        std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
+        // std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
+        notifications.push_back({
+            MessageType::ERROR,
+            "Failed to compile shader [" + vertShaderPath + "]: pipeline not built"
+        });
         return;
     }
     
@@ -569,7 +612,11 @@ void Application::rebuildPipeline() {
         fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);
     } catch (...) {
         engine.destroyShader(vertShader);
-        std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
+        // std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
+        notifications.push_back({
+            MessageType::ERROR,
+            "Failed to compile shader [" + fragShaderPath + "]: pipeline not built"
+        });
         return;
     }
 
@@ -599,5 +646,9 @@ void Application::rebuildPipeline() {
     engine.destroyShader(vertShader);
     engine.destroyShader(fragShader);
 
-    std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
+    // std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
+    notifications.push_back({
+        MessageType::INFO,
+        "Built the main pipeline by recompiling [" + vertShaderPath + "] and [" + fragShaderPath + "]"
+    });
 }

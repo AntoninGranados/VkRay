@@ -1,8 +1,8 @@
 #include "engine.hpp"
 
 // TODO: get this values from the application (and pass them in the engine.init)
-const uint32_t WIDTH = 960;
-const uint32_t HEIGHT = 540;
+const uint32_t WIDTH = 1280;
+const uint32_t HEIGHT = 720;
 
 const uint32_t MAX_FRAME_IN_FLIGHT = 2; // Number of frames that can be worked on in parallele by the CPU
 

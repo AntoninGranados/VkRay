@@ -170,7 +170,7 @@ void Scene::drawSelectedUI() {
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings
     );
     {
-        objects[selectedObjectId]->drawUI();
+        updated |= objects[selectedObjectId]->drawUI();
     
         ImGui::Separator();
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });

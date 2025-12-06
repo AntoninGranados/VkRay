@@ -33,6 +33,12 @@ struct RaytracingUBO {
 struct ScreenUBO {
 };
 
+enum MessageType {
+    INFO,
+    WARNING,
+    ERROR,
+};
+
 class Application {
 public:
     Application();
@@ -63,6 +69,9 @@ private:
     int timeOfDay = 1;
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;
+    bool uiToggled = true;
+
+    std::vector<std::pair<MessageType, std::string> > notifications;
 
     void initScene();
     void drawUI(CommandBuffer commandBuffer);
@@ -70,6 +79,4 @@ private:
     float lastTime = 0.0f;
 
     void rebuildPipeline();
-
-    glm::mat4 model = glm::mat4(1.0f);
 };
