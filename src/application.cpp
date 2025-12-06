@@ -283,7 +283,7 @@ void Application::run() {
         }
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) frameCount = 0;
 
-        if (scene.isUpdated()) frameCount = 0;
+        if (scene.wasUpdated()) frameCount = 0;
 
         RaytracingUBO raytracingUBO;
         ScreenUBO screenUBO;

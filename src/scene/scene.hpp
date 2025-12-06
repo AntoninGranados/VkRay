@@ -37,7 +37,7 @@ public:
     std::vector<bufferList_t> getBufferLists() { return { sphereBuffers, planeBuffers, boxBuffers, objectBuffers }; }
 
     // Returns true if the scene have been updated this the last call of this function
-    bool isUpdated();
+    bool wasUpdated();
 
 private:
     bufferList_t sphereBuffers, planeBuffers, boxBuffers, objectBuffers;

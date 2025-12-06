@@ -204,7 +204,7 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     return closest_id >= 0;
 }
 
-bool Scene::isUpdated() {
+bool Scene::wasUpdated() {
     if (updated) {
         updated = false;
         return true;
