@@ -18,10 +18,12 @@ const std::vector<const char*> instanceExtensions = {
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+#ifdef __APPLE__
     "VK_KHR_portability_subset",
+#endif
 };
 
-// only used if NDEBUG is not defined
+// only used if NDEBUG is ndef
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation",
 };

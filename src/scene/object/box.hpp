@@ -17,8 +17,8 @@ class Box: public Object {
 public:
     Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
     float rayIntersection(const Ray &ray) override;
-    void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) override;
-    void drawUI(int &frameCount) override;
+    bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
+    bool drawUI() override;
     
     GpuBox getStruct();
     ObjectType getType() override { return ObjectType::BOX; };

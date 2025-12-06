@@ -33,6 +33,7 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
 }
 
 void Scene::fillBuffers(VkSmol &engine) {
+    // TODO: Only refill them after an update (not every frame)
     std::vector<GpuSphere> spheres;
     std::vector<GpuPlane> planes;
     std::vector<GpuBox> boxes;
@@ -91,36 +92,60 @@ void Scene::fillBuffers(VkSmol &engine) {
     free(objectData);
 }
 
-void Scene::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) {
+void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedObjectId < 0) return;
-    objects[selectedObjectId]->drawGuizmo(frameCount, view, proj);
+    updated |= objects[selectedObjectId]->drawGuizmo(view, proj);
 }
 
 
-void Scene::drawNewObjectUI(int &frameCount) {
+void Scene::drawNewObjectUI() {
     ImGui::SeparatorText("Scene");
 
-    if (ImGui::Button("Add sphere", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New sphere")) {
-        pushSphere(
-            "No Name",
-            glm::vec3(0.0, 0.0, 0.0),
-            1.0,
-            Material {
-                .type = LAMBERTIAN,
-                .albedo = { 1.0, 0.0, 1.0 },
-            }
-        );
-        ImGui::OpenPopup("New sphere");
+    if (ImGui::Button("Add object", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New Object")) {
+        ImGui::OpenPopup("New Object");
     }
 
-    if (ImGui::BeginPopupModal("New sphere", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-        ImGui::SeparatorText("Sphere parameters");
-        
-        objects.back()->drawUI(frameCount);
-
-        ImGui::Separator();
-        if (ImGui::Button("Save sphere", { -FLT_MIN, 0 })) {
-            frameCount = 0;
+    if (ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        if (ImGui::Button("Sphere", { 100, 0 })) {
+            selectedObjectId = objects.size();
+            updated = true;
+            pushSphere(
+                "New Sphere",
+                glm::vec3(0.0, 0.0, 0.0),
+                1.0,
+                Material {
+                    .type = LAMBERTIAN,
+                    .albedo = { 1.0, 0.0, 1.0 },
+                }
+            );
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::Button("Plane", { 100, 0 })) {
+            selectedObjectId = objects.size();
+            updated = true;
+            pushPlane(
+                "New Plane",
+                glm::vec3( 0.0, 0.0, 0.0),
+                glm::vec3( 0.0, 1.0, 0.0),
+                Material {
+                    .type = LAMBERTIAN,
+                    .albedo = { 1.0, 0.0, 1.0 },
+                }
+            );
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::Button("Box", { 100, 0 })) {
+            selectedObjectId = objects.size();
+            updated = true;
+            pushBox(
+                "New Box",
+                glm::vec3(-1.0,-1.0,-1.0),
+                glm::vec3( 1.0, 1.0, 1.0),
+                Material {
+                    .type = LAMBERTIAN,
+                    .albedo = { 1.0, 0.0, 1.0 },
+                }
+            );
             ImGui::CloseCurrentPopup();
         }
 
@@ -128,7 +153,7 @@ void Scene::drawNewObjectUI(int &frameCount) {
     }
 }
 
-void Scene::drawSelectedUI(int &frameCount) {
+void Scene::drawSelectedUI() {
     if (selectedObjectId < 0) return;
 
     std::string typeName;
@@ -145,14 +170,14 @@ void Scene::drawSelectedUI(int &frameCount) {
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings
     );
     {
-        objects[selectedObjectId]->drawUI(frameCount);
+        objects[selectedObjectId]->drawUI();
     
         ImGui::Separator();
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
         if (ImGui::Button("Delete", { -FLT_MIN, 0 })) {
             objects.erase(std::next(objects.begin(), selectedObjectId));
             selectedObjectId = -1;
-            frameCount = 0;
+            updated = true;
         }
         ImGui::PopStyleColor();
     }
@@ -177,4 +202,12 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
 
     selectedObjectId = closest_id;
     return closest_id >= 0;
+}
+
+bool Scene::isUpdated() {
+    if (updated) {
+        updated = false;
+        return true;
+    }
+    return false;
 }

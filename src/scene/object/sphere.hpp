@@ -17,8 +17,8 @@ class Sphere: public Object {
 public:
     Sphere(std::string name, glm::vec3 center, float radius, Material mat);
     float rayIntersection(const Ray &ray) override;
-    void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) override;
-    void drawUI(int &frameCount) override;
+    bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
+    bool drawUI() override;
     
     GpuSphere getStruct();
     ObjectType getType() override { return ObjectType::SPHERE; };

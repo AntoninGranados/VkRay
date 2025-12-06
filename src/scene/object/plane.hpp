@@ -17,8 +17,8 @@ class Plane: public Object {
 public:
     Plane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
     float rayIntersection(const Ray &ray) override;
-    void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) override;
-    void drawUI(int &frameCount) override;
+    bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
+    bool drawUI() override;
     
     GpuPlane getStruct();
     ObjectType getType() override { return ObjectType::PLANE; };

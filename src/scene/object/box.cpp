@@ -32,7 +32,7 @@ float Box::rayIntersection(const Ray &ray) {
     return tmin >= 0.0f ? tmin : tmax;
 }
 
-void Box::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) {
+bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     glm::vec3 center = (cornerMax + cornerMin) * glm::vec3(0.5);
     glm::mat4 model = glm::translate(glm::mat4(1.0), center);
     model = glm::scale(model, glm::vec3(cornerMax - cornerMin));
@@ -44,7 +44,7 @@ void Box::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &pr
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return;
+        if (isnan4x4(model)) return false;
 
         glm::vec3 translation, rotation, scale;
         ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
@@ -52,11 +52,15 @@ void Box::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &pr
         cornerMin = translation - halfSize;
         cornerMax = translation + halfSize;
         
-        frameCount = 0;
+        return true;
     }
+
+    return false;
 }
 
-void Box::drawUI(int &frameCount) {
+bool Box::drawUI() {
+    bool updated = false;
+    
     char buff[128];
     memcpy(buff, name.data(), name.size());
     ImGui::Text("Name:");
@@ -65,15 +69,18 @@ void Box::drawUI(int &frameCount) {
     
     ImGui::Text("Corner Max:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat3("##CornerMax", glm::value_ptr(cornerMax), 0.01)) frameCount = 0;
+    if (ImGui::DragFloat3("##CornerMax", glm::value_ptr(cornerMax), 0.01))
+        updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Corner Min:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat3("##CornerMin", glm::value_ptr(cornerMin), 0.01)) frameCount = 0;
+    if (ImGui::DragFloat3("##CornerMin", glm::value_ptr(cornerMin), 0.01))
+        updated = true;
     ImGui::PopItemWidth();
     
-    drawMaterialUI(frameCount, mat);
+    updated |= drawMaterialUI(mat);
+    return updated;
 }
 
 GpuBox Box::getStruct() {

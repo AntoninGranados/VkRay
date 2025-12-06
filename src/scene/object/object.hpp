@@ -49,8 +49,8 @@ class Object {
 public:
     Object() {};
     virtual float rayIntersection(const Ray &ray) = 0;
-    virtual void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) = 0;
-    virtual void drawUI(int &frameCount) = 0;
+    virtual bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) = 0;
+    virtual bool drawUI() = 0;
     
     void getStruct(void) {};
     virtual ObjectType getType() = 0;
@@ -60,4 +60,4 @@ private:
 };
 
 bool isnan4x4(glm::mat4 mat);
-void drawMaterialUI(int &frameCount, Material &mat);
+bool drawMaterialUI(Material &mat);

@@ -21,32 +21,41 @@ Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera 
     return Ray{ camera.getPosition(), dir };
 }
 
-void drawMaterialUI(int &frameCount, Material &mat) {
+bool drawMaterialUI(Material &mat) {
+    bool updated = false;
+
     ImGui::SeparatorText("Material");
     const char *types[5] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Animated" };
-    if (ImGui::Combo("##Mat-type", (int*)&mat.type, types, IM_ARRAYSIZE(types))) frameCount = 0;
+    if (ImGui::Combo("##Mat-type", (int*)&mat.type, types, IM_ARRAYSIZE(types)))
+        updated = true;
     
-    if (mat.type == MaterialType::ANIMATED) return;
+    if (mat.type == MaterialType::ANIMATED) return false;
 
     ImGui::Text("Albedo:");
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo))) frameCount = 0;
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+        updated = true;
     
     switch (mat.type) {
         case MaterialType::LAMBERTIAN: break;
         case MaterialType::METAL: {
             ImGui::Text("Fuzz:");
-            if (ImGui::DragFloat("##Mat-fuzz", &mat.fuzz, 0.01, 0.0, 1.0)) frameCount = 0;
+            if (ImGui::DragFloat("##Mat-fuzz", &mat.fuzz, 0.01, 0.0, 1.0))
+                updated = true;
         } break;
         case MaterialType::DIELECTRIC: {
             ImGui::Text("Refraction Index:");
-            if (ImGui::DragFloat("##Mat-index", &mat.refraction_index, 0.001, 0.01, 10.0, "%.3f")) frameCount = 0;
+            if (ImGui::DragFloat("##Mat-index", &mat.refraction_index, 0.001, 0.01, 10.0, "%.3f"))
+                updated = true;
         } break;
         case MaterialType::EMISSIVE: {
             ImGui::Text("Intensity:");
-            if (ImGui::DragFloat("##Mat-intensity", &mat.intensity, 0.1, 0.0, 100.0)) frameCount = 0;
+            if (ImGui::DragFloat("##Mat-intensity", &mat.intensity, 0.1, 0.0, 100.0))
+                updated = true;
         } break;
         default: break;
     }
+
+    return updated;
 }
 
 bool isnan4x4(glm::mat4 mat) {

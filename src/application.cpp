@@ -162,20 +162,20 @@ void Application::initScene() {
         Material {
             .type = DIELECTRIC,
             .albedo = { 0.95, 0.8, 0.9 },
-            .refraction_index = 1.05,
+            .refraction_index = 1.5,
         }
     );
 
-    scene.pushSphere(
-        "Metal",
-        glm::vec3( 2.0, 0.0, 0.0),
-        1.0 - 0.01,
-        Material {
-            .type = METAL,
-            .albedo = { 0.8, 0.6, 0.2 },
-            .fuzz = 0.01,
-        }
-    );
+    // scene.pushSphere(
+    //     "Metal",
+    //     glm::vec3( 2.0, 0.0, 0.0),
+    //     1.0 - 0.01,
+    //     Material {
+    //         .type = METAL,
+    //         .albedo = { 0.8, 0.6, 0.2 },
+    //         .fuzz = 0.01,
+    //     }
+    // );
 
     scene.pushBox(
         "Left",
@@ -282,6 +282,8 @@ void Application::run() {
             frameCount = 0;
         }
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) frameCount = 0;
+
+        if (scene.isUpdated()) frameCount = 0;
 
         RaytracingUBO raytracingUBO;
         ScreenUBO screenUBO;
@@ -470,7 +472,6 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
         scene.drawGuizmo(
-            frameCount,
             camera.getView(),
             camera.getProjection(engine.getWindow().get())
         );
@@ -517,11 +518,11 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PopItemWidth();
         ImGui::Separator();
         
-        scene.drawNewObjectUI(frameCount);
+        scene.drawNewObjectUI();
     }
     ImGui::End();
     
-    scene.drawSelectedUI(frameCount);
+    scene.drawSelectedUI();
 
     ImGui::Render();
     

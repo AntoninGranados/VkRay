@@ -27,18 +27,23 @@ public:
     void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
     void fillBuffers(VkSmol &engine);
     
-    void drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj);
-    void drawNewObjectUI(int &frameCount);
-    void drawSelectedUI(int &frameCount);
+    void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
+    void drawNewObjectUI();
+    void drawSelectedUI();
 
     void clearSelection() { selectedObjectId = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera);
 
     std::vector<bufferList_t> getBufferLists() { return { sphereBuffers, planeBuffers, boxBuffers, objectBuffers }; }
 
+    // Returns true if the scene have been updated this the last call of this function
+    bool isUpdated();
+
 private:
     bufferList_t sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
     
     int selectedObjectId = -1;
     std::vector<Object*> objects;
+
+    bool updated;
 };

@@ -12,7 +12,7 @@ float Plane::rayIntersection(const Ray &ray) {
     return t >= 0.0f ? t : -1.0f;
 }
 
-void Plane::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) {
+bool Plane::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     const glm::vec3 up = glm::abs(normal.z) < 0.999f ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
     const glm::vec3 tangent = glm::normalize(glm::cross(up, normal));
     const glm::vec3 bitangent = glm::cross(normal, tangent);
@@ -30,16 +30,19 @@ void Plane::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return;
+        if (isnan4x4(model)) return false;
 
         point = glm::vec3(model[3]);
         normal = glm::normalize(glm::vec3(model[2]));
         
-        frameCount = 0;
+        return true;
     }
+    return false;
 }
 
-void Plane::drawUI(int &frameCount) {
+bool Plane::drawUI() {
+    bool updated = false;
+    
     char buff[128];
     memcpy(buff, name.data(), name.size());
     ImGui::Text("Name:");
@@ -48,16 +51,19 @@ void Plane::drawUI(int &frameCount) {
     
     ImGui::Text("Point:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat3("##Point", glm::value_ptr(point), 0.01)) frameCount = 0;
+    if (ImGui::DragFloat3("##Point", glm::value_ptr(point), 0.01))
+        updated = true;
     ImGui::PopItemWidth();
     
     ImGui::Text("Normal:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat3("##Normal", glm::value_ptr(normal), 0.01)) frameCount = 0;
+    if (ImGui::DragFloat3("##Normal", glm::value_ptr(normal), 0.01))
+        updated = true;
     ImGui::PopItemWidth();
     normal = glm::normalize(normal);
     
-    drawMaterialUI(frameCount, mat);
+    updated |= drawMaterialUI(mat);
+    return updated;
 }
 
 GpuPlane Plane::getStruct() {

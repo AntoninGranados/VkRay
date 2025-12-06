@@ -20,7 +20,7 @@ float Sphere::rayIntersection(const Ray &ray) {
     return t >= 0.0f ? t : -1.0f;
 }
 
-void Sphere::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 &proj) {
+bool Sphere::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     glm::mat4 model = glm::translate(glm::mat4(1.0), center);
     model = glm::scale(model, glm::vec3(radius));
 
@@ -31,18 +31,21 @@ void Sphere::drawGuizmo(int &frameCount, const glm::mat4 &view, const glm::mat4 
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return;
+        if (isnan4x4(model)) return false;
 
         glm::vec3 translation, rotation, scale;
         ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
         center = translation;
         radius = glm::max(scale.x, 0.1f);
 
-        frameCount = 0;
+        return true;
     }
+    return false;
 }
 
-void Sphere::drawUI(int &frameCount) {
+bool Sphere::drawUI() {
+    bool updated = false;
+
     char buff[128];
     memcpy(buff, name.data(), name.size());
     ImGui::Text("Name:");
@@ -51,15 +54,18 @@ void Sphere::drawUI(int &frameCount) {
     
     ImGui::Text("Position:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat3("##Position", glm::value_ptr(center), 0.01)) frameCount = 0;
+    if (ImGui::DragFloat3("##Position", glm::value_ptr(center), 0.01))
+        updated = true;
     ImGui::PopItemWidth();
     
     ImGui::Text("Radius:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Radius", &radius, 0.01, 0.0)) frameCount = 0;
+    if (ImGui::DragFloat("##Radius", &radius, 0.01, 0.0))
+        updated = true;
     ImGui::PopItemWidth();
     
-    drawMaterialUI(frameCount, mat);
+    updated |= drawMaterialUI(mat);
+    return updated;
 }
 
 GpuSphere Sphere::getStruct() {
