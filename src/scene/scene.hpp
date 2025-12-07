@@ -45,5 +45,5 @@ private:
     int selectedObjectId = -1;
     std::vector<Object*> objects;
 
-    bool updated;
+    bool updated = false;
 };

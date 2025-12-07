@@ -21,10 +21,9 @@ public:
     bool drawUI() override;
     
     GpuPlane getStruct();
-    ObjectType getType() override { return ObjectType::PLANE; };
+    ObjectType getType() override { return ObjectType::Plane; };
 
 private:
-    std::string name;
     GpuPlane plane;
 
     glm::vec3 point;

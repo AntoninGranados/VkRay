@@ -21,10 +21,9 @@ public:
     bool drawUI() override;
     
     GpuBox getStruct();
-    ObjectType getType() override { return ObjectType::BOX; };
+    ObjectType getType() override { return ObjectType::Box; };
 
 private:
-    std::string name;
     GpuBox box;
 
     glm::vec3 cornerMin;

@@ -7,6 +7,7 @@
 
 #include "./engine/engine.hpp"
 #include "./camera.hpp"
+#include "./notification.hpp"
 #include "./scene/scene.hpp"
 #include "./scene/object/object.hpp"
 
@@ -28,15 +29,12 @@ struct RaytracingUBO {
     float time;
 
     int timeOfDay;
+
+    int maxBounces;
+    int samplesPerPixel;
 };
 
 struct ScreenUBO {
-};
-
-enum MessageType {
-    INFO,
-    WARNING,
-    ERROR,
 };
 
 class Application {
@@ -65,13 +63,16 @@ private:
     size_t frame = 0;
     int frameCount = 0;
 
-    Camera camera = Camera(glm::vec3(0.0f, 5.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     int timeOfDay = 1;
+    int maxBounces = 5;
+    int samplesPerPixel = 1;
+
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;
     bool uiToggled = true;
 
-    std::vector<std::pair<MessageType, std::string> > notifications;
+    NotificationManager notificationManager;
 
     void initScene();
     void drawUI(CommandBuffer commandBuffer);

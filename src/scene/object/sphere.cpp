@@ -1,7 +1,6 @@
 #include "sphere.hpp"
 
-Sphere::Sphere(std::string name, glm::vec3 center, float radius, Material mat):
-    name(name), center(center), radius(radius), mat(mat) {
+Sphere::Sphere(std::string name, glm::vec3 center, float radius, Material mat): Object(name), center(center), radius(radius), mat(mat) {
 }
 
 float Sphere::rayIntersection(const Ray &ray) {
@@ -31,12 +30,19 @@ bool Sphere::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return false;
+        if (isInvalid(model)) return false;
 
         glm::vec3 translation, rotation, scale;
         ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
-        center = translation;
-        radius = glm::max(scale.x, 0.1f);
+        const float maxStep = maxStepPerFrame(MAX_GIZMO_LINEAR_SPEED);
+        const float maxScaleStep = maxStepPerFrame(MAX_GIZMO_SCALE_SPEED);
+
+        glm::vec3 delta = translation - center;
+        center += clampVecDelta(delta, maxStep);
+
+        float targetRadius = glm::max(scale.x, 0.1f);
+        radius += clampScalarDelta(targetRadius - radius, maxScaleStep);
+        radius = glm::max(radius, 0.1f);
 
         return true;
     }
@@ -45,12 +51,6 @@ bool Sphere::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 
 bool Sphere::drawUI() {
     bool updated = false;
-
-    char buff[128];
-    memcpy(buff, name.data(), name.size());
-    ImGui::Text("Name:");
-    ImGui::InputText("##Name", buff, 128);
-    name = std::string(buff);
     
     ImGui::Text("Position:");
     ImGui::PushItemWidth(-FLT_MIN);

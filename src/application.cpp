@@ -24,7 +24,7 @@ Application::Application() {
             if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse || ImGuizmo::IsUsing()))
                 return;
             if (app->camera.cursorPosCallback(window, x, y))
-                app->frameCount = 1;
+                app->frameCount = 0;
         }
     );
     glfwSetScrollCallback(
@@ -34,7 +34,7 @@ Application::Application() {
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
             if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
             if (app->camera.scrollCallback(window, xoffset, yoffset))
-                app->frameCount = 1;
+                app->frameCount = 0;
         }
     );
 
@@ -160,7 +160,7 @@ void Application::initScene() {
         glm::vec3(-2.0, 0.0, 0.0),
         1.0 - 0.01,
         Material {
-            .type = DIELECTRIC,
+            .type = Dielectric,
             .albedo = { 0.95, 0.8, 0.9 },
             .refraction_index = 1.5,
         }
@@ -171,7 +171,7 @@ void Application::initScene() {
     //     glm::vec3( 2.0, 0.0, 0.0),
     //     1.0 - 0.01,
     //     Material {
-    //         .type = METAL,
+    //         .type = Metal,
     //         .albedo = { 0.8, 0.6, 0.2 },
     //         .fuzz = 0.01,
     //     }
@@ -182,7 +182,7 @@ void Application::initScene() {
         glm::vec3(4.0,-4.0,-4.0),
         glm::vec3(4.1, 4.0, 4.0),
         Material {
-            .type = LAMBERTIAN,
+            .type = Lambertian,
             .albedo = { 1.0, 0.0, 0.0 },
         }
     );
@@ -192,7 +192,7 @@ void Application::initScene() {
         glm::vec3(-4.1,-4.0,-4.0),
         glm::vec3(-4.0, 4.0, 4.0),
         Material {
-            .type = LAMBERTIAN,
+            .type = Lambertian,
             .albedo = { 0.0, 1.0, 0.0 },
         }
     );
@@ -202,7 +202,7 @@ void Application::initScene() {
         glm::vec3(-4.0, 4.0,-4.0),
         glm::vec3( 4.0, 4.1, 4.0),
         Material {
-            .type = LAMBERTIAN,
+            .type = Lambertian,
             .albedo = { 1.0, 1.0, 1.0 },
         }
     );
@@ -212,7 +212,7 @@ void Application::initScene() {
         glm::vec3(-4.0,-4.1,-4.0),
         glm::vec3( 4.0,-4.0, 4.0),
         Material {
-            .type = LAMBERTIAN,
+            .type = Lambertian,
             .albedo = { 1.0, 1.0, 1.0 },
         }
     );
@@ -222,7 +222,7 @@ void Application::initScene() {
         glm::vec3(-4.0,-4.0, 4.0),
         glm::vec3( 4.0, 4.0, 4.1),
         Material {
-            .type = LAMBERTIAN,
+            .type = Lambertian,
             .albedo = { 1.0, 1.0, 1.0 },
         }
     );
@@ -232,7 +232,7 @@ void Application::initScene() {
         glm::vec3(-1.0, 3.9,-1.0),
         glm::vec3( 1.0, 4.0, 1.0),
         Material {
-            .type = EMISSIVE,
+            .type = Emissive,
             .albedo = { 1.0, 1.0, 1.0 },
             .intensity = 100.0,
         }
@@ -265,11 +265,10 @@ void Application::run() {
             glfwGetWindowSize(engine.getWindow().get(), &width, &height);
             scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera);
         }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            scene.clearSelection();
-        
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_U) == GLFW_PRESS)
-            uiToggled = true;
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            if (!uiToggled) uiToggled = true;
+            else scene.clearSelection();
+        }
 
         if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
             frameCount = 0;
@@ -279,13 +278,22 @@ void Application::run() {
         else
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_H) == GLFW_PRESS) {
+        if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
+            frameCount = 0;
+
+        if (scene.wasUpdated()) 
+            frameCount = 0;
+
+        if (notificationManager.isCommandRequested(Command::Exit))
+            break;
+        if (notificationManager.isCommandRequested(Command::Render)) {
+            scene.clearSelection();
+            uiToggled = false;
+        }
+        if (notificationManager.isCommandRequested(Command::Reload)) {
             rebuildPipeline();
             frameCount = 0;
         }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS) frameCount = 0;
-
-        if (scene.wasUpdated()) frameCount = 0;
 
         RaytracingUBO raytracingUBO;
         ScreenUBO screenUBO;
@@ -446,7 +454,12 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     uiCapturesMouse = io.WantCaptureMouse;
     uiCapturesKeyboard = io.WantCaptureKeyboard;
 
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 5.0f;
+    style.FrameRounding = 5.0f;
+
     ImGuizmo::SetOrthographic(false);
+    ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::BeginFrame();
     
     ImGuiID dockspace_id = ImGui::GetID("Dock space");
@@ -484,6 +497,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::PopStyleVar(2);
     
     ImGui::SetNextWindowPos({0, 0});
+    ImGui::SetNextWindowBgAlpha(0.3f);
     ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration // | ImGuiWindowFlags_NoBackground
@@ -491,37 +505,10 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
     ImGui::End();
 
-    ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
-    ImGui::SetNextWindowSize({ 300, 500 });
-    ImGui::Begin("Outputs",
-        nullptr,
-        ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground
-    );
-    {
-        for (auto notification : notifications) {
-            const char* label = nullptr;
-            ImVec4 color;
-            switch (notification.first) {
-                case MessageType::INFO:    label = "[INFO]";    color = { 0.55, 0.91, 0.99, 1.00 }; break;
-                case MessageType::WARNING: label = "[WARNING]"; color = { 1.00, 0.72, 0.42, 1.00 }; break;
-                case MessageType::ERROR:   label = "[ERROR]";   color = { 1.00, 0.33, 0.33, 1.00 }; break;
-                default: continue;
-            }
+    notificationManager.drawNotifications();
 
-            std::string line = std::string(label) + " " + notification.second;
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + ImGui::GetContentRegionAvail().x);
-            ImGui::TextUnformatted(line.c_str());
-            ImGui::PopTextWrapPos();
-
-            const ImVec2 textPos = ImGui::GetItemRectMin();
-            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::ColorConvertFloat4ToU32(color), label);
-        }
-        ImGui::SetScrollHereY(1.0f);
-    }
-    ImGui::End();
-
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::Begin("Information");
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         ImGui::Text("Camera Position:\n (%4.1f, %4.1f, %4.1f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
         ImGui::Separator();
@@ -532,30 +519,21 @@ void Application::drawUI(CommandBuffer commandBuffer) {
 
         const char *cycle[3] = { "Day", "Sunset", "Night" };
         ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Combo("##TimeOfDay", &timeOfDay, cycle, IM_ARRAYSIZE(cycle))) frameCount = 0;
+        if (ImGui::Combo("##TimeOfDay", &timeOfDay, cycle, IM_ARRAYSIZE(cycle)))
+            frameCount = 0;
         ImGui::PopItemWidth();
 
         ImGui::Separator();
         
         ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Button("Hot Reload Shader (H)", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-            // std::async(&Application::rebuildPipeline, this);
-            rebuildPipeline();
-            frameCount = 0;
-        }
-        ImGui::PopItemWidth();
-        
-        ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
             frameCount = 0;
         ImGui::PopItemWidth();
-        ImGui::Separator();
-        
-        ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Button("Hide UI (U to show again)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
-            uiToggled = false;
-        ImGui::PopItemWidth();
-        ImGui::Separator();
+
+        if (ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d"))
+            frameCount = 0;
+        if (ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d"))
+            frameCount = 0;
         
         scene.drawNewObjectUI();
     }
@@ -585,6 +563,9 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
 
     raytracingUBO.timeOfDay = timeOfDay;
 
+    raytracingUBO.maxBounces = maxBounces;
+    raytracingUBO.samplesPerPixel = samplesPerPixel;
+
     // Screen UBO
     // screenUBO.XXX = ...;
 }
@@ -599,10 +580,10 @@ void Application::rebuildPipeline() {
         vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
         // std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
-        notifications.push_back({
-            MessageType::ERROR,
+        notificationManager.pushMessage(
+            NotificationType::Error,
             "Failed to compile shader [" + vertShaderPath + "]: pipeline not built"
-        });
+        );
         return;
     }
     
@@ -613,10 +594,10 @@ void Application::rebuildPipeline() {
     } catch (...) {
         engine.destroyShader(vertShader);
         // std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
-        notifications.push_back({
-            MessageType::ERROR,
+        notificationManager.pushMessage(
+            NotificationType::Error,
             "Failed to compile shader [" + fragShaderPath + "]: pipeline not built"
-        });
+        );
         return;
     }
 
@@ -647,8 +628,8 @@ void Application::rebuildPipeline() {
     engine.destroyShader(fragShader);
 
     // std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
-    notifications.push_back({
-        MessageType::INFO,
-        "Built the main pipeline by recompiling [" + vertShaderPath + "] and [" + fragShaderPath + "]"
-    });
+    notificationManager.pushMessage(
+        NotificationType::Info,
+        "(Re)Built the main pipeline"
+    );
 }

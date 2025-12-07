@@ -19,6 +19,9 @@ layout(std140, set = 0, binding = 0) uniform UBO {
     float time;
 
     int timeOfDay;
+
+    int maxBounces;
+    int samplesPerPixel;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;

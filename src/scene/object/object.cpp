@@ -26,31 +26,42 @@ bool drawMaterialUI(Material &mat) {
 
     ImGui::SeparatorText("Material");
     const char *types[5] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Animated" };
+    ImGui::PushItemWidth(-FLT_MIN);
     if (ImGui::Combo("##Mat-type", (int*)&mat.type, types, IM_ARRAYSIZE(types)))
         updated = true;
+    ImGui::PopItemWidth();
     
-    if (mat.type == MaterialType::ANIMATED) return false;
+    if (mat.type == MaterialType::Animated)
+        return updated;
 
     ImGui::Text("Albedo:");
+    ImGui::PushItemWidth(-FLT_MIN);
     if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
         updated = true;
+    ImGui::PopItemWidth();
     
     switch (mat.type) {
-        case MaterialType::LAMBERTIAN: break;
-        case MaterialType::METAL: {
+        case MaterialType::Lambertian: break;
+        case MaterialType::Metal: {
             ImGui::Text("Fuzz:");
+            ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::DragFloat("##Mat-fuzz", &mat.fuzz, 0.01, 0.0, 1.0))
                 updated = true;
+            ImGui::PopItemWidth();
         } break;
-        case MaterialType::DIELECTRIC: {
+        case MaterialType::Dielectric: {
             ImGui::Text("Refraction Index:");
+            ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::DragFloat("##Mat-index", &mat.refraction_index, 0.001, 0.01, 10.0, "%.3f"))
                 updated = true;
+            ImGui::PopItemWidth();
         } break;
-        case MaterialType::EMISSIVE: {
+        case MaterialType::Emissive: {
             ImGui::Text("Intensity:");
+            ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::DragFloat("##Mat-intensity", &mat.intensity, 0.1, 0.0, 100.0))
                 updated = true;
+            ImGui::PopItemWidth();
         } break;
         default: break;
     }
@@ -58,8 +69,11 @@ bool drawMaterialUI(Material &mat) {
     return updated;
 }
 
-bool isnan4x4(glm::mat4 mat) {
-    bool isnan = false;
-    for (size_t i = 0; i < 4; i++) isnan |= glm::any(glm::isnan(mat[i]));
-    return isnan;
+bool isInvalid(glm::mat4 mat) {
+    bool invalid = false;
+    for (size_t i = 0; i < 4; i++) {
+        const glm::vec4 col = mat[i];
+        invalid |= glm::any(glm::isnan(col)) || glm::any(glm::isinf(col));
+    }
+    return invalid;
 }

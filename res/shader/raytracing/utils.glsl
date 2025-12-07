@@ -1,8 +1,6 @@
 #ifndef UTILS_GLSL
 #define UTILS_GLSL
 
-#define MAX_BOUNCE_DEPTH 5 // TODO: make it a uniform
-#define SAMPLES_PER_PIXEL 1  // TODO: make it a uniform
 #define EPS 1e-3
 #define INFINITY abs(1.0/0.0)
 

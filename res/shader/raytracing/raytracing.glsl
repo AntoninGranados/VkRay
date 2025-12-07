@@ -75,7 +75,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     vec3 color = vec3(1);
 
     int i = 0;
-    for (; i < MAX_BOUNCE_DEPTH; i++) {
+    for (; i < ubo.maxBounces; i++) {
         if (foundIntersection(hit)) {
             vec3 attenuation;
             Ray scattered;
@@ -100,7 +100,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
             break;
         }
     }
-    if (i == MAX_BOUNCE_DEPTH)
+    if (i == ubo.maxBounces)
         color = vec3(0.0);
 
     color = min(max(color, vec3(0)), vec3(1));
@@ -119,13 +119,13 @@ void main() {
     if (ubo.frameCount <= 1) prevColor = vec3(0.0);
 
     vec3 currColor = vec3(0);
-    for (int i = 0; i < SAMPLES_PER_PIXEL; i++) {
+    for (int i = 0; i < ubo.samplesPerPixel; i++) {
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
         Ray ray = getRay(camera, fragPos + offset);
         vec3 color = traceRay(camera, ray, seed);
         currColor.rgb += color.rgb;
     }
-    currColor.rgb /= SAMPLES_PER_PIXEL;
+    currColor.rgb /= float(ubo.samplesPerPixel);
 
     float intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {

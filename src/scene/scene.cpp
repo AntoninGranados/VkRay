@@ -1,5 +1,8 @@
 #include "scene.hpp"
 
+#include <cstring>
+#include <glm/gtc/matrix_transform.hpp>
+
 void Scene::init(VkSmol &engine) {
     sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Sphere) * MAX_CAPACITY);
     boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Box) * MAX_CAPACITY);
@@ -44,19 +47,19 @@ void Scene::fillBuffers(VkSmol &engine) {
     int boxId = 0;
     for (Object *p_object : objects) {
         switch(p_object->getType()) {
-            case ObjectType::SPHERE: {
+            case ObjectType::Sphere: {
                 spheres.push_back(static_cast<Sphere*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::SPHERE, .id=sphereId });
+                objects_data.push_back({ .type=ObjectType::Sphere, .id=sphereId });
                 sphereId++;
             } break;
-            case ObjectType::PLANE: {
+            case ObjectType::Plane: {
                 planes.push_back(static_cast<Plane*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::PLANE, .id=planeId });
+                objects_data.push_back({ .type=ObjectType::Plane, .id=planeId });
                 planeId++;
             } break;
-            case ObjectType::BOX: {
+            case ObjectType::Box: {
                 boxes.push_back(static_cast<Box*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::BOX, .id=boxId });
+                objects_data.push_back({ .type=ObjectType::Box, .id=boxId });
                 boxId++;
             } break;
             default: break;
@@ -94,7 +97,9 @@ void Scene::fillBuffers(VkSmol &engine) {
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedObjectId < 0) return;
+    ImGuizmo::PushID(selectedObjectId); // To isolate the state of the gizmo
     updated |= objects[selectedObjectId]->drawGuizmo(view, proj);
+    ImGuizmo::PopID();
 }
 
 
@@ -114,7 +119,7 @@ void Scene::drawNewObjectUI() {
                 glm::vec3(0.0, 0.0, 0.0),
                 1.0,
                 Material {
-                    .type = LAMBERTIAN,
+                    .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
             );
@@ -128,7 +133,7 @@ void Scene::drawNewObjectUI() {
                 glm::vec3( 0.0, 0.0, 0.0),
                 glm::vec3( 0.0, 1.0, 0.0),
                 Material {
-                    .type = LAMBERTIAN,
+                    .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
             );
@@ -142,12 +147,17 @@ void Scene::drawNewObjectUI() {
                 glm::vec3(-1.0,-1.0,-1.0),
                 glm::vec3( 1.0, 1.0, 1.0),
                 Material {
-                    .type = LAMBERTIAN,
+                    .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
             );
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
+        if (ImGui::Button("Cancel", { 100, 0 })) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
 
         ImGui::EndPopup();
     }
@@ -158,18 +168,29 @@ void Scene::drawSelectedUI() {
 
     std::string typeName;
     switch (objects[selectedObjectId]->getType()) {
-        case ObjectType::SPHERE:    typeName = "Sphere"; break;
-        case ObjectType::PLANE:     typeName = "Plane"; break;
-        case ObjectType::BOX:       typeName = "Box"; break;
+        case ObjectType::Sphere:    typeName = "Sphere"; break;
+        case ObjectType::Plane:     typeName = "Plane"; break;
+        case ObjectType::Box:       typeName = "Box"; break;
         default: break; // UNREACHABLE
     }
 
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowSize({ 200, 0 });
     ImGui::Begin(
         typeName.c_str(),
         nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
     );
     {
+        char buff[128] = {};
+        const std::string &name = objects[selectedObjectId]->getName();
+        std::strncpy(buff, name.c_str(), sizeof(buff) - 1);
+        ImGui::Text("Name:");
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::InputText("##Name", buff, 128);
+        ImGui::PopItemWidth();
+        objects[selectedObjectId]->setName(std::string(buff));
+        
         updated |= objects[selectedObjectId]->drawUI();
     
         ImGui::Separator();

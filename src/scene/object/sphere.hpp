@@ -21,10 +21,9 @@ public:
     bool drawUI() override;
     
     GpuSphere getStruct();
-    ObjectType getType() override { return ObjectType::SPHERE; };
+    ObjectType getType() override { return ObjectType::Sphere; };
 
 private:
-    std::string name;
     GpuSphere sphere;
 
     glm::vec3 center;

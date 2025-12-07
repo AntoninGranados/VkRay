@@ -1,7 +1,5 @@
 #include "camera.hpp"
 
-#include <iostream>
-
 Camera::Camera(glm::vec3 position, glm::vec3 direction): position(position), direction(direction) {}
 
 bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {

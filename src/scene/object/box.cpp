@@ -3,8 +3,7 @@
 #include <cmath>
 #include <limits>
 
-Box::Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat):
-    name(name), cornerMin(cornerMin), cornerMax(cornerMax), mat(mat) {
+Box::Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat): Object(name), cornerMin(cornerMin), cornerMax(cornerMax), mat(mat) {
 }
 
 float Box::rayIntersection(const Ray &ray) {
@@ -34,6 +33,7 @@ float Box::rayIntersection(const Ray &ray) {
 
 bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     glm::vec3 center = (cornerMax + cornerMin) * glm::vec3(0.5);
+    glm::vec3 halfSize = (cornerMax - cornerMin) * glm::vec3(0.5);
     glm::mat4 model = glm::translate(glm::mat4(1.0), center);
     model = glm::scale(model, glm::vec3(cornerMax - cornerMin));
 
@@ -44,13 +44,23 @@ bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return false;
+        if (isInvalid(model)) return false;
 
         glm::vec3 translation, rotation, scale;
         ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
-        const glm::vec3 halfSize = glm::max(scale, glm::vec3(0.1)) * 0.5f;
-        cornerMin = translation - halfSize;
-        cornerMax = translation + halfSize;
+        const float maxStep = maxStepPerFrame(MAX_GIZMO_LINEAR_SPEED);
+        const float maxScaleStep = maxStepPerFrame(MAX_GIZMO_SCALE_SPEED);
+
+        glm::vec3 centerDelta = translation - center;
+        center += clampVecDelta(centerDelta, maxStep);
+
+        glm::vec3 targetHalfSize = glm::max(scale, glm::vec3(0.1f)) * 0.5f;
+        glm::vec3 halfSizeDelta = targetHalfSize - halfSize;
+        halfSize += clampVecDeltaPerAxis(halfSizeDelta, maxScaleStep);
+        halfSize = glm::max(halfSize, glm::vec3(0.05f));
+
+        cornerMin = center - halfSize;
+        cornerMax = center + halfSize;
         
         return true;
     }
@@ -60,12 +70,6 @@ bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 
 bool Box::drawUI() {
     bool updated = false;
-    
-    char buff[128];
-    memcpy(buff, name.data(), name.size());
-    ImGui::Text("Name:");
-    ImGui::InputText("##Name", buff, 128);
-    name = std::string(buff);
     
     ImGui::Text("Corner Max:");
     ImGui::PushItemWidth(-FLT_MIN);

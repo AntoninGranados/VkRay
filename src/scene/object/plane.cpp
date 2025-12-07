@@ -1,7 +1,8 @@
+#include <cmath>
+
 #include "plane.hpp"
 
-Plane::Plane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat):
-    name(name), point(point), normal(normal), mat(mat) {
+Plane::Plane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat): Object(name), point(point), normal(normal), mat(mat) {
 }
 
 float Plane::rayIntersection(const Ray &ray) {
@@ -30,10 +31,22 @@ bool Plane::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
         ImGuizmo::MODE::WORLD, 
         glm::value_ptr(model)
     )) {
-        if (isnan4x4(model)) return false;
+        if (isInvalid(model)) return false;
 
-        point = glm::vec3(model[3]);
-        normal = glm::normalize(glm::vec3(model[2]));
+        const float maxStep = maxStepPerFrame(MAX_GIZMO_LINEAR_SPEED);
+        const float maxAngularStep = maxStepPerFrame(MAX_GIZMO_ANGULAR_SPEED);
+
+        glm::vec3 targetPoint = glm::vec3(model[3]);
+        glm::vec3 delta = targetPoint - point;
+        point += clampVecDelta(delta, maxStep);
+
+        glm::vec3 targetNormal = glm::normalize(glm::vec3(model[2]));
+        float angle = std::acos(glm::clamp(glm::dot(glm::normalize(normal), targetNormal), -1.0f, 1.0f));
+        if (angle > maxAngularStep && angle > 1e-5f && maxAngularStep > 0.0f) {
+            float t = maxAngularStep / angle;
+            targetNormal = glm::normalize(glm::mix(normal, targetNormal, t));
+        }
+        normal = targetNormal;
         
         return true;
     }
@@ -42,12 +55,6 @@ bool Plane::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 
 bool Plane::drawUI() {
     bool updated = false;
-    
-    char buff[128];
-    memcpy(buff, name.data(), name.size());
-    ImGui::Text("Name:");
-    ImGui::InputText("##Name", buff, 128);
-    name = std::string(buff);
     
     ImGui::Text("Point:");
     ImGui::PushItemWidth(-FLT_MIN);
