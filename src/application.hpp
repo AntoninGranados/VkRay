@@ -79,7 +79,7 @@ private:
     bool uiCapturesKeyboard = false;
     bool uiToggled = true;
 
-    NotificationManager notificationManager;
+    static NotificationManager notificationManager;
 
     void initScene();
     void drawUI(CommandBuffer commandBuffer);

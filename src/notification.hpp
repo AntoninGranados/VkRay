@@ -9,6 +9,7 @@ enum NotificationType : int{
     Warning,
     Error,
     Command,
+    Debug,
     Other,
 };
 

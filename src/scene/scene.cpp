@@ -3,11 +3,16 @@
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 
+constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
+
 void Scene::init(VkSmol &engine) {
-    sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Sphere) * sphereBuffersCapacity);
-    planeBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Plane) * planeBuffersCapacity);
-    boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Box) * boxBuffersCapacity);
-    objectBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(unsigned int) + sizeof(int) + sizeof(Object) * objectBuffersCapacity);
+    sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuSphere) * sphereBuffersCapacity);
+    planeBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuPlane) * planeBuffersCapacity);
+    boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuBox) * boxBuffersCapacity);
+    objectBuffers = engine.initBufferList(
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffersCapacity
+    );
 }
 
 void Scene::destroy(VkSmol &engine) {
@@ -17,98 +22,114 @@ void Scene::destroy(VkSmol &engine) {
     engine.destroyBufferList(objectBuffers);
 }
 
-void resizeBuffer(VkSmol &engine, bufferList_t &bufferList, size_t &capacity, size_t objectSize) {
+void Scene::resizeBuffer(VkSmol &engine, bufferList_t &bufferList, size_t &capacity, size_t objectSize, size_t baseSize) {
+    engine.waitIdle();
+
+    char buff[128];
+    snprintf(buff, 128, "Resize buffer %zu -> %zu", capacity, capacity*2);
+    messageCallback(NotificationType::Debug, buff);
+
     engine.destroyBufferList(bufferList);
     capacity *= 2;
-    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, objectSize * capacity);
-
+    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
 }
 
-void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Material mat) {
-    if (objectBuffersSize >= objectBuffersCapacity)
-        throw std::runtime_error("Object overflow");
+bool Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
+    if (sphereBuffersSize >= sphereBuffersCapacity) {
+        resizeBuffer(engine, sphereBuffers, sphereBuffersCapacity, sizeof(GpuSphere));
+    }
+    if (objectBuffersSize >= objectBuffersCapacity) {
+        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
+    }
     objects.push_back(new Sphere(name, center, radius, mat));
     
     sphereBuffersSize++;
     objectBuffersSize++;
+
+    return true;
 }
 
-void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
-    if (objectBuffersSize >= objectBuffersCapacity)
-    throw std::runtime_error("Object overflow");
+bool Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
+    if (planeBuffersSize >= planeBuffersCapacity) {
+        resizeBuffer(engine, planeBuffers, planeBuffersCapacity, sizeof(GpuPlane));
+    }
+    if (objectBuffersSize >= objectBuffersCapacity) {
+        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
+    }
     objects.push_back(new Plane(name, point, normal, mat));
     
     planeBuffersSize++;
     objectBuffersSize++;
+
+    return true;
 }
 
-void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
-    if (objectBuffersSize >= objectBuffersCapacity)
-    throw std::runtime_error("Object overflow");
+bool Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
+    if (boxBuffersSize >= boxBuffersCapacity) {
+        resizeBuffer(engine, boxBuffers, boxBuffersCapacity, sizeof(GpuBox));
+    }
+    if (objectBuffersSize >= objectBuffersCapacity) {
+        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
+    }
     objects.push_back(new Box(name, cornerMin, cornerMax, mat));
     
     boxBuffersSize++;
     objectBuffersSize++;
+
+    return true;
 }
 
 void Scene::fillBuffers(VkSmol &engine) {
     // TODO: Only refill them after an update (not every frame)
-    std::vector<GpuSphere> spheres;
-    std::vector<GpuPlane> planes;
-    std::vector<GpuBox> boxes;
-    std::vector<GpuObject> objects_data;
+    std::vector<GpuSphere> spheres(sphereBuffersCapacity);
+    std::vector<GpuPlane> planes(planeBuffersCapacity);
+    std::vector<GpuBox> boxes(boxBuffersCapacity);
+    std::vector<GpuObject> objects_data(objectBuffersCapacity);
 
     int sphereId = 0;
     int planeId = 0;
     int boxId = 0;
+    unsigned int objectCount = 0;
     for (Object *p_object : objects) {
         switch(p_object->getType()) {
             case ObjectType::Sphere: {
-                spheres.push_back(static_cast<Sphere*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::Sphere, .id=sphereId });
+                spheres[sphereId] = static_cast<Sphere*>(p_object)->getStruct();
+                objects_data[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
                 sphereId++;
+                objectCount++;
             } break;
             case ObjectType::Plane: {
-                planes.push_back(static_cast<Plane*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::Plane, .id=planeId });
+                planes[planeId] = static_cast<Plane*>(p_object)->getStruct();
+                objects_data[objectCount] = { .type=ObjectType::Plane, .id=planeId };
                 planeId++;
+                objectCount++;
             } break;
             case ObjectType::Box: {
-                boxes.push_back(static_cast<Box*>(p_object)->getStruct());
-                objects_data.push_back({ .type=ObjectType::Box, .id=boxId });
+                boxes[boxId] = static_cast<Box*>(p_object)->getStruct();
+                objects_data[objectCount] = { .type=ObjectType::Box, .id=boxId };
                 boxId++;
+                objectCount++;
             } break;
             default: break;
         }
     }
 
-    void *sphereData = malloc(sizeof(GpuSphere) * spheres.size());
-    void *planeData = malloc(sizeof(GpuPlane) * planes.size());
-    void *boxData = malloc(sizeof(GpuBox) * boxes.size());
-    void *objectData = malloc(sizeof(unsigned int) + sizeof(int) + sizeof(GpuObject) * objects_data.size());
-    
-    memcpy(sphereData, spheres.data(), sizeof(GpuSphere) * spheres.size());
-    memcpy(planeData, planes.data(), sizeof(GpuPlane) * planes.size());
-    memcpy(boxData, boxes.data(), sizeof(GpuBox) * boxes.size());
-    
-    unsigned int count = static_cast<unsigned int>(objects_data.size());
     int selected = static_cast<int>(selectedObjectId);  // should be the same as the selectedObjectId (only spheres for now)
-    int size = 0;
-    memcpy(static_cast<char*>(objectData) + size, &count, sizeof(count));
-    size += sizeof(count);
-    memcpy(static_cast<char*>(objectData) + size, &selected, sizeof(selected));
-    size += sizeof(selected);
-    memcpy(static_cast<char*>(objectData) + size, objects_data.data(), sizeof(GpuObject) * objects_data.size());
-    
-    engine.fillBuffer(engine.getBuffer(sphereBuffers), sphereData);
-    engine.fillBuffer(engine.getBuffer(planeBuffers), planeData);
-    engine.fillBuffer(engine.getBuffer(boxBuffers), boxData);
-    engine.fillBuffer(engine.getBuffer(objectBuffers), objectData);
-    
-    free(sphereData);
-    free(planeData);
-    free(boxData);
-    free(objectData);
+
+    engine.fillBuffer(engine.getBuffer(sphereBuffers), spheres.data());
+    engine.fillBuffer(engine.getBuffer(planeBuffers), planes.data());
+    engine.fillBuffer(engine.getBuffer(boxBuffers), boxes.data());
+
+    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffersCapacity, 0);
+    size_t offset = 0;
+    memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
+    offset += sizeof(objectCount);
+    memcpy(objectData.data() + offset, &selected, sizeof(selected));
+    offset += sizeof(selected);
+    if (objectCount > 0)
+        memcpy(objectData.data() + offset, objects_data.data(), sizeof(GpuObject) * objectCount);
+
+    engine.fillBuffer(engine.getBuffer(objectBuffers), objectData.data());
 }
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
@@ -119,7 +140,7 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 }
 
 
-void Scene::drawNewObjectUI() {
+void Scene::drawNewObjectUI(VkSmol &engine) {
     ImGui::SeparatorText("Scene");
 
     if (ImGui::Button("Add object", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New Object")) {
@@ -128,9 +149,8 @@ void Scene::drawNewObjectUI() {
 
     if (ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
         if (ImGui::Button("Sphere", { 100, 0 })) {
-            selectedObjectId = objects.size();
-            updated = true;
-            pushSphere(
+            if (pushSphere(
+                engine,
                 "New Sphere",
                 glm::vec3(0.0, 0.0, 0.0),
                 1.0,
@@ -138,13 +158,16 @@ void Scene::drawNewObjectUI() {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            );
+            )) {
+                selectedObjectId = objects.size() - 1;
+                updated = true;
+                std::cout << selectedObjectId << std::endl;
+            }
             ImGui::CloseCurrentPopup();
         }
         if (ImGui::Button("Plane", { 100, 0 })) {
-            selectedObjectId = objects.size();
-            updated = true;
-            pushPlane(
+            if (pushPlane(
+                engine,
                 "New Plane",
                 glm::vec3( 0.0, 0.0, 0.0),
                 glm::vec3( 0.0, 1.0, 0.0),
@@ -152,13 +175,15 @@ void Scene::drawNewObjectUI() {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            );
+            )) {
+                selectedObjectId = objects.size() - 1;
+                updated = true;
+            }
             ImGui::CloseCurrentPopup();
         }
         if (ImGui::Button("Box", { 100, 0 })) {
-            selectedObjectId = objects.size();
-            updated = true;
-            pushBox(
+            if (pushBox(
+                engine,
                 "New Box",
                 glm::vec3(-1.0,-1.0,-1.0),
                 glm::vec3( 1.0, 1.0, 1.0),
@@ -166,7 +191,10 @@ void Scene::drawNewObjectUI() {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            );
+            )) {
+                selectedObjectId = objects.size() - 1;
+                updated = true;
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });

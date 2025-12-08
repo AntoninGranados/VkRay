@@ -14,21 +14,25 @@
 #include "object/sphere.hpp"
 #include "object/plane.hpp"
 #include "object/box.hpp"
-
-#define MAX_CAPACITY 8  // TODO: realloc buffer instead of using a fixed max capacity
+#include "../notification.hpp"
 
 class Scene {
 public:
     void init(VkSmol &engine);
     void destroy(VkSmol &engine);
+    void setMessageCallback(void (*messageCallback_)(NotificationType, std::string)) {
+        messageCallback = messageCallback_;
+    }
 
-    void pushSphere(std::string name, glm::vec3 center, float radius, Material mat);
-    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
-    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
+    // The engine is needed in case we have to resize a buffer
+    bool pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat);
+    bool pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
+    bool pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
+
     void fillBuffers(VkSmol &engine);
     
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
-    void drawNewObjectUI();
+    void drawNewObjectUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
     void drawSelectedUI();
 
     void clearSelection() { selectedObjectId = -1; }
@@ -40,6 +44,8 @@ public:
     bool wasUpdated();
 
 private:
+    void resizeBuffer(VkSmol &engine, bufferList_t &bufferList, size_t &capacity, size_t objectSize, size_t baseSize = 0);
+
     bufferList_t sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
     size_t sphereBuffersCapacity = 8, planeBuffersCapacity = 8, boxBuffersCapacity = 8, objectBuffersCapacity = 8;
     size_t sphereBuffersSize = 0, planeBuffersSize = 0, boxBuffersSize = 0, objectBuffersSize = 0;
@@ -48,4 +54,6 @@ private:
     std::vector<Object*> objects;
 
     bool updated = false;
+
+    void (*messageCallback)(NotificationType, std::string) = nullptr;
 };

@@ -11,6 +11,8 @@ const std::vector<index_t> indices = {
     0, 1, 2, 2, 3, 0
 };
 
+NotificationManager Application::notificationManager;
+
 Application::Application() {
     engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0));
 
@@ -155,7 +157,12 @@ Application::~Application() {
 void Application::initScene() {
     scene.init(engine);
 
+    scene.setMessageCallback([](NotificationType type, std::string content) {
+        Application::notificationManager.pushMessage(type, content);
+    });
+
     scene.pushSphere(
+        engine,
         "Glass",
         glm::vec3(-2.0, 0.0, 0.0),
         1.5,
@@ -167,6 +174,7 @@ void Application::initScene() {
     );
 
     scene.pushSphere(
+        engine,
         "Metal",
         glm::vec3( 2.0, 0.0, 0.0),
         1.5,
@@ -178,6 +186,7 @@ void Application::initScene() {
     );
 
     scene.pushBox(
+        engine,
         "Left",
         glm::vec3(4.0,-4.0,-4.0),
         glm::vec3(4.1, 4.0, 4.0),
@@ -188,6 +197,7 @@ void Application::initScene() {
     );
     
     scene.pushBox(
+        engine,
         "Right",
         glm::vec3(-4.1,-4.0,-4.0),
         glm::vec3(-4.0, 4.0, 4.0),
@@ -198,6 +208,7 @@ void Application::initScene() {
     );
     
     scene.pushBox(
+        engine,
         "Top",
         glm::vec3(-4.0, 4.0,-4.0),
         glm::vec3( 4.0, 4.1, 4.0),
@@ -208,6 +219,7 @@ void Application::initScene() {
     );
     
     scene.pushBox(
+        engine,
         "Bottom",
         glm::vec3(-4.0,-4.1,-4.0),
         glm::vec3( 4.0,-4.0, 4.0),
@@ -218,6 +230,7 @@ void Application::initScene() {
     );
     
     scene.pushBox(
+        engine,
         "Back",
         glm::vec3(-4.0,-4.0, 4.0),
         glm::vec3( 4.0, 4.0, 4.1),
@@ -228,6 +241,7 @@ void Application::initScene() {
     );
     
     // scene.pushBox(
+    // engine,
     //     "Light",
     //     glm::vec3(-2.0, 3.9,-2.0),
     //     glm::vec3( 2.0, 4.0, 2.0),
@@ -239,6 +253,7 @@ void Application::initScene() {
     // );
     
     scene.pushSphere(
+        engine,
         "Light",
         glm::vec3(0.0, 4.0, 0.0),
         1.0,
@@ -255,6 +270,26 @@ void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while(!engine.shouldTerminate()) {
+
+        // TODO remove this !!!!
+        {   // This should only be recomputed on scene buffer update
+
+            std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
+                { imageViews[0], samplers[0] },
+                { imageViews[1], samplers[1] }
+            };
+
+            std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
+            for (size_t i = 0; i < 2; i++) {
+                std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
+                for (bufferList_t &buffers : storageBuffers) {
+                    descriptors.push_back(&buffers);
+                }
+                
+                descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
+            }
+        }
+        
         frame = (frame + 1) % 2;
         frameCount++;
 
@@ -516,8 +551,6 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
     ImGui::End();
 
-    notificationManager.drawNotifications();
-
     ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
@@ -543,16 +576,15 @@ void Application::drawUI(CommandBuffer commandBuffer) {
             frameCount = 0;
         ImGui::PopItemWidth();
 
-        if (ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d"))
-            frameCount = 0;
-        if (ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d"))
-            frameCount = 0;
+        ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
+        ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
         
-        scene.drawNewObjectUI();
+        scene.drawNewObjectUI(engine);
     }
     ImGui::End();
     
     scene.drawSelectedUI();
+    notificationManager.drawNotifications();
 
     ImGui::Render();
     

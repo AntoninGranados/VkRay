@@ -19,6 +19,7 @@ void NotificationManager::drawNotifications() {
                 case NotificationType::Warning: label = "[WARNING]"; color = { 1.00, 0.72, 0.42, 1.00 }; break;
                 case NotificationType::Error:   label = "[ERROR]";   color = { 1.00, 0.33, 0.33, 1.00 }; break;
                 case NotificationType::Command: label = ">";         color = { 0.00, 0.00, 0.00, 1.00 }; break;
+                case NotificationType::Debug:   label = "[DEBUG]";   color = { 0.74, 0.58, 0.98, 1.00 }; break;
                 default: break;
             }
 
