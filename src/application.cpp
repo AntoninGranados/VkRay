@@ -158,7 +158,7 @@ void Application::initScene() {
     scene.pushSphere(
         "Glass",
         glm::vec3(-2.0, 0.0, 0.0),
-        1.0 - 0.01,
+        1.5,
         Material {
             .type = Dielectric,
             .albedo = { 0.95, 0.8, 0.9 },
@@ -166,16 +166,16 @@ void Application::initScene() {
         }
     );
 
-    // scene.pushSphere(
-    //     "Metal",
-    //     glm::vec3( 2.0, 0.0, 0.0),
-    //     1.0 - 0.01,
-    //     Material {
-    //         .type = Metal,
-    //         .albedo = { 0.8, 0.6, 0.2 },
-    //         .fuzz = 0.01,
-    //     }
-    // );
+    scene.pushSphere(
+        "Metal",
+        glm::vec3( 2.0, 0.0, 0.0),
+        1.5,
+        Material {
+            .type = Metal,
+            .albedo = { 0.8, 0.6, 0.2 },
+            .fuzz = 0.01,
+        }
+    );
 
     scene.pushBox(
         "Left",
@@ -227,14 +227,25 @@ void Application::initScene() {
         }
     );
     
-    scene.pushBox(
+    // scene.pushBox(
+    //     "Light",
+    //     glm::vec3(-2.0, 3.9,-2.0),
+    //     glm::vec3( 2.0, 4.0, 2.0),
+    //     Material {
+    //         .type = Emissive,
+    //         .albedo = { 1.0, 1.0, 1.0 },
+    //         .intensity = 20.0,
+    //     }
+    // );
+    
+    scene.pushSphere(
         "Light",
-        glm::vec3(-1.0, 3.9,-1.0),
-        glm::vec3( 1.0, 4.0, 1.0),
+        glm::vec3(0.0, 4.0, 0.0),
+        1.0,
         Material {
             .type = Emissive,
             .albedo = { 1.0, 1.0, 1.0 },
-            .intensity = 100.0,
+            .intensity = 20.0,
         }
     );
 }
@@ -517,10 +528,12 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::Text("Camera Fov:\n %4.1f°", camera.getFov());
         ImGui::Separator();
 
-        const char *cycle[3] = { "Day", "Sunset", "Night" };
+        const char *lightModes[4] = { "Day", "Sunset", "Night", "Empty" };
         ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Combo("##TimeOfDay", &timeOfDay, cycle, IM_ARRAYSIZE(cycle)))
+        int currentLigthMode = static_cast<int>(lightMode);
+        if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
             frameCount = 0;
+        lightMode = static_cast<LightMode>(currentLigthMode);
         ImGui::PopItemWidth();
 
         ImGui::Separator();
@@ -561,7 +574,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.cameraPos = camera.getPosition();
     raytracingUBO.cameraDir = camera.getDirection();
 
-    raytracingUBO.timeOfDay = timeOfDay;
+    raytracingUBO.lightMode = lightMode;
 
     raytracingUBO.maxBounces = maxBounces;
     raytracingUBO.samplesPerPixel = samplesPerPixel;

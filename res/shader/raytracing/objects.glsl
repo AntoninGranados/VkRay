@@ -50,21 +50,28 @@ float rayPlaneIntersection(in Ray ray, in Plane plane) {
 }
 
 float rayBoxIntersection(in Ray ray, in Box box) {
-    float tmin = 0.0;
-    float tmax = INFINITY;
+    vec3 safeDir = sign(ray.dir) * max(abs(ray.dir), vec3(EPS));
+    vec3 invDir = 1.0 / safeDir;
+    bvec3 s = lessThan(ray.dir, vec3(0.0));
 
-    float t1, t2;
-    for (int d = 0; d < 3; d++) {
-        t1 = (box.cornerMin[d] - ray.origin[d]) / ray.dir[d];
-        t2 = (box.cornerMax[d] - ray.origin[d]) / ray.dir[d];
+    float tmin = ( (s.x ? box.cornerMax.x : box.cornerMin.x) - ray.origin.x) * invDir.x;
+    float tmax = ( (!s.x ? box.cornerMax.x : box.cornerMin.x) - ray.origin.x) * invDir.x;
 
-        tmin = max(tmin, min(min(t1, t2), tmax));
-        tmax = min(tmax, max(max(t1, t2), tmin));
-    }
+    float tymin = ( (s.y ? box.cornerMax.y : box.cornerMin.y) - ray.origin.y) * invDir.y;
+    float tymax = ( (!s.y ? box.cornerMax.y : box.cornerMin.y) - ray.origin.y) * invDir.y;
 
-    if (tmin < tmax)
-        return tmin > 0 ? tmin : tmax;
-    return -1;
+    tmin = max(tmin, tymin);
+    tmax = min(tmax, tymax);
+
+    float tzmin = ( (s.z ? box.cornerMax.z : box.cornerMin.z) - ray.origin.z) * invDir.z;
+    float tzmax = ( (!s.z ? box.cornerMax.z : box.cornerMin.z) - ray.origin.z) * invDir.z;
+
+    tmin = max(tmin, tzmin);
+    tmax = min(tmax, tzmax);
+
+    if (tmax >= max(tmin, EPS))
+        return (tmin >= EPS) ? tmin : tmax;
+    return -1.0;
 }
 
 // ================ NORMALS ================

@@ -37,6 +37,10 @@ Hit intersection(in Ray ray) {
             obj = objectBuffer.objects[i];
         }
     }
+
+    if (obj.type == obj_None) {
+        return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+    }
     
     vec3 p = ray.origin + ray.dir * tFinal;
     vec3 normal = getNormal(obj, p);
@@ -54,15 +58,25 @@ vec3 skyColor(vec3 dir) {
     float t = clamp(0.5*(dir.y + 1.0), 0.0, 1.0);
     vec3 zenith, horizon;
 
-    if (ubo.timeOfDay == 0) {           // Day
-        zenith = vec3(0.5, 0.7, 1.0);
-        horizon = vec3(1.0, 1.0, 1.0);
-    } else if (ubo.timeOfDay == 1) {    // Sunset
-        zenith = vec3(0.2, 0.1, 0.4);
-        horizon = vec3(1.0, 0.4, 0.2);
-    } else {                            // Night
-        zenith  = vec3(0.01, 0.01, 0.03);
-        horizon = vec3(0.05, 0.05, 0.1);
+    switch (ubo.lightMode) {
+        case lightMode_Day:
+            zenith = vec3(0.5, 0.7, 1.0);
+            horizon = vec3(1.0, 1.0, 1.0);
+            break;
+        case lightMode_Sunset:
+            zenith = vec3(0.2, 0.1, 0.4);
+            horizon = vec3(1.0, 0.4, 0.2);
+            break;
+        case lightMode_Night:
+            zenith  = vec3(0.01, 0.01, 0.03);
+            horizon = vec3(0.05, 0.05, 0.1);
+            break;
+        case lightMode_Empty:
+            return vec3(0.0);
+            break;
+        default:
+            return vec3(1.0, 0.0, 1.0);
+            break;
     }
     
     vec3 color = mix(horizon, zenith, t);
@@ -103,7 +117,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     if (i == ubo.maxBounces)
         color = vec3(0.0);
 
-    color = min(max(color, vec3(0)), vec3(1));
     return color;
 }
 

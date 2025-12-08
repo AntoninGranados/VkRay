@@ -4,35 +4,51 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 void Scene::init(VkSmol &engine) {
-    sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Sphere) * MAX_CAPACITY);
-    boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Box) * MAX_CAPACITY);
-    planeBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Plane) * MAX_CAPACITY);
-    objectBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(unsigned int) + sizeof(int) + sizeof(Object) * MAX_CAPACITY * 2);
+    sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Sphere) * sphereBuffersCapacity);
+    planeBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Plane) * planeBuffersCapacity);
+    boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(Box) * boxBuffersCapacity);
+    objectBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(unsigned int) + sizeof(int) + sizeof(Object) * objectBuffersCapacity);
 }
 
 void Scene::destroy(VkSmol &engine) {
     engine.destroyBufferList(sphereBuffers);
-    engine.destroyBufferList(boxBuffers);
     engine.destroyBufferList(planeBuffers);
+    engine.destroyBufferList(boxBuffers);
     engine.destroyBufferList(objectBuffers);
 }
 
+void resizeBuffer(VkSmol &engine, bufferList_t &bufferList, size_t &capacity, size_t objectSize) {
+    engine.destroyBufferList(bufferList);
+    capacity *= 2;
+    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, objectSize * capacity);
+
+}
+
 void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Material mat) {
-    if (objects.size() >= MAX_CAPACITY)
+    if (objectBuffersSize >= objectBuffersCapacity)
         throw std::runtime_error("Object overflow");
     objects.push_back(new Sphere(name, center, radius, mat));
+    
+    sphereBuffersSize++;
+    objectBuffersSize++;
 }
 
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
-    if (objects.size() >= MAX_CAPACITY)
-        throw std::runtime_error("Object overflow");
+    if (objectBuffersSize >= objectBuffersCapacity)
+    throw std::runtime_error("Object overflow");
     objects.push_back(new Plane(name, point, normal, mat));
+    
+    planeBuffersSize++;
+    objectBuffersSize++;
 }
 
 void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
-    if (objects.size() >= MAX_CAPACITY)
-        throw std::runtime_error("Object overflow");
+    if (objectBuffersSize >= objectBuffersCapacity)
+    throw std::runtime_error("Object overflow");
     objects.push_back(new Box(name, cornerMin, cornerMax, mat));
+    
+    boxBuffersSize++;
+    objectBuffersSize++;
 }
 
 void Scene::fillBuffers(VkSmol &engine) {
@@ -196,6 +212,14 @@ void Scene::drawSelectedUI() {
         ImGui::Separator();
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
         if (ImGui::Button("Delete", { -FLT_MIN, 0 })) {
+            switch(objects[selectedObjectId]->getType()) {
+                case ObjectType::Sphere: sphereBuffersSize--;
+                case ObjectType::Plane:  planeBuffersSize--;
+                case ObjectType::Box:    boxBuffersSize--;
+                default: break;
+            }
+            objectBuffersSize--;
+
             objects.erase(std::next(objects.begin(), selectedObjectId));
             selectedObjectId = -1;
             updated = true;

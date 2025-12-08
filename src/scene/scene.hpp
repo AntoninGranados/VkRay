@@ -41,6 +41,8 @@ public:
 
 private:
     bufferList_t sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
+    size_t sphereBuffersCapacity = 8, planeBuffersCapacity = 8, boxBuffersCapacity = 8, objectBuffersCapacity = 8;
+    size_t sphereBuffersSize = 0, planeBuffersSize = 0, boxBuffersSize = 0, objectBuffersSize = 0;
     
     int selectedObjectId = -1;
     std::vector<Object*> objects;

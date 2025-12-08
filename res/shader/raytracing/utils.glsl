@@ -4,7 +4,12 @@
 #define EPS 1e-3
 #define INFINITY abs(1.0/0.0)
 
-#define Enum uint
+#define Enum int
+
+#define lightMode_Day    Enum(0)
+#define lightMode_Sunset Enum(1)
+#define lightMode_Night  Enum(2)
+#define lightMode_Empty  Enum(3)
 
 // Needs to be here for the Hit struct
 #define obj_None    Enum(0)

@@ -13,6 +13,13 @@
 
 typedef uint16_t index_t;
 
+enum LightMode : int {
+    Day,
+    Sunset,
+    Night,
+    Empty,
+};
+
 struct ScreenVertex {
     glm::vec2 position;
 };
@@ -28,7 +35,7 @@ struct RaytracingUBO {
     int frameCount;
     float time;
 
-    int timeOfDay;
+    LightMode lightMode;
 
     int maxBounces;
     int samplesPerPixel;
@@ -64,7 +71,7 @@ private:
     int frameCount = 0;
 
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    int timeOfDay = 1;
+    LightMode lightMode = LightMode::Empty;
     int maxBounces = 5;
     int samplesPerPixel = 1;
 

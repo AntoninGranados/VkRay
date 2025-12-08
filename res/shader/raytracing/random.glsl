@@ -22,19 +22,17 @@ float rand(inout vec3 seed) {
 }
 
 vec3 randomInSphere(inout vec3 seed) {
-    while (true) {
-        vec3 p = vec3(rand(seed), rand(seed), rand(seed)) * 2 - 1;
-        float lensq = dot(p, p);
-        if (1e-160 < lensq && lensq <= 1)
-            return p / sqrt(lensq);
-    }
+    float z  = 1.0 - 2.0 * rand(seed);
+    float r  = sqrt(max(0.0, 1.0 - z*z));
+    float phi = 6.2831853 * rand(seed);
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+    return vec3(x, y, z);
 }
 
 vec3 randomInHemisphere(inout vec3 seed, vec3 normal) {
-    vec3 rand = randomInSphere(seed);
-    if (dot(rand, normal) < 0.0f)
-        return -rand;
-    return rand;
+    vec3 v = randomInSphere(seed);
+    return dot(v, normal) < 0.0 ? -v : v;
 }
 
 #endif
