@@ -3,88 +3,76 @@
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 
-constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
+void GpuBuffers::init(VkSmol &engine, size_t _objectSize, size_t _baseSize) {
+    count = 0;
+    capacity = 2;
+    objectSize = _objectSize;
+    baseSize = _baseSize;
 
-void Scene::init(VkSmol &engine) {
-    sphereBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuSphere) * sphereBuffersCapacity);
-    planeBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuPlane) * planeBuffersCapacity);
-    boxBuffers = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(GpuBox) * boxBuffersCapacity);
-    objectBuffers = engine.initBufferList(
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffersCapacity
-    );
+    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
 }
 
-void Scene::destroy(VkSmol &engine) {
-    engine.destroyBufferList(sphereBuffers);
-    engine.destroyBufferList(planeBuffers);
-    engine.destroyBufferList(boxBuffers);
-    engine.destroyBufferList(objectBuffers);
+void GpuBuffers::destroy(VkSmol &engine) {
+    engine.destroyBufferList(bufferList);
 }
 
-void Scene::resizeBuffer(VkSmol &engine, bufferList_t &bufferList, size_t &capacity, size_t objectSize, size_t baseSize) {
+void GpuBuffers::addElement(VkSmol &engine) {
+    if (count >= capacity) resize(engine);
+    count++;
+}
+
+void GpuBuffers::removeElement() {
+    count--;
+}
+
+void GpuBuffers::resize(VkSmol &engine) {
     engine.waitIdle();
-
-    char buff[128];
-    snprintf(buff, 128, "Resize buffer %zu -> %zu", capacity, capacity*2);
-    messageCallback(NotificationType::Debug, buff);
-
     engine.destroyBufferList(bufferList);
     capacity *= 2;
     bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
 }
 
-bool Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
-    if (sphereBuffersSize >= sphereBuffersCapacity) {
-        resizeBuffer(engine, sphereBuffers, sphereBuffersCapacity, sizeof(GpuSphere));
-    }
-    if (objectBuffersSize >= objectBuffersCapacity) {
-        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
-    }
+
+constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
+
+void Scene::init(VkSmol &engine) {
+    sphereBuffers.init(engine, sizeof(GpuSphere));
+    planeBuffers.init(engine, sizeof(GpuPlane));
+    boxBuffers.init(engine, sizeof(GpuBox));
+    objectBuffers.init(engine, sizeof(GpuObject), OBJECT_HEADER_SIZE);
+}
+
+void Scene::destroy(VkSmol &engine) {
+    sphereBuffers.destroy(engine);
+    planeBuffers.destroy(engine);
+    boxBuffers.destroy(engine);
+    objectBuffers.destroy(engine);
+}
+
+void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
+    sphereBuffers.addElement(engine);
+    objectBuffers.addElement(engine);
     objects.push_back(new Sphere(name, center, radius, mat));
-    
-    sphereBuffersSize++;
-    objectBuffersSize++;
-
-    return true;
 }
 
-bool Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
-    if (planeBuffersSize >= planeBuffersCapacity) {
-        resizeBuffer(engine, planeBuffers, planeBuffersCapacity, sizeof(GpuPlane));
-    }
-    if (objectBuffersSize >= objectBuffersCapacity) {
-        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
-    }
+void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
+    planeBuffers.addElement(engine);
+    objectBuffers.addElement(engine);
     objects.push_back(new Plane(name, point, normal, mat));
-    
-    planeBuffersSize++;
-    objectBuffersSize++;
-
-    return true;
 }
 
-bool Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
-    if (boxBuffersSize >= boxBuffersCapacity) {
-        resizeBuffer(engine, boxBuffers, boxBuffersCapacity, sizeof(GpuBox));
-    }
-    if (objectBuffersSize >= objectBuffersCapacity) {
-        resizeBuffer(engine, objectBuffers, objectBuffersCapacity, sizeof(GpuObject), OBJECT_HEADER_SIZE);
-    }
+void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
+    boxBuffers.addElement(engine);
+    objectBuffers.addElement(engine);
     objects.push_back(new Box(name, cornerMin, cornerMax, mat));
-    
-    boxBuffersSize++;
-    objectBuffersSize++;
-
-    return true;
 }
 
 void Scene::fillBuffers(VkSmol &engine) {
     // TODO: Only refill them after an update (not every frame)
-    std::vector<GpuSphere> spheres(sphereBuffersCapacity);
-    std::vector<GpuPlane> planes(planeBuffersCapacity);
-    std::vector<GpuBox> boxes(boxBuffersCapacity);
-    std::vector<GpuObject> objects_data(objectBuffersCapacity);
+    std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
+    std::vector<GpuPlane> planes(planeBuffers.getCapacity());
+    std::vector<GpuBox> boxes(boxBuffers.getCapacity());
+    std::vector<GpuObject> objects_data(objectBuffers.getCapacity());
 
     int sphereId = 0;
     int planeId = 0;
@@ -116,11 +104,11 @@ void Scene::fillBuffers(VkSmol &engine) {
 
     int selected = static_cast<int>(selectedObjectId);  // should be the same as the selectedObjectId (only spheres for now)
 
-    engine.fillBuffer(engine.getBuffer(sphereBuffers), spheres.data());
-    engine.fillBuffer(engine.getBuffer(planeBuffers), planes.data());
-    engine.fillBuffer(engine.getBuffer(boxBuffers), boxes.data());
+    engine.fillBuffer(engine.getBuffer(sphereBuffers.getBufferList()), spheres.data());
+    engine.fillBuffer(engine.getBuffer(planeBuffers.getBufferList()), planes.data());
+    engine.fillBuffer(engine.getBuffer(boxBuffers.getBufferList()), boxes.data());
 
-    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffersCapacity, 0);
+    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
@@ -129,7 +117,7 @@ void Scene::fillBuffers(VkSmol &engine) {
     if (objectCount > 0)
         memcpy(objectData.data() + offset, objects_data.data(), sizeof(GpuObject) * objectCount);
 
-    engine.fillBuffer(engine.getBuffer(objectBuffers), objectData.data());
+    engine.fillBuffer(engine.getBuffer(objectBuffers.getBufferList()), objectData.data());
 }
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
@@ -149,7 +137,7 @@ void Scene::drawNewObjectUI(VkSmol &engine) {
 
     if (ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
         if (ImGui::Button("Sphere", { 100, 0 })) {
-            if (pushSphere(
+            pushSphere(
                 engine,
                 "New Sphere",
                 glm::vec3(0.0, 0.0, 0.0),
@@ -158,15 +146,13 @@ void Scene::drawNewObjectUI(VkSmol &engine) {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            )) {
-                selectedObjectId = objects.size() - 1;
-                updated = true;
-                std::cout << selectedObjectId << std::endl;
-            }
+            );
+            selectedObjectId = objects.size() - 1;
+            updated = true;
             ImGui::CloseCurrentPopup();
         }
         if (ImGui::Button("Plane", { 100, 0 })) {
-            if (pushPlane(
+            pushPlane(
                 engine,
                 "New Plane",
                 glm::vec3( 0.0, 0.0, 0.0),
@@ -175,14 +161,13 @@ void Scene::drawNewObjectUI(VkSmol &engine) {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            )) {
-                selectedObjectId = objects.size() - 1;
-                updated = true;
-            }
+            );
+            selectedObjectId = objects.size() - 1;
+            updated = true;
             ImGui::CloseCurrentPopup();
         }
         if (ImGui::Button("Box", { 100, 0 })) {
-            if (pushBox(
+            pushBox(
                 engine,
                 "New Box",
                 glm::vec3(-1.0,-1.0,-1.0),
@@ -191,10 +176,9 @@ void Scene::drawNewObjectUI(VkSmol &engine) {
                     .type = Lambertian,
                     .albedo = { 1.0, 0.0, 1.0 },
                 }
-            )) {
-                selectedObjectId = objects.size() - 1;
-                updated = true;
-            }
+            );
+            selectedObjectId = objects.size() - 1;
+            updated = true;
             ImGui::CloseCurrentPopup();
         }
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
@@ -241,12 +225,12 @@ void Scene::drawSelectedUI() {
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
         if (ImGui::Button("Delete", { -FLT_MIN, 0 })) {
             switch(objects[selectedObjectId]->getType()) {
-                case ObjectType::Sphere: sphereBuffersSize--;
-                case ObjectType::Plane:  planeBuffersSize--;
-                case ObjectType::Box:    boxBuffersSize--;
+                case ObjectType::Sphere: sphereBuffers.removeElement();
+                case ObjectType::Plane:  planeBuffers.removeElement();
+                case ObjectType::Box:    boxBuffers.removeElement();
                 default: break;
             }
-            objectBuffersSize--;
+            objectBuffers.removeElement();
 
             objects.erase(std::next(objects.begin(), selectedObjectId));
             selectedObjectId = -1;
@@ -275,6 +259,18 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
 
     selectedObjectId = closest_id;
     return closest_id >= 0;
+}
+
+std::vector<bufferList_t> Scene::getBufferLists() {
+    std::vector<bufferList_t> bufferLists = {
+        sphereBuffers.getBufferList(),
+        planeBuffers.getBufferList(),
+        boxBuffers.getBufferList(),
+        objectBuffers.getBufferList(),
+    };
+
+
+    return bufferLists;
 }
 
 bool Scene::wasUpdated() {

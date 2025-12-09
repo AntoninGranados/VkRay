@@ -587,7 +587,6 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     notificationManager.drawNotifications();
 
     ImGui::Render();
-    
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
 }
 

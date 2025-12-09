@@ -1,5 +1,7 @@
 #include "notification.hpp"
 
+constexpr int MAX_NOTIFICATION_COUNT = 32;
+
 void NotificationManager::drawNotifications() {
     ImGui::SetNextWindowBgAlpha(0.3f);
     ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
@@ -12,7 +14,7 @@ void NotificationManager::drawNotifications() {
         ImGui::BeginChild("MessagesRegion", { 0, -ImGui::GetFrameHeightWithSpacing() }, 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         for (auto& n : notifications) {
-            const char* label = "";
+            std::string label = "";
             ImVec4 color;
             switch (n.type) {
                 case NotificationType::Info:    label = "[INFO]";    color = { 0.55, 0.91, 0.99, 1.00 }; break;
@@ -23,19 +25,7 @@ void NotificationManager::drawNotifications() {
                 default: break;
             }
 
-            /*
-            const float wrapPos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
-            ImGui::PushTextWrapPos(wrapPos);
-            ImGui::PushStyleColor(ImGuiCol_Text, color);
-            ImGui::TextUnformatted(label);
-            ImGui::PopStyleColor();
-            
-            ImGui::SameLine();
-            ImGui::TextUnformatted(n.content.c_str());
-            ImGui::PopTextWrapPos();
-            */
-
-            std::string line = std::string(label) + " " + n.content;
+            std::string line = label + " " + n.content;
 
             ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
             ImGui::TextUnformatted(line.c_str());
@@ -44,7 +34,7 @@ void NotificationManager::drawNotifications() {
             ImGui::GetWindowDrawList()->AddText(
                 ImGui::GetItemRectMin(),
                 ImGui::ColorConvertFloat4ToU32(color),
-                label
+                label.c_str()
             );
         }
 
@@ -72,10 +62,14 @@ void NotificationManager::pushMessage(NotificationType type, std::string content
         .type = type,
         .content = content
     });
+    if (notifications.size() > MAX_NOTIFICATION_COUNT)
+        notifications.erase(notifications.begin());
 }
 
 void NotificationManager::pushNotification(Notification notification) {
     notifications.push_back(notification);
+    if (notifications.size() > MAX_NOTIFICATION_COUNT)
+        notifications.erase(notifications.begin());
 }
 
 bool NotificationManager::isCommandRequested(enum Command command) {
