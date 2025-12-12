@@ -4,36 +4,6 @@
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 
-void GpuBuffers::init(VkSmol &engine, size_t _objectSize, size_t _baseSize) {
-    count = 0;
-    capacity = 2;
-    objectSize = _objectSize;
-    baseSize = _baseSize;
-
-    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
-}
-
-void GpuBuffers::destroy(VkSmol &engine) {
-    engine.destroyBufferList(bufferList);
-}
-
-void GpuBuffers::addElement(VkSmol &engine) {
-    if (count >= capacity) resize(engine);
-    count++;
-}
-
-void GpuBuffers::removeElement() {
-    count--;
-}
-
-void GpuBuffers::resize(VkSmol &engine) {
-    engine.waitIdle();
-    engine.destroyBufferList(bufferList);
-    capacity *= 2;
-    bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
-}
-
-
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 
 void Scene::init(VkSmol &engine) {
@@ -69,8 +39,8 @@ void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::
     objects.push_back(new Box(name, cornerMin, cornerMax, mat));
 }
 
+// TODO: Only refill them after an update (not every frame)
 void Scene::fillBuffers(VkSmol &engine) {
-    // TODO: Only refill them after an update (not every frame)
     std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
     std::vector<GpuPlane> planes(planeBuffers.getCapacity());
     std::vector<GpuBox> boxes(boxBuffers.getCapacity());
@@ -104,11 +74,11 @@ void Scene::fillBuffers(VkSmol &engine) {
         }
     }
 
-    int selected = static_cast<int>(selectedObjectId);  // should be the same as the selectedObjectId (only spheres for now)
+    int selected = static_cast<int>(selectedObjectId);
 
-    engine.fillBuffer(engine.getBuffer(sphereBuffers.getBufferList()), spheres.data());
-    engine.fillBuffer(engine.getBuffer(planeBuffers.getBufferList()), planes.data());
-    engine.fillBuffer(engine.getBuffer(boxBuffers.getBufferList()), boxes.data());
+    sphereBuffers.fill(engine, spheres.data());
+    planeBuffers.fill(engine, planes.data());
+    boxBuffers.fill(engine, boxes.data());
 
     std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
@@ -119,7 +89,7 @@ void Scene::fillBuffers(VkSmol &engine) {
     if (objectCount > 0)
         memcpy(objectData.data() + offset, objects_data.data(), sizeof(GpuObject) * objectCount);
 
-    engine.fillBuffer(engine.getBuffer(objectBuffers.getBufferList()), objectData.data());
+    objectBuffers.fill(engine, objectData.data());
 }
 
 

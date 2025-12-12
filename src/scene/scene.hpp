@@ -10,33 +10,12 @@
 #include "../imgui/ImGuizmo.h"
 #include "../imgui/imgui.h"
 
+#include "object/object_buffers.hpp"
 #include "object/object.hpp"
 #include "object/sphere.hpp"
 #include "object/plane.hpp"
 #include "object/box.hpp"
 #include "../notification.hpp"
-
-class GpuBuffers {
-public:
-    void init(VkSmol &engine, size_t objectSize, size_t baseSize = 0);
-    void destroy(VkSmol &engine);
-
-    void addElement(VkSmol &engine);
-    void removeElement();
-    void resize(VkSmol &engine);
-
-    size_t getCapacity() { return capacity; }
-    size_t getCount() { return count; }
-    bufferList_t getBufferList() { return bufferList; }
-
-private:
-    bufferList_t bufferList;
-    size_t capacity;
-    size_t count;
-
-    size_t objectSize;
-    size_t baseSize;
-};
 
 class Scene {
 public:
@@ -67,7 +46,7 @@ public:
     bool wasUpdated();
 
 private:
-    GpuBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
+    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
     
     int selectedObjectId = -1;
     int objectId = 0;   // Used for unique object naming
