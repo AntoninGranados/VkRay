@@ -54,8 +54,9 @@ public:
     void fillBuffers(VkSmol &engine);
     
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
-    void drawNewObjectUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
-    void drawSelectedUI();
+    void drawUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
+    void drawNewObjectPopUp(VkSmol &engine);
+    void drawSelectedUI(VkSmol &engine);
 
     void clearSelection() { selectedObjectId = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera);
@@ -69,6 +70,7 @@ private:
     GpuBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
     
     int selectedObjectId = -1;
+    int objectId = 0;   // Used for unique object naming
     std::vector<Object*> objects;
 
     bool updated = false;

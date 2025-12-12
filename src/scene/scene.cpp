@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include <iostream>
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -48,6 +49,7 @@ void Scene::destroy(VkSmol &engine) {
     boxBuffers.destroy(engine);
     objectBuffers.destroy(engine);
 }
+
 
 void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
     sphereBuffers.addElement(engine);
@@ -120,6 +122,7 @@ void Scene::fillBuffers(VkSmol &engine) {
     engine.fillBuffer(engine.getBuffer(objectBuffers.getBufferList()), objectData.data());
 }
 
+
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedObjectId < 0) return;
     ImGuizmo::PushID(selectedObjectId); // To isolate the state of the gizmo
@@ -127,71 +130,92 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     ImGuizmo::PopID();
 }
 
-
-void Scene::drawNewObjectUI(VkSmol &engine) {
+void Scene::drawUI(VkSmol &engine) {
     ImGui::SeparatorText("Scene");
 
     if (ImGui::Button("Add object", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New Object")) {
         ImGui::OpenPopup("New Object");
     }
 
-    if (ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-        if (ImGui::Button("Sphere", { 100, 0 })) {
-            pushSphere(
-                engine,
-                "New Sphere",
-                glm::vec3(0.0, 0.0, 0.0),
-                1.0,
-                Material {
-                    .type = Lambertian,
-                    .albedo = { 1.0, 0.0, 1.0 },
-                }
-            );
-            selectedObjectId = objects.size() - 1;
-            updated = true;
-            ImGui::CloseCurrentPopup();
+    for (size_t i = 0; i < objects.size(); i++) {
+        switch (objects[i]->getType()) {
+            case ObjectType::Sphere: ImGui::TextDisabled("Sph"); break;
+            case ObjectType::Plane:  ImGui::TextDisabled("Pln"); break;
+            case ObjectType::Box:    ImGui::TextDisabled("Box"); break;
+            default: ImGui::TextDisabled("???");; break;
         }
-        if (ImGui::Button("Plane", { 100, 0 })) {
-            pushPlane(
-                engine,
-                "New Plane",
-                glm::vec3( 0.0, 0.0, 0.0),
-                glm::vec3( 0.0, 1.0, 0.0),
-                Material {
-                    .type = Lambertian,
-                    .albedo = { 1.0, 0.0, 1.0 },
-                }
-            );
-            selectedObjectId = objects.size() - 1;
-            updated = true;
-            ImGui::CloseCurrentPopup();
-        }
-        if (ImGui::Button("Box", { 100, 0 })) {
-            pushBox(
-                engine,
-                "New Box",
-                glm::vec3(-1.0,-1.0,-1.0),
-                glm::vec3( 1.0, 1.0, 1.0),
-                Material {
-                    .type = Lambertian,
-                    .albedo = { 1.0, 0.0, 1.0 },
-                }
-            );
-            selectedObjectId = objects.size() - 1;
-            updated = true;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
-        if (ImGui::Button("Cancel", { 100, 0 })) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::PopStyleColor();
+        ImGui::SameLine();
 
-        ImGui::EndPopup();
+        bool value = i == selectedObjectId;
+        std::string displayName = objects[i]->getName().length() > 0 ? objects[i]->getName() : "???";
+        if (ImGui::Selectable(displayName.c_str(), value, ImGuiSelectableFlags_AllowDoubleClick)) {
+            if (ImGui::IsMouseDoubleClicked(0))
+                selectedObjectId = i;
+        }
     }
+
+    drawNewObjectPopUp(engine);
 }
 
-void Scene::drawSelectedUI() {
+void Scene::drawNewObjectPopUp(VkSmol &engine) {
+    if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+        return;
+    
+    if (ImGui::Button("Sphere", { 100, 0 })) {
+        pushSphere(
+            engine,
+            "Sphere-" + std::to_string(objectId++),
+            glm::vec3(0.0, 0.0, 0.0),
+            1.0,
+            Material {
+                .type = Lambertian,
+                .albedo = { 1.0, 0.0, 1.0 },
+            }
+        );
+        selectedObjectId = objects.size() - 1;
+        updated = true;
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button("Plane", { 100, 0 })) {
+        pushPlane(
+            engine,
+            "Plane-" + std::to_string(objectId++),
+            glm::vec3( 0.0, 0.0, 0.0),
+            glm::vec3( 0.0, 1.0, 0.0),
+            Material {
+                .type = Lambertian,
+                .albedo = { 1.0, 0.0, 1.0 },
+            }
+        );
+        selectedObjectId = objects.size() - 1;
+        updated = true;
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button("Box", { 100, 0 })) {
+        pushBox(
+            engine,
+            "Box-" + std::to_string(objectId++),
+            glm::vec3(-1.0,-1.0,-1.0),
+            glm::vec3( 1.0, 1.0, 1.0),
+            Material {
+                .type = Lambertian,
+                .albedo = { 1.0, 0.0, 1.0 },
+            }
+        );
+        selectedObjectId = objects.size() - 1;
+        updated = true;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
+    if (ImGui::Button("Cancel", { 100, 0 })) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::EndPopup();
+}
+
+void Scene::drawSelectedUI(VkSmol &engine) {
     if (selectedObjectId < 0) return;
 
     std::string typeName;
@@ -220,14 +244,54 @@ void Scene::drawSelectedUI() {
         objects[selectedObjectId]->setName(std::string(buff));
         
         updated |= objects[selectedObjectId]->drawUI();
-    
+        
+        ImGui::Separator();
+        if (ImGui::Button("Clone", { -FLT_MIN, 0 })) {
+            switch(objects[selectedObjectId]->getType()) {
+                case ObjectType::Sphere: {
+                    Sphere *sphere = static_cast<Sphere*>(objects[selectedObjectId]);
+                    pushSphere(
+                        engine,
+                        sphere->getName() + "-copy",
+                        sphere->getStruct().center,
+                        sphere->getStruct().radius,
+                        sphere->getStruct().mat
+                    ); 
+                } break;
+                case ObjectType::Plane: {
+                    Plane *plane = static_cast<Plane*>(objects[selectedObjectId]);
+                    pushPlane(
+                        engine,
+                        plane->getName() + "-copy",
+                        plane->getStruct().point,
+                        plane->getStruct().normal,
+                        plane->getStruct().mat
+                    ); 
+                } break;
+                case ObjectType::Box: {
+                    Box *box = static_cast<Box*>(objects[selectedObjectId]);
+                    pushBox(
+                        engine,
+                        box->getName() + "-copy",
+                        box->getStruct().cornerMin,
+                        box->getStruct().cornerMax,
+                        box->getStruct().mat
+                    ); 
+                } break;
+                default: break;
+            }
+
+            selectedObjectId = objects.size()-1;
+            updated = true;
+        }
+
         ImGui::Separator();
         ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
         if (ImGui::Button("Delete", { -FLT_MIN, 0 })) {
             switch(objects[selectedObjectId]->getType()) {
-                case ObjectType::Sphere: sphereBuffers.removeElement();
-                case ObjectType::Plane:  planeBuffers.removeElement();
-                case ObjectType::Box:    boxBuffers.removeElement();
+                case ObjectType::Sphere: sphereBuffers.removeElement(); break;
+                case ObjectType::Plane:  planeBuffers.removeElement(); break;
+                case ObjectType::Box:    boxBuffers.removeElement(); break;
                 default: break;
             }
             objectBuffers.removeElement();
@@ -240,6 +304,7 @@ void Scene::drawSelectedUI() {
     }
     ImGui::End();
 }
+
 
 bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera) {
     Ray ray = getRay(screenPos, screenSize, camera);

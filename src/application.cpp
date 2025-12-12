@@ -579,11 +579,11 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
         ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
         
-        scene.drawNewObjectUI(engine);
+        scene.drawUI(engine);
     }
     ImGui::End();
     
-    scene.drawSelectedUI();
+    scene.drawSelectedUI(engine);
     notificationManager.drawNotifications();
 
     ImGui::Render();

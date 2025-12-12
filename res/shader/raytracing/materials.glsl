@@ -104,7 +104,8 @@ bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
     if (border.x > 0.0 || border.y > 0.0) {
         return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.4), ray, hit, attenuation, scattered, seed);
     } else if (int(ip.x + ip.y + 1) % 2 == 0) {
-        return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.6), ray, hit, attenuation, scattered, seed);
+        // return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.6), ray, hit, attenuation, scattered, seed);
+        return scatterMetal(METAL_MATERIAL(color*0.6, 0.01), ray, hit, attenuation, scattered, seed);
     } else {
         return scatterLambertian(LAMBERTIAN_MATERIAL(color), ray, hit, attenuation, scattered, seed);
     }

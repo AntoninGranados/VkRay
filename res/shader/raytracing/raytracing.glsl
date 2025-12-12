@@ -121,11 +121,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
 }
 
 void main() {
+    // if (ubo.frameCount <= 1) {
+    //     if (ivec2(fragPos * vec2(1280, 720)) % 2 != ivec2(0)) {
+    //         outColor = vec4(0.0, 0.0, 0.0, 0.0);
+    //         return;
+    //     }
+    // }
+
     vec3 seed = initSeed(fragPos, ubo.time);
-
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
-
-    // pushPlane(Plane(vec3(0, -1, 0), vec3(0, 1, 0), ANIMATED_MATERIAL));
 
     vec2 uv = fragPos * 0.5 + 0.5;
     vec3 prevColor = texture(prevTex, uv).rgb;
