@@ -36,4 +36,13 @@ vec3 getNormal(in Object obj, in vec3 p) {
     return vec3(0);
 }
 
+int getLightId() {
+    for (int i = 0; i < objectBuffer.objectCount; i++) {
+        if (getMaterial(objectBuffer.objects[i]).type == mat_Emissive) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 #endif

@@ -86,48 +86,91 @@ vec3 skyColor(vec3 dir) {
 
 vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     Hit hit = intersection(ray);
-    vec3 color = vec3(1);
+    vec3 throughput = vec3(1.0);
+    vec3 radiance = vec3(0.0);
 
     int i = 0;
+    vec3 attenuation;
+    Ray scattered;
+    Material mat;
+    bool isScattered;
     for (; i < ubo.maxBounces; i++) {
         if (foundIntersection(hit)) {
-            vec3 attenuation;
-            Ray scattered;
+            mat = getMaterial(hit.object);
 
-            bool isScattered = scatter(
-                getMaterial(hit.object),
+            if (mat.type == mat_Emissive) {
+                radiance += throughput * mat.albedo * mat.intensity;
+                break;
+            }
+
+            // TODO remove emissive from scatter function
+            isScattered = scatter(
+                mat,
                 ray,
                 hit,
                 attenuation,
                 scattered,
                 seed
             );
-            color *= attenuation;
-            if (!isScattered) {
-                break;
+            throughput *= attenuation;
+            if (!isScattered) break;
+
+            //! Temporary direct lighting test
+            if (mat.type == mat_Lambertian) {
+                int lightIdx = getLightId();
+                if (lightIdx >= 0) {
+                    Object lightObj = objectBuffer.objects[lightIdx];
+                    uint lightId = lightObj.id;
+                    Sphere lightSphere = sphereBuffer.spheres[lightId];
+
+                    // Uniform sample on sphere surface
+                    vec3 onLightDir = normalize(randomInSphere(seed));
+                    vec3 lightPoint = lightSphere.center + onLightDir * lightSphere.radius;
+
+                    vec3 toLight = lightPoint - scattered.origin;
+                    float dist2 = dot(toLight, toLight);
+                    float dist = sqrt(dist2);
+                    vec3 toLightDir = normalize(toLight);
+
+                    float cosSurface = max(dot(hit.normal, toLightDir), 0.0);
+                    vec3 lightNormal = (lightPoint - lightSphere.center) / lightSphere.radius;
+                    float cosLight = max(dot(-toLightDir, lightNormal), 0.0);
+
+                    if (cosSurface > 0.0 && cosLight > 0.0) {
+                        Ray shadowRay = Ray(scattered.origin, toLightDir);
+                        Hit shadowHit = intersection(shadowRay);
+                        bool visible = foundIntersection(shadowHit) && shadowHit.t >= dist - EPS;
+
+                        if (visible) {
+                            float lightArea = 4.0 * 3.14159265 * lightSphere.radius * lightSphere.radius;
+                            float pdfA = 1.0 / lightArea;
+                            float pdfW = pdfA * dist2 / max(cosLight, EPS);
+
+                            Material lightMat = getMaterial(lightObj);
+                            vec3 Le = lightMat.albedo * lightMat.intensity;
+                            vec3 direct = (mat.albedo / 3.14159265) * Le * cosSurface / max(pdfW, EPS);
+
+                            radiance += throughput * direct;
+                        }
+                    }
+                }
             }
 
-            hit = intersection(scattered);
+            // Continue path
             ray = scattered;
+            hit = intersection(ray);
         } else {
-            color *= skyColor(ray.dir);
+            radiance += throughput * skyColor(ray.dir);
             break;
         }
     }
     if (i == ubo.maxBounces)
-        color = vec3(0.0);
+        radiance = vec3(0.0);
 
-    return color;
+    return radiance;
 }
 
 void main() {
-    // if (ubo.frameCount <= 1) {
-    //     if (ivec2(fragPos * vec2(1280, 720)) % 2 != ivec2(0)) {
-    //         outColor = vec4(0.0, 0.0, 0.0, 0.0);
-    //         return;
-    //     }
-    // }
-
     vec3 seed = initSeed(fragPos, ubo.time);
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
 

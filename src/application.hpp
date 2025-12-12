@@ -69,6 +69,7 @@ private:
     
     size_t frame = 0;
     int frameCount = 0;
+    bool restartRender = false;
 
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     LightMode lightMode = LightMode::Empty;

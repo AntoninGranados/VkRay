@@ -17,7 +17,7 @@ class Fence;
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily; // queue for graphics
     std::optional<uint32_t> presentFamily;  // queue for prensenting surface to the screen
-    std::optional<uint32_t> transferFamily; // queue for transfering data from the CPU to the GPY
+    std::optional<uint32_t> transferFamily; // queue for transfering data from the CPU to the GPU
 
     bool isComplete() {
         return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();

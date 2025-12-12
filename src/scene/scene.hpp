@@ -42,7 +42,7 @@ public:
 
     std::vector<bufferList_t> getBufferLists();
 
-    // Returns true if the scene have been updated this the last call of this function
+    // Returns true if the scene have been updated since the last call of this function
     bool wasUpdated();
 
 private:

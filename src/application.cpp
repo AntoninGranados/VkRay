@@ -26,7 +26,7 @@ Application::Application() {
             if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse || ImGuizmo::IsUsing()))
                 return;
             if (app->camera.cursorPosCallback(window, x, y))
-                app->frameCount = 0;
+                app->restartRender = true;
         }
     );
     glfwSetScrollCallback(
@@ -36,7 +36,7 @@ Application::Application() {
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
             if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
             if (app->camera.scrollCallback(window, xoffset, yoffset))
-                app->frameCount = 0;
+                app->restartRender = true;
         }
     );
 
@@ -317,7 +317,7 @@ void Application::run() {
         }
 
         if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
-            frameCount = 0;
+            restartRender = true;
 
         if (camera.isLocked() || blockMouseInput)
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -325,10 +325,10 @@ void Application::run() {
             glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
         if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-            frameCount = 0;
+            restartRender = true;
 
         if (scene.wasUpdated()) 
-            frameCount = 0;
+            restartRender = true;
 
         if (notificationManager.isCommandRequested(Command::Exit))
             break;
@@ -338,7 +338,12 @@ void Application::run() {
         }
         if (notificationManager.isCommandRequested(Command::Reload)) {
             rebuildPipeline();
+            restartRender = true;
+        }
+
+        if (restartRender) {
             frameCount = 0;
+            restartRender = false;
         }
 
         RaytracingUBO raytracingUBO;
@@ -565,7 +570,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PushItemWidth(-FLT_MIN);
         int currentLigthMode = static_cast<int>(lightMode);
         if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
-            frameCount = 0;
+            restartRender = true;
         lightMode = static_cast<LightMode>(currentLigthMode);
         ImGui::PopItemWidth();
 
@@ -573,7 +578,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
-            frameCount = 0;
+            restartRender = true;
         ImGui::PopItemWidth();
 
         ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
