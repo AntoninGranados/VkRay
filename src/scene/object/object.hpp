@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "material.hpp"
 #include "../../camera.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
@@ -43,22 +44,6 @@ struct Ray {
 };
 Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera &camera);
 
-enum MaterialType {
-    Lambertian = 0,
-    Metal,
-    Dielectric,
-    Emissive,
-    Animated,
-};
-
-struct Material {
-    MaterialType type;
-    alignas(16) glm::vec3 albedo;
-    float fuzz;
-    float refraction_index;
-    float intensity;
-};
-
 // Objects
 enum class ObjectType : int {
     None,
@@ -89,4 +74,3 @@ protected:
 };
 
 bool isInvalid(glm::mat4 mat);
-bool drawMaterialUI(Material &mat);

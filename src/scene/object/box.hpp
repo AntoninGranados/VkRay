@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "object.hpp"
+#include "material.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 

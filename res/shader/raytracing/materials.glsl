@@ -4,11 +4,12 @@
 #include "utils.glsl"
 #include "random.glsl"
 
-#define mat_Lambertian  Enum(0)
-#define mat_Metal       Enum(1)
-#define mat_Dielectric  Enum(2)
-#define mat_Emissive    Enum(3)
-#define mat_Animated    Enum(4)
+#define mat_Lambertian    Enum(0)
+#define mat_Metal         Enum(1)
+#define mat_Dielectric    Enum(2)
+#define mat_Emissive      Enum(3)
+#define mat_Glossy        Enum(4)
+#define mat_Checkerboard  Enum(5)
 struct Material {
     Enum type;
     vec3 albedo;
@@ -22,7 +23,8 @@ struct Material {
 #define METAL_MATERIAL(albedo, fuzz)         Material(mat_Metal, albedo, fuzz, 0.0, 0.0)
 #define DIELECTRIX_MATERIAL(albedo, index)   Material(mat_Dielectric, albedo, 0.0, index, 0.0)
 #define EMISSIVE_MATERIAL(albedo, intensity) Material(mat_Emissive, albedo, 0.0, 0.0, intensity)
-#define ANIMATED_MATERIAL                    Material(mat_Animated, vec3(0), 0.0, 0.0, 0.0)
+#define GLOSSY_MATERIAL(albedo)              Material(mat_Glossy, albedo, 0.0, 0.0, 0.0)
+#define CHECKERBOARD_MATERIAL                Material(mat_Checkerboard, vec3(0), 0.0, 0.0, 0.0)
 
 // ================== SCATTERING FUNCIONS ==================
 bool scatterLambertian(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
@@ -57,7 +59,7 @@ bool scatterDielectric(in Material mat, in Ray ray, in Hit hit, out vec3 attenua
 
     float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
     float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
-    
+
     vec3 dir;
     if (ri * sin_theta > 1 || schlick_approx(cos_theta, ri) > rand(seed))
         dir = reflect(ray.dir, hit.normal);
@@ -75,7 +77,18 @@ bool scatterEmissive(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
     return false;
 }
 
-bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
+bool scatterGlossy(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
+    float ri = hit.front_face ? (1.0/mat.refraction_index) : mat.refraction_index;
+
+    float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
+
+    if (schlick_approx(cos_theta, ri) > rand(seed))
+        return scatterMetal(METAL_MATERIAL(vec3(1.0), mat.fuzz), ray, hit, attenuation, scattered, seed);
+    else
+        return scatterLambertian(LAMBERTIAN_MATERIAL(mat.albedo), ray, hit, attenuation, scattered, seed);
+}
+
+bool scatterCheckerboard(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
     vec2 p = hit.p.xz;
     float scale = 0.5;
     // float t = sin(ubo.time)*0.5+0.5;
@@ -112,17 +125,15 @@ bool scatterAnimated(in Material mat, in Ray ray, in Hit hit, out vec3 attenuati
 }
 
 bool scatter(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    if (mat.type == mat_Lambertian)
-        return scatterLambertian(mat, ray, hit, attenuation, scattered, seed);
-    if (mat.type == mat_Metal)
-        return scatterMetal(mat, ray, hit, attenuation, scattered, seed);
-    if (mat.type == mat_Dielectric)
-        return scatterDielectric(mat, ray, hit, attenuation, scattered, seed);
-    if (mat.type == mat_Emissive)
-        return scatterEmissive(mat, ray, hit, attenuation, scattered, seed);
-    if (mat.type == mat_Animated)
-        return scatterAnimated(mat, ray, hit, attenuation, scattered, seed);
-    return scatterLambertian(DEFAULT_MATERIAL, ray, hit, attenuation, scattered, seed);
+    switch (mat.type) {
+        case mat_Lambertian:    return scatterLambertian(mat, ray, hit, attenuation, scattered, seed);
+        case mat_Metal:         return scatterMetal(mat, ray, hit, attenuation, scattered, seed);
+        case mat_Dielectric:    return scatterDielectric(mat, ray, hit, attenuation, scattered, seed);
+        case mat_Emissive:      return scatterEmissive(mat, ray, hit, attenuation, scattered, seed);
+        case mat_Glossy:        return scatterGlossy(mat, ray, hit, attenuation, scattered, seed);
+        case mat_Checkerboard:  return scatterCheckerboard(mat, ray, hit, attenuation, scattered, seed);
+        default:                return scatterLambertian(DEFAULT_MATERIAL, ray, hit, attenuation, scattered, seed);
+    }
 }
 
 
