@@ -3,6 +3,7 @@
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
     int frameCount;
+    float lowResolutionScale;
 } ubo;
 
 layout(location = 0) in vec2 fragPos;
@@ -18,11 +19,10 @@ void main() {
     vec2 texSize = vec2(textureSize(tex, 0));
     vec2 texelSize = 1.0 / texSize;
 
-    
     vec3 color = texelData.rgb;
     if (ubo.frameCount <= 1) {
         vec2 screenCoord = uv * texSize;
-        ivec2 blockCoord = ivec2(round(screenCoord / 10.0) * 10.0);
+        ivec2 blockCoord = ivec2(round(screenCoord / ubo.lowResolutionScale) * ubo.lowResolutionScale);
         color = texelFetch(tex, blockCoord, 0).rgb;
     }
 

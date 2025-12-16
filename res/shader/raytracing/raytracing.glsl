@@ -4,6 +4,7 @@
 #include "utils.glsl"
 #include "materials.glsl"
 #include "objects.glsl"
+#include "lights.glsl"
 #include "global.glsl"
 #include "random.glsl"
 
@@ -84,92 +85,6 @@ vec3 skyColor(vec3 dir) {
     return color;
 }
 
-// Uniform sample on a box surface; returns a point, sets the outward normal and pdf over area.
-vec3 sampleBoxSurface(Box box, inout vec3 seed, out vec3 normal, out float pdfA) {
-    vec3 size = box.cornerMax - box.cornerMin;
-    float areaXY = size.x * size.y;
-    float areaYZ = size.y * size.z;
-    float areaZX = size.z * size.x;
-    float totalArea = 2.0 * (areaXY + areaYZ + areaZX);
-    pdfA = totalArea > EPS ? 1.0 / totalArea : 0.0;
-
-    float r = rand(seed) * totalArea;
-
-    // z-min face
-    if (r < areaXY) {
-        float u = rand(seed);
-        float v = rand(seed);
-        normal = vec3(0.0, 0.0, -1.0);
-        return vec3(
-            mix(box.cornerMin.x, box.cornerMax.x, u),
-            mix(box.cornerMin.y, box.cornerMax.y, v),
-            box.cornerMin.z
-        );
-    }
-    r -= areaXY;
-
-    // z-max face
-    if (r < areaXY) {
-        float u = rand(seed);
-        float v = rand(seed);
-        normal = vec3(0.0, 0.0, 1.0);
-        return vec3(
-            mix(box.cornerMin.x, box.cornerMax.x, u),
-            mix(box.cornerMin.y, box.cornerMax.y, v),
-            box.cornerMax.z
-        );
-    }
-    r -= areaXY;
-
-    // x-min face
-    if (r < areaYZ) {
-        float u = rand(seed);
-        float v = rand(seed);
-        normal = vec3(-1.0, 0.0, 0.0);
-        return vec3(
-            box.cornerMin.x,
-            mix(box.cornerMin.y, box.cornerMax.y, u),
-            mix(box.cornerMin.z, box.cornerMax.z, v)
-        );
-    }
-    r -= areaYZ;
-
-    // x-max face
-    if (r < areaYZ) {
-        float u = rand(seed);
-        float v = rand(seed);
-        normal = vec3(1.0, 0.0, 0.0);
-        return vec3(
-            box.cornerMax.x,
-            mix(box.cornerMin.y, box.cornerMax.y, u),
-            mix(box.cornerMin.z, box.cornerMax.z, v)
-        );
-    }
-    r -= areaYZ;
-
-    // y-min face
-    if (r < areaZX) {
-        float u = rand(seed);
-        float v = rand(seed);
-        normal = vec3(0.0, -1.0, 0.0);
-        return vec3(
-            mix(box.cornerMin.x, box.cornerMax.x, u),
-            box.cornerMin.y,
-            mix(box.cornerMin.z, box.cornerMax.z, v)
-        );
-    }
-
-    // y-max face (fallback)
-    float u = rand(seed);
-    float v = rand(seed);
-    normal = vec3(0.0, 1.0, 0.0);
-    return vec3(
-        mix(box.cornerMin.x, box.cornerMax.x, u),
-        box.cornerMax.y,
-        mix(box.cornerMin.z, box.cornerMax.z, v)
-    );
-}
-
 vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     Hit hit = intersection(ray);
     vec3 throughput = vec3(1.0);
@@ -197,82 +112,9 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
             throughput *= result.attenuation;
             if (!result.isScattered) break;
 
-            if (ubo.importanceSampling == 1 && result.isDiffuse) {
-                int lightIdx = getLightId();
-                if (lightIdx >= 0) {
-                    Object lightObj = objectBuffer.objects[lightIdx];
-                    uint lightId = lightObj.id;
+            vec3 direct = importanceSampleLight(mat, hit, result, seed);
+            radiance += throughput * direct;
 
-                    // New: box importance sampling (hardcoded for now)
-                    if (lightObj.type == obj_Box) {
-                        Box lightBox = boxBuffer.boxes[lightId];
-                        vec3 lightNormal;
-                        float pdfA;
-                        vec3 lightPoint = sampleBoxSurface(lightBox, seed, lightNormal, pdfA);
-
-                        vec3 toLight = lightPoint - result.scattered.origin;
-                        float dist2 = dot(toLight, toLight);
-                        float dist = sqrt(dist2);
-                        vec3 toLightDir = toLight / dist;
-
-                        float cosSurface = max(dot(hit.normal, toLightDir), 0.0);
-                        float cosLight = max(dot(-toLightDir, lightNormal), 0.0);
-
-                        if (cosSurface > 0.0 && cosLight > 0.0 && pdfA > 0.0) {
-                            Ray shadowRay = Ray(result.scattered.origin, toLightDir);
-                            Hit shadowHit = intersection(shadowRay);
-                            bool visible = foundIntersection(shadowHit) && shadowHit.t >= dist - EPS;
-
-                            if (visible) {
-                                float pdfW = pdfA * dist2 / max(cosLight, EPS);
-
-                                Material lightMat = getMaterial(lightObj);
-                                vec3 Le = lightMat.albedo * emissiveIntensity(lightMat);
-                                vec3 direct = (mat.albedo / 3.14159265) * Le * cosSurface / max(pdfW, EPS);
-
-                                radiance += throughput * direct;
-                            }
-                        }
-                    }
-                    // Fallback: sphere importance sampling (kept functional while the previous block shows the legacy version)
-                    else if (lightObj.type == obj_Sphere) {
-                        Sphere lightSphere = sphereBuffer.spheres[lightId];
-
-                        // Uniform sample on sphere surface
-                        vec3 onLightDir = normalize(randomInSphere(seed));
-                        vec3 lightPoint = lightSphere.center + onLightDir * lightSphere.radius;
-
-                        vec3 toLight = lightPoint - result.scattered.origin;
-                        float dist2 = dot(toLight, toLight);
-                        float dist = sqrt(dist2);
-                        vec3 toLightDir = toLight / dist;
-
-                        float cosSurface = max(dot(hit.normal, toLightDir), 0.0);
-                        vec3 lightNormal = (lightPoint - lightSphere.center) / lightSphere.radius;
-                        float cosLight = max(dot(-toLightDir, lightNormal), 0.0);
-
-                        if (cosSurface > 0.0 && cosLight > 0.0) {
-                            Ray shadowRay = Ray(result.scattered.origin, toLightDir);
-                            Hit shadowHit = intersection(shadowRay);
-                            bool visible = foundIntersection(shadowHit) && shadowHit.t >= dist - EPS;
-
-                            if (visible) {
-                                float lightArea = 4.0 * 3.14159265 * lightSphere.radius * lightSphere.radius;
-                                float pdfA = 1.0 / lightArea;
-                                float pdfW = pdfA * dist2 / max(cosLight, EPS);
-
-                                Material lightMat = getMaterial(lightObj);
-                                vec3 Le = lightMat.albedo * emissiveIntensity(lightMat);
-                                vec3 direct = (mat.albedo / 3.14159265) * Le * cosSurface / max(pdfW, EPS);
-
-                                radiance += throughput * direct;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Continue path
             ray = result.scattered;
             hit = intersection(ray);
         } else {
@@ -315,8 +157,8 @@ void main() {
     if (ubo.frameCount <= 1) {
         prevColor = vec3(0.0);
 
-        ivec2 blockCoord = ivec2(round(screenCoord / 10.0) * 10.0);
-        if (pixelCoord == blockCoord) {
+        ivec2 blockCoord = ivec2(round(screenCoord / ubo.lowResolutionScale) * ubo.lowResolutionScale);
+        if (ubo.lowResolutionScale == 1.0f || pixelCoord == blockCoord) {
             currColor = computeFragmentColor(camera, seed);
         }
     } else {

@@ -10,10 +10,11 @@ layout(location = 0) out vec4 outColor;
 layout(std140, set = 0, binding = 0) uniform UBO {
     vec3 cameraPos;
     vec3 cameraDir;
+    float tanHFov;
 
     vec2 screenSize;
     float aspect;
-    float tanHFov;
+    float lowResolutionScale;
     
     int frameCount;
     float time;

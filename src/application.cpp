@@ -160,8 +160,8 @@ void Application::initScene() {
         Application::notificationManager.pushMessage(type, content);
     });
 
-    // initCornellBox(engine, scene, lightMode);
-    initRandomSphere(engine, scene, lightMode);
+    initCornellBox(engine, scene, lightMode);
+    // initRandomSphere(engine, scene, lightMode);
 }
 
 
@@ -469,19 +469,22 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PushItemWidth(-FLT_MIN);
         int currentLigthMode = static_cast<int>(lightMode);
         if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
-            restartRender = true;
+        restartRender = true;
         lightMode = static_cast<LightMode>(currentLigthMode);
         ImGui::PopItemWidth();
-
+        
         ImGui::Separator();
         
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
-            restartRender = true;
+        restartRender = true;
         ImGui::PopItemWidth();
-
-        ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
-        ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
+        
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::DragInt("##Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
+        ImGui::DragInt("##Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
+        ImGui::DragFloat("##Low Resolution Scale", &lowResolutionScale, 1.0f, 1.0f, 50.0f, "Low Res: %.0f");
+        ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
         
         scene.drawUI(engine);
@@ -497,19 +500,20 @@ void Application::drawUI(CommandBuffer commandBuffer) {
 
 void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     // Raytracing UBO
-    if (frameCount <= 1)
-        lastTime = glfwGetTime();
-    raytracingUBO.time = glfwGetTime() - lastTime;
-    raytracingUBO.frameCount = frameCount;
+    raytracingUBO.cameraPos = camera.getPosition();
+    raytracingUBO.cameraDir = camera.getDirection();
+    raytracingUBO.tanHFov = camera.getTanHFov();
 
     VkExtent2D extent = engine.getExtent();
     raytracingUBO.screenSize = { (float)extent.width, (float)extent.height };
     raytracingUBO.aspect = raytracingUBO.screenSize.x / raytracingUBO.screenSize.y;
+    raytracingUBO.lowResolutionScale = lowResolutionScale;
 
-    raytracingUBO.tanHFov = camera.getTanHFov();
-    raytracingUBO.cameraPos = camera.getPosition();
-    raytracingUBO.cameraDir = camera.getDirection();
-
+    if (frameCount <= 1)
+        lastTime = glfwGetTime();
+    raytracingUBO.frameCount = frameCount;
+    raytracingUBO.time = glfwGetTime() - lastTime;
+    
     raytracingUBO.lightMode = lightMode;
 
     raytracingUBO.maxBounces = maxBounces;
@@ -518,6 +522,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
 
     // Screen UBO
     screenUBO.frameCount = frameCount;
+    screenUBO.lowResolutionScale = lowResolutionScale;
 }
 
 // TODO: make this function asynchronous ?

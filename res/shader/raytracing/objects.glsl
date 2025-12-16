@@ -4,24 +4,6 @@
 #include "utils.glsl"
 #include "materials.glsl"
 
-struct Sphere {
-    vec3 center;
-    float radius;
-    MaterialHandle materialHandle;
-};
-
-struct Plane {
-    vec3 point;
-    vec3 normal;
-    MaterialHandle materialHandle;
-};
-
-struct Box {
-    vec3 cornerMin;
-    vec3 cornerMax;
-    MaterialHandle materialHandle;
-};
-
 // ================ RAY INTERSECTION ================
 float raySphereIntersection(in Ray ray, in Sphere sphere) {
     vec3 p = sphere.center - ray.origin;
@@ -83,7 +65,6 @@ vec3 planeNormal(in Plane plane, in vec3 p) {
     return plane.normal;
 }
 
-// TODO: optimize this !!
 vec3 boxNormal(in Box box, in vec3 p) {
     vec3 normal = vec3(0, 0, 0);
     for (int d = 0; d < 3; d++) {
@@ -97,6 +78,82 @@ vec3 boxNormal(in Box box, in vec3 p) {
         }
     }
     return normal;
+}
+
+// ================ SURFACE SAMPLING ================
+SurfaceSample sampleSphereSurface(in Sphere sphere, inout vec3 seed) {
+    SurfaceSample surfaceSample;
+    
+    vec3 onLightDir = normalize(randomInSphere(seed));
+    surfaceSample.p = sphere.center + onLightDir * sphere.radius;
+
+    surfaceSample.normal = (surfaceSample.p - sphere.center) / sphere.radius;
+
+    float lightArea = 4.0 * PI * sphere.radius * sphere.radius;
+    surfaceSample.pdfA = 1.0 / lightArea;
+
+    return surfaceSample;
+}
+
+SurfaceSample sampleBoxSurface(in Box box, inout vec3 seed) {
+    SurfaceSample surfaceSample;
+
+    vec3 size = box.cornerMax - box.cornerMin;
+    vec3 pairArea = vec3(size.y * size.z, size.z * size.x, size.x * size.y);
+    float totalArea = 2.0 * (pairArea.x + pairArea.y + pairArea.z);
+    surfaceSample.pdfA = totalArea > EPS ? 1.0 / totalArea : 0.0;
+
+    float r = rand(seed) * totalArea;
+    vec2 uv = vec2(rand(seed), rand(seed));
+
+    int axis;
+    float side;
+    float range = 2.0 * pairArea.x;
+    if (r < range) {
+        axis = 0;
+        side = (r < pairArea.x) ? -1.0 : 1.0;
+    } else {
+        r -= range;
+        range = 2.0 * pairArea.y;
+        if (r < range) {
+            axis = 1;
+            side = (r < pairArea.y) ? -1.0 : 1.0;
+        } else {
+            r -= range;
+            axis = 2;
+            side = (r < pairArea.z) ? -1.0 : 1.0;
+        }
+    }
+
+    vec3 cornerMin = box.cornerMin;
+    vec3 cornerMax = box.cornerMax;
+    if (axis == 0) {
+        float x = side < 0.0 ? cornerMin.x : cornerMax.x;
+        surfaceSample.p = vec3(
+            x,
+            mix(cornerMin.y, cornerMax.y, uv.x),
+            mix(cornerMin.z, cornerMax.z, uv.y)
+        );
+        surfaceSample.normal = vec3(side, 0.0, 0.0);
+    } else if (axis == 1) {
+        float y = side < 0.0 ? cornerMin.y : cornerMax.y;
+        surfaceSample.p = vec3(
+            mix(cornerMin.x, cornerMax.x, uv.x),
+            y,
+            mix(cornerMin.z, cornerMax.z, uv.y)
+        );
+        surfaceSample.normal = vec3(0.0, side, 0.0);
+    } else {
+        float z = side < 0.0 ? cornerMin.z : cornerMax.z;
+        surfaceSample.p = vec3(
+            mix(cornerMin.x, cornerMax.x, uv.x),
+            mix(cornerMin.y, cornerMax.y, uv.y),
+            z
+        );
+        surfaceSample.normal = vec3(0.0, 0.0, side);
+    }
+
+    return surfaceSample;
 }
 
 #endif

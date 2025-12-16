@@ -21,10 +21,11 @@ struct ScreenVertex {
 struct RaytracingUBO {
     alignas(16) glm::vec3 cameraPos;
     alignas(16) glm::vec3 cameraDir;
+    float tanHFov;
 
     alignas(8) glm::vec2 screenSize;
     float aspect;
-    float tanHFov;
+    float lowResolutionScale;
     
     int frameCount;
     float time;
@@ -38,6 +39,7 @@ struct RaytracingUBO {
 
 struct ScreenUBO {
     int frameCount;
+    float lowResolutionScale;
 };
 
 class Application {
@@ -69,9 +71,10 @@ private:
 
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     LightMode lightMode = LightMode::Empty;
-    int maxBounces = 5;
+    int maxBounces = 4;
     int samplesPerPixel = 1;
-    bool importanceSampling = false;
+    float lowResolutionScale = 8.0f;
+    bool importanceSampling = true;
 
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;

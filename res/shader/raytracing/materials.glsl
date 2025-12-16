@@ -4,21 +4,6 @@
 #include "utils.glsl"
 #include "random.glsl"
 
-#define mat_Lambertian    Enum(0)
-#define mat_Metal         Enum(1)
-#define mat_Dielectric    Enum(2)
-#define mat_Emissive      Enum(3)
-#define mat_Glossy        Enum(4)
-#define mat_Checkerboard  Enum(5)
-
-struct Material {
-    Enum type;
-    vec3 albedo;
-    float payload[2];
-};
-
-#define MaterialHandle int
-
 Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
     Material m;
     m.type = type;
@@ -67,7 +52,7 @@ void scatterLambertian(in Material mat, in Ray ray, in Hit hit, out ScatterResul
     dir = normalize(dir);
 
     result.scattered = Ray(hit.p + hit.normal * EPS, dir);
-    result.attenuation = mat.albedo / 3.14159265;
+    result.attenuation = mat.albedo / PI;
     result.isScattered = true;
     result.isDiffuse = true;
 }
