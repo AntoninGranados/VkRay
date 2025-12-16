@@ -10,52 +10,81 @@
 #define mat_Emissive      Enum(3)
 #define mat_Glossy        Enum(4)
 #define mat_Checkerboard  Enum(5)
+
 struct Material {
     Enum type;
     vec3 albedo;
-    float fuzz;
-    float refraction_index;
-    float intensity;
+    float payload[2];
 };
 
-#define DEFAULT_MATERIAL                     Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0)
-#define LAMBERTIAN_MATERIAL(albedo)          Material(mat_Lambertian, albedo, 0.0, 0.0, 0.0)
-#define METAL_MATERIAL(albedo, fuzz)         Material(mat_Metal, albedo, fuzz, 0.0, 0.0)
-#define DIELECTRIX_MATERIAL(albedo, index)   Material(mat_Dielectric, albedo, 0.0, index, 0.0)
-#define EMISSIVE_MATERIAL(albedo, intensity) Material(mat_Emissive, albedo, 0.0, 0.0, intensity)
-#define GLOSSY_MATERIAL(albedo)              Material(mat_Glossy, albedo, 0.0, 0.0, 0.0)
-#define CHECKERBOARD_MATERIAL                Material(mat_Checkerboard, vec3(0), 0.0, 0.0, 0.0)
+#define MaterialHandle int
 
-// ================== SCATTERING FUNCIONS ==================
-bool scatterLambertian(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    vec3 dir = hit.normal + randomInSphere(seed);
-    if (length(dir) < EPS) dir = hit.normal;
-    dir = normalize(dir);
-
-    scattered = Ray(hit.p + hit.normal * EPS, dir);
-    attenuation = mat.albedo / 3.14159265;
-
-    return true;
+Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
+    Material m;
+    m.type = type;
+    m.albedo = albedo;
+    m.payload[0] = f0;
+    m.payload[1] = f1;
+    return m;
 }
 
-bool scatterMetal(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    vec3 dir = reflect(ray.dir, hit.normal);
-    dir = normalize(dir);
-    dir = normalize(dir + randomInSphere(seed) * mat.fuzz);
+#define SET_MATERIAL_0(type, albedo)         makeMaterial(type, albedo, 0.0, 0.0)
+#define SET_MATERIAL_1(type, albedo, f0)     makeMaterial(type, albedo, f0, 0.0)
+#define SET_MATERIAL_2(type, albedo, f0, f1) makeMaterial(type, albedo, f0, f1)
 
-    scattered = Ray(hit.p + hit.normal * EPS, dir);
-    attenuation = mat.albedo;
+#define DEFAULT_MATERIAL                     SET_MATERIAL_0(mat_Lambertian, vec3(1,0,1)*0.7)
+#define LAMBERTIAN_MATERIAL(albedo)          SET_MATERIAL_0(mat_Lambertian, albedo)
+#define METAL_MATERIAL(albedo, fuzz)         SET_MATERIAL_1(mat_Metal, albedo, fuzz)
+#define DIELECTRIX_MATERIAL(albedo, ior)     SET_MATERIAL_1(mat_Dielectric, albedo, ior)
+#define EMISSIVE_MATERIAL(albedo, intensity) SET_MATERIAL_1(mat_Emissive, albedo, intensity)
+#define GLOSSY_MATERIAL(albedo, ior, fuzz)   SET_MATERIAL_2(mat_Glossy, albedo, ior, fuzz)
+#define CHECKERBOARD_MATERIAL                SET_MATERIAL_1(mat_Checkerboard, vec3(0), 2)
 
-    return true;
-}
+#define metalFuzz(mat) mat.payload[0]
+#define dielectricIoR(mat) mat.payload[0]
+#define emissiveIntensity(mat) mat.payload[0]
+#define glossyIoR(mat) mat.payload[0]
+#define glossyFuzz(mat) mat.payload[1]
+#define checkerboardScale(mat) mat.payload[0]
 
 float schlick_approx(float cosine, float ri) {
     float r0 = (1 - ri) / (1 + ri);
     r0 = r0*r0;
     return r0 + (1-r0) * pow((1 - cosine),5);
 }
-bool scatterDielectric(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    float ri = hit.front_face ? (1.0/mat.refraction_index) : mat.refraction_index;
+
+struct ScatterResult {
+    vec3 attenuation;
+    Ray scattered;
+    bool isScattered;
+    bool isDiffuse;
+};
+
+// ================== SCATTERING FUNCIONS ==================
+void scatterLambertian(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
+    vec3 dir = hit.normal + randomInSphere(seed);
+    if (length(dir) < EPS) dir = hit.normal;
+    dir = normalize(dir);
+
+    result.scattered = Ray(hit.p + hit.normal * EPS, dir);
+    result.attenuation = mat.albedo / 3.14159265;
+    result.isScattered = true;
+    result.isDiffuse = true;
+}
+
+void scatterMetal(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
+    vec3 dir = reflect(ray.dir, hit.normal);
+    dir = normalize(dir);
+    dir = normalize(dir + randomInSphere(seed) * metalFuzz(mat));
+
+    result.scattered = Ray(hit.p + hit.normal * EPS, dir);
+    result.attenuation = mat.albedo;
+    result.isScattered = true;
+    result.isDiffuse = false;
+}
+
+void scatterDielectric(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
+    float ri = hit.front_face ? (1.0/dielectricIoR(mat)) : dielectricIoR(mat);
 
     float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
     float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
@@ -67,38 +96,36 @@ bool scatterDielectric(in Material mat, in Ray ray, in Hit hit, out vec3 attenua
         dir = refract(ray.dir, hit.normal, ri);
 
     float side = dot(hit.normal, dir) > 0 ? 1.0 : -1.0;
-    scattered = Ray(hit.p + hit.normal * EPS * side, dir);
-    attenuation = mat.albedo;
-    return true;
+    result.scattered = Ray(hit.p + hit.normal * EPS * side, dir);
+    result.attenuation = mat.albedo;
+    result.isScattered = true;
+    result.isDiffuse = false;
 }
 
-bool scatterEmissive(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    attenuation = mat.albedo * mat.intensity;
-    return false;
+void scatterEmissive(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
+    result.attenuation = mat.albedo * emissiveIntensity(mat);
+    result.isScattered = false;
 }
 
-bool scatterGlossy(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
-    float ri = hit.front_face ? (1.0/mat.refraction_index) : mat.refraction_index;
+void scatterGlossy(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
+    float ri = hit.front_face ? (1.0/glossyIoR(mat)) : glossyIoR(mat);
 
     float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
 
     if (schlick_approx(cos_theta, ri) > rand(seed))
-        return scatterMetal(METAL_MATERIAL(vec3(1.0), mat.fuzz), ray, hit, attenuation, scattered, seed);
+        scatterMetal(METAL_MATERIAL(vec3(1.0), glossyFuzz(mat)), ray, hit, result, seed);
     else
-        return scatterLambertian(LAMBERTIAN_MATERIAL(mat.albedo), ray, hit, attenuation, scattered, seed);
+        scatterLambertian(LAMBERTIAN_MATERIAL(mat.albedo), ray, hit, result, seed);
 }
 
-bool scatterCheckerboard(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
+void scatterCheckerboard(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
     vec2 p = hit.p.xz;
-    float scale = 0.5;
-    // float t = sin(ubo.time)*0.5+0.5;
-    vec2 ip = round(p / scale);
-    // vec3 color = mix(vec3(0.8, 0.6, 0.2), vec3(0.2, 0.3, 0.5), t);
+    vec2 ip = round(p / checkerboardScale(mat));
     vec3 color = vec3(0.2, 0.3, 0.5);
 
     // Artificial gutters on tile edges //! this is absolute magic
     float s = 6.0;
-    vec2 uv = p / scale;
+    vec2 uv = p / checkerboardScale(mat);
     vec2 tile_uv = fract(uv - 0.5);
     vec2 centered = tile_uv - 0.5;
     vec2 edge_dist = 0.5 - abs(centered);
@@ -115,26 +142,24 @@ bool scatterCheckerboard(in Material mat, in Ray ray, in Hit hit, out vec3 atten
     }
 
     if (border.x > 0.0 || border.y > 0.0) {
-        return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.4), ray, hit, attenuation, scattered, seed);
+        scatterLambertian(LAMBERTIAN_MATERIAL(color*0.4), ray, hit, result, seed);
     } else if (int(ip.x + ip.y + 1) % 2 == 0) {
-        // return scatterLambertian(LAMBERTIAN_MATERIAL(color*0.6), ray, hit, attenuation, scattered, seed);
-        return scatterMetal(METAL_MATERIAL(color*0.6, 0.01), ray, hit, attenuation, scattered, seed);
+        scatterMetal(METAL_MATERIAL(color*0.6, 0.01), ray, hit, result, seed);
     } else {
-        return scatterLambertian(LAMBERTIAN_MATERIAL(color), ray, hit, attenuation, scattered, seed);
+        scatterLambertian(LAMBERTIAN_MATERIAL(color), ray, hit, result, seed);
     }
 }
 
-bool scatter(in Material mat, in Ray ray, in Hit hit, out vec3 attenuation, out Ray scattered, inout vec3 seed) {
+void scatter(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout vec3 seed) {
     switch (mat.type) {
-        case mat_Lambertian:    return scatterLambertian(mat, ray, hit, attenuation, scattered, seed);
-        case mat_Metal:         return scatterMetal(mat, ray, hit, attenuation, scattered, seed);
-        case mat_Dielectric:    return scatterDielectric(mat, ray, hit, attenuation, scattered, seed);
-        case mat_Emissive:      return scatterEmissive(mat, ray, hit, attenuation, scattered, seed);
-        case mat_Glossy:        return scatterGlossy(mat, ray, hit, attenuation, scattered, seed);
-        case mat_Checkerboard:  return scatterCheckerboard(mat, ray, hit, attenuation, scattered, seed);
-        default:                return scatterLambertian(DEFAULT_MATERIAL, ray, hit, attenuation, scattered, seed);
+        case mat_Lambertian:   scatterLambertian(mat, ray, hit, result, seed); break;
+        case mat_Metal:        scatterMetal(mat, ray, hit, result, seed); break;
+        case mat_Dielectric:   scatterDielectric(mat, ray, hit, result, seed); break;
+        case mat_Emissive:     scatterEmissive(mat, ray, hit, result, seed); break;
+        case mat_Glossy:       scatterGlossy(mat, ray, hit, result, seed); break;
+        case mat_Checkerboard: scatterCheckerboard(mat, ray, hit, result, seed); break;
+        default:               scatterLambertian(DEFAULT_MATERIAL, ray, hit, result, seed); break;
     }
 }
-
 
 #endif

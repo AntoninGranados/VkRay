@@ -1,8 +1,9 @@
 #version 450
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
-// layout(set = 0, binding = 1) uniform UBO {
-// } ubo;
+layout(set = 0, binding = 1) uniform UBO {
+    int frameCount;
+} ubo;
 
 layout(location = 0) in vec2 fragPos;
 layout(location = 0) out vec4 outColor;
@@ -11,13 +12,20 @@ const float outlineWidth = 3.0;
 const float feather = 0.8;
 
 void main() {
-    // TODO fix the edge issue (edges wrap around the screen)
     vec2 uv = fragPos * 0.5 + 0.5;
 
     vec4 texelData = texture(tex, uv);
-    vec3 color = texelData.rgb;
+    vec2 texSize = vec2(textureSize(tex, 0));
+    vec2 texelSize = 1.0 / texSize;
 
-    vec2 texelSize = 1.0 / vec2(textureSize(tex, 0));
+    
+    vec3 color = texelData.rgb;
+    if (ubo.frameCount <= 1) {
+        vec2 screenCoord = uv * texSize;
+        ivec2 blockCoord = ivec2(round(screenCoord / 10.0) * 10.0);
+        color = texelFetch(tex, blockCoord, 0).rgb;
+    }
+
 
     float targetMin = 0.5;
     float targetMax = 1.5;

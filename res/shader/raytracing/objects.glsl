@@ -7,19 +7,19 @@
 struct Sphere {
     vec3 center;
     float radius;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 struct Plane {
     vec3 point;
     vec3 normal;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 struct Box {
     vec3 cornerMin;
     vec3 cornerMax;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 // ================ RAY INTERSECTION ================

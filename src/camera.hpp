@@ -28,7 +28,6 @@ public:
 
 private:
     float fov = 80.0f;
-    float tanHFov;
 
     glm::vec3 position;
     glm::vec3 direction;

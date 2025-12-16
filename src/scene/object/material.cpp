@@ -1,116 +1,124 @@
 #include "material.hpp"
 
-bool drawLambertianUI(Material &mat) {
+bool drawLambertianUI(Material &material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     return updated;
 }
 
-bool drawMetalUI(Material &mat) {
+bool drawMetalUI(Material &material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Fuzz:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-fuzz", &mat.fuzz, 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat-fuzz", &metalFuzz(material), 0.01, 0.0, 1.0))
         updated = true;
     ImGui::PopItemWidth();
 
     return updated;
 }
 
-bool drawDielectricUI(Material &mat) {
+bool drawDielectricUI(Material &material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("IoR:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-index", &mat.refraction_index, 0.001, 0.01, 10.0, "%.3f"))
+    if (ImGui::DragFloat("##Mat-index", &dielectricIoR(material), 0.001, 0.01, 10.0, "%.3f"))
         updated = true;
     ImGui::PopItemWidth();
 
     return updated;
 }
 
-bool drawEmissiveUI(Material &mat) {
+bool drawEmissiveUI(Material &material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Intensity:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-intensity", &mat.intensity, 0.1, 0.0, 100.0))
+    if (ImGui::DragFloat("##Mat-intensity", &emissiveIntensity(material), 0.1, 0.0, 100.0))
         updated = true;
     ImGui::PopItemWidth();
 
     return updated;
 }
 
-bool drawGlossyUI(Material &mat) {
+bool drawGlossyUI(Material &material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(mat.albedo)))
+    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("IoR:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-index", &mat.refraction_index, 0.001, 0.01, 10.0, "%.3f"))
+    if (ImGui::DragFloat("##Mat-index", &glossyIoR(material), 0.001, 0.01, 10.0, "%.3f"))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Fuzz:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-fuzz", &mat.fuzz, 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat-fuzz", &glossyFuzz(material), 0.01, 0.0, 1.0))
         updated = true;
     ImGui::PopItemWidth();
 
     return updated;
 } 
 
-bool drawCheckerboardUI(Material &mat) {
-    return false;
+bool drawCheckerboardUI(Material &material) {
+    bool updated = false;
+
+    ImGui::Text("Scale:");
+    ImGui::PushItemWidth(-FLT_MIN);
+    if (ImGui::DragFloat("##Mat-scale", &checkerboardScale(material), 0.01, 0.01, 10.0, "%.3f"))
+        updated = true;
+    ImGui::PopItemWidth();
+
+    return updated;
 }
 
-bool drawMaterialUI(Material &mat) {
+bool drawMaterialUI(Material &material) {
     bool updated = false;
 
     ImGui::SeparatorText("Material");
     const char *types[] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Glossy", "Checkerboard" };
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::Combo("##Mat-type", (int*)&mat.type, types, IM_ARRAYSIZE(types)))
+    if (ImGui::Combo("##Mat-type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;
     ImGui::PopItemWidth();
     
-    switch (mat.type) {
-        case MaterialType::Lambertian:   updated |= drawLambertianUI(mat);   break;
-        case MaterialType::Metal:        updated |= drawMetalUI(mat);        break;
-        case MaterialType::Dielectric:   updated |= drawDielectricUI(mat);   break;
-        case MaterialType::Emissive:     updated |= drawEmissiveUI(mat);     break;
-        case MaterialType::Glossy:       updated |= drawGlossyUI(mat);       break;
-        case MaterialType::Checkerboard: updated |= drawCheckerboardUI(mat); break;
+    switch (material.type) {
+        case MaterialType::Lambertian:   updated |= drawLambertianUI(material);   break;
+        case MaterialType::Metal:        updated |= drawMetalUI(material);        break;
+        case MaterialType::Dielectric:   updated |= drawDielectricUI(material);   break;
+        case MaterialType::Emissive:     updated |= drawEmissiveUI(material);     break;
+        case MaterialType::Glossy:       updated |= drawGlossyUI(material);       break;
+        case MaterialType::Checkerboard: updated |= drawCheckerboardUI(material); break;
     }
 
     return updated;

@@ -9,16 +9,10 @@
 #include "./camera.hpp"
 #include "./notification.hpp"
 #include "./scene/scene.hpp"
+#include "./scene/scene_preset.hpp"
 #include "./scene/object/object.hpp"
 
 typedef uint16_t index_t;
-
-enum LightMode : int {
-    Day,
-    Sunset,
-    Night,
-    Empty,
-};
 
 struct ScreenVertex {
     glm::vec2 position;
@@ -39,9 +33,11 @@ struct RaytracingUBO {
 
     int maxBounces;
     int samplesPerPixel;
+    int importanceSampling;
 };
 
 struct ScreenUBO {
+    int frameCount;
 };
 
 class Application {
@@ -75,6 +71,7 @@ private:
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 5;
     int samplesPerPixel = 1;
+    bool importanceSampling = false;
 
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;

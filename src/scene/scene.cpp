@@ -10,7 +10,8 @@ void Scene::init(VkSmol &engine) {
     sphereBuffers.init(engine, sizeof(GpuSphere));
     planeBuffers.init(engine, sizeof(GpuPlane));
     boxBuffers.init(engine, sizeof(GpuBox));
-    objectBuffers.init(engine, sizeof(GpuObject), OBJECT_HEADER_SIZE);
+    objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
+    materialBuffers.init(engine, sizeof(Material));
 }
 
 void Scene::destroy(VkSmol &engine) {
@@ -18,25 +19,35 @@ void Scene::destroy(VkSmol &engine) {
     planeBuffers.destroy(engine);
     boxBuffers.destroy(engine);
     objectBuffers.destroy(engine);
+    materialBuffers.destroy(engine);
 }
 
 
 void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
     sphereBuffers.addElement(engine);
     objectBuffers.addElement(engine);
-    objects.push_back(new Sphere(name, center, radius, mat));
+    materialBuffers.addElement(engine);
+
+    objects.push_back(new Sphere(name, center, radius, static_cast<int>(materials.size())));
+    materials.push_back(mat);
 }
 
 void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
     planeBuffers.addElement(engine);
     objectBuffers.addElement(engine);
-    objects.push_back(new Plane(name, point, normal, mat));
+    materialBuffers.addElement(engine);
+
+    objects.push_back(new Plane(name, point, normal, static_cast<int>(materials.size())));
+    materials.push_back(mat);
 }
 
 void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
     boxBuffers.addElement(engine);
     objectBuffers.addElement(engine);
-    objects.push_back(new Box(name, cornerMin, cornerMax, mat));
+    materialBuffers.addElement(engine);
+
+    objects.push_back(new Box(name, cornerMin, cornerMax, static_cast<int>(materials.size())));
+    materials.push_back(mat);
 }
 
 // TODO: Only refill them after an update (not every frame)
@@ -44,7 +55,8 @@ void Scene::fillBuffers(VkSmol &engine) {
     std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
     std::vector<GpuPlane> planes(planeBuffers.getCapacity());
     std::vector<GpuBox> boxes(boxBuffers.getCapacity());
-    std::vector<GpuObject> objects_data(objectBuffers.getCapacity());
+    std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
+    std::vector<Material> materialData(materialBuffers.getCapacity());
 
     int sphereId = 0;
     int planeId = 0;
@@ -54,24 +66,28 @@ void Scene::fillBuffers(VkSmol &engine) {
         switch(p_object->getType()) {
             case ObjectType::Sphere: {
                 spheres[sphereId] = static_cast<Sphere*>(p_object)->getStruct();
-                objects_data[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
+                objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
                 sphereId++;
                 objectCount++;
             } break;
             case ObjectType::Plane: {
                 planes[planeId] = static_cast<Plane*>(p_object)->getStruct();
-                objects_data[objectCount] = { .type=ObjectType::Plane, .id=planeId };
+                objectHandles[objectCount] = { .type=ObjectType::Plane, .id=planeId };
                 planeId++;
                 objectCount++;
             } break;
             case ObjectType::Box: {
                 boxes[boxId] = static_cast<Box*>(p_object)->getStruct();
-                objects_data[objectCount] = { .type=ObjectType::Box, .id=boxId };
+                objectHandles[objectCount] = { .type=ObjectType::Box, .id=boxId };
                 boxId++;
                 objectCount++;
             } break;
             default: break;
         }
+    }
+
+    for (size_t i = 0; i < materials.size() && i < materialData.size(); i++) {
+        materialData[i] = materials[i];
     }
 
     int selected = static_cast<int>(selectedObjectId);
@@ -80,16 +96,19 @@ void Scene::fillBuffers(VkSmol &engine) {
     planeBuffers.fill(engine, planes.data());
     boxBuffers.fill(engine, boxes.data());
 
-    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(GpuObject) * objectBuffers.getCapacity(), 0);
+    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
     memcpy(objectData.data() + offset, &selected, sizeof(selected));
     offset += sizeof(selected);
     if (objectCount > 0)
-        memcpy(objectData.data() + offset, objects_data.data(), sizeof(GpuObject) * objectCount);
+        memcpy(objectData.data() + offset, objectHandles.data(), sizeof(ObjectHandle) * objectCount);
 
+        
     objectBuffers.fill(engine, objectData.data());
+    
+    materialBuffers.fill(engine, materialData.data());
 }
 
 
@@ -213,7 +232,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
         ImGui::PopItemWidth();
         objects[selectedObjectId]->setName(std::string(buff));
         
-        updated |= objects[selectedObjectId]->drawUI();
+        updated |= objects[selectedObjectId]->drawUI(materials);
         
         ImGui::Separator();
         if (ImGui::Button("Clone", { -FLT_MIN, 0 })) {
@@ -225,7 +244,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                         sphere->getName() + "-copy",
                         sphere->getStruct().center,
                         sphere->getStruct().radius,
-                        sphere->getStruct().mat
+                        materials[sphere->getStruct().materialHandle]
                     ); 
                 } break;
                 case ObjectType::Plane: {
@@ -235,7 +254,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                         plane->getName() + "-copy",
                         plane->getStruct().point,
                         plane->getStruct().normal,
-                        plane->getStruct().mat
+                        materials[plane->getStruct().materialHandle]
                     ); 
                 } break;
                 case ObjectType::Box: {
@@ -245,7 +264,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                         box->getName() + "-copy",
                         box->getStruct().cornerMin,
                         box->getStruct().cornerMax,
-                        box->getStruct().mat
+                        materials[box->getStruct().materialHandle]
                     ); 
                 } break;
                 default: break;
@@ -302,6 +321,7 @@ std::vector<bufferList_t> Scene::getBufferLists() {
         planeBuffers.getBufferList(),
         boxBuffers.getBufferList(),
         objectBuffers.getBufferList(),
+        materialBuffers.getBufferList(),
     };
 
 

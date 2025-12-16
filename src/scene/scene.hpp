@@ -17,6 +17,13 @@
 #include "object/box.hpp"
 #include "../notification.hpp"
 
+enum LightMode : int {
+    Day,
+    Sunset,
+    Night,
+    Empty,
+};
+
 class Scene {
 public:
     void init(VkSmol &engine);
@@ -46,11 +53,12 @@ public:
     bool wasUpdated();
 
 private:
-    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers;
+    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers, materialBuffers;
     
     int selectedObjectId = -1;
     int objectId = 0;   // Used for unique object naming
     std::vector<Object*> objects;
+    std::vector<Material> materials;
 
     bool updated = false;
 

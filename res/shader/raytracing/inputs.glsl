@@ -22,6 +22,7 @@ layout(std140, set = 0, binding = 0) uniform UBO {
 
     int maxBounces;
     int samplesPerPixel;
+    int importanceSampling;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;
@@ -40,5 +41,8 @@ layout(set = 0, binding = 5) buffer readonly ObjectBuffer {
     int selectedObjectId;
     Object objects[];
 } objectBuffer;
+layout(set = 0, binding = 6) buffer readonly MaterialBuffer {
+    Material materials[];
+} materialBuffer;
 
 #endif

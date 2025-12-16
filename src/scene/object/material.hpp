@@ -17,10 +17,20 @@ enum MaterialType {
 struct Material {
     MaterialType type;
     alignas(16) glm::vec3 albedo;
-    float fuzz;
-    float refraction_index;
-    float intensity;
+    float payload[2];
+    // float fuzz;
+    // float refraction_index;
+    // float intensity;
 };
+
+#define metalFuzz(mat) mat.payload[0]
+#define dielectricIoR(mat) mat.payload[0]
+#define emissiveIntensity(mat) mat.payload[0]
+#define glossyIoR(mat) mat.payload[0]
+#define glossyFuzz(mat) mat.payload[1]
+#define checkerboardScale(mat) mat.payload[0]
+
+typedef int MaterialHandle;
 
 bool drawLambertianUI(Material &mat);
 bool drawMetalUI(Material &mat);

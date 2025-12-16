@@ -11,15 +11,15 @@
 struct GpuPlane {
     alignas(16) glm::vec3 point;
     alignas(16) glm::vec3 normal;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 class Plane: public Object {
 public:
-    Plane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
+    Plane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle);
     float rayIntersection(const Ray &ray) override;
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
-    bool drawUI() override;
+    bool drawUI(std::vector<Material> &materials) override;
     
     GpuPlane getStruct();
     ObjectType getType() override { return ObjectType::Plane; };
@@ -29,5 +29,5 @@ private:
 
     glm::vec3 point;
     glm::vec3 normal;
-    Material mat;
+    MaterialHandle materialHandle;
 };

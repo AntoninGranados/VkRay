@@ -1,6 +1,7 @@
 #include "sphere.hpp"
 
-Sphere::Sphere(std::string name, glm::vec3 center, float radius, Material mat): Object(name), center(center), radius(radius), mat(mat) {
+Sphere::Sphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle):
+    Object(name), center(center), radius(radius), materialHandle(materialHandle) {
 }
 
 float Sphere::rayIntersection(const Ray &ray) {
@@ -49,7 +50,7 @@ bool Sphere::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     return false;
 }
 
-bool Sphere::drawUI() {
+bool Sphere::drawUI(std::vector<Material> &materials) {
     bool updated = false;
     
     ImGui::Text("Position:");
@@ -64,13 +65,13 @@ bool Sphere::drawUI() {
         updated = true;
     ImGui::PopItemWidth();
     
-    updated |= drawMaterialUI(mat);
+    updated |= drawMaterialUI(materials[materialHandle]);
     return updated;
 }
 
 GpuSphere Sphere::getStruct() {
     sphere.center = center;
     sphere.radius = radius;
-    sphere.mat = mat;
+    sphere.materialHandle = materialHandle;
     return sphere;
 }

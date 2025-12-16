@@ -2,7 +2,8 @@
 
 #include "plane.hpp"
 
-Plane::Plane(std::string name, glm::vec3 point, glm::vec3 normal, Material mat): Object(name), point(point), normal(normal), mat(mat) {
+Plane::Plane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle):
+    Object(name), point(point), normal(normal), materialHandle(materialHandle) {
 }
 
 float Plane::rayIntersection(const Ray &ray) {
@@ -53,7 +54,7 @@ bool Plane::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     return false;
 }
 
-bool Plane::drawUI() {
+bool Plane::drawUI(std::vector<Material> &materials) {
     bool updated = false;
     
     ImGui::Text("Point:");
@@ -69,13 +70,13 @@ bool Plane::drawUI() {
     ImGui::PopItemWidth();
     normal = glm::normalize(normal);
     
-    updated |= drawMaterialUI(mat);
+    updated |= drawMaterialUI(materials[materialHandle]);
     return updated;
 }
 
 GpuPlane Plane::getStruct() {
     plane.point = point;
     plane.normal = normal;
-    plane.mat = mat;
+    plane.materialHandle = materialHandle;
     return plane;
 }

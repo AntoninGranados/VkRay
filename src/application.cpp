@@ -75,10 +75,9 @@ Application::Application() {
     
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // sphere buffer
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // plane buffer
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // box buffer
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);  // object buffer
+    for (size_t i = 0; i < scene.getBufferLists().size(); i++) {
+        setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    }
     engine.initDescriptorSetLayout(setLayout);
     
     screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -161,108 +160,8 @@ void Application::initScene() {
         Application::notificationManager.pushMessage(type, content);
     });
 
-    scene.pushSphere(
-        engine,
-        "Glass",
-        glm::vec3(-2.0, 0.0, 0.0),
-        1.5,
-        Material {
-            .type = Dielectric,
-            .albedo = { 0.95, 0.8, 0.9 },
-            .refraction_index = 1.5,
-        }
-    );
-
-    scene.pushSphere(
-        engine,
-        "Metal",
-        glm::vec3( 2.0, 0.0, 0.0),
-        1.5,
-        Material {
-            .type = Metal,
-            .albedo = { 0.8, 0.6, 0.2 },
-            .fuzz = 0.01,
-        }
-    );
-
-    scene.pushBox(
-        engine,
-        "Left",
-        glm::vec3(4.0,-4.0,-4.0),
-        glm::vec3(4.1, 4.0, 4.0),
-        Material {
-            .type = Lambertian,
-            .albedo = { 1.0, 0.0, 0.0 },
-        }
-    );
-    
-    scene.pushBox(
-        engine,
-        "Right",
-        glm::vec3(-4.1,-4.0,-4.0),
-        glm::vec3(-4.0, 4.0, 4.0),
-        Material {
-            .type = Lambertian,
-            .albedo = { 0.0, 1.0, 0.0 },
-        }
-    );
-    
-    scene.pushBox(
-        engine,
-        "Top",
-        glm::vec3(-4.0, 4.0,-4.0),
-        glm::vec3( 4.0, 4.1, 4.0),
-        Material {
-            .type = Lambertian,
-            .albedo = { 1.0, 1.0, 1.0 },
-        }
-    );
-    
-    scene.pushBox(
-        engine,
-        "Bottom",
-        glm::vec3(-4.0,-4.1,-4.0),
-        glm::vec3( 4.0,-4.0, 4.0),
-        Material {
-            .type = Lambertian,
-            .albedo = { 1.0, 1.0, 1.0 },
-        }
-    );
-    
-    scene.pushBox(
-        engine,
-        "Back",
-        glm::vec3(-4.0,-4.0, 4.0),
-        glm::vec3( 4.0, 4.0, 4.1),
-        Material {
-            .type = Lambertian,
-            .albedo = { 1.0, 1.0, 1.0 },
-        }
-    );
-    
-    // scene.pushBox(
-    // engine,
-    //     "Light",
-    //     glm::vec3(-2.0, 3.9,-2.0),
-    //     glm::vec3( 2.0, 4.0, 2.0),
-    //     Material {
-    //         .type = Emissive,
-    //         .albedo = { 1.0, 1.0, 1.0 },
-    //         .intensity = 20.0,
-    //     }
-    // );
-    
-    scene.pushSphere(
-        engine,
-        "Light",
-        glm::vec3(0.0, 4.0, 0.0),
-        1.0,
-        Material {
-            .type = Emissive,
-            .albedo = { 1.0, 1.0, 1.0 },
-            .intensity = 20.0,
-        }
-    );
+    // initCornellBox(engine, scene, lightMode);
+    initRandomSphere(engine, scene, lightMode);
 }
 
 
@@ -583,6 +482,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
 
         ImGui::DragInt("Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
         ImGui::DragInt("Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
+        ImGui::Checkbox("Importance Sampling", &importanceSampling);
         
         scene.drawUI(engine);
     }
@@ -614,9 +514,10 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
 
     raytracingUBO.maxBounces = maxBounces;
     raytracingUBO.samplesPerPixel = samplesPerPixel;
+    raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
 
     // Screen UBO
-    // screenUBO.XXX = ...;
+    screenUBO.frameCount = frameCount;
 }
 
 // TODO: make this function asynchronous ?

@@ -3,7 +3,8 @@
 #include <cmath>
 #include <limits>
 
-Box::Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat): Object(name), cornerMin(cornerMin), cornerMax(cornerMax), mat(mat) {
+Box::Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle):
+    Object(name), cornerMin(cornerMin), cornerMax(cornerMax), materialHandle(materialHandle) {
 }
 
 float Box::rayIntersection(const Ray &ray) {
@@ -68,7 +69,7 @@ bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     return false;
 }
 
-bool Box::drawUI() {
+bool Box::drawUI(std::vector<Material> &materials) {
     bool updated = false;
     
     ImGui::Text("Corner Max:");
@@ -83,13 +84,13 @@ bool Box::drawUI() {
         updated = true;
     ImGui::PopItemWidth();
     
-    updated |= drawMaterialUI(mat);
+    updated |= drawMaterialUI(materials[materialHandle]);
     return updated;
 }
 
 GpuBox Box::getStruct() {
     box.cornerMin = cornerMin;
     box.cornerMax = cornerMax;
-    box.mat = mat;
+    box.materialHandle = materialHandle;
     return box;
 }

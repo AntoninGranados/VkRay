@@ -11,15 +11,15 @@
 struct GpuBox {
     alignas(16) glm::vec3 cornerMin;
     alignas(16) glm::vec3 cornerMax;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 class Box: public Object {
 public:
-    Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
+    Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle);
     float rayIntersection(const Ray &ray) override;
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
-    bool drawUI() override;
+    bool drawUI(std::vector<Material> &materials) override;
     
     GpuBox getStruct();
     ObjectType getType() override { return ObjectType::Box; };
@@ -29,5 +29,5 @@ private:
 
     glm::vec3 cornerMin;
     glm::vec3 cornerMax;
-    Material mat;
+    MaterialHandle materialHandle;
 };

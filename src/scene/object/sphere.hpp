@@ -11,15 +11,15 @@
 struct GpuSphere {
     alignas(16) glm::vec3 center;
     float radius;
-    Material mat;
+    MaterialHandle materialHandle;
 };
 
 class Sphere: public Object {
 public:
-    Sphere(std::string name, glm::vec3 center, float radius, Material mat);
+    Sphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle);
     float rayIntersection(const Ray &ray) override;
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
-    bool drawUI() override;
+    bool drawUI(std::vector<Material> &materials) override;
     
     GpuSphere getStruct();
     ObjectType getType() override { return ObjectType::Sphere; };
@@ -29,5 +29,5 @@ private:
 
     glm::vec3 center;
     float radius;
-    Material mat;
+    MaterialHandle materialHandle;
 };

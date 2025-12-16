@@ -18,11 +18,11 @@ float rayObjectIntersection(in Ray ray, in Object obj) {
 
 Material getMaterial(in Object obj) {
     if (obj.type == obj_Sphere)
-        return sphereBuffer.spheres[obj.id].mat;
+        return materialBuffer.materials[sphereBuffer.spheres[obj.id].materialHandle];
     else if (obj.type == obj_Plane)
-        return planeBuffer.planes[obj.id].mat;
+        return materialBuffer.materials[planeBuffer.planes[obj.id].materialHandle];
     else if (obj.type == obj_Box)
-        return boxBuffer.boxes[obj.id].mat;
+        return materialBuffer.materials[boxBuffer.boxes[obj.id].materialHandle];
     return DEFAULT_MATERIAL;
 }
 

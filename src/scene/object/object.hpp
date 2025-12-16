@@ -52,7 +52,7 @@ enum class ObjectType : int {
     Box,
 };
 
-struct GpuObject {
+struct ObjectHandle {
     ObjectType type;
     int id;
 };
@@ -62,7 +62,7 @@ public:
     Object(std::string name): name(name) {};
     virtual float rayIntersection(const Ray &ray) = 0;
     virtual bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) = 0;
-    virtual bool drawUI() = 0;
+    virtual bool drawUI(std::vector<Material> &materials) = 0;
     
     void getStruct(void) {};
     std::string getName() { return name; }
