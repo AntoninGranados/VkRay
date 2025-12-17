@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "imgui/imgui.h"
+
 class Camera {
 public:
     Camera(glm::vec3 position, glm::vec3 direction);
@@ -21,13 +23,23 @@ public:
     glm::mat4 getView() const;
     glm::mat4 getProjection(GLFWwindow* window) const;
 
+    float getAperture() const { return aperture; };
+    void setAperture(float newAperture) { aperture = newAperture; }
+    float getFocusDepth() const { return focusDepth; };
+    void setFocusDepth(float newFocusDepth) { focusDepth = newFocusDepth; }
+
     bool isLocked() { return locked; }
     void toggleLock() { locked = !locked; }
 
     void resetMouse() { firstMouse = true; }
 
+    bool drawUI();
+
 private:
     float fov = 80.0f;
+
+    float aperture = 0.0f;
+    float focusDepth = 10.0f;
 
     glm::vec3 position;
     glm::vec3 direction;

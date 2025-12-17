@@ -35,4 +35,12 @@ vec3 randomInHemisphere(inout vec3 seed, vec3 normal) {
     return dot(v, normal) < 0.0 ? -v : v;
 }
 
+vec2 randomInDisk(inout vec3 seed) {
+    float r  = sqrt(rand(seed));
+    float theta = 6.2831853 * rand(seed);
+    float x = r * cos(theta);
+    float y = r * sin(theta);
+    return vec2(x, y);
+}
+
 #endif

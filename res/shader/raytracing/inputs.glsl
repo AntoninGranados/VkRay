@@ -11,6 +11,8 @@ layout(std140, set = 0, binding = 0) uniform UBO {
     vec3 cameraPos;
     vec3 cameraDir;
     float tanHFov;
+    float aperture;
+    float focusDepth;
 
     vec2 screenSize;
     float aspect;

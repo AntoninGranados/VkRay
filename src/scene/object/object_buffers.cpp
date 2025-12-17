@@ -14,6 +14,11 @@ void ObjectBuffers::destroy(VkSmol &engine) {
     engine.destroyBufferList(bufferList);
 }
 
+void ObjectBuffers::clear(VkSmol &engine) {
+    engine.destroyBufferList(bufferList);
+    init(engine, objectSize, baseSize);
+}
+
 void ObjectBuffers::addElement(VkSmol &engine) {
     if (count >= capacity) resize(engine);
     count++;

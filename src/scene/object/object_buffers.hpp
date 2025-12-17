@@ -6,6 +6,7 @@ class ObjectBuffers {
 public:
     void init(VkSmol &engine, size_t objectSize, size_t baseSize = 0);
     void destroy(VkSmol &engine);
+    void clear(VkSmol &engine);
 
     void addElement(VkSmol &engine);
     void removeElement();

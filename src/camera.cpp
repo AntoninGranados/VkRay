@@ -105,3 +105,23 @@ glm::mat4 Camera::getProjection(GLFWwindow* window) const {
     glm::mat4 proj = glm::perspective(fovY, aspect, 1e-4f, 1e4f);
     return proj;
 }
+
+bool Camera::drawUI() {
+    bool updated = false;
+
+    ImGui::Text("Camera Position:\n (%4.1f, %4.1f, %4.1f)", position.x, position.y, position.z);
+    ImGui::Text("Camera Direction:\n (%4.1f, %4.1f, %4.1f)", direction.x, direction.y, direction.z);
+    ImGui::Text("Camera Fov:\n %4.1f°", fov);
+    
+    ImGui::Text("Camera Aperture:");
+    if (ImGui::DragFloat("##Camera Aperture", &aperture, 0.01, 0.0, 5.0)) {
+        updated = true;
+    }
+
+    ImGui::Text("Camera Focus Depth:");
+    if (ImGui::DragFloat("##Camera Focus Depth", &focusDepth, 0.1, 0.0, 100.0)) {
+        updated = true;
+    }
+
+    return updated;
+}

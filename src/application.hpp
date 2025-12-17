@@ -22,6 +22,8 @@ struct RaytracingUBO {
     alignas(16) glm::vec3 cameraPos;
     alignas(16) glm::vec3 cameraDir;
     float tanHFov;
+    float aperture;
+    float focusDepth;
 
     alignas(8) glm::vec2 screenSize;
     float aspect;
@@ -73,7 +75,7 @@ private:
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 4;
     int samplesPerPixel = 1;
-    float lowResolutionScale = 8.0f;
+    float lowResolutionScale = 8.0f;    // TODO: change the resolution dynamically (no computation in the shader so this is always used and not only when moving)
     bool importanceSampling = true;
 
     bool uiCapturesMouse = false;

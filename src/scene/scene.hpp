@@ -7,15 +7,16 @@
 
 #include "../engine/engine.hpp"
 #include "../camera.hpp"
-#include "../imgui/ImGuizmo.h"
-#include "../imgui/imgui.h"
+#include "../notification.hpp"
 
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
 #include "object/sphere.hpp"
 #include "object/plane.hpp"
 #include "object/box.hpp"
-#include "../notification.hpp"
+
+#include "imgui/ImGuizmo.h"
+#include "imgui/imgui.h"
 
 enum LightMode : int {
     Day,
@@ -28,6 +29,8 @@ class Scene {
 public:
     void init(VkSmol &engine);
     void destroy(VkSmol &engine);
+    void clear(VkSmol &engine);
+
     void setMessageCallback(void (*messageCallback_)(NotificationType, std::string)) {
         messageCallback = messageCallback_;
     }
@@ -45,7 +48,7 @@ public:
     void drawSelectedUI(VkSmol &engine);
 
     void clearSelection() { selectedObjectId = -1; }
-    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera);
+    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist);
 
     std::vector<bufferList_t> getBufferLists();
 

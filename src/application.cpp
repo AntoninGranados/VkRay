@@ -160,8 +160,7 @@ void Application::initScene() {
         Application::notificationManager.pushMessage(type, content);
     });
 
-    initCornellBox(engine, scene, lightMode);
-    // initRandomSphere(engine, scene, lightMode);
+    initEmpty(engine, scene, lightMode);
 }
 
 
@@ -208,7 +207,11 @@ void Application::run() {
             glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
             int width, height;
             glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-            scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera);
+            float dist;
+            if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist)) {
+                camera.setFocusDepth(dist);
+                restartRender = true;
+            }
         }
         if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             if (!uiToggled) uiToggled = true;
@@ -458,22 +461,10 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
-        ImGui::Text("Camera Position:\n (%4.1f, %4.1f, %4.1f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-        ImGui::Separator();
-        ImGui::Text("Camera Direction:\n (%4.1f, %4.1f, %4.1f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
-        ImGui::Separator();
-        ImGui::Text("Camera Fov:\n %4.1f°", camera.getFov());
-        ImGui::Separator();
-
-        const char *lightModes[4] = { "Day", "Sunset", "Night", "Empty" };
-        ImGui::PushItemWidth(-FLT_MIN);
-        int currentLigthMode = static_cast<int>(lightMode);
-        if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
-        restartRender = true;
-        lightMode = static_cast<LightMode>(currentLigthMode);
-        ImGui::PopItemWidth();
+        ImGui::SeparatorText("Camera");
+        restartRender |= camera.drawUI();
         
-        ImGui::Separator();
+        ImGui::SeparatorText("Pathtracer");
         
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
@@ -487,7 +478,46 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
         
+        ImGui::SeparatorText("Scene");
+
+        const char *lightModes[4] = { "Day", "Sunset", "Night", "Empty" };
+        ImGui::PushItemWidth(-FLT_MIN);
+        int currentLigthMode = static_cast<int>(lightMode);
+        if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
+        restartRender = true;
+        lightMode = static_cast<LightMode>(currentLigthMode);
+        ImGui::PopItemWidth();
+
+        if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
+            ImGui::OpenPopup("Scene Preset");
+        }
         scene.drawUI(engine);
+
+        if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            if (ImGui::Button("Empty", { 200, 0 })) {
+                initEmpty(engine, scene, lightMode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Cornell Box", { 200, 0 })) {
+                initCornellBox(engine, scene, lightMode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Random Spheres", { 200, 0 })) {
+                initRandomSpheres(engine, scene, lightMode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            
+            ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
+            if (ImGui::Button("Cancel", { 200, 0 })) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopStyleColor();
+            
+            ImGui::EndPopup();
+        }
     }
     ImGui::End();
     
@@ -503,6 +533,8 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.cameraPos = camera.getPosition();
     raytracingUBO.cameraDir = camera.getDirection();
     raytracingUBO.tanHFov = camera.getTanHFov();
+    raytracingUBO.aperture = camera.getAperture();
+    raytracingUBO.focusDepth = camera.getFocusDepth();
 
     VkExtent2D extent = engine.getExtent();
     raytracingUBO.screenSize = { (float)extent.width, (float)extent.height };

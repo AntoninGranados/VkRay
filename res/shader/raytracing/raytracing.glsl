@@ -9,7 +9,7 @@
 #include "random.glsl"
 
 
-Ray getRay(Camera camera, vec2 ndc_pos) {
+Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout vec3 seed) {
     vec3 forward = normalize(camera.dir);
     vec3 right   = normalize(cross(forward, camera.up));
     vec3 up      = cross(right, forward);
@@ -21,10 +21,19 @@ Ray getRay(Camera camera, vec2 ndc_pos) {
     float cam_x = (2.f * scr_x - 1.f) * ubo.aspect * ubo.tanHFov;
     float cam_y = (1.f - 2.f * scr_y) * ubo.tanHFov;
 
-    vec3 dir = cam_x * right + cam_y * up + forward;
-    dir = normalize(dir);
+    vec3 offset = vec3(0.0);
+    if (enableFocus) {
+        vec2 p = randomInDisk(seed);
+        float lens_r = ubo.aperture * 0.5;
+        offset = lens_r * (right * p.x + up * p.y);
+    }
 
-    return Ray(camera.pos, dir);
+    vec3 origin = camera.pos + offset;
+
+    vec3 target = camera.pos + (cam_x * right + cam_y * up + forward) * ubo.focusDepth;
+    vec3 dir = normalize(target - origin);
+
+    return Ray(origin, dir);
 }
 
 Hit intersection(in Ray ray) {
@@ -132,7 +141,7 @@ vec3 computeFragmentColor(in Camera camera, inout vec3 seed) {
     vec3 color = vec3(0);
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
-        Ray ray = getRay(camera, fragPos + offset);
+        Ray ray = getRay(camera, fragPos + offset, true, seed);
         vec3 rayColor = traceRay(camera, ray, seed);
         color.rgb += rayColor.rgb;
     }
@@ -167,7 +176,7 @@ void main() {
 
     float intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
-        float t = rayObjectIntersection(getRay(camera, fragPos), objectBuffer.objects[objectBuffer.selectedObjectId]);
+        float t = rayObjectIntersection(getRay(camera, fragPos, false, seed), objectBuffer.objects[objectBuffer.selectedObjectId]);
         if (t > 0.0) intersection = 1;
     }
 

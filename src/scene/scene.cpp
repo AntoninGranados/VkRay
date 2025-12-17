@@ -22,6 +22,19 @@ void Scene::destroy(VkSmol &engine) {
     materialBuffers.destroy(engine);
 }
 
+void Scene::clear(VkSmol &engine) {
+    engine.waitIdle();
+    
+    sphereBuffers.clear(engine);
+    planeBuffers.clear(engine);
+    boxBuffers.clear(engine);
+    objectBuffers.clear(engine);
+    materialBuffers.clear(engine);
+    objects.clear();
+    materials.clear();
+    selectedObjectId = -1;
+}
+
 
 void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
     sphereBuffers.addElement(engine);
@@ -120,8 +133,6 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 }
 
 void Scene::drawUI(VkSmol &engine) {
-    ImGui::SeparatorText("Scene");
-
     if (ImGui::Button("Add object", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New Object")) {
         ImGui::OpenPopup("New Object");
     }
@@ -295,24 +306,25 @@ void Scene::drawSelectedUI(VkSmol &engine) {
 }
 
 
-bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera) {
+bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist) {
     Ray ray = getRay(screenPos, screenSize, camera);
-    float closest_t = std::numeric_limits<float>::infinity();
-    int closest_id = -1;
+    float tClosest = std::numeric_limits<float>::infinity();
+    int idClosest = -1;
 
     float t;
     int i = 0;
     for (Object *p_object : objects) {
         t = p_object->rayIntersection(ray);
-        if (t >= 0.0f && t < closest_t) {
-            closest_t = t;
-            closest_id = i;
+        if (t >= 0.0f && t < tClosest) {
+            tClosest = t;
+            idClosest = i;
         }
         i++;
     }
 
-    selectedObjectId = closest_id;
-    return closest_id >= 0;
+    selectedObjectId = idClosest;
+    dist = tClosest;
+    return idClosest >= 0;
 }
 
 std::vector<bufferList_t> Scene::getBufferLists() {

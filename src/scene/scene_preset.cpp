@@ -1,6 +1,14 @@
 #include "scene_preset.hpp"
 
+void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+    scene.clear(engine);
+
+    lightMode = LightMode::Day;
+}
+
 void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+    scene.clear(engine);
+
     lightMode = LightMode::Empty;
     
     scene.pushSphere(
@@ -96,9 +104,10 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
 }
 
 #define RAND_FLOAT static_cast<float>(rand() % 100) / 100.0f
+void initRandomSpheres(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+    srand(time(nullptr));
 
-void initRandomSphere(VkSmol &engine, Scene &scene, LightMode &lightMode) {
-    srand(0);
+    scene.clear(engine);
 
     lightMode = LightMode::Empty;
 
