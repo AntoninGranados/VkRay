@@ -167,91 +167,17 @@ void Application::initScene() {
 void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    while(!engine.shouldTerminate()) {
-
-        // TODO remove this !!!!
-        {   // This should only be recomputed on scene buffer update
-
-            std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
-                { imageViews[0], samplers[0] },
-                { imageViews[1], samplers[1] }
-            };
-
-            std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
-            for (size_t i = 0; i < 2; i++) {
-                std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
-                for (bufferList_t &buffers : storageBuffers) {
-                    descriptors.push_back(&buffers);
-                }
-                
-                descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
-            }
-        }
-        
-        frame = (frame + 1) % 2;
-        frameCount++;
-
+    while(!engine.shouldTerminate() && !shouldClose) {
         auto currentTime = std::chrono::high_resolution_clock::now();
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
-
+        
         CommandBuffer commandBuffer;
         
         engine.beginFrame();
-
-        const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
-        const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
-
-        if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            double xpos, ypos;
-            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-            int width, height;
-            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-            float dist;
-            if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist)) {
-                camera.setFocusDepth(dist);
-                restartRender = true;
-            }
-        }
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            if (!uiToggled) uiToggled = true;
-            else scene.clearSelection();
-        }
-
-        if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), deltaTime))
-            restartRender = true;
-
-        if (camera.isLocked() || blockMouseInput)
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        else
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-        if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-            restartRender = true;
-
-        if (scene.wasUpdated()) 
-            restartRender = true;
-
-        if (notificationManager.isCommandRequested(Command::Exit))
-            break;
-        if (notificationManager.isCommandRequested(Command::Render)) {
-            scene.clearSelection();
-            uiToggled = false;
-        }
-        if (notificationManager.isCommandRequested(Command::Reload)) {
-            rebuildPipeline();
-            restartRender = true;
-        }
-
-        if (restartRender) {
-            frameCount = 0;
-            restartRender = false;
-        }
-
-        RaytracingUBO raytracingUBO;
-        ScreenUBO screenUBO;
-        fillUBOs(raytracingUBO, screenUBO);
         
+        onFrameStart(deltaTime);
+
         commandBuffer = engine.beginRecordingRender();
         {
             VkExtent2D extent = engine.getExtent();
@@ -290,8 +216,7 @@ void Application::run() {
                     {{ 0.0f, 0.0f, 0.0f, 1.0f }}
                 );
                 
-                engine.fillBuffer(engine.getBuffer(raytracingUniformBuffers), &raytracingUBO);
-                scene.fillBuffers(engine);
+                // Bind current descriptor set
                 engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pipeline.getLayout());
                 
                 pipeline.bind(commandBuffer);
@@ -359,7 +284,6 @@ void Application::run() {
         }
         engine.endRecoringRender(commandBuffer);
             
-
         // TODO: might set default barrier and dyamic rendering context (at least for the UI)
         commandBuffer = engine.beginRecordingUiRender();
         {
@@ -395,7 +319,82 @@ void Application::run() {
 }
 
 
-// #include <future>
+void Application::onFrameStart(float dt) {
+    fillUBOs(raytracingUBO, screenUBO);
+    engine.fillBuffer(engine.getBuffer(raytracingUniformBuffers), &raytracingUBO);
+    scene.fillBuffers(engine);
+
+    // Rebuild descriptor set
+    if (scene.checkBufferUpdate()) {
+        std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
+            { imageViews[0], samplers[0] },
+            { imageViews[1], samplers[1] }
+        };
+
+        std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
+        for (size_t i = 0; i < 2; i++) {
+            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
+            for (bufferList_t &buffers : storageBuffers) {
+                descriptors.push_back(&buffers);
+            }
+            
+            descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
+        }
+    }
+    
+    frame = (frame + 1) % 2;
+    frameCount++;
+
+    const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
+    const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
+
+    if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        double xpos, ypos;
+        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+        int width, height;
+        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+        float dist;
+        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist)) {
+            camera.setFocusDepth(dist);
+            restartRender = true;
+        }
+    }
+    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (!uiToggled) uiToggled = true;
+        else scene.clearSelection();
+    }
+
+    if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
+        restartRender = true;
+
+    if (camera.isLocked() || blockMouseInput)
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    else
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
+        restartRender = true;
+
+    if (scene.checkUpdate()) 
+        restartRender = true;
+
+    if (notificationManager.isCommandRequested(Command::Exit))
+        shouldClose = true;
+    if (notificationManager.isCommandRequested(Command::Render)) {
+        scene.clearSelection();
+        uiToggled = false;
+    }
+    if (notificationManager.isCommandRequested(Command::Reload)) {
+        rebuildPipeline();
+        restartRender = true;
+    }
+
+    if (restartRender) {
+        frameCount = 0;
+        restartRender = false;
+    }
+}
+
 void Application::drawUI(CommandBuffer commandBuffer) {
     if (!uiToggled) return;
 

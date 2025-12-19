@@ -19,19 +19,38 @@ void ObjectBuffers::clear(VkSmol &engine) {
     init(engine, objectSize, baseSize);
 }
 
-void ObjectBuffers::addElement(VkSmol &engine) {
-    if (count >= capacity) resize(engine);
+bool ObjectBuffers::addElement(VkSmol &engine) {
+    bool updated = false;
+    if (count >= capacity) {
+        resize(engine, capacity*2);
+        updated = true;
+    }
     count++;
+    return updated;
+}
+
+bool ObjectBuffers::setElementCount(VkSmol &engine, size_t newCount) {
+    count = newCount;
+
+    // Find nearest power of two
+    size_t newCapacity = 1;
+    for (; newCapacity<count; newCapacity*=2) {}
+
+    if (capacity < newCapacity) {
+        resize(engine, newCapacity);
+        return true;
+    }
+    return false;
 }
 
 void ObjectBuffers::removeElement() {
     count--;
 }
 
-void ObjectBuffers::resize(VkSmol &engine) {
+void ObjectBuffers::resize(VkSmol &engine, size_t newCapacity) {
     engine.waitIdle();
     engine.destroyBufferList(bufferList);
-    capacity *= 2;
+    capacity = newCapacity;
     bufferList = engine.initBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, baseSize + objectSize * capacity);
 }
 

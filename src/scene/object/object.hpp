@@ -57,6 +57,12 @@ struct ObjectHandle {
     int id;
 };
 
+struct GpuLight {
+    int objectId;
+    float area;
+    float pdfA;
+};
+
 class Object {
 public:
     Object(std::string name): name(name) {};
@@ -64,6 +70,7 @@ public:
     virtual bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) = 0;
     virtual bool drawUI(std::vector<Material> &materials) = 0;
     
+    virtual float getArea() = 0;
     void getStruct(void) {};
     std::string getName() { return name; }
     void setName(std::string newName) { name = newName; }

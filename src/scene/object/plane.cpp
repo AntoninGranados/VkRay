@@ -74,6 +74,10 @@ bool Plane::drawUI(std::vector<Material> &materials) {
     return updated;
 }
 
+float Plane::getArea() {
+    return 0.0;
+}
+
 GpuPlane Plane::getStruct() {
     plane.point = point;
     plane.normal = normal;

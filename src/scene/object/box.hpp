@@ -21,6 +21,7 @@ public:
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
     bool drawUI(std::vector<Material> &materials) override;
     
+    float getArea() override;
     GpuBox getStruct();
     ObjectType getType() override { return ObjectType::Box; };
 

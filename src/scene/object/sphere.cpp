@@ -69,6 +69,10 @@ bool Sphere::drawUI(std::vector<Material> &materials) {
     return updated;
 }
 
+float Sphere::getArea() {
+    return 4.0 * glm::pi<float>() * radius * radius;
+}
+
 GpuSphere Sphere::getStruct() {
     sphere.center = center;
     sphere.radius = radius;

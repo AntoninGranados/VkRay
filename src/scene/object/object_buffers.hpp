@@ -8,9 +8,10 @@ public:
     void destroy(VkSmol &engine);
     void clear(VkSmol &engine);
 
-    void addElement(VkSmol &engine);
+    bool addElement(VkSmol &engine);
+    bool setElementCount(VkSmol &engine, size_t newCount);
     void removeElement();
-    void resize(VkSmol &engine);
+    void resize(VkSmol &engine, size_t newCapacity);
     void fill(VkSmol &engine, void *data);
 
     size_t getCapacity() { return capacity; }

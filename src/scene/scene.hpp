@@ -53,10 +53,11 @@ public:
     std::vector<bufferList_t> getBufferLists();
 
     // Returns true if the scene have been updated since the last call of this function
-    bool wasUpdated();
+    bool checkUpdate();
+    bool checkBufferUpdate();
 
 private:
-    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, objectBuffers, materialBuffers;
+    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, materialBuffers, objectBuffers, lightBuffers;
     
     int selectedObjectId = -1;
     int objectId = 0;   // Used for unique object naming
@@ -64,6 +65,7 @@ private:
     std::vector<Material> materials;
 
     bool updated = false;
+    bool bufferUpdated = false;
 
     void (*messageCallback)(NotificationType, std::string) = nullptr;
 };

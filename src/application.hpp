@@ -66,11 +66,16 @@ private:
     bufferList_t raytracingUniformBuffers, screenUniformBuffers;
 
     Scene scene;
+
     
     size_t frame = 0;
     int frameCount = 0;
     bool restartRender = false;
-
+    bool shouldClose = false;
+    
+    RaytracingUBO raytracingUBO;
+    ScreenUBO screenUBO;
+    
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 4;
@@ -83,8 +88,10 @@ private:
     bool uiToggled = true;
 
     static NotificationManager notificationManager;
-
+    
     void initScene();
+
+    void onFrameStart(float dt);
     void drawUI(CommandBuffer commandBuffer);
     void fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO);
     float lastTime = 0.0f;

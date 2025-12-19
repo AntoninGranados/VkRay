@@ -39,13 +39,17 @@ layout(set = 0, binding = 3) buffer readonly PlaneBuffer {
 layout(set = 0, binding = 4) buffer readonly BoxBuffer {
     Box boxes[];
 } boxBuffer;
-layout(set = 0, binding = 5) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 5) buffer readonly MaterialBuffer {
+    Material materials[];
+} materialBuffer;
+layout(set = 0, binding = 6) buffer readonly ObjectBuffer {
     uint objectCount;
     int selectedObjectId;
     Object objects[];
 } objectBuffer;
-layout(set = 0, binding = 6) buffer readonly MaterialBuffer {
-    Material materials[];
-} materialBuffer;
+layout(set = 0, binding = 7) buffer readonly LightBuffer {
+    float totalArea;
+    Light lights[];
+} lightBuffer;
 
 #endif

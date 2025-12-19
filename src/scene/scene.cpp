@@ -1,3 +1,6 @@
+// 000101001
+// 001000000
+
 #include "scene.hpp"
 
 #include <iostream>
@@ -5,21 +8,24 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
+constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
 
 void Scene::init(VkSmol &engine) {
     sphereBuffers.init(engine, sizeof(GpuSphere));
     planeBuffers.init(engine, sizeof(GpuPlane));
     boxBuffers.init(engine, sizeof(GpuBox));
-    objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
     materialBuffers.init(engine, sizeof(Material));
+    objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
+    lightBuffers.init(engine, sizeof(GpuLight), LIGHT_HEADER_SIZE);
 }
 
 void Scene::destroy(VkSmol &engine) {
     sphereBuffers.destroy(engine);
     planeBuffers.destroy(engine);
     boxBuffers.destroy(engine);
-    objectBuffers.destroy(engine);
     materialBuffers.destroy(engine);
+    objectBuffers.destroy(engine);
+    lightBuffers.destroy(engine);
 }
 
 void Scene::clear(VkSmol &engine) {
@@ -28,69 +34,92 @@ void Scene::clear(VkSmol &engine) {
     sphereBuffers.clear(engine);
     planeBuffers.clear(engine);
     boxBuffers.clear(engine);
-    objectBuffers.clear(engine);
     materialBuffers.clear(engine);
+    objectBuffers.clear(engine);
+    lightBuffers.clear(engine);
+
     objects.clear();
     materials.clear();
     selectedObjectId = -1;
+    bufferUpdated = true;
 }
 
 
 void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
-    sphereBuffers.addElement(engine);
-    objectBuffers.addElement(engine);
-    materialBuffers.addElement(engine);
+    bufferUpdated |= sphereBuffers.addElement(engine);
+    bufferUpdated |= materialBuffers.addElement(engine);
+    bufferUpdated |= objectBuffers.addElement(engine);
 
     objects.push_back(new Sphere(name, center, radius, static_cast<int>(materials.size())));
     materials.push_back(mat);
 }
 
 void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
-    planeBuffers.addElement(engine);
-    objectBuffers.addElement(engine);
-    materialBuffers.addElement(engine);
+    bufferUpdated |= planeBuffers.addElement(engine);
+    bufferUpdated |= materialBuffers.addElement(engine);
+    bufferUpdated |= objectBuffers.addElement(engine);
 
     objects.push_back(new Plane(name, point, normal, static_cast<int>(materials.size())));
     materials.push_back(mat);
 }
 
 void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
-    boxBuffers.addElement(engine);
-    objectBuffers.addElement(engine);
-    materialBuffers.addElement(engine);
+    bufferUpdated |= boxBuffers.addElement(engine);
+    bufferUpdated |= materialBuffers.addElement(engine);
+    bufferUpdated |= objectBuffers.addElement(engine);
 
     objects.push_back(new Box(name, cornerMin, cornerMax, static_cast<int>(materials.size())));
     materials.push_back(mat);
 }
+
+// TODO refactor this
+inline void addLight(const Material &mat, const float &area, const int &objectId, int &lightCount, std::vector<GpuLight> &lights, float &totalLightArea) {
+    if (mat.type == MaterialType::Emissive) {
+        lightCount++;
+        lights.push_back(GpuLight{
+            .objectId = objectId,
+            .area = area,
+            .pdfA = 1.0f/area,
+        });
+        totalLightArea += area;
+    }
+};
 
 // TODO: Only refill them after an update (not every frame)
 void Scene::fillBuffers(VkSmol &engine) {
     std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
     std::vector<GpuPlane> planes(planeBuffers.getCapacity());
     std::vector<GpuBox> boxes(boxBuffers.getCapacity());
-    std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
     std::vector<Material> materialData(materialBuffers.getCapacity());
+    std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
+    std::vector<GpuLight> lights;
 
     int sphereId = 0;
     int planeId = 0;
     int boxId = 0;
     unsigned int objectCount = 0;
-    for (Object *p_object : objects) {
-        switch(p_object->getType()) {
+    int lightCount = 0;
+    float totalLightArea = 0;
+    
+    for (Object *object : objects) {
+        switch(object->getType()) {
             case ObjectType::Sphere: {
-                spheres[sphereId] = static_cast<Sphere*>(p_object)->getStruct();
+                spheres[sphereId] = static_cast<Sphere*>(object)->getStruct();
+                addLight(materials[spheres[sphereId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
                 objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
                 sphereId++;
                 objectCount++;
             } break;
             case ObjectType::Plane: {
-                planes[planeId] = static_cast<Plane*>(p_object)->getStruct();
+                planes[planeId] = static_cast<Plane*>(object)->getStruct();
+                // addLight(materials[planes[planeId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);    //! should not be counted as it can't be used for importance sampling
                 objectHandles[objectCount] = { .type=ObjectType::Plane, .id=planeId };
                 planeId++;
                 objectCount++;
             } break;
             case ObjectType::Box: {
-                boxes[boxId] = static_cast<Box*>(p_object)->getStruct();
+                boxes[boxId] = static_cast<Box*>(object)->getStruct();
+                addLight(materials[boxes[boxId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
                 objectHandles[objectCount] = { .type=ObjectType::Box, .id=boxId };
                 boxId++;
                 objectCount++;
@@ -98,6 +127,7 @@ void Scene::fillBuffers(VkSmol &engine) {
             default: break;
         }
     }
+    bufferUpdated |= lightBuffers.setElementCount(engine, lightCount);
 
     for (size_t i = 0; i < materials.size() && i < materialData.size(); i++) {
         materialData[i] = materials[i];
@@ -105,23 +135,32 @@ void Scene::fillBuffers(VkSmol &engine) {
 
     int selected = static_cast<int>(selectedObjectId);
 
+    // Fill the buffers
     sphereBuffers.fill(engine, spheres.data());
     planeBuffers.fill(engine, planes.data());
     boxBuffers.fill(engine, boxes.data());
+    materialBuffers.fill(engine, materialData.data());
 
+    size_t offset;
+    
     std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
-    size_t offset = 0;
+    offset = 0;
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
     memcpy(objectData.data() + offset, &selected, sizeof(selected));
     offset += sizeof(selected);
     if (objectCount > 0)
-        memcpy(objectData.data() + offset, objectHandles.data(), sizeof(ObjectHandle) * objectCount);
+        memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
 
-        
     objectBuffers.fill(engine, objectData.data());
-    
-    materialBuffers.fill(engine, materialData.data());
+
+    std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
+    offset = 0;
+    memcpy(lightData.data() + offset, &totalLightArea, sizeof(totalLightArea));
+    offset += sizeof(totalLightArea);
+    memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
+        
+    lightBuffers.fill(engine, lightData.data());
 }
 
 
@@ -313,8 +352,8 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
 
     float t;
     int i = 0;
-    for (Object *p_object : objects) {
-        t = p_object->rayIntersection(ray);
+    for (Object *object : objects) {
+        t = object->rayIntersection(ray);
         if (t >= 0.0f && t < tClosest) {
             tClosest = t;
             idClosest = i;
@@ -332,17 +371,26 @@ std::vector<bufferList_t> Scene::getBufferLists() {
         sphereBuffers.getBufferList(),
         planeBuffers.getBufferList(),
         boxBuffers.getBufferList(),
-        objectBuffers.getBufferList(),
         materialBuffers.getBufferList(),
+        objectBuffers.getBufferList(),
+        lightBuffers.getBufferList(),
     };
 
 
     return bufferLists;
 }
 
-bool Scene::wasUpdated() {
+bool Scene::checkUpdate() {
     if (updated) {
         updated = false;
+        return true;
+    }
+    return false;
+}
+
+bool Scene::checkBufferUpdate() {
+    if (bufferUpdated) {
+        bufferUpdated = false;
         return true;
     }
     return false;

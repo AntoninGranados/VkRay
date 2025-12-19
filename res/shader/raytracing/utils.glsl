@@ -29,8 +29,6 @@ struct Material {
 #define obj_Plane   Enum(2)
 #define obj_Box     Enum(3)
 
-#define ObjectHandle int
-
 struct Object {
     Enum type;
     uint id;
@@ -84,15 +82,14 @@ struct Hit {
 #define lightMode_Empty  Enum(3)
 
 struct Light {
-    ObjectHandle objectHandle;
+    int objectId;
     float area;
-    float pdf;     // 1 / area
+    float pdfA;     // 1 / area
 };
 
 struct SurfaceSample {
     vec3 p;
     vec3 normal;
-    float pdfA;
 };
 
 #endif

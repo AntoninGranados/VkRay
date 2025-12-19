@@ -81,29 +81,23 @@ vec3 boxNormal(in Box box, in vec3 p) {
 }
 
 // ================ SURFACE SAMPLING ================
-SurfaceSample sampleSphereSurface(in Sphere sphere, inout vec3 seed) {
+SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout vec3 seed) {
     SurfaceSample surfaceSample;
     
     vec3 onLightDir = normalize(randomInSphere(seed));
     surfaceSample.p = sphere.center + onLightDir * sphere.radius;
 
     surfaceSample.normal = (surfaceSample.p - sphere.center) / sphere.radius;
-
-    float lightArea = 4.0 * PI * sphere.radius * sphere.radius;
-    surfaceSample.pdfA = 1.0 / lightArea;
-
     return surfaceSample;
 }
 
-SurfaceSample sampleBoxSurface(in Box box, inout vec3 seed) {
+SurfaceSample sampleBoxSurface(in Box box, in float area, inout vec3 seed) {
     SurfaceSample surfaceSample;
 
     vec3 size = box.cornerMax - box.cornerMin;
     vec3 pairArea = vec3(size.y * size.z, size.z * size.x, size.x * size.y);
-    float totalArea = 2.0 * (pairArea.x + pairArea.y + pairArea.z);
-    surfaceSample.pdfA = totalArea > EPS ? 1.0 / totalArea : 0.0;
 
-    float r = rand(seed) * totalArea;
+    float r = rand(seed) * area;
     vec2 uv = vec2(rand(seed), rand(seed));
 
     int axis;

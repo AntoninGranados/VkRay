@@ -88,6 +88,12 @@ bool Box::drawUI(std::vector<Material> &materials) {
     return updated;
 }
 
+float Box::getArea() {
+    glm::vec3 size = cornerMax - cornerMin;
+    glm::vec3 pairArea(size.y * size.z, size.z * size.x, size.x * size.y);
+    return 2.0 * (pairArea.x + pairArea.y + pairArea.z);
+}
+
 GpuBox Box::getStruct() {
     box.cornerMin = cornerMin;
     box.cornerMax = cornerMax;
