@@ -89,6 +89,9 @@ void NotificationManager::parseInput(char *buff) {
     } else if (strcmp(buff, "help") == 0) {
         requestedCommands[Command::Help] = true;
         pushHelp();
+    } else if (strcmp(buff, "key") == 0) {
+        requestedCommands[Command::Key] = true;
+        pushKeymaps();
     } else if (strcmp(buff, "render") == 0) {
         requestedCommands[Command::Render] = true;
     } else if (strcmp(buff, "reload") == 0) {
@@ -103,6 +106,15 @@ void NotificationManager::pushHelp() {
     char buff[128];
     for (auto &command : commands) {
         snprintf(buff, 128, "- %s: %s", command.first.c_str(), command.second.c_str());
+        notifications.push_back({ NotificationType::Other, buff });
+    }
+}
+
+void NotificationManager::pushKeymaps() {
+    notifications.push_back({ NotificationType::Info, "Keymaps:" });
+    char buff[128];
+    for (auto &keymap : keymaps) {
+        snprintf(buff, 128, "- [%s]: %s", keymap.first.c_str(), keymap.second.c_str());
         notifications.push_back({ NotificationType::Other, buff });
     }
 }
