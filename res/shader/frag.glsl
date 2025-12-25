@@ -58,4 +58,8 @@ void main() {
     color = mix(color, vec3(1.0, 0.5, 0.062), min(outline, 0.563));
 
     outColor = vec4(color, 1.0);
+
+    if (length((uv - 0.5f) * texSize) < 5.0f) {
+        outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
 }
