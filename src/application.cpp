@@ -348,38 +348,54 @@ void Application::onFrameStart(float dt) {
     const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
 
+    // TODO refactor (remove duplicated code)
+    const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+    if (!blockMouseInput && middleDown && !middleClickWasDown) {
+        double xpos, ypos;
+        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+        int width, height;
+        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+        float dist;
+        glm::vec3 p;
+        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
+            camera.setFocusDepth(dist);
+            camera.setTarget(p);
+            restartRender = true;
+        }
+    }
+    middleClickWasDown = middleDown;
+
     if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         double xpos, ypos;
         glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
         int width, height;
         glfwGetWindowSize(engine.getWindow().get(), &width, &height);
         float dist;
-        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist)) {
-            camera.setFocusDepth(dist);
-            restartRender = true;
-        }
+        glm::vec3 p;
+        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
     }
+    
     if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         if (!uiToggled) uiToggled = true;
         else scene.clearSelection();
     }
-
+    
     if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
-        restartRender = true;
-
+    restartRender = true;
+    
     if (camera.isLocked() || blockMouseInput)
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     else
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
+    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
     if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-        restartRender = true;
-
+    restartRender = true;
+    
     if (scene.checkUpdate()) 
-        restartRender = true;
-
+    restartRender = true;
+    
     if (notificationManager.isCommandRequested(Command::Exit))
-        shouldClose = true;
+    shouldClose = true;
     if (notificationManager.isCommandRequested(Command::Render)) {
         scene.clearSelection();
         uiToggled = false;

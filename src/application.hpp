@@ -76,7 +76,7 @@ private:
     RaytracingUBO raytracingUBO;
     ScreenUBO screenUBO;
     
-    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 4;
     int samplesPerPixel = 1;
@@ -86,6 +86,7 @@ private:
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;
     bool uiToggled = true;
+    bool middleClickWasDown = false;
 
     static NotificationManager notificationManager;
     

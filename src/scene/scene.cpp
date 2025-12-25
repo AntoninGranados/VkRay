@@ -345,7 +345,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
 }
 
 
-bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist) {
+bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select) {
     Ray ray = getRay(screenPos, screenSize, camera);
     float tClosest = std::numeric_limits<float>::infinity();
     int idClosest = -1;
@@ -361,8 +361,9 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
         i++;
     }
 
-    selectedObjectId = idClosest;
+    if (select) selectedObjectId = idClosest;
     dist = tClosest;
+    p = ray.origin + dist * ray.dir;
     return idClosest >= 0;
 }
 

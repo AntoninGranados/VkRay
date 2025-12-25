@@ -48,7 +48,7 @@ public:
     void drawSelectedUI(VkSmol &engine);
 
     void clearSelection() { selectedObjectId = -1; }
-    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist);
+    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false);
 
     std::vector<bufferList_t> getBufferLists();
 
@@ -56,7 +56,7 @@ public:
     bool checkUpdate();
     bool checkBufferUpdate();
 
-private:
+    private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, materialBuffers, objectBuffers, lightBuffers;
     
     int selectedObjectId = -1;
