@@ -384,9 +384,9 @@ void Application::onFrameStart(float dt) {
     restartRender = true;
     
     if (camera.isLocked() || blockMouseInput)
-    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     else
-    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
     if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
     restartRender = true;
@@ -394,13 +394,12 @@ void Application::onFrameStart(float dt) {
     if (scene.checkUpdate()) 
     restartRender = true;
     
-    if (notificationManager.isCommandRequested(Command::Exit))
-    shouldClose = true;
-    if (notificationManager.isCommandRequested(Command::Render)) {
+    if (notificationManager.isCommandRequested(Command::Exit)) {
+        shouldClose = true;
+    } if (notificationManager.isCommandRequested(Command::Render)) {
         scene.clearSelection();
         uiToggled = false;
-    }
-    if (notificationManager.isCommandRequested(Command::Reload)) {
+    } if (notificationManager.isCommandRequested(Command::Reload)) {
         rebuildPipeline();
         restartRender = true;
     }

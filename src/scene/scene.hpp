@@ -56,7 +56,7 @@ public:
     bool checkUpdate();
     bool checkBufferUpdate();
 
-    private:
+private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, materialBuffers, objectBuffers, lightBuffers;
     
     int selectedObjectId = -1;

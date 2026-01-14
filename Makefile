@@ -1,7 +1,7 @@
 CC = clang
-LIB = -L$(VULKAN_SDK)/lib
-LINK = -lc++ -lglfw3 -lvulkan -Wl,-rpath,$(VULKAN_SDK)/lib
-INCLUDE = -I/usr/local/include -Iinclude/ -Iinclude/imgui -I$(VULKAN_SDK)/include
+LIB = -L$(VULKAN_SDK)/lib -L/opt/homebrew/lib
+LINK = -lc++ -lglfw -lvulkan -Wl,-rpath,$(VULKAN_SDK)/lib
+INCLUDE = -I/opt/homebrew/include -Iinclude/ -Iinclude/imgui -I$(VULKAN_SDK)/include
 FLAGS = -Wall -O3 -std=c++23 -arch arm64 # -DNDEBUG
 FRAMEWORKS = -framework Accelerate -framework Cocoa -framework IOKit -framework Metal -framework QuartzCore -F/usr/local/Cellar/molten-vk/1.2.11/Frameworks
 

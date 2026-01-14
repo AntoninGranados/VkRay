@@ -59,7 +59,8 @@ void main() {
 
     outColor = vec4(color, 1.0);
 
-    if (length((uv - 0.5f) * texSize) < 5.0f) {
-        outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    }
+    // // Crossair
+    // if (length((uv - 0.5f) * texSize) < 5.0f) {
+    //     outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    // }
 }
