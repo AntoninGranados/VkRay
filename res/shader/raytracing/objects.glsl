@@ -81,7 +81,7 @@ vec3 boxNormal(in Box box, in vec3 p) {
 }
 
 // ================ SURFACE SAMPLING ================
-SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout vec3 seed) {
+SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout uint seed) {
     SurfaceSample surfaceSample;
     
     vec3 onLightDir = normalize(randomInSphere(seed));
@@ -91,7 +91,7 @@ SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout vec3 se
     return surfaceSample;
 }
 
-SurfaceSample sampleBoxSurface(in Box box, in float area, inout vec3 seed) {
+SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
     SurfaceSample surfaceSample;
 
     vec3 size = box.cornerMax - box.cornerMin;

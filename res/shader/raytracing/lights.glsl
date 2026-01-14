@@ -5,7 +5,7 @@
 #include "global.glsl"
 #include "random.glsl"
 
-int getLightId(inout vec3 seed) {
+int getLightId(inout uint seed) {
     if (lightBuffer.totalArea == 0) return -1;
 
     float r = rand(seed);
@@ -20,7 +20,7 @@ int getLightId(inout vec3 seed) {
 
 Hit intersection(in Ray ray); // Forward declaration
 
-vec3 importanceSampleLight(in Material surfaceMat, in Hit hit, in ScatterResult scatterResult, inout vec3 seed) {
+vec3 importanceSampleLight(in Material surfaceMat, in Hit hit, in ScatterResult scatterResult, inout uint seed) {
     if (ubo.importanceSampling != 1 || !scatterResult.isDiffuse) return vec3(0.0);
 
     int lightId = getLightId(seed);

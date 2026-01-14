@@ -33,7 +33,7 @@ vec3 getNormal(in Object obj, in vec3 p) {
     }
 }
 
-SurfaceSample sampleSurface(in Object obj, in float area, inout vec3 seed) {
+SurfaceSample sampleSurface(in Object obj, in float area, inout uint seed) {
     switch (obj.type) {
         case obj_Sphere: return sampleSphereSurface(sphereBuffer.spheres[obj.id], area, seed);
         case obj_Plane:  return SurfaceSample(vec3(0.0), vec3(0.0));

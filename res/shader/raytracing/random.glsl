@@ -1,27 +1,23 @@
 #ifndef RANDOM_GLSL
 #define RANDOM_GLSL
 
-vec3 initSeed(vec2 pos, float time) {
-    return vec3(
-        fract(sin(dot(pos, vec2(12.9898,78.233))) * 43758.5453 + time),
-        fract(sin(dot(pos, vec2(93.9898,67.345))) * 43758.5453 + time),
-        fract(sin(dot(pos, vec2(56.1234,12.345))) * 43758.5453 + time)
-    );
+uint pcg_hash(uint v) {
+    v = v * 747796405u + 2891336453u;
+    uint word = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+    return (word >> 22u) ^ word;
 }
 
-float hash13(vec3 p3) {
-    p3  = fract(p3 * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+uint initSeed(uvec2 pos, uint frame) {
+    uint v = pos.x + pos.y * 4096u + frame * 1315423911u;
+    return pcg_hash(v);
 }
 
-float rand(inout vec3 seed) {
-    float r = hash13(seed);
-    seed += vec3(1.0, 1.0, 1.0);
-    return r;
+float rand(inout uint seed) {
+    seed = pcg_hash(seed);
+    return float(seed) * (1.0 / 4294967296.0);
 }
 
-vec3 randomInSphere(inout vec3 seed) {
+vec3 randomInSphere(inout uint seed) {
     float z  = 1.0 - 2.0 * rand(seed);
     float r  = sqrt(max(0.0, 1.0 - z*z));
     float phi = 6.2831853 * rand(seed);
@@ -30,12 +26,12 @@ vec3 randomInSphere(inout vec3 seed) {
     return vec3(x, y, z);
 }
 
-vec3 randomInHemisphere(inout vec3 seed, vec3 normal) {
+vec3 randomInHemisphere(inout uint seed, vec3 normal) {
     vec3 v = randomInSphere(seed);
     return dot(v, normal) < 0.0 ? -v : v;
 }
 
-vec2 randomInDisk(inout vec3 seed) {
+vec2 randomInDisk(inout uint seed) {
     float r  = sqrt(rand(seed));
     float theta = 6.2831853 * rand(seed);
     float x = r * cos(theta);

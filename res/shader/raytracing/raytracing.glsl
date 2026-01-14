@@ -9,7 +9,7 @@
 #include "random.glsl"
 
 
-Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout vec3 seed) {
+Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
     vec3 forward = normalize(camera.dir);
     vec3 right   = normalize(cross(forward, camera.up));
     vec3 up      = cross(right, forward);
@@ -94,7 +94,7 @@ vec3 skyColor(vec3 dir) {
     return color;
 }
 
-vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
+vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     Hit hit = intersection(ray);
     vec3 throughput = vec3(1.0);
     vec3 radiance = vec3(0.0);
@@ -137,12 +137,13 @@ vec3 traceRay(in Camera camera, in Ray ray, inout vec3 seed) {
     return radiance;
 }
 
-vec3 computeFragmentColor(in Camera camera, inout vec3 seed) {
+vec3 computeFragmentColor(in Camera camera, inout uint seed) {
     vec3 color = vec3(0);
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
-        vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
-        Ray ray = getRay(camera, fragPos + offset, true, seed);
-        vec3 rayColor = traceRay(camera, ray, seed);
+        uint sampleState = pcg_hash(seed + uint(i));
+        vec2 offset = vec2(rand(sampleState), rand(sampleState)) / ubo.screenSize;
+        Ray ray = getRay(camera, fragPos + offset, true, sampleState);
+        vec3 rayColor = traceRay(camera, ray, sampleState);
         color.rgb += rayColor.rgb;
     }
     color.rgb /= float(ubo.samplesPerPixel);
@@ -160,7 +161,7 @@ void main() {
     vec3 prevColor = texelFetch(prevTex, pixelCoord, 0).rgb;
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
-    vec3 seed = initSeed(fragPos, ubo.time);
+    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frameCount));
 
     vec3 currColor = vec3(0);
     if (ubo.frameCount <= 1) {
