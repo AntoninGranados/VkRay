@@ -359,7 +359,6 @@ void Application::onFrameStart(float dt) {
         glm::vec3 p;
         if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
             camera.setFocusDepth(dist);
-            camera.setTarget(p);
             restartRender = true;
         }
     }

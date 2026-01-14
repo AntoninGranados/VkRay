@@ -39,8 +39,8 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
     if (dragMode == DragMode::Pan) {
         float panScale = panSensitivity * orbitDistance;
         glm::vec3 offset = (right * xoffset + camUp * yoffset) * panScale;
-        position += offset;
-        target += offset;
+        position -= offset;
+        target -= offset;
         return change;
     }
 
