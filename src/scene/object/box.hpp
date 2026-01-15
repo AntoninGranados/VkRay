@@ -9,26 +9,26 @@
 #include "imgui/ImGuizmo.h"
 
 struct GpuBox {
-    alignas(16) glm::vec3 cornerMin;
-    alignas(16) glm::vec3 cornerMax;
+    alignas(16) glm::mat4 transform;
+    alignas(16) glm::mat4 invTransform;
     MaterialHandle materialHandle;
 };
 
 class Box: public Object {
 public:
-    Box(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle);
+    Box(std::string name, glm::mat4 transform, MaterialHandle materialHandle);
     float rayIntersection(const Ray &ray) override;
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
     bool drawUI(std::vector<Material> &materials) override;
     
     float getArea() override;
     GpuBox getStruct();
+    glm::mat4 getTransform() const { return transform; }
     ObjectType getType() override { return ObjectType::Box; };
 
 private:
     GpuBox box;
 
-    glm::vec3 cornerMin;
-    glm::vec3 cornerMax;
+    glm::mat4 transform;
     MaterialHandle materialHandle;
 };

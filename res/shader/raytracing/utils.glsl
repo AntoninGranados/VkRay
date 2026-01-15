@@ -28,6 +28,7 @@ struct Material {
 #define obj_Sphere  Enum(1)
 #define obj_Plane   Enum(2)
 #define obj_Box     Enum(3)
+#define obj_Mesh    Enum(4)
 
 struct Object {
     Enum type;
@@ -49,8 +50,22 @@ struct Plane {
 };
 
 struct Box {
-    vec3 cornerMin;
-    vec3 cornerMax;
+    mat4 modelMatrix;
+    mat4 invModelMatrix;
+    MaterialHandle materialHandle;
+};
+
+struct Vertex {
+    vec3 position;
+};
+
+struct Mesh {
+    mat4 modelMatrix;
+    mat4 invModelMatrix;
+    vec3 aabbMin;
+    vec3 aabbMax;
+    uint indexOffset;
+    uint triangleCount;
     MaterialHandle materialHandle;
 };
 

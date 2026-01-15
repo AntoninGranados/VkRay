@@ -14,6 +14,7 @@
 #include "object/sphere.hpp"
 #include "object/plane.hpp"
 #include "object/box.hpp"
+#include "object/mesh.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -39,6 +40,9 @@ public:
     void pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat);
     void pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
     void pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
+    void pushBoxTransform(VkSmol &engine, std::string name, const glm::mat4 &transform, Material mat);
+    void pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat);
+    bool pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform = glm::mat4(1.0f));
 
     void fillBuffers(VkSmol &engine);
     
@@ -57,7 +61,8 @@ public:
     bool checkBufferUpdate();
 
 private:
-    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, materialBuffers, objectBuffers, lightBuffers;
+    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, meshBuffers;
+    ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
     
     int selectedObjectId = -1;
     int objectId = 0;   // Used for unique object naming

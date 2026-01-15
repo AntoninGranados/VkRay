@@ -7,6 +7,9 @@
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
 
@@ -14,6 +17,10 @@ void Scene::init(VkSmol &engine) {
     sphereBuffers.init(engine, sizeof(GpuSphere));
     planeBuffers.init(engine, sizeof(GpuPlane));
     boxBuffers.init(engine, sizeof(GpuBox));
+    vertexBuffers.init(engine, sizeof(Vertex));
+    indexBuffers.init(engine, sizeof(unsigned int));
+    meshBuffers.init(engine, sizeof(GpuMesh));
+
     materialBuffers.init(engine, sizeof(Material));
     objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
     lightBuffers.init(engine, sizeof(GpuLight), LIGHT_HEADER_SIZE);
@@ -23,6 +30,10 @@ void Scene::destroy(VkSmol &engine) {
     sphereBuffers.destroy(engine);
     planeBuffers.destroy(engine);
     boxBuffers.destroy(engine);
+    vertexBuffers.destroy(engine);
+    indexBuffers.destroy(engine);
+    meshBuffers.destroy(engine);
+
     materialBuffers.destroy(engine);
     objectBuffers.destroy(engine);
     lightBuffers.destroy(engine);
@@ -34,6 +45,10 @@ void Scene::clear(VkSmol &engine) {
     sphereBuffers.clear(engine);
     planeBuffers.clear(engine);
     boxBuffers.clear(engine);
+    vertexBuffers.clear(engine);
+    indexBuffers.clear(engine);
+    meshBuffers.clear(engine);
+
     materialBuffers.clear(engine);
     objectBuffers.clear(engine);
     lightBuffers.clear(engine);
@@ -64,12 +79,84 @@ void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::ve
 }
 
 void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
+    glm::vec3 center = (cornerMin + cornerMax) * 0.5f;
+    glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), center);
+    transform = glm::scale(transform, halfExtents);
+    pushBoxTransform(engine, name, transform, mat);
+}
+
+void Scene::pushBoxTransform(VkSmol &engine, std::string name, const glm::mat4 &transform, Material mat) {
     bufferUpdated |= boxBuffers.addElement(engine);
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    objects.push_back(new Box(name, cornerMin, cornerMax, static_cast<int>(materials.size())));
+    objects.push_back(new Box(name, transform, static_cast<int>(materials.size())));
     materials.push_back(mat);
+}
+
+void Scene::pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat) {
+    bufferUpdated |= meshBuffers.addElement(engine);
+    bufferUpdated |= materialBuffers.addElement(engine);
+    bufferUpdated |= objectBuffers.addElement(engine);
+
+    objects.push_back(new Mesh(name, std::move(vertices), std::move(indices), transform, static_cast<int>(materials.size())));
+    materials.push_back(mat);
+}
+
+bool Scene::pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform) {
+    std::string baseDir = "./";
+    size_t slash = path.find_last_of("/\\");
+    if (slash != std::string::npos) {
+        baseDir = path.substr(0, slash + 1);
+    }
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn;
+    std::string err;
+    bool loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), baseDir.c_str(), true);
+    if (!warn.empty()) {
+        std::cerr << "[WARN] OBJ load: " << warn << std::endl;
+    }
+    if (!err.empty()) {
+        std::cerr << "[ERROR] OBJ load: " << err << std::endl;
+    }
+    if (!loaded) {
+        std::cerr << "[ERROR] Failed to load OBJ: " << path << std::endl;
+        return false;
+    }
+
+    std::vector<Vertex> meshVertices;
+    meshVertices.reserve(attrib.vertices.size() / 3);
+    for (size_t i = 0; i + 2 < attrib.vertices.size(); i += 3) {
+        meshVertices.push_back(Vertex{
+            .position = glm::vec3(attrib.vertices[i + 0], attrib.vertices[i + 1], attrib.vertices[i + 2]),
+        });
+    }
+
+    std::vector<unsigned int> meshIndices;
+    for (const tinyobj::shape_t &shape : shapes) {
+        size_t indexOffset = 0;
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            int fv = shape.mesh.num_face_vertices[f];
+            if (fv != 3) {
+                indexOffset += fv;
+                continue;
+            }
+
+            for (int v = 0; v < fv; v++) {
+                const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
+                if (idx.vertex_index < 0) continue;
+                meshIndices.push_back(static_cast<unsigned int>(idx.vertex_index));
+            }
+            indexOffset += fv;
+        }
+    }
+
+    pushMesh(engine, name, std::move(meshVertices), std::move(meshIndices), transform, mat);
+    return true;
 }
 
 // TODO refactor this
@@ -87,9 +174,28 @@ inline void addLight(const Material &mat, const float &area, const int &objectId
 
 // TODO: Only refill them after an update (not every frame)
 void Scene::fillBuffers(VkSmol &engine) {
+    size_t totalVertices = 0;
+    size_t totalIndices = 0;
+    size_t meshCount = 0;
+    for (Object *object : objects) {
+        if (object->getType() == ObjectType::Mesh) {
+            Mesh *mesh = static_cast<Mesh*>(object);
+            totalVertices += mesh->getVertices().size();
+            totalIndices += mesh->getIndices().size();
+            meshCount++;
+        }
+    }
+
+    bufferUpdated |= vertexBuffers.setElementCount(engine, totalVertices);
+    bufferUpdated |= indexBuffers.setElementCount(engine, totalIndices);
+    bufferUpdated |= meshBuffers.setElementCount(engine, meshCount);
+
     std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
     std::vector<GpuPlane> planes(planeBuffers.getCapacity());
     std::vector<GpuBox> boxes(boxBuffers.getCapacity());
+    std::vector<Vertex> vertices(vertexBuffers.getCapacity());
+    std::vector<unsigned int> indices(indexBuffers.getCapacity());
+    std::vector<GpuMesh> meshes(meshBuffers.getCapacity());
     std::vector<Material> materialData(materialBuffers.getCapacity());
     std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
     std::vector<GpuLight> lights;
@@ -97,9 +203,12 @@ void Scene::fillBuffers(VkSmol &engine) {
     int sphereId = 0;
     int planeId = 0;
     int boxId = 0;
+    int meshId = 0;
     unsigned int objectCount = 0;
     int lightCount = 0;
     float totalLightArea = 0;
+    unsigned int vertexOffset = 0;
+    unsigned int indexOffset = 0;
     
     for (Object *object : objects) {
         switch(object->getType()) {
@@ -124,6 +233,30 @@ void Scene::fillBuffers(VkSmol &engine) {
                 boxId++;
                 objectCount++;
             } break;
+            case ObjectType::Mesh: {
+                Mesh *mesh = static_cast<Mesh*>(object);
+                const std::vector<Vertex> &meshVerts = mesh->getVertices();
+                const std::vector<unsigned int> &meshIndices = mesh->getIndices();
+
+                for (size_t i = 0; i < meshVerts.size(); i++) {
+                    vertices[vertexOffset + i] = meshVerts[i];
+                }
+                for (size_t i = 0; i < meshIndices.size(); i++) {
+                    indices[indexOffset + i] = meshIndices[i] + vertexOffset;
+                }
+
+                GpuMesh meshStruct = mesh->getStruct();
+                meshStruct.indexOffset = indexOffset;
+                meshes[meshId] = meshStruct;
+
+                addLight(materials[meshStruct.materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
+                objectHandles[objectCount] = { .type=ObjectType::Mesh, .id=meshId };
+
+                vertexOffset += static_cast<unsigned int>(meshVerts.size());
+                indexOffset += static_cast<unsigned int>(meshIndices.size());
+                meshId++;
+                objectCount++;
+            } break;
             default: break;
         }
     }
@@ -140,6 +273,9 @@ void Scene::fillBuffers(VkSmol &engine) {
     planeBuffers.fill(engine, planes.data());
     boxBuffers.fill(engine, boxes.data());
     materialBuffers.fill(engine, materialData.data());
+    vertexBuffers.fill(engine, vertices.data());
+    indexBuffers.fill(engine, indices.data());
+    meshBuffers.fill(engine, meshes.data());
 
     size_t offset;
     
@@ -181,6 +317,7 @@ void Scene::drawUI(VkSmol &engine) {
             case ObjectType::Sphere: ImGui::TextDisabled("Sph"); break;
             case ObjectType::Plane:  ImGui::TextDisabled("Pln"); break;
             case ObjectType::Box:    ImGui::TextDisabled("Box"); break;
+            case ObjectType::Mesh:   ImGui::TextDisabled("Msh"); break;
             default: ImGui::TextDisabled("???");; break;
         }
         ImGui::SameLine();
@@ -262,10 +399,11 @@ void Scene::drawSelectedUI(VkSmol &engine) {
         case ObjectType::Sphere:    typeName = "Sphere"; break;
         case ObjectType::Plane:     typeName = "Plane"; break;
         case ObjectType::Box:       typeName = "Box"; break;
+        case ObjectType::Mesh:      typeName = "Mesh"; break;
         default: break; // UNREACHABLE
     }
 
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::SetNextWindowSize({ 200, 0 });
     ImGui::Begin(
         typeName.c_str(),
@@ -309,13 +447,23 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                 } break;
                 case ObjectType::Box: {
                     Box *box = static_cast<Box*>(objects[selectedObjectId]);
-                    pushBox(
+                    pushBoxTransform(
                         engine,
                         box->getName() + "-copy",
-                        box->getStruct().cornerMin,
-                        box->getStruct().cornerMax,
+                        box->getTransform(),
                         materials[box->getStruct().materialHandle]
-                    ); 
+                    );
+                } break;
+                case ObjectType::Mesh: {
+                    Mesh *mesh = static_cast<Mesh*>(objects[selectedObjectId]);
+                    pushMesh(
+                        engine,
+                        mesh->getName() + "-copy",
+                        mesh->getVertices(),
+                        mesh->getIndices(),
+                        mesh->getTransform(),
+                        materials[mesh->getStruct().materialHandle]
+                    );
                 } break;
                 default: break;
             }
@@ -331,6 +479,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                 case ObjectType::Sphere: sphereBuffers.removeElement(); break;
                 case ObjectType::Plane:  planeBuffers.removeElement(); break;
                 case ObjectType::Box:    boxBuffers.removeElement(); break;
+                case ObjectType::Mesh:   meshBuffers.removeElement(); break;
                 default: break;
             }
             objectBuffers.removeElement();
@@ -372,6 +521,9 @@ std::vector<bufferList_t> Scene::getBufferLists() {
         sphereBuffers.getBufferList(),
         planeBuffers.getBufferList(),
         boxBuffers.getBufferList(),
+        vertexBuffers.getBufferList(),
+        indexBuffers.getBufferList(),
+        meshBuffers.getBufferList(),
         materialBuffers.getBufferList(),
         objectBuffers.getBufferList(),
         lightBuffers.getBufferList(),

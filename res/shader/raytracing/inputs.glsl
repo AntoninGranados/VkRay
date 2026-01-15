@@ -1,7 +1,7 @@
 #ifndef INPUTS_GLSL
 #define INPUTS_GLSL
 
-#include "objects.glsl"
+#include "utils.glsl"
 #include "materials.glsl"
 
 layout(location = 0) in vec2 fragPos;
@@ -30,6 +30,8 @@ layout(std140, set = 0, binding = 0) uniform UBO {
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;
 
+// Vertices
+// Indices
 layout(set = 0, binding = 2) buffer readonly SphereBuffer {
     Sphere spheres[];
 } sphereBuffer;
@@ -39,15 +41,24 @@ layout(set = 0, binding = 3) buffer readonly PlaneBuffer {
 layout(set = 0, binding = 4) buffer readonly BoxBuffer {
     Box boxes[];
 } boxBuffer;
-layout(set = 0, binding = 5) buffer readonly MaterialBuffer {
+layout(set = 0, binding = 5) buffer readonly VertexBuffer {
+    Vertex vertices[];
+} vertexBuffer;
+layout(set = 0, binding = 6) buffer readonly IndexBuffer {
+    uint indices[];
+} indexBuffer;
+layout(set = 0, binding = 7) buffer readonly MeshBuffer {
+    Mesh meshes[];
+} meshBuffer;
+layout(set = 0, binding = 8) buffer readonly MaterialBuffer {
     Material materials[];
 } materialBuffer;
-layout(set = 0, binding = 6) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 9) buffer readonly ObjectBuffer {
     uint objectCount;
     int selectedObjectId;
     Object objects[];
 } objectBuffer;
-layout(set = 0, binding = 7) buffer readonly LightBuffer {
+layout(set = 0, binding = 10) buffer readonly LightBuffer {
     float totalArea;
     Light lights[];
 } lightBuffer;

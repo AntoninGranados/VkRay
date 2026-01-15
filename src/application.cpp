@@ -372,6 +372,7 @@ void Application::onFrameStart(float dt) {
     
     frame = (frame + 1) % 2;
     frameCount++;
+    sampleCount += static_cast<uint64_t>(samplesPerPixelRuntime);
 
     const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
@@ -435,6 +436,7 @@ void Application::onFrameStart(float dt) {
 
     if (restartRender) {
         frameCount = 0;
+        sampleCount = 0;
         restartRender = false;
     }
 }
@@ -491,17 +493,43 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     }
     ImGui::End();
     ImGui::PopStyleVar(2);
-    
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(0.3f);
+    ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration // | ImGuiWindowFlags_NoBackground
     );
-    ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+    {
+        ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        ImGui::Text("Samples: %llu", static_cast<unsigned long long>(sampleCount));
+        if (samplesPerPixelRender > 0) {
+            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, samplesPerPixelRender))
+                / static_cast<float>(samplesPerPixelRender);
+            char overlay[64];
+            snprintf(
+                overlay,
+                sizeof(overlay),
+                "%llu / %d",
+                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, samplesPerPixelRender)),
+                samplesPerPixelRender
+            );
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
+            ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
+            ImGui::PopStyleColor();
+
+            ImVec2 textSize = ImGui::CalcTextSize(overlay);
+            ImVec2 barMin = ImGui::GetItemRectMin();
+            ImVec2 barMax = ImGui::GetItemRectMax();
+            ImVec2 textPos(
+                (barMin.x + barMax.x - textSize.x) * 0.5f,
+                (barMin.y + barMax.y - textSize.y) * 0.5f
+            );
+            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
+        }
+    }
     ImGui::End();
 
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         ImGui::SeparatorText("Camera");
@@ -516,7 +544,8 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::DragInt("##Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
-        ImGui::DragInt("##Samples", &samplesPerPixel, 1, 1, 10, "Samples: %d");
+        ImGui::DragInt("##Samples", &samplesPerPixelRuntime, 1, 1, 10, "Runtime Samples: %d");
+        ImGui::DragInt("##Samples Per Pixel", &samplesPerPixelRender, 1, 1, 4096, "Render Samples: %d");
         ImGui::DragFloat("##Low Resolution Scale", &lowResolutionScale, 1.0f, 1.0f, 50.0f, "Low Res: %.0f");
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
@@ -592,7 +621,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.lightMode = lightMode;
 
     raytracingUBO.maxBounces = maxBounces;
-    raytracingUBO.samplesPerPixel = samplesPerPixel;
+    raytracingUBO.samplesPerPixel = samplesPerPixelRuntime;
     raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
 
     // Screen UBO

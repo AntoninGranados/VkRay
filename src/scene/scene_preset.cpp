@@ -4,6 +4,28 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     scene.clear(engine);
 
     lightMode = LightMode::Day;
+
+    scene.pushMeshFromObj(
+        engine,
+        "Monkey",
+        "./res/model/monkey.obj",
+        Material {
+            .type = MaterialType::Lambertian,
+            .albedo = { 0.9f, 0.9f, 0.9f },
+        },
+        glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+    );
+
+    Material floorMat = {};
+    floorMat.type = MaterialType::Lambertian;
+    floorMat.albedo = { 1.0, 1.0, 1.0 };
+    scene.pushPlane(
+        engine,
+        "Floor",
+        glm::vec3(0.0, -1.0, 0.0),
+        glm::vec3(0.0,  1.0 , 0.0),
+        floorMat
+    );
 }
 
 void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
@@ -103,7 +125,7 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     );
 }
 
-#define RAND_FLOAT static_cast<float>(rand() % 100) / 100.0f
+#define RAND_FLOAT static_cast<float>(rand() % 100000) / 100000.0f
 void initRandomSpheres(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     srand(time(nullptr));
 

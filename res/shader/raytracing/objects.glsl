@@ -3,6 +3,7 @@
 
 #include "utils.glsl"
 #include "materials.glsl"
+#include "inputs.glsl"
 
 // ================ RAY INTERSECTION ================
 float raySphereIntersection(in Ray ray, in Sphere sphere) {
@@ -32,21 +33,25 @@ float rayPlaneIntersection(in Ray ray, in Plane plane) {
 }
 
 float rayBoxIntersection(in Ray ray, in Box box) {
-    vec3 safeDir = sign(ray.dir) * max(abs(ray.dir), vec3(EPS));
+    vec3 localOrigin = (box.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
+    vec3 localDir = (box.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
+    Ray localRay = Ray(localOrigin, localDir);
+
+    vec3 safeDir = sign(localRay.dir) * max(abs(localRay.dir), vec3(EPS));
     vec3 invDir = 1.0 / safeDir;
-    bvec3 s = lessThan(ray.dir, vec3(0.0));
+    bvec3 s = lessThan(localRay.dir, vec3(0.0));
 
-    float tmin = ( (s.x ? box.cornerMax.x : box.cornerMin.x) - ray.origin.x) * invDir.x;
-    float tmax = ( (!s.x ? box.cornerMax.x : box.cornerMin.x) - ray.origin.x) * invDir.x;
+    float tmin = ((s.x ? 1.0 : -1.0) - localRay.origin.x) * invDir.x;
+    float tmax = ((!s.x ? 1.0 : -1.0) - localRay.origin.x) * invDir.x;
 
-    float tymin = ( (s.y ? box.cornerMax.y : box.cornerMin.y) - ray.origin.y) * invDir.y;
-    float tymax = ( (!s.y ? box.cornerMax.y : box.cornerMin.y) - ray.origin.y) * invDir.y;
+    float tymin = ((s.y ? 1.0 : -1.0) - localRay.origin.y) * invDir.y;
+    float tymax = ((!s.y ? 1.0 : -1.0) - localRay.origin.y) * invDir.y;
 
     tmin = max(tmin, tymin);
     tmax = min(tmax, tymax);
 
-    float tzmin = ( (s.z ? box.cornerMax.z : box.cornerMin.z) - ray.origin.z) * invDir.z;
-    float tzmax = ( (!s.z ? box.cornerMax.z : box.cornerMin.z) - ray.origin.z) * invDir.z;
+    float tzmin = ((s.z ? 1.0 : -1.0) - localRay.origin.z) * invDir.z;
+    float tzmax = ((!s.z ? 1.0 : -1.0) - localRay.origin.z) * invDir.z;
 
     tmin = max(tmin, tzmin);
     tmax = min(tmax, tzmax);
@@ -55,6 +60,110 @@ float rayBoxIntersection(in Ray ray, in Box box) {
         return (tmin >= EPS) ? tmin : tmax;
     return -1.0;
 }
+
+float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    vec3 pvec = cross(ray.dir, edge2);
+    float det = dot(edge1, pvec);
+    if (abs(det) < EPS) return -1.0;
+
+    float invDet = 1.0 / det;
+    vec3 tvec = ray.origin - v0;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0) return -1.0;
+
+    vec3 qvec = cross(tvec, edge1);
+    float v = dot(ray.dir, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0) return -1.0;
+
+    float t = dot(edge2, qvec) * invDet;
+    return (t >= EPS) ? t : -1.0;
+}
+
+float rayMeshIntersection(in Ray ray, in Mesh mesh) {
+    vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
+    vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
+    Ray localRay = Ray(localOrigin, localDir);
+
+    vec3 safeDir = sign(localRay.dir) * max(abs(localRay.dir), vec3(EPS));
+    vec3 invDir = 1.0 / safeDir;
+    vec3 t0 = (mesh.aabbMin - localRay.origin) * invDir;
+    vec3 t1 = (mesh.aabbMax - localRay.origin) * invDir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+    if (tFar < max(tNear, EPS))
+        return -1.0;
+
+    float tClosest = INFINITY;
+    bool hit = false;
+    for (uint i = 0; i < mesh.triangleCount; i++) {
+        uint base = mesh.indexOffset + i * 3u;
+        uint i0 = indexBuffer.indices[base + 0u];
+        uint i1 = indexBuffer.indices[base + 1u];
+        uint i2 = indexBuffer.indices[base + 2u];
+
+        vec3 v0 = vertexBuffer.vertices[i0].position;
+        vec3 v1 = vertexBuffer.vertices[i1].position;
+        vec3 v2 = vertexBuffer.vertices[i2].position;
+
+        float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
+        if (tLocal > 0.0 && tLocal < tClosest) {
+            tClosest = tLocal;
+            hit = true;
+        }
+    }
+    return hit ? tClosest : -1.0;
+}
+
+float rayMeshIntersectionNormal(in Ray ray, in Mesh mesh, out vec3 outNormal) {
+    vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
+    vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
+    Ray localRay = Ray(localOrigin, localDir);
+
+    vec3 safeDir = sign(localRay.dir) * max(abs(localRay.dir), vec3(EPS));
+    vec3 invDir = 1.0 / safeDir;
+    vec3 t0 = (mesh.aabbMin - localRay.origin) * invDir;
+    vec3 t1 = (mesh.aabbMax - localRay.origin) * invDir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+    if (tFar < max(tNear, EPS)) {
+        outNormal = vec3(0.0, 1.0, 0.0);
+        return -1.0;
+    }
+
+    float tClosest = INFINITY;
+    bool hit = false;
+    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+
+    for (uint i = 0; i < mesh.triangleCount; i++) {
+        uint base = mesh.indexOffset + i * 3u;
+        uint i0 = indexBuffer.indices[base + 0u];
+        uint i1 = indexBuffer.indices[base + 1u];
+        uint i2 = indexBuffer.indices[base + 2u];
+
+        vec3 v0 = vertexBuffer.vertices[i0].position;
+        vec3 v1 = vertexBuffer.vertices[i1].position;
+        vec3 v2 = vertexBuffer.vertices[i2].position;
+
+        float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
+        if (tLocal > 0.0 && tLocal < tClosest) {
+            tClosest = tLocal;
+            vec3 localNormal = normalize(cross(v1 - v0, v2 - v0));
+            mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+            bestNormal = normalize(normalMat * localNormal);
+            hit = true;
+        }
+    }
+
+    outNormal = bestNormal;
+    return hit ? tClosest : -1.0;
+}
+
 
 // ================ NORMALS ================
 vec3 sphereNormal(in Sphere sphere, in vec3 p) {
@@ -66,18 +175,65 @@ vec3 planeNormal(in Plane plane, in vec3 p) {
 }
 
 vec3 boxNormal(in Box box, in vec3 p) {
+    vec3 localP = (box.invModelMatrix * vec4(p, 1.0)).xyz;
     vec3 normal = vec3(0, 0, 0);
     for (int d = 0; d < 3; d++) {
-        if (abs(p[d] - box.cornerMin[d]) < EPS) {
-            normal[d] = 1;
+        if (abs(localP[d] + 1.0) < EPS) {
+            normal[d] = -1.0;
             break;
         }
-        if (abs(p[d] - box.cornerMax[d]) < EPS) {
-            normal[d] = -1;
+        if (abs(localP[d] - 1.0) < EPS) {
+            normal[d] = 1.0;
             break;
         }
     }
-    return normal;
+    mat3 normalMat = mat3(transpose(box.invModelMatrix));
+    return normalize(normalMat * normal);
+}
+
+vec3 meshNormal(in Mesh mesh, in vec3 p) {
+    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+    float bestDist = INFINITY;
+
+    vec3 localP = (mesh.invModelMatrix * vec4(p, 1.0)).xyz;
+
+    for (uint i = 0; i < mesh.triangleCount; i++) {
+        uint base = mesh.indexOffset + i * 3u;
+        uint i0 = indexBuffer.indices[base + 0u];
+        uint i1 = indexBuffer.indices[base + 1u];
+        uint i2 = indexBuffer.indices[base + 2u];
+
+        vec3 v0 = vertexBuffer.vertices[i0].position;
+        vec3 v1 = vertexBuffer.vertices[i1].position;
+        vec3 v2 = vertexBuffer.vertices[i2].position;
+
+        vec3 n = normalize(cross(v1 - v0, v2 - v0));
+        float dist = abs(dot(localP - v0, n));
+        if (dist > 1e-2) continue;
+
+        vec3 v0v1 = v1 - v0;
+        vec3 v0v2 = v2 - v0;
+        vec3 v0p = localP - v0;
+        float d00 = dot(v0v1, v0v1);
+        float d01 = dot(v0v1, v0v2);
+        float d11 = dot(v0v2, v0v2);
+        float d20 = dot(v0p, v0v1);
+        float d21 = dot(v0p, v0v2);
+        float denom = d00 * d11 - d01 * d01;
+        if (abs(denom) < EPS) continue;
+
+        float v = (d11 * d20 - d01 * d21) / denom;
+        float w = (d00 * d21 - d01 * d20) / denom;
+        float u = 1.0 - v - w;
+        if (u >= -EPS && v >= -EPS && w >= -EPS) {
+            if (dist < bestDist) {
+                bestDist = dist;
+                mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+                bestNormal = normalize(normalMat * n);
+            }
+        }
+    }
+    return bestNormal;
 }
 
 // ================ SURFACE SAMPLING ================
@@ -94,7 +250,10 @@ SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout uint se
 SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
     SurfaceSample surfaceSample;
 
-    vec3 size = box.cornerMax - box.cornerMin;
+    vec3 axisX = vec3(box.modelMatrix[0]);
+    vec3 axisY = vec3(box.modelMatrix[1]);
+    vec3 axisZ = vec3(box.modelMatrix[2]);
+    vec3 size = 2.0 * vec3(length(axisX), length(axisY), length(axisZ));
     vec3 pairArea = vec3(size.y * size.z, size.z * size.x, size.x * size.y);
 
     float r = rand(seed) * area;
@@ -119,35 +278,67 @@ SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
         }
     }
 
-    vec3 cornerMin = box.cornerMin;
-    vec3 cornerMax = box.cornerMax;
     if (axis == 0) {
-        float x = side < 0.0 ? cornerMin.x : cornerMax.x;
+        float x = side < 0.0 ? -1.0 : 1.0;
         surfaceSample.p = vec3(
             x,
-            mix(cornerMin.y, cornerMax.y, uv.x),
-            mix(cornerMin.z, cornerMax.z, uv.y)
+            mix(-1.0, 1.0, uv.x),
+            mix(-1.0, 1.0, uv.y)
         );
         surfaceSample.normal = vec3(side, 0.0, 0.0);
     } else if (axis == 1) {
-        float y = side < 0.0 ? cornerMin.y : cornerMax.y;
+        float y = side < 0.0 ? -1.0 : 1.0;
         surfaceSample.p = vec3(
-            mix(cornerMin.x, cornerMax.x, uv.x),
+            mix(-1.0, 1.0, uv.x),
             y,
-            mix(cornerMin.z, cornerMax.z, uv.y)
+            mix(-1.0, 1.0, uv.y)
         );
         surfaceSample.normal = vec3(0.0, side, 0.0);
     } else {
-        float z = side < 0.0 ? cornerMin.z : cornerMax.z;
+        float z = side < 0.0 ? -1.0 : 1.0;
         surfaceSample.p = vec3(
-            mix(cornerMin.x, cornerMax.x, uv.x),
-            mix(cornerMin.y, cornerMax.y, uv.y),
+            mix(-1.0, 1.0, uv.x),
+            mix(-1.0, 1.0, uv.y),
             z
         );
         surfaceSample.normal = vec3(0.0, 0.0, side);
     }
 
+    surfaceSample.p = (box.modelMatrix * vec4(surfaceSample.p, 1.0)).xyz;
+    mat3 normalMat = mat3(transpose(box.invModelMatrix));
+    surfaceSample.normal = normalize(normalMat * surfaceSample.normal);
     return surfaceSample;
 }
+
+SurfaceSample sampleMeshSurface(in Mesh mesh, in float area, inout uint seed) {
+    SurfaceSample surfaceSample;
+    if (mesh.triangleCount == 0u) {
+        surfaceSample.p = vec3(0.0);
+        surfaceSample.normal = vec3(0.0);
+        return surfaceSample;
+    }
+
+    uint tri = uint(rand(seed) * float(mesh.triangleCount));
+    if (tri >= mesh.triangleCount) tri = mesh.triangleCount - 1u;
+    uint base = mesh.indexOffset + tri * 3u;
+    uint i0 = indexBuffer.indices[base + 0u];
+    uint i1 = indexBuffer.indices[base + 1u];
+    uint i2 = indexBuffer.indices[base + 2u];
+
+    vec3 v0 = vertexBuffer.vertices[i0].position;
+    vec3 v1 = vertexBuffer.vertices[i1].position;
+    vec3 v2 = vertexBuffer.vertices[i2].position;
+
+    float r1 = sqrt(rand(seed));
+    float r2 = rand(seed);
+    vec3 localP = v0 * (1.0 - r1) + v1 * (r1 * (1.0 - r2)) + v2 * (r1 * r2);
+    vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
+
+    surfaceSample.p = worldP;
+    mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+    surfaceSample.normal = normalize(normalMat * normalize(cross(v1 - v0, v2 - v0)));
+    return surfaceSample;
+}
+
 
 #endif

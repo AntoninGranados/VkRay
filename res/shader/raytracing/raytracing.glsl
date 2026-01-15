@@ -39,12 +39,27 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
 Hit intersection(in Ray ray) {
     float tFinal = INFINITY;
     Object obj = OBJECT_NONE;
+    vec3 meshNormal = vec3(0.0, 1.0, 0.0);
+    bool meshNormalValid = false;
 
     for (int i = 0; i < objectBuffer.objectCount; i++) {
-        float t = rayObjectIntersection(ray, objectBuffer.objects[i]);
-        if (t >= EPS && t < tFinal) {
-            tFinal = t;
-            obj = objectBuffer.objects[i];
+        float t = -1.0;
+        if (objectBuffer.objects[i].type == obj_Mesh) {
+            vec3 hitNormal;
+            t = rayMeshIntersectionNormal(ray, meshBuffer.meshes[objectBuffer.objects[i].id], hitNormal);
+            if (t >= EPS && t < tFinal) {
+                tFinal = t;
+                obj = objectBuffer.objects[i];
+                meshNormal = hitNormal;
+                meshNormalValid = true;
+            }
+        } else {
+            t = rayObjectIntersection(ray, objectBuffer.objects[i]);
+            if (t >= EPS && t < tFinal) {
+                tFinal = t;
+                obj = objectBuffer.objects[i];
+                meshNormalValid = false;
+            }
         }
     }
 
@@ -53,7 +68,7 @@ Hit intersection(in Ray ray) {
     }
     
     vec3 p = ray.origin + ray.dir * tFinal;
-    vec3 normal = getNormal(obj, p);
+    vec3 normal = meshNormalValid ? meshNormal : getNormal(obj, p);
 
     bool front_face = true;
     if (dot(ray.dir, normal) > 0.0) {

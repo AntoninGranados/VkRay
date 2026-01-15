@@ -79,20 +79,25 @@ private:
     
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
     LightMode lightMode = LightMode::Empty;
-    int maxBounces = 4;
-    int samplesPerPixel = 1;
+    int maxBounces = 8;
+    int samplesPerPixelRuntime = 1;
+    int samplesPerPixelRender = 2028;
     float lowResolutionScale = 8.0f;    // TODO: change the resolution dynamically (no computation in the shader so this is always used and not only when moving)
     bool importanceSampling = true;
 
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;
     bool uiToggled = true;
+    bool uiToggledBeforeRender = true;
     bool middleClickWasDown = false;
+    bool renderMode = false;
+    bool renderModePendingExit = false;
 
     bool screenshotRequested = false;
     bool screenshotPendingSave = false;
     uint32_t screenshotWidth = 0;
     uint32_t screenshotHeight = 0;
+    uint64_t sampleCount = 0;
 
     static NotificationManager notificationManager;
     

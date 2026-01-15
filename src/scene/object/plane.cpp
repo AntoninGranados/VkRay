@@ -15,33 +15,27 @@ float Plane::rayIntersection(const Ray &ray) {
 }
 
 bool Plane::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
-    const glm::vec3 up = glm::abs(normal.z) < 0.999f ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
-    const glm::vec3 tangent = glm::normalize(glm::cross(up, normal));
-    const glm::vec3 bitangent = glm::cross(normal, tangent);
-
-    glm::mat4 model(1.0f);
-    model[0] = glm::vec4(tangent, 0.0f);
-    model[1] = glm::vec4(bitangent, 0.0f);
-    model[2] = glm::vec4(normal, 0.0f);
-    model[3] = glm::vec4(point, 1.0f);
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), point);
+    glm::mat4 delta(1.0f);
 
     if (ImGuizmo::Manipulate(
         glm::value_ptr(view),
         glm::value_ptr(proj),
         ImGuizmo::OPERATION::ROTATE | ImGuizmo::OPERATION::TRANSLATE,
         ImGuizmo::MODE::WORLD, 
-        glm::value_ptr(model)
+        glm::value_ptr(model),
+        glm::value_ptr(delta)
     )) {
-        if (isInvalid(model)) return false;
+        if (isInvalid(model) || isInvalid(delta)) return false;
 
         const float maxStep = maxStepPerFrame(MAX_GIZMO_LINEAR_SPEED);
         const float maxAngularStep = maxStepPerFrame(MAX_GIZMO_ANGULAR_SPEED);
 
         glm::vec3 targetPoint = glm::vec3(model[3]);
-        glm::vec3 delta = targetPoint - point;
-        point += clampVecDelta(delta, maxStep);
+        glm::vec3 deltaPos = targetPoint - point;
+        point += clampVecDelta(deltaPos, maxStep);
 
-        glm::vec3 targetNormal = glm::normalize(glm::vec3(model[2]));
+        glm::vec3 targetNormal = glm::normalize(glm::mat3(delta) * normal);
         float angle = std::acos(glm::clamp(glm::dot(glm::normalize(normal), targetNormal), -1.0f, 1.0f));
         if (angle > maxAngularStep && angle > 1e-5f && maxAngularStep > 0.0f) {
             float t = maxAngularStep / angle;

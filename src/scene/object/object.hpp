@@ -50,6 +50,7 @@ enum class ObjectType : int {
     Sphere,
     Plane,
     Box,
+    Mesh,
 };
 
 struct ObjectHandle {

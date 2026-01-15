@@ -3,7 +3,7 @@
 constexpr int MAX_NOTIFICATION_COUNT = 32;
 
 void NotificationManager::drawNotifications() {
-    ImGui::SetNextWindowBgAlpha(0.3f);
+    ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
     ImGui::SetNextWindowSize({ 300, 500 });
     ImGui::Begin("Outputs",
