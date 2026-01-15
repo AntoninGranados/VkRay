@@ -64,6 +64,7 @@ private:
     
     Buffer vertexBuffer, indexBuffer;
     bufferList_t raytracingUniformBuffers, screenUniformBuffers;
+    Buffer screenshotBuffer;
 
     Scene scene;
 
@@ -88,6 +89,11 @@ private:
     bool uiToggled = true;
     bool middleClickWasDown = false;
 
+    bool screenshotRequested = false;
+    bool screenshotPendingSave = false;
+    uint32_t screenshotWidth = 0;
+    uint32_t screenshotHeight = 0;
+
     static NotificationManager notificationManager;
     
     void initScene();
@@ -98,4 +104,7 @@ private:
     float lastTime = 0.0f;
 
     void rebuildPipeline();
+
+    void copyImageToScreenshotBuffer(CommandBuffer commandBuffer, Image image);
+    void saveScreenshotBuffer(std::string path);
 };

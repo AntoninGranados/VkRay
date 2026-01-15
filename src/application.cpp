@@ -1,5 +1,11 @@
 #include "application.hpp"
 
+#include <algorithm>
+#include <cmath>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 const std::vector<ScreenVertex> vertices = {
     { .position={ 1.0f, 1.0f} },
     { .position={ 1.0f,-1.0f} },
@@ -10,6 +16,13 @@ const std::vector<ScreenVertex> vertices = {
 const std::vector<index_t> indices = {
     0, 1, 2, 2, 3, 0
 };
+
+static std::string buildScreenshotPath() {
+    auto now = std::chrono::system_clock::now();
+    auto nowSecs = std::chrono::time_point_cast<std::chrono::seconds>(now);
+    auto value = nowSecs.time_since_epoch().count();
+    return "screenshot_" + std::to_string(value) + ".png";
+}
 
 NotificationManager Application::notificationManager;
 
@@ -65,12 +78,15 @@ Application::Application() {
                 extent.width, extent.height,
                 // Use float format to avoid quantizing every accumulation step
                 VK_FORMAT_R32G32B32A32_SFLOAT,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
             imageViews[i] = engine.initImageView(images[i]);
             samplers[i] = engine.initSampler();
         }
+        screenshotWidth = extent.width;
+        screenshotHeight = extent.height;
+        screenshotBuffer = engine.initReadbackBuffer(static_cast<size_t>(screenshotWidth) * screenshotHeight * 4 * sizeof(float));
     }
     
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -144,6 +160,7 @@ Application::~Application() {
     engine.destroyBuffer(indexBuffer);
     engine.destroyBufferList(raytracingUniformBuffers);
     engine.destroyBufferList(screenUniformBuffers);
+    engine.destroyBuffer(screenshotBuffer);
     scene.destroy(engine);
     
     engine.destroyGraphicsPipeline(pipeline);
@@ -236,6 +253,11 @@ void Application::run() {
                     VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
                 );
+                if (screenshotRequested) {
+                    copyImageToScreenshotBuffer(commandBuffer, images[frame]);
+                    screenshotPendingSave = true;
+                    screenshotRequested = false;
+                }
                 engine.barrier(
                     commandBuffer,
                     images[1-frame].get(),
@@ -315,6 +337,12 @@ void Application::run() {
         engine.endRecoringUiRender(commandBuffer);
 
         engine.endFrame();
+
+        if (screenshotPendingSave) {
+            engine.waitIdle();
+            saveScreenshotBuffer(buildScreenshotPath());
+            screenshotPendingSave = false;
+        }
     }
 }
 
@@ -401,6 +429,8 @@ void Application::onFrameStart(float dt) {
     } if (notificationManager.isCommandRequested(Command::Reload)) {
         rebuildPipeline();
         restartRender = true;
+    } if (notificationManager.isCommandRequested(Command::Screenshot)) {
+        screenshotRequested = true;
     }
 
     if (restartRender) {
@@ -632,4 +662,48 @@ void Application::rebuildPipeline() {
         NotificationType::Info,
         "(Re)Built the main pipeline"
     );
+}
+
+void Application::copyImageToScreenshotBuffer(CommandBuffer commandBuffer, Image image) {
+    engine.barrier(
+        commandBuffer,
+        image.get(),
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+    );
+    image.copyToBuffer(commandBuffer, screenshotBuffer);
+    engine.barrier(
+        commandBuffer,
+        image.get(),
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+    );
+}
+
+void Application::saveScreenshotBuffer(std::string path) {
+    size_t floatCount = static_cast<size_t>(screenshotWidth) * screenshotHeight * 4;
+    size_t byteCount = floatCount * sizeof(float);
+    std::vector<float> floatPixels(floatCount);
+    engine.readBuffer(screenshotBuffer, floatPixels.data(), byteCount);
+
+    std::vector<uint8_t> pixels(static_cast<size_t>(screenshotWidth) * screenshotHeight * 4);
+    auto toByte = [](float v) -> uint8_t {
+        v = std::clamp(v, 0.0f, 1.0f);
+        v = std::pow(v, 1.0f / 2.2f);
+        return static_cast<uint8_t>(v * 255.0f + 0.5f);
+    };
+    for (size_t i = 0; i < floatCount; i += 4) {
+        pixels[i + 0] = toByte(floatPixels[i + 0]);
+        pixels[i + 1] = toByte(floatPixels[i + 1]);
+        pixels[i + 2] = toByte(floatPixels[i + 2]);
+        pixels[i + 3] = 255;
+    }
+
+    if (stbi_write_png(path.c_str(), static_cast<int>(screenshotWidth), static_cast<int>(screenshotHeight), 4, pixels.data(), static_cast<int>(screenshotWidth) * 4) != 0) {
+        notificationManager.pushMessage(NotificationType::Info, "Saved screenshot to " + path);
+    } else {
+        notificationManager.pushMessage(NotificationType::Error, "Failed to write screenshot");
+    }
 }

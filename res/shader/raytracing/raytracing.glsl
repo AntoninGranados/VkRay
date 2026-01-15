@@ -134,6 +134,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (i == ubo.maxBounces)
         radiance = vec3(0.0);
 
+    // radiance = vec3(i / float(ubo.maxBounces));
     return radiance;
 }
 

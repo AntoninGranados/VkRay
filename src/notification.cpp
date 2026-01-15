@@ -96,6 +96,8 @@ void NotificationManager::parseInput(char *buff) {
         requestedCommands[Command::Render] = true;
     } else if (strcmp(buff, "reload") == 0) {
         requestedCommands[Command::Reload] = true;
+    } else if (strcmp(buff, "screenshot") == 0) {
+        requestedCommands[Command::Screenshot] = true;
     } else {
         notifications.push_back({ NotificationType::Error, "Unrecognised command" });
     }
