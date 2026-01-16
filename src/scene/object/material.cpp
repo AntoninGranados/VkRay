@@ -5,7 +5,7 @@ bool drawLambertianUI(Material &material) {
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -17,13 +17,13 @@ bool drawMetalUI(Material &material) {
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Fuzz:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-fuzz", &metalFuzz(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Fuzz", &metalFuzz(material), 0.01, 0.0, 1.0))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -35,13 +35,19 @@ bool drawDielectricUI(Material &material) {
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("IoR:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-index", &dielectricIoR(material), 0.001, 0.01, 10.0, "%.3f"))
+    if (ImGui::DragFloat("##Mat IoR", &dielectricIoR(material), 0.001, 0.01, 10.0, "%.3f"))
+        updated = true;
+    ImGui::PopItemWidth();
+    
+    ImGui::Text("Fuzz:");
+    ImGui::PushItemWidth(-FLT_MIN);
+    if (ImGui::DragFloat("##Mat Fuzz", &dielectricFuzz(material), 0.001, 0.0, 1.0, "%.3f"))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -53,13 +59,13 @@ bool drawEmissiveUI(Material &material) {
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Intensity:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-intensity", &emissiveIntensity(material), 0.1, 0.0, 100.0))
+    if (ImGui::DragFloat("##Mat Intensity", &emissiveIntensity(material), 0.1, 0.0, 100.0))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -71,19 +77,19 @@ bool drawGlossyUI(Material &material) {
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::ColorEdit3("##Mat-albedo", glm::value_ptr(material.albedo)))
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("IoR:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-index", &glossyIoR(material), 0.001, 0.01, 10.0, "%.3f"))
+    if (ImGui::DragFloat("##Mat IoR", &glossyIoR(material), 0.001, 0.01, 10.0, "%.3f"))
         updated = true;
     ImGui::PopItemWidth();
 
     ImGui::Text("Fuzz:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-fuzz", &glossyFuzz(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Fuzz", &glossyFuzz(material), 0.01, 0.0, 1.0))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -95,7 +101,7 @@ bool drawCheckerboardUI(Material &material) {
 
     ImGui::Text("Scale:");
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Mat-scale", &checkerboardScale(material), 0.01, 0.01, 10.0, "%.3f"))
+    if (ImGui::DragFloat("##Mat Scale", &checkerboardScale(material), 0.01, 0.01, 10.0, "%.3f"))
         updated = true;
     ImGui::PopItemWidth();
 
@@ -108,7 +114,7 @@ bool drawMaterialUI(Material &material) {
     ImGui::SeparatorText("Material");
     const char *types[] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Glossy", "Checkerboard" };
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::Combo("##Mat-type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
+    if (ImGui::Combo("##Mat Type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;
     ImGui::PopItemWidth();
     

@@ -27,6 +27,7 @@ Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
 
 #define metalFuzz(mat) mat.payload[0]
 #define dielectricIoR(mat) mat.payload[0]
+#define dielectricFuzz(mat) mat.payload[1]
 #define emissiveIntensity(mat) mat.payload[0]
 #define glossyIoR(mat) mat.payload[0]
 #define glossyFuzz(mat) mat.payload[1]
@@ -59,7 +60,6 @@ void scatterLambertian(in Material mat, in Ray ray, in Hit hit, out ScatterResul
 
 void scatterMetal(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout uint seed) {
     vec3 dir = reflect(ray.dir, hit.normal);
-    dir = normalize(dir);
     dir = normalize(dir + randomInSphere(seed) * metalFuzz(mat));
 
     result.scattered = Ray(hit.p + hit.normal * EPS, dir);
@@ -75,10 +75,13 @@ void scatterDielectric(in Material mat, in Ray ray, in Hit hit, out ScatterResul
     float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
 
     vec3 dir;
-    if (ri * sin_theta > 1 || schlick_approx(cos_theta, ri) > rand(seed))
+    if (ri * sin_theta > 1 || schlick_approx(cos_theta, ri) > rand(seed)) {
         dir = reflect(ray.dir, hit.normal);
-    else
+        dir = normalize(dir + randomInSphere(seed) * dielectricFuzz(mat));
+    } else {
         dir = refract(ray.dir, hit.normal, ri);
+        dir = normalize(dir + randomInSphere(seed) * dielectricFuzz(mat));
+    }
 
     float side = dot(hit.normal, dir) > 0 ? 1.0 : -1.0;
     result.scattered = Ray(hit.p + hit.normal * EPS * side, dir);

@@ -6,13 +6,13 @@
 #include "materials.glsl"
 #include "objects.glsl"
 
-float rayObjectIntersection(in Ray ray, in Object obj) {
+Hit rayObjectIntersection(in Ray ray, in Object obj) {
     switch (obj.type) {
-        case obj_Sphere: return raySphereIntersection(ray, sphereBuffer.spheres[obj.id]);
-        case obj_Plane:  return rayPlaneIntersection(ray, planeBuffer.planes[obj.id]);
-        case obj_Box:    return rayBoxIntersection(ray, boxBuffer.boxes[obj.id]);
-        case obj_Mesh:   return rayMeshIntersection(ray, meshBuffer.meshes[obj.id]);
-        default:         return -1;
+        case obj_Sphere: return raySphereIntersection(ray, obj, sphereBuffer.spheres[obj.id]);
+        case obj_Plane:  return rayPlaneIntersection(ray, obj, planeBuffer.planes[obj.id]);
+        case obj_Box:    return rayBoxIntersection(ray, obj, boxBuffer.boxes[obj.id]);
+        case obj_Mesh:   return rayMeshIntersection(ray, obj, meshBuffer.meshes[obj.id]);
+        default:         return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
     }
 }
 
@@ -23,16 +23,6 @@ Material getMaterial(in Object obj) {
         case obj_Box:    return materialBuffer.materials[boxBuffer.boxes[obj.id].materialHandle];
         case obj_Mesh:   return materialBuffer.materials[meshBuffer.meshes[obj.id].materialHandle];
         default:         return DEFAULT_MATERIAL;
-    }
-}
-
-vec3 getNormal(in Object obj, in vec3 p) {
-    switch (obj.type) {
-        case obj_Sphere: return sphereNormal(sphereBuffer.spheres[obj.id], p);
-        case obj_Plane:  return planeNormal(planeBuffer.planes[obj.id], p);
-        case obj_Box:    return boxNormal(boxBuffer.boxes[obj.id], p);
-        case obj_Mesh:   return meshNormal(meshBuffer.meshes[obj.id], p);
-        default:         return vec3(0);
     }
 }
 

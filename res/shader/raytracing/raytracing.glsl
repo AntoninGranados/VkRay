@@ -37,46 +37,16 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
 }
 
 Hit intersection(in Ray ray) {
-    float tFinal = INFINITY;
-    Object obj = OBJECT_NONE;
-    vec3 meshNormal = vec3(0.0, 1.0, 0.0);
-    bool meshNormalValid = false;
+    Hit bestHit = Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
 
     for (int i = 0; i < objectBuffer.objectCount; i++) {
-        float t = -1.0;
-        if (objectBuffer.objects[i].type == obj_Mesh) {
-            vec3 hitNormal;
-            t = rayMeshIntersectionNormal(ray, meshBuffer.meshes[objectBuffer.objects[i].id], hitNormal);
-            if (t >= EPS && t < tFinal) {
-                tFinal = t;
-                obj = objectBuffer.objects[i];
-                meshNormal = hitNormal;
-                meshNormalValid = true;
-            }
-        } else {
-            t = rayObjectIntersection(ray, objectBuffer.objects[i]);
-            if (t >= EPS && t < tFinal) {
-                tFinal = t;
-                obj = objectBuffer.objects[i];
-                meshNormalValid = false;
-            }
+        Hit hit = rayObjectIntersection(ray, objectBuffer.objects[i]);
+        if (foundIntersection(hit) && hit.t < bestHit.t) {
+            bestHit = hit;
         }
     }
 
-    if (obj.type == obj_None) {
-        return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
-    }
-    
-    vec3 p = ray.origin + ray.dir * tFinal;
-    vec3 normal = meshNormalValid ? meshNormal : getNormal(obj, p);
-
-    bool front_face = true;
-    if (dot(ray.dir, normal) > 0.0) {
-        normal = -normal;
-        front_face = false;
-    }
-
-    return Hit(p, normal, tFinal, front_face, obj);
+    return bestHit;
 }
 
 vec3 skyColor(vec3 dir) {
@@ -149,7 +119,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (i == ubo.maxBounces)
         radiance = vec3(0.0);
 
-    // radiance = vec3(i / float(ubo.maxBounces));
     return radiance;
 }
 
@@ -181,8 +150,6 @@ void main() {
 
     vec3 currColor = vec3(0);
     if (ubo.frameCount <= 1) {
-        prevColor = vec3(0.0);
-
         ivec2 blockCoord = ivec2(round(screenCoord / ubo.lowResolutionScale) * ubo.lowResolutionScale);
         if (ubo.lowResolutionScale == 1.0f || pixelCoord == blockCoord) {
             currColor = computeFragmentColor(camera, seed);
@@ -191,10 +158,14 @@ void main() {
         currColor = computeFragmentColor(camera, seed);
     }
 
+    if (ubo.frameCount <= 2) {
+        prevColor = currColor;
+    }
+
     float intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
-        float t = rayObjectIntersection(getRay(camera, fragPos, false, seed), objectBuffer.objects[objectBuffer.selectedObjectId]);
-        if (t > 0.0) intersection = 1;
+        Hit hit = rayObjectIntersection(getRay(camera, fragPos, false, seed), objectBuffer.objects[objectBuffer.selectedObjectId]);
+        if (foundIntersection(hit)) intersection = 1;
     }
 
     float frame = float(max(ubo.frameCount, 1));

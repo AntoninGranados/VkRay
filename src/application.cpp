@@ -342,6 +342,15 @@ void Application::run() {
             engine.waitIdle();
             saveScreenshotBuffer(buildScreenshotPath());
             screenshotPendingSave = false;
+            if (renderModePendingExit) {
+                renderMode = false;
+                renderModePendingExit = false;
+                uiToggled = uiToggledBeforeRender;
+                samplesPerSecEMA = 0.0;
+                samplesPerSecInitialized = false;
+                samplesPerSecAccumTime = 0.0;
+                samplesPerSecAccumSamples = 0.0;
+            }
         }
     }
 }
@@ -374,59 +383,100 @@ void Application::onFrameStart(float dt) {
     frameCount++;
     sampleCount += static_cast<uint64_t>(samplesPerPixelRuntime);
 
-    const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
-    const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
-
-    // TODO refactor (remove duplicated code)
-    const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
-    if (!blockMouseInput && middleDown && !middleClickWasDown) {
-        double xpos, ypos;
-        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-        int width, height;
-        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-        float dist;
-        glm::vec3 p;
-        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
-            camera.setFocusDepth(dist);
-            restartRender = true;
+    if (renderMode) {
+        double dtSafe = std::max(static_cast<double>(dt), 0.0);
+        samplesPerSecAccumTime += dtSafe;
+        samplesPerSecAccumSamples += static_cast<double>(samplesPerPixelRuntime);
+        if (samplesPerSecAccumTime >= 1.0) {
+            double instant = samplesPerSecAccumSamples / std::max(samplesPerSecAccumTime, 1e-6);
+            double alpha = 1.0 - std::exp(-samplesPerSecAccumTime / 5.0);
+            if (!samplesPerSecInitialized) {
+                samplesPerSecEMA = instant;
+                samplesPerSecInitialized = true;
+            } else {
+                samplesPerSecEMA += alpha * (instant - samplesPerSecEMA);
+            }
+            samplesPerSecAccumTime = 0.0;
+            samplesPerSecAccumSamples = 0.0;
         }
     }
-    middleClickWasDown = middleDown;
 
-    if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        double xpos, ypos;
-        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-        int width, height;
-        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-        float dist;
-        glm::vec3 p;
-        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
-    }
-    
-    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (!uiToggled) uiToggled = true;
-        else scene.clearSelection();
-    }
-    
-    if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
-    restartRender = true;
-    
-    if (camera.isLocked() || blockMouseInput)
+    if (!renderMode) {
+        const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
+        const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
+
+        // TODO refactor (remove duplicated code)
+        const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+        if (!blockMouseInput && middleDown && !middleClickWasDown) {
+            double xpos, ypos;
+            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+            int width, height;
+            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+            float dist;
+            glm::vec3 p;
+            if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
+                camera.setFocusDepth(dist);
+                restartRender = true;
+            }
+        }
+        middleClickWasDown = middleDown;
+
+        if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            double xpos, ypos;
+            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+            int width, height;
+            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+            float dist;
+            glm::vec3 p;
+            scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
+        }
+        
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            if (!uiToggled) uiToggled = true;
+            else scene.clearSelection();
+        }
+        
+        if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
+        restartRender = true;
+        
+        if (camera.isLocked() || blockMouseInput)
+            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        else
+            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        
+        if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
+        restartRender = true;
+        
+        if (scene.checkUpdate()) 
+        restartRender = true;
+    } else {
         glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    else
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    
-    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-    restartRender = true;
-    
-    if (scene.checkUpdate()) 
-    restartRender = true;
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            renderMode = false;
+            renderModePendingExit = false;
+            uiToggled = uiToggledBeforeRender;
+            samplesPerSecEMA = 0.0;
+            samplesPerSecInitialized = false;
+            samplesPerSecAccumTime = 0.0;
+            samplesPerSecAccumSamples = 0.0;
+        }
+    }
     
     if (notificationManager.isCommandRequested(Command::Exit)) {
         shouldClose = true;
     } if (notificationManager.isCommandRequested(Command::Render)) {
-        scene.clearSelection();
-        uiToggled = false;
+        if (!renderMode) {
+            scene.clearSelection();
+            uiToggledBeforeRender = uiToggled;
+            uiToggled = false;
+            renderMode = true;
+            renderModePendingExit = false;
+            restartRender = true;
+            samplesPerSecEMA = 0.0;
+            samplesPerSecInitialized = false;
+            samplesPerSecAccumTime = 0.0;
+            samplesPerSecAccumSamples = 0.0;
+        }
     } if (notificationManager.isCommandRequested(Command::Reload)) {
         rebuildPipeline();
         restartRender = true;
@@ -434,15 +484,22 @@ void Application::onFrameStart(float dt) {
         screenshotRequested = true;
     }
 
+    if (renderMode && samplesPerPixelRender > 0 && !renderModePendingExit && !restartRender) {
+        if (sampleCount >= static_cast<uint64_t>(samplesPerPixelRender)) {
+            screenshotRequested = true;
+            renderModePendingExit = true;
+        }
+    }
+
     if (restartRender) {
-        frameCount = 0;
+        frameCount = 1;
         sampleCount = 0;
         restartRender = false;
     }
 }
 
 void Application::drawUI(CommandBuffer commandBuffer) {
-    if (!uiToggled) return;
+    if (!uiToggled && !renderMode) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -455,6 +512,58 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 5.0f;
     style.FrameRounding = 5.0f;
+
+    if (renderMode) {
+        ImGui::SetNextWindowPos({0, 0});
+        ImGui::SetNextWindowBgAlpha(0.6f);
+        ImGui::Begin("Loading",
+            nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
+        );
+        if (samplesPerPixelRender > 0) {
+            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, samplesPerPixelRender))
+                / static_cast<float>(samplesPerPixelRender);
+            char overlay[64];
+            snprintf(
+                overlay,
+                sizeof(overlay),
+                "%llu / %d",
+                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, samplesPerPixelRender)),
+                samplesPerPixelRender
+            );
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
+            ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
+            ImGui::PopStyleColor();
+
+            ImVec2 textSize = ImGui::CalcTextSize(overlay);
+            ImVec2 barMin = ImGui::GetItemRectMin();
+            ImVec2 barMax = ImGui::GetItemRectMax();
+            ImVec2 textPos(
+                (barMin.x + barMax.x - textSize.x) * 0.5f,
+                (barMin.y + barMax.y - textSize.y) * 0.5f
+            );
+            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
+        }
+        float samplesPerSec = static_cast<float>(samplesPerSecEMA);
+        ImGui::Text("%.1f samples/sec", samplesPerSec);
+        if (samplesPerPixelRender > 0 && samplesPerSec > 0.0f) {
+            uint64_t remaining = 0;
+            if (sampleCount < static_cast<uint64_t>(samplesPerPixelRender)) {
+                remaining = static_cast<uint64_t>(samplesPerPixelRender) - sampleCount;
+            }
+            float etaSec = static_cast<float>(remaining) / samplesPerSec;
+            int etaMin = static_cast<int>(etaSec / 60.0f);
+            int etaRemSec = static_cast<int>(etaSec) % 60;
+            ImGui::Text("ETA: %dm %02ds", etaMin, etaRemSec);
+        } else {
+            ImGui::Text("ETA: --");
+        }
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
+        return;
+    }
 
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::AllowAxisFlip(false);
@@ -501,31 +610,8 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     );
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-        ImGui::Text("Samples: %llu", static_cast<unsigned long long>(sampleCount));
-        if (samplesPerPixelRender > 0) {
-            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, samplesPerPixelRender))
-                / static_cast<float>(samplesPerPixelRender);
-            char overlay[64];
-            snprintf(
-                overlay,
-                sizeof(overlay),
-                "%llu / %d",
-                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, samplesPerPixelRender)),
-                samplesPerPixelRender
-            );
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
-            ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
-            ImGui::PopStyleColor();
-
-            ImVec2 textSize = ImGui::CalcTextSize(overlay);
-            ImVec2 barMin = ImGui::GetItemRectMin();
-            ImVec2 barMax = ImGui::GetItemRectMax();
-            ImVec2 textPos(
-                (barMin.x + barMax.x - textSize.x) * 0.5f,
-                (barMin.y + barMax.y - textSize.y) * 0.5f
-            );
-            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
-        }
+        ImGui::Text("%llu samples", static_cast<unsigned long long>(sampleCount));
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * samplesPerPixelRuntime);
     }
     ImGui::End();
 
@@ -546,7 +632,9 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::DragInt("##Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
         ImGui::DragInt("##Samples", &samplesPerPixelRuntime, 1, 1, 10, "Runtime Samples: %d");
         ImGui::DragInt("##Samples Per Pixel", &samplesPerPixelRender, 1, 1, 4096, "Render Samples: %d");
-        ImGui::DragFloat("##Low Resolution Scale", &lowResolutionScale, 1.0f, 1.0f, 50.0f, "Low Res: %.0f");
+        if (ImGui::DragFloat("##Low Resolution Scale", &lowResolutionScale, 1.0f, 1.0f, 50.0f, "Low Res: %.0f")) {
+            restartRender = true;
+        }
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
         

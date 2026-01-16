@@ -38,20 +38,45 @@ float Box::rayIntersection(const Ray &ray) {
 }
 
 bool Box::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(transform[3]));
-    glm::mat4 delta(1.0f);
+    glm::vec3 currentPos, currentRot, currentScale;
+    ImGuizmo::DecomposeMatrixToComponents(
+        glm::value_ptr(transform),
+        glm::value_ptr(currentPos),
+        glm::value_ptr(currentRot),
+        glm::value_ptr(currentScale)
+    );
 
+    glm::mat4 model = transform;
     if (ImGuizmo::Manipulate(
         glm::value_ptr(view),
         glm::value_ptr(proj),
-        ImGuizmo::OPERATION::SCALE | ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE,
+        ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE | ImGuizmo::OPERATION::SCALE,
         ImGuizmo::MODE::WORLD, 
-        glm::value_ptr(model),
-        glm::value_ptr(delta)
+        glm::value_ptr(model)
     )) {
-        if (isInvalid(model) || isInvalid(delta)) return false;
+        if (isInvalid(model)) return false;
 
-        transform = delta * transform;
+        glm::vec3 targetPos, targetRot, targetScale;
+        ImGuizmo::DecomposeMatrixToComponents(
+            glm::value_ptr(model),
+            glm::value_ptr(targetPos),
+            glm::value_ptr(targetRot),
+            glm::value_ptr(targetScale)
+        );
+
+        const float maxStep = maxStepPerFrame(MAX_GIZMO_LINEAR_SPEED);
+        targetPos = currentPos + clampVecDelta(targetPos - currentPos, maxStep);
+        const float scaleSpeed = MAX_GIZMO_SCALE_SPEED * 0.2f;
+        const float maxScaleStep = maxStepPerFrame(scaleSpeed);
+        targetScale = currentScale + clampVecDeltaPerAxis(targetScale - currentScale, maxScaleStep);
+        targetScale = glm::max(targetScale, glm::vec3(0.001f));
+
+        ImGuizmo::RecomposeMatrixFromComponents(
+            glm::value_ptr(targetPos),
+            glm::value_ptr(targetRot),
+            glm::value_ptr(targetScale),
+            glm::value_ptr(transform)
+        );
         return true;
     }
 

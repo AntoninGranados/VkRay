@@ -7,13 +7,13 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
 
     scene.pushMeshFromObj(
         engine,
-        "Monkey",
-        "./res/model/monkey.obj",
+        "Suzanne",
+        "./res/model/suzanne.obj",
         Material {
             .type = MaterialType::Lambertian,
             .albedo = { 0.9f, 0.9f, 0.9f },
         },
-        glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(0.5f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
     );
 
     Material floorMat = {};
@@ -33,9 +33,10 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
 
     lightMode = LightMode::Empty;
     
+    /*
     scene.pushSphere(
         engine,
-        "Glass",
+        "Glossy",
         glm::vec3(-2.0, 0.0, 0.0),
         1.5,
         Material {
@@ -44,7 +45,7 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
             .payload = { 1.5, 0.0 },
         }
     );
-
+    
     scene.pushSphere(
         engine,
         "Metal",
@@ -55,6 +56,18 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
             .albedo = { 0.2, 0.4, 0.8 },
             .payload = { 0.01, 0.0 },
         }
+    );
+    */
+
+    scene.pushMeshFromObj(
+        engine,
+        "Suzanne",
+        "./res/model/suzanne.obj",
+        Material {
+            .type = MaterialType::Lambertian,
+            .albedo = { 1.0f, 1.0f, 1.0f },
+        },
+        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
     );
 
     scene.pushBox(
@@ -115,8 +128,8 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     scene.pushBox(
         engine,
         "Light",
-        glm::vec3(-2.0, 3.9,-2.0),
-        glm::vec3( 2.0, 4.0, 2.0),
+        glm::vec3(-1.0, 3.9,-1.0),
+        glm::vec3( 1.0, 4.0, 1.0),
         Material {
             .type = MaterialType::Emissive,
             .albedo = { 1.0, 0.7, 0.5 },

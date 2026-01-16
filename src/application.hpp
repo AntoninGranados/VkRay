@@ -81,7 +81,7 @@ private:
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 8;
     int samplesPerPixelRuntime = 1;
-    int samplesPerPixelRender = 2028;
+    int samplesPerPixelRender = 2048;
     float lowResolutionScale = 8.0f;    // TODO: change the resolution dynamically (no computation in the shader so this is always used and not only when moving)
     bool importanceSampling = true;
 
@@ -92,6 +92,10 @@ private:
     bool middleClickWasDown = false;
     bool renderMode = false;
     bool renderModePendingExit = false;
+    double samplesPerSecEMA = 0.0;
+    bool samplesPerSecInitialized = false;
+    double samplesPerSecAccumTime = 0.0;
+    double samplesPerSecAccumSamples = 0.0;
 
     bool screenshotRequested = false;
     bool screenshotPendingSave = false;

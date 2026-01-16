@@ -59,6 +59,19 @@ struct Vertex {
     vec3 position;
 };
 
+struct BVHNode {
+    vec3 aabbMin;
+    vec3 aabbMax;
+    uint data0; // left or first triangle
+    uint data1; // right or triangle count
+    bool isLeaf;
+};
+
+#define BVH_childLeft(node)   (node.data0)
+#define BVH_childRight(node)  (node.data1)
+#define BVH_firstTriangle(node) (node.data0)
+#define BVH_triangleCount(node) (node.data1)
+
 struct Mesh {
     mat4 modelMatrix;
     mat4 invModelMatrix;

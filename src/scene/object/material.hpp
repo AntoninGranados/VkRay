@@ -18,13 +18,11 @@ struct Material {
     MaterialType type;
     alignas(16) glm::vec3 albedo;
     float payload[2];
-    // float fuzz;
-    // float refraction_index;
-    // float intensity;
 };
 
 #define metalFuzz(mat) mat.payload[0]
 #define dielectricIoR(mat) mat.payload[0]
+#define dielectricFuzz(mat) mat.payload[1]
 #define emissiveIntensity(mat) mat.payload[0]
 #define glossyIoR(mat) mat.payload[0]
 #define glossyFuzz(mat) mat.payload[1]
