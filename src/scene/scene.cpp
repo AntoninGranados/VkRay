@@ -19,6 +19,7 @@ void Scene::init(VkSmol &engine) {
     boxBuffers.init(engine, sizeof(GpuBox));
     vertexBuffers.init(engine, sizeof(Vertex));
     indexBuffers.init(engine, sizeof(unsigned int));
+    bvhBuffers.init(engine, sizeof(GpuBvhNode));
     meshBuffers.init(engine, sizeof(GpuMesh));
 
     materialBuffers.init(engine, sizeof(Material));
@@ -32,6 +33,7 @@ void Scene::destroy(VkSmol &engine) {
     boxBuffers.destroy(engine);
     vertexBuffers.destroy(engine);
     indexBuffers.destroy(engine);
+    bvhBuffers.destroy(engine);
     meshBuffers.destroy(engine);
 
     materialBuffers.destroy(engine);
@@ -47,6 +49,7 @@ void Scene::clear(VkSmol &engine) {
     boxBuffers.clear(engine);
     vertexBuffers.clear(engine);
     indexBuffers.clear(engine);
+    bvhBuffers.clear(engine);
     meshBuffers.clear(engine);
 
     materialBuffers.clear(engine);
@@ -176,25 +179,26 @@ inline void addLight(const Material &mat, const float &area, const int &objectId
 void Scene::fillBuffers(VkSmol &engine) {
     size_t totalVertices = 0;
     size_t totalIndices = 0;
-    size_t meshCount = 0;
+    size_t totalBvhNodes = 0;
     for (Object *object : objects) {
         if (object->getType() == ObjectType::Mesh) {
             Mesh *mesh = static_cast<Mesh*>(object);
             totalVertices += mesh->getVertices().size();
             totalIndices += mesh->getIndices().size();
-            meshCount++;
+            totalBvhNodes += mesh->getBvhNodes().size();
         }
     }
 
     bufferUpdated |= vertexBuffers.setElementCount(engine, totalVertices);
     bufferUpdated |= indexBuffers.setElementCount(engine, totalIndices);
-    bufferUpdated |= meshBuffers.setElementCount(engine, meshCount);
+    bufferUpdated |= bvhBuffers.setElementCount(engine, totalBvhNodes);
 
     std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
     std::vector<GpuPlane> planes(planeBuffers.getCapacity());
     std::vector<GpuBox> boxes(boxBuffers.getCapacity());
     std::vector<Vertex> vertices(vertexBuffers.getCapacity());
-    std::vector<unsigned int> indices(indexBuffers.getCapacity());
+    std::vector<uint32_t> indices(indexBuffers.getCapacity());
+    std::vector<GpuBvhNode> bvhNodes(bvhBuffers.getCapacity());
     std::vector<GpuMesh> meshes(meshBuffers.getCapacity());
     std::vector<Material> materialData(materialBuffers.getCapacity());
     std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
@@ -204,11 +208,12 @@ void Scene::fillBuffers(VkSmol &engine) {
     int planeId = 0;
     int boxId = 0;
     int meshId = 0;
-    unsigned int objectCount = 0;
+    uint32_t objectCount = 0;
     int lightCount = 0;
     float totalLightArea = 0;
-    unsigned int vertexOffset = 0;
-    unsigned int indexOffset = 0;
+    uint32_t vertexOffset = 0;
+    uint32_t indexOffset = 0;
+    uint32_t bvhOffset = 0;
     
     for (Object *object : objects) {
         switch(object->getType()) {
@@ -236,7 +241,8 @@ void Scene::fillBuffers(VkSmol &engine) {
             case ObjectType::Mesh: {
                 Mesh *mesh = static_cast<Mesh*>(object);
                 const std::vector<Vertex> &meshVerts = mesh->getVertices();
-                const std::vector<unsigned int> &meshIndices = mesh->getIndices();
+                const std::vector<uint32_t> &meshIndices = mesh->getIndices();
+                const std::vector<GpuBvhNode> &meshBvhNodes = mesh->getBvhNodes();
 
                 for (size_t i = 0; i < meshVerts.size(); i++) {
                     vertices[vertexOffset + i] = meshVerts[i];
@@ -244,16 +250,28 @@ void Scene::fillBuffers(VkSmol &engine) {
                 for (size_t i = 0; i < meshIndices.size(); i++) {
                     indices[indexOffset + i] = meshIndices[i] + vertexOffset;
                 }
+                for (size_t i = 0; i < meshBvhNodes.size(); i++) {
+                    GpuBvhNode node = meshBvhNodes[i];
+                    if (node.isLeaf != 0) {
+                        node.data0 = static_cast<size_t>(node.data0 + (indexOffset / 3));
+                    } else {
+                        node.data0 = static_cast<size_t>(node.data0 + bvhOffset);
+                        node.data1 = static_cast<size_t>(node.data1 + bvhOffset);
+                    }
+                    bvhNodes[bvhOffset + i] = node;
+                }
 
                 GpuMesh meshStruct = mesh->getStruct();
                 meshStruct.indexOffset = indexOffset;
+                meshStruct.bvhOffset = bvhOffset;
                 meshes[meshId] = meshStruct;
 
                 addLight(materials[meshStruct.materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
                 objectHandles[objectCount] = { .type=ObjectType::Mesh, .id=meshId };
 
-                vertexOffset += static_cast<unsigned int>(meshVerts.size());
-                indexOffset += static_cast<unsigned int>(meshIndices.size());
+                vertexOffset += static_cast<uint32_t>(meshVerts.size());
+                indexOffset += static_cast<uint32_t>(meshIndices.size());
+                bvhOffset += static_cast<uint32_t>(meshBvhNodes.size());
                 meshId++;
                 objectCount++;
             } break;
@@ -276,6 +294,7 @@ void Scene::fillBuffers(VkSmol &engine) {
     vertexBuffers.fill(engine, vertices.data());
     indexBuffers.fill(engine, indices.data());
     meshBuffers.fill(engine, meshes.data());
+    bvhBuffers.fill(engine, bvhNodes.data());
 
     size_t offset;
     
@@ -523,6 +542,7 @@ std::vector<bufferList_t> Scene::getBufferLists() {
         boxBuffers.getBufferList(),
         vertexBuffers.getBufferList(),
         indexBuffers.getBufferList(),
+        bvhBuffers.getBufferList(),
         meshBuffers.getBufferList(),
         materialBuffers.getBufferList(),
         objectBuffers.getBufferList(),

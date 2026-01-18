@@ -26,6 +26,7 @@ layout(std140, set = 0, binding = 0) uniform UBO {
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
+    int debugView;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;
@@ -47,18 +48,21 @@ layout(set = 0, binding = 5) buffer readonly VertexBuffer {
 layout(set = 0, binding = 6) buffer readonly IndexBuffer {
     uint indices[];
 } indexBuffer;
-layout(set = 0, binding = 7) buffer readonly MeshBuffer {
+layout(set = 0, binding = 7) buffer readonly BvhBuffer {
+    BvhNode bvhNodes[];
+} bvhBuffer;
+layout(set = 0, binding = 8) buffer readonly MeshBuffer {
     Mesh meshes[];
 } meshBuffer;
-layout(set = 0, binding = 8) buffer readonly MaterialBuffer {
+layout(set = 0, binding = 9) buffer readonly MaterialBuffer {
     Material materials[];
 } materialBuffer;
-layout(set = 0, binding = 9) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 10) buffer readonly ObjectBuffer {
     uint objectCount;
     int selectedObjectId;
     Object objects[];
 } objectBuffer;
-layout(set = 0, binding = 10) buffer readonly LightBuffer {
+layout(set = 0, binding = 11) buffer readonly LightBuffer {
     float totalArea;
     Light lights[];
 } lightBuffer;

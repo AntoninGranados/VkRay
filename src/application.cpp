@@ -89,6 +89,8 @@ Application::Application() {
         screenshotBuffer = engine.initReadbackBuffer(static_cast<size_t>(screenshotWidth) * screenshotHeight * 4 * sizeof(float));
     }
     
+    initScene();
+
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     for (size_t i = 0; i < scene.getBufferLists().size(); i++) {
@@ -117,8 +119,6 @@ Application::Application() {
         engine.destroyShader(screenVertShader);
         engine.destroyShader(screenFragShader);
     }
-
-    initScene();
 
     {   // Descriptor sets creation
         std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
@@ -637,6 +637,14 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         }
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
+
+        const char *debugViews[] = { "None", "Bounces", "Normal", "Selection Mask" };
+        ImGui::PushItemWidth(-FLT_MIN);
+        int currentDebugView = static_cast<int>(debugView);
+        if (ImGui::Combo("##DebugView", &currentDebugView, debugViews, IM_ARRAYSIZE(debugViews)))
+            restartRender = true;
+        debugView = static_cast<DebugView>(currentDebugView);
+        ImGui::PopItemWidth();
         
         ImGui::SeparatorText("Scene");
 
@@ -711,6 +719,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.maxBounces = maxBounces;
     raytracingUBO.samplesPerPixel = samplesPerPixelRuntime;
     raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
+    raytracingUBO.debugView = static_cast<int>(debugView);
 
     // Screen UBO
     screenUBO.frameCount = frameCount;
@@ -726,7 +735,7 @@ void Application::rebuildPipeline() {
     try {
         vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
-        // std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
+        std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
         notificationManager.pushMessage(
             NotificationType::Error,
             "Failed to compile shader [" + vertShaderPath + "]: pipeline not built"
@@ -740,7 +749,7 @@ void Application::rebuildPipeline() {
         fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);
     } catch (...) {
         engine.destroyShader(vertShader);
-        // std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
+        std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
         notificationManager.pushMessage(
             NotificationType::Error,
             "Failed to compile shader [" + fragShaderPath + "]: pipeline not built"
@@ -774,7 +783,7 @@ void Application::rebuildPipeline() {
     engine.destroyShader(vertShader);
     engine.destroyShader(fragShader);
 
-    // std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
+    std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
     notificationManager.pushMessage(
         NotificationType::Info,
         "(Re)Built the main pipeline"

@@ -11,9 +11,9 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
         "./res/model/suzanne.obj",
         Material {
             .type = MaterialType::Lambertian,
-            .albedo = { 0.9f, 0.9f, 0.9f },
+            .albedo = { 1.0f, 0.0f, 1.0f },
         },
-        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(0.5f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
     );
 
     Material floorMat = {};
@@ -64,12 +64,13 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
         "Suzanne",
         "./res/model/suzanne.obj",
         Material {
-            .type = MaterialType::Lambertian,
+            .type = MaterialType::Glossy,
             .albedo = { 1.0f, 1.0f, 1.0f },
+            .payload = { 3.0f, 0.1f },
         },
         glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
     );
-
+    
     scene.pushBox(
         engine,
         "Left",

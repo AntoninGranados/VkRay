@@ -49,6 +49,7 @@ enum class ObjectType : int {
     None,
     Sphere,
     Plane,
+    Aabb,
     Box,
     Mesh,
 };

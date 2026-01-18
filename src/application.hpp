@@ -37,6 +37,14 @@ struct RaytracingUBO {
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
+    int debugView;
+};
+
+enum class DebugView : int {
+    None = 0,
+    Bounces,
+    Normal,
+    SelectionMask
 };
 
 struct ScreenUBO {
@@ -84,6 +92,7 @@ private:
     int samplesPerPixelRender = 2048;
     float lowResolutionScale = 8.0f;    // TODO: change the resolution dynamically (no computation in the shader so this is always used and not only when moving)
     bool importanceSampling = true;
+    DebugView debugView = DebugView::None;
 
     bool uiCapturesMouse = false;
     bool uiCapturesKeyboard = false;

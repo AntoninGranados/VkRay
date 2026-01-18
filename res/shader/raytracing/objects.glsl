@@ -109,7 +109,7 @@ Hit raySphereIntersection(in Ray ray, in Object obj, in Sphere sphere) {
         return makeHit(ray, obj, t2, sphereNormal(sphere, hitP));
     }
     
-    return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+    return NO_HIT;
 }
 
 Hit rayPlaneIntersection(in Ray ray, in Object obj, in Plane plane) {
@@ -119,7 +119,29 @@ Hit rayPlaneIntersection(in Ray ray, in Object obj, in Plane plane) {
         float t = dot(plane.point - ray.origin, plane.normal) / denom;
         if (t >= EPS) return makeHit(ray, obj, t, plane.normal);
     }
-    return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+    return NO_HIT;
+}
+
+Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax) {
+    vec3 safeDir = sign(ray.dir) * max(abs(ray.dir), vec3(EPS));
+    vec3 invDir = 1.0 / safeDir;
+    vec3 t0 = (aabbMin - ray.origin) * invDir;
+    vec3 t1 = (aabbMax - ray.origin) * invDir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+
+    if (tFar < max(tNear, EPS)) {
+        return NO_HIT;
+    }
+
+    vec3 normal = vec3(0.0);
+    if (tNear == tmin.x) normal = vec3(sign(ray.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
+    else if (tNear == tmin.y) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
+    else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? 1.0 : -1.0);
+
+    return makeHit(ray, OBJECT_AABB, tNear, normal);
 }
 
 Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
@@ -127,27 +149,12 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
     vec3 localDir = (box.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
     Ray localRay = Ray(localOrigin, localDir);
 
-    vec3 safeDir = sign(localRay.dir) * max(abs(localRay.dir), vec3(EPS));
-    vec3 invDir = 1.0 / safeDir;
-    vec3 t0 = (vec3(-1.0) - localRay.origin) * invDir;
-    vec3 t1 = (vec3( 1.0) - localRay.origin) * invDir;
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-    float tNear = max(max(tmin.x, tmin.y), tmin.z);
-    float tFar = min(min(tmax.x, tmax.y), tmax.z);
-
-    if (tFar < max(tNear, EPS)) {
-        return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
-    }
-
-    vec3 localNormal = vec3(0.0);
-    if (tNear == tmin.x) localNormal = vec3(sign(localRay.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
-    else if (tNear == tmin.y) localNormal = vec3(0.0, sign(localRay.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
-    else localNormal = vec3(0.0, 0.0, sign(localRay.dir.z) < 0.0 ? 1.0 : -1.0);
+    Hit hit = rayAabbIntersection(localRay, vec3(-1.0), vec3(1.0));
+    if (!foundIntersection(hit)) return hit;
 
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
-    vec3 worldNormal = normalize(normalMat * localNormal);
-    return makeHit(ray, obj, tNear, worldNormal);
+    vec3 worldNormal = normalize(normalMat * hit.normal);
+    return makeHit(ray, obj, hit.t, worldNormal);
 }
 
 float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
@@ -175,19 +182,13 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
     vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
     Ray localRay = Ray(localOrigin, localDir);
 
-    vec3 safeDir = sign(localRay.dir) * max(abs(localRay.dir), vec3(EPS));
-    vec3 invDir = 1.0 / safeDir;
-    vec3 t0 = (mesh.aabbMin - localRay.origin) * invDir;
-    vec3 t1 = (mesh.aabbMax - localRay.origin) * invDir;
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-    float tNear = max(max(tmin.x, tmin.y), tmin.z);
-    float tFar = min(min(tmax.x, tmax.y), tmax.z);
-    if (tFar < max(tNear, EPS))
-        return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+    BvhNode bvhNode = bvhBuffer.bvhNodes[mesh.bvhOffset];
+
+    Hit hit = rayAabbIntersection(localRay, bvhNode.aabbMin, bvhNode.aabbMax);
+    if (!foundIntersection(hit)) return hit;
 
     float tClosest = INFINITY;
-    bool hit = false;
+    bool foundHit = false;
     vec3 bestNormal = vec3(0.0, 1.0, 0.0);
     for (uint i = 0; i < mesh.triangleCount; i++) {
         uint base = mesh.indexOffset + i * 3u;
@@ -202,14 +203,14 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
         float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
         if (tLocal > 0.0 && tLocal < tClosest) {
             tClosest = tLocal;
-            vec3 localNormal = normalize(cross(v1 - v0, v2 - v0));
-            mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
-            bestNormal = normalize(normalMat * localNormal);
-            hit = true;
+            bestNormal = normalize(cross(v1 - v0, v2 - v0));
+            foundHit = true;
         }
     }
-    return hit ? makeHit(ray, obj, tClosest, bestNormal)
-               : Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+
+    mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+    vec3 normal = normalize(normalMat * bestNormal);
+    return foundHit ? makeHit(ray, obj, tClosest, normal) : NO_HIT;
 }
 
 // ================ SURFACE SAMPLING ================

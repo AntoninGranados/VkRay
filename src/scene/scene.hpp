@@ -61,7 +61,7 @@ public:
     bool checkBufferUpdate();
 
 private:
-    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, meshBuffers;
+    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
     
     int selectedObjectId = -1;

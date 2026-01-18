@@ -80,6 +80,7 @@ vec3 skyColor(vec3 dir) {
 }
 
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
+    Ray primaryRay = ray;
     Hit hit = intersection(ray);
     vec3 throughput = vec3(1.0);
     vec3 radiance = vec3(0.0);
@@ -88,6 +89,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     ScatterResult result;
     Material mat;
     for (; i < ubo.maxBounces; i++) {
+        if (ubo.debugView == debug_Normal || ubo.debugView == debug_SelectionMask) break;
+        
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
@@ -119,6 +122,20 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (i == ubo.maxBounces)
         radiance = vec3(0.0);
 
+    // Debug visualisations
+    if (ubo.debugView == debug_Bounces) {
+        return vec3(i / float(ubo.maxBounces));
+    }
+    if (ubo.debugView == debug_Normal) {
+        return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
+    }
+    if (ubo.debugView == debug_SelectionMask) {
+        if (objectBuffer.selectedObjectId < 0) return vec3(0.0);
+        Object sel = objectBuffer.objects[objectBuffer.selectedObjectId];
+        Hit selHit = rayObjectIntersection(primaryRay, sel);
+        return foundIntersection(selHit) ? vec3(1.0) : vec3(0.0);
+    }
+    
     return radiance;
 }
 
