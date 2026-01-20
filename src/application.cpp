@@ -69,6 +69,10 @@ Application::Application() {
     
         raytracingUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(RaytracingUBO));
         screenUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
+
+        VkExtent2D extent = engine.getExtent();
+        size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * 3 * sizeof(float);
+        pixelInfoBuffers = engine.initSharedBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoBytes);
     }
 
     {   // Image (image + view + sampler) creation
@@ -93,6 +97,7 @@ Application::Application() {
 
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     for (size_t i = 0; i < scene.getBufferLists().size(); i++) {
         setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     }
@@ -100,6 +105,7 @@ Application::Application() {
     
     screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     engine.initDescriptorSetLayout(screenSetLayout);
     
     {   // Pipeline creation
@@ -128,7 +134,7 @@ Application::Application() {
         
         std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
+            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i], &pixelInfoBuffers };
             for (bufferList_t &buffers : storageBuffers) {
                 descriptors.push_back(&buffers);
             }
@@ -137,7 +143,7 @@ Application::Application() {
 
             screenDescriptorSets[i] = engine.initDescriptorSetList(
                 screenSetLayout,
-                { &combinedImageSampler[i], &screenUniformBuffers }
+                { &combinedImageSampler[i], &screenUniformBuffers, &pixelInfoBuffers }
             );
         }
     }
@@ -160,6 +166,7 @@ Application::~Application() {
     engine.destroyBuffer(indexBuffer);
     engine.destroyBufferList(raytracingUniformBuffers);
     engine.destroyBufferList(screenUniformBuffers);
+    engine.destroyBufferList(pixelInfoBuffers);
     engine.destroyBuffer(screenshotBuffer);
     scene.destroy(engine);
     
@@ -360,6 +367,7 @@ void Application::onFrameStart(float dt) {
     fillUBOs(raytracingUBO, screenUBO);
     engine.fillBuffer(engine.getBuffer(raytracingUniformBuffers), &raytracingUBO);
     scene.fillBuffers(engine);
+    prevResolution = resolution;
 
     // Rebuild descriptor set
     if (scene.checkBufferUpdate()) {
@@ -370,7 +378,7 @@ void Application::onFrameStart(float dt) {
 
         std::vector<bufferList_t> storageBuffers = scene.getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i] };
+            std::vector<void*> descriptors = { &raytracingUniformBuffers, &combinedImageSampler[1-i], &pixelInfoBuffers };
             for (bufferList_t &buffers : storageBuffers) {
                 descriptors.push_back(&buffers);
             }
@@ -381,12 +389,14 @@ void Application::onFrameStart(float dt) {
     
     frame = (frame + 1) % 2;
     frameCount++;
-    sampleCount += static_cast<uint64_t>(samplesPerPixelRuntime);
+    sampleCount += static_cast<uint64_t>(runtimeSamplesPerPixel);
 
     if (renderMode) {
+        resolution = renderResolution;
+
         double dtSafe = std::max(static_cast<double>(dt), 0.0);
         samplesPerSecAccumTime += dtSafe;
-        samplesPerSecAccumSamples += static_cast<double>(samplesPerPixelRuntime);
+        samplesPerSecAccumSamples += static_cast<double>(runtimeSamplesPerPixel);
         if (samplesPerSecAccumTime >= 1.0) {
             double instant = samplesPerSecAccumSamples / std::max(samplesPerSecAccumTime, 1e-6);
             double alpha = 1.0 - std::exp(-samplesPerSecAccumTime / 5.0);
@@ -399,9 +409,20 @@ void Application::onFrameStart(float dt) {
             samplesPerSecAccumTime = 0.0;
             samplesPerSecAccumSamples = 0.0;
         }
-    }
 
-    if (!renderMode) {
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            renderMode = false;
+            renderModePendingExit = false;
+            uiToggled = uiToggledBeforeRender;
+            samplesPerSecEMA = 0.0;
+            samplesPerSecInitialized = false;
+            samplesPerSecAccumTime = 0.0;
+            samplesPerSecAccumSamples = 0.0;
+        }
+    } else {
+        resolution = runtimeResolution;
+        
         const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
         const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
 
@@ -449,17 +470,6 @@ void Application::onFrameStart(float dt) {
         
         if (scene.checkUpdate()) 
         restartRender = true;
-    } else {
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            renderMode = false;
-            renderModePendingExit = false;
-            uiToggled = uiToggledBeforeRender;
-            samplesPerSecEMA = 0.0;
-            samplesPerSecInitialized = false;
-            samplesPerSecAccumTime = 0.0;
-            samplesPerSecAccumSamples = 0.0;
-        }
     }
     
     if (notificationManager.isCommandRequested(Command::Exit)) {
@@ -484,17 +494,23 @@ void Application::onFrameStart(float dt) {
         screenshotRequested = true;
     }
 
-    if (renderMode && samplesPerPixelRender > 0 && !renderModePendingExit && !restartRender) {
-        if (sampleCount >= static_cast<uint64_t>(samplesPerPixelRender)) {
+    if (renderMode && renderSamplesPerPixel > 0 && !renderModePendingExit && !restartRender) {
+        if (sampleCount >= static_cast<uint64_t>(renderSamplesPerPixel)) {
             screenshotRequested = true;
             renderModePendingExit = true;
         }
     }
 
     if (restartRender) {
+        Buffer pixelInfoBuffer = engine.getBuffer(pixelInfoBuffers);
+        size_t pixelInfoFloatCount = pixelInfoBuffer.getSize() / sizeof(float);
+        std::vector<float> zeroData(pixelInfoFloatCount, 0.0f);
+        engine.fillBuffer(pixelInfoBuffer, zeroData.data());
+
         frameCount = 1;
         sampleCount = 0;
         restartRender = false;
+        resolution = movingResolution;
     }
 }
 
@@ -520,16 +536,16 @@ void Application::drawUI(CommandBuffer commandBuffer) {
             nullptr,
             ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
         );
-        if (samplesPerPixelRender > 0) {
-            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, samplesPerPixelRender))
-                / static_cast<float>(samplesPerPixelRender);
+        if (renderSamplesPerPixel > 0) {
+            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel))
+                / static_cast<float>(renderSamplesPerPixel);
             char overlay[64];
             snprintf(
                 overlay,
                 sizeof(overlay),
                 "%llu / %d",
-                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, samplesPerPixelRender)),
-                samplesPerPixelRender
+                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel)),
+                renderSamplesPerPixel
             );
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
             ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
@@ -546,10 +562,10 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         }
         float samplesPerSec = static_cast<float>(samplesPerSecEMA);
         ImGui::Text("%.1f samples/sec", samplesPerSec);
-        if (samplesPerPixelRender > 0 && samplesPerSec > 0.0f) {
+        if (renderSamplesPerPixel > 0 && samplesPerSec > 0.0f) {
             uint64_t remaining = 0;
-            if (sampleCount < static_cast<uint64_t>(samplesPerPixelRender)) {
-                remaining = static_cast<uint64_t>(samplesPerPixelRender) - sampleCount;
+            if (sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
+                remaining = static_cast<uint64_t>(renderSamplesPerPixel) - sampleCount;
             }
             float etaSec = static_cast<float>(remaining) / samplesPerSec;
             int etaMin = static_cast<int>(etaSec / 60.0f);
@@ -611,7 +627,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%llu samples", static_cast<unsigned long long>(sampleCount));
-        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * samplesPerPixelRuntime);
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * runtimeSamplesPerPixel);
     }
     ImGui::End();
 
@@ -630,19 +646,18 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::DragInt("##Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
-        ImGui::DragInt("##Samples", &samplesPerPixelRuntime, 1, 1, 10, "Runtime Samples: %d");
-        ImGui::DragInt("##Samples Per Pixel", &samplesPerPixelRender, 1, 1, 4096, "Render Samples: %d");
-        if (ImGui::DragFloat("##Low Resolution Scale", &lowResolutionScale, 1.0f, 1.0f, 50.0f, "Low Res: %.0f")) {
-            restartRender = true;
-        }
+        ImGui::DragInt("##Samples", &runtimeSamplesPerPixel, 1, 1, 10, "Runtime Samples: %d");
+        ImGui::DragInt("##Samples Per Pixel", &renderSamplesPerPixel, 1, 1, 4096, "Render Samples: %d");
+        ImGui::DragFloat("##Moving Resolution", &movingResolution, 1.0f, 1.0f, 50.0f, "Moving Res: %.0f");
+        if (ImGui::DragFloat("##Runtime Resolution", &runtimeResolution, 1.0f, 1.0f, 50.0f, "Runtime Res: %.0f")) { restartRender = true; }
+        ImGui::DragFloat("##Render Resolution", &renderResolution, 1.0f, 1.0f, 50.0f, "Render Res: %.0f");
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
 
-        const char *debugViews[] = { "None", "Bounces", "Normal", "Selection Mask" };
+        const char *debugViews[] = { "None", "Bounces", "Normal", "Selection Mask", "Variance" };
         ImGui::PushItemWidth(-FLT_MIN);
         int currentDebugView = static_cast<int>(debugView);
-        if (ImGui::Combo("##DebugView", &currentDebugView, debugViews, IM_ARRAYSIZE(debugViews)))
-            restartRender = true;
+        ImGui::Combo("##DebugView", &currentDebugView, debugViews, IM_ARRAYSIZE(debugViews));
         debugView = static_cast<DebugView>(currentDebugView);
         ImGui::PopItemWidth();
         
@@ -664,6 +679,16 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
             if (ImGui::Button("Empty", { 200, 0 })) {
                 initEmpty(engine, scene, lightMode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Suzanne", { 200, 0 })) {
+                initSuzanne(engine, scene, lightMode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Sponza", { 200, 0 })) {
+                initSponza(engine, scene, lightMode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -707,7 +732,8 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     VkExtent2D extent = engine.getExtent();
     raytracingUBO.screenSize = { (float)extent.width, (float)extent.height };
     raytracingUBO.aspect = raytracingUBO.screenSize.x / raytracingUBO.screenSize.y;
-    raytracingUBO.lowResolutionScale = lowResolutionScale;
+    raytracingUBO.resolution = resolution;
+    raytracingUBO.prevResolution = prevResolution;
 
     if (frameCount <= 1)
         lastTime = glfwGetTime();
@@ -717,13 +743,14 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.lightMode = lightMode;
 
     raytracingUBO.maxBounces = maxBounces;
-    raytracingUBO.samplesPerPixel = samplesPerPixelRuntime;
+    raytracingUBO.samplesPerPixel = runtimeSamplesPerPixel;
     raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
     raytracingUBO.debugView = static_cast<int>(debugView);
 
     // Screen UBO
     screenUBO.frameCount = frameCount;
-    screenUBO.lowResolutionScale = lowResolutionScale;
+    screenUBO.resolution = resolution;
+    screenUBO.debugView = static_cast<int>(debugView);
 }
 
 // TODO: make this function asynchronous ?

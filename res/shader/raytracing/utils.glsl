@@ -36,6 +36,7 @@ struct Material {
 #define debug_Bounces       Enum(1)
 #define debug_Normal        Enum(2)
 #define debug_SelectionMask Enum(3)
+#define debug_Variance      Enum(4)
 
 struct Object {
     Enum type;
@@ -74,6 +75,7 @@ struct BvhNode {
     uint data1; // right or triangle count
     uint isLeaf;
 };
+#define BVH_STACK_SIZE 64
 
 #define BVH_childLeft(node)   (node.data0)
 #define BVH_childRight(node)  (node.data1)
@@ -91,6 +93,12 @@ struct Mesh {
 };
 
 // ============== PATH-TRACING  ==============
+struct PixelInfo {
+    float mean;
+    float m2;
+    float count;
+};
+
 struct Camera {
     vec3 pos;
     vec3 dir;

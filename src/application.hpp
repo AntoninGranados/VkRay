@@ -15,7 +15,7 @@
 typedef uint16_t index_t;
 
 struct ScreenVertex {
-    glm::vec2 position;
+    alignas(16) glm::vec2 position;
 };
 
 struct RaytracingUBO {
@@ -27,7 +27,8 @@ struct RaytracingUBO {
 
     alignas(8) glm::vec2 screenSize;
     float aspect;
-    float lowResolutionScale;
+    float resolution;
+    float prevResolution;
     
     int frameCount;
     float time;
@@ -44,12 +45,14 @@ enum class DebugView : int {
     None = 0,
     Bounces,
     Normal,
-    SelectionMask
+    SelectionMask,
+    Variance
 };
 
 struct ScreenUBO {
     int frameCount;
-    float lowResolutionScale;
+    float resolution;
+    int debugView;
 };
 
 class Application {
@@ -73,10 +76,10 @@ private:
     Buffer vertexBuffer, indexBuffer;
     bufferList_t raytracingUniformBuffers, screenUniformBuffers;
     Buffer screenshotBuffer;
+    bufferList_t pixelInfoBuffers;
 
     Scene scene;
 
-    
     size_t frame = 0;
     int frameCount = 0;
     bool restartRender = false;
@@ -88,9 +91,16 @@ private:
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
     LightMode lightMode = LightMode::Empty;
     int maxBounces = 8;
-    int samplesPerPixelRuntime = 1;
-    int samplesPerPixelRender = 2048;
-    float lowResolutionScale = 8.0f;    // TODO: change the resolution dynamically (no computation in the shader so this is always used and not only when moving)
+
+    int runtimeSamplesPerPixel = 1;
+    int renderSamplesPerPixel = 2048;
+
+    float movingResolution = 8.0f;
+    float runtimeResolution = 1.0f;
+    float renderResolution = 1.0f;
+    float resolution = 1.0f;
+    float prevResolution = resolution;
+
     bool importanceSampling = true;
     DebugView debugView = DebugView::None;
 

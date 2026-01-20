@@ -89,7 +89,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     ScatterResult result;
     Material mat;
     for (; i < ubo.maxBounces; i++) {
-        if (ubo.debugView == debug_Normal || ubo.debugView == debug_SelectionMask) break;
+        if (ubo.debugView == debug_Normal) break;
         
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
@@ -129,26 +129,58 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (ubo.debugView == debug_Normal) {
         return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
-    if (ubo.debugView == debug_SelectionMask) {
-        if (objectBuffer.selectedObjectId < 0) return vec3(0.0);
-        Object sel = objectBuffer.objects[objectBuffer.selectedObjectId];
-        Hit selHit = rayObjectIntersection(primaryRay, sel);
-        return foundIntersection(selHit) ? vec3(1.0) : vec3(0.0);
-    }
-    
     return radiance;
 }
 
-vec3 computeFragmentColor(in Camera camera, inout uint seed) {
-    vec3 color = vec3(0);
-    for (int i = 0; i < ubo.samplesPerPixel; i++) {
-        uint sampleState = pcg_hash(seed + uint(i));
-        vec2 offset = vec2(rand(sampleState), rand(sampleState)) / ubo.screenSize;
-        Ray ray = getRay(camera, fragPos + offset, true, sampleState);
-        vec3 rayColor = traceRay(camera, ray, sampleState);
-        color.rgb += rayColor.rgb;
+float luma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+uint varianceIndexFromCoord(ivec2 coord, ivec2 texSize) {
+    return uint(coord.y * texSize.x + coord.x);
+}
+
+ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
+    ivec2 blockCoord = pixelCoord;
+    if (resolution > 1.0f) {
+        blockCoord = ivec2(floor(screenCoord / resolution) * resolution);
     }
-    color.rgb /= float(ubo.samplesPerPixel);
+    return clamp(blockCoord, ivec2(0), texSize - ivec2(1));
+}
+
+void updateVariance(in float value, inout PixelInfo pixelInfo) {
+    pixelInfo.count += 1.0;
+    float delta = value - pixelInfo.mean;
+    pixelInfo.mean += delta / pixelInfo.count;
+    float delta2 = value - pixelInfo.mean;
+    pixelInfo.m2 += delta * delta2;
+}
+
+float computeSampleProbability(in PixelInfo pixelInfo) {
+    float variance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
+    float varianceMean = (pixelInfo.count > 0.0) ? (variance / pixelInfo.count) : 0.0;
+    float sigmaMean = sqrt(max(varianceMean, 0.0));
+    const float minAdaptiveSamples = 64.0;
+    return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : clamp(sigmaMean * 4.0, 0.2, 1.0);
+}
+
+vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
+    vec3 color = vec3(0);
+    takenSamples = 0.0;
+    for (int i = 0; i < ubo.samplesPerPixel; i++) {
+        if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
+            vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
+            Ray ray = getRay(camera, fragPos + offset, true, seed);
+            vec3 rayColor = traceRay(camera, ray, seed);
+            color.rgb += rayColor.rgb;
+
+            takenSamples += 1.0;
+            updateVariance(luma(rayColor.rgb), pixelInfo);
+        }
+    }
+    if (takenSamples > 0.0) {
+        color.rgb /= takenSamples;
+    }
 
     return color;
 }
@@ -156,28 +188,36 @@ vec3 computeFragmentColor(in Camera camera, inout uint seed) {
 void main() {
     vec2 uv = fragPos * 0.5 + 0.5;
 
-    vec2 texSize = vec2(textureSize(prevTex, 0));
-    vec2 screenCoord = uv * texSize;
+    ivec2 texSize = textureSize(prevTex, 0);
+    vec2 screenCoord = uv * vec2(texSize);
     ivec2 pixelCoord = ivec2(screenCoord);
 
-    vec3 prevColor = texelFetch(prevTex, pixelCoord, 0).rgb;
+    float prevScale = max(ubo.prevResolution, 1.0);
+    ivec2 prevBlockCoord = pixelCoord;
+    if (prevScale > 1.0) {
+        prevBlockCoord = ivec2(floor(screenCoord / prevScale) * prevScale);
+        prevBlockCoord = clamp(prevBlockCoord, ivec2(0), texSize - ivec2(1));
+    }
+    vec3 prevColor = texelFetch(prevTex, prevBlockCoord, 0).rgb;
+    if (ubo.frameCount <= 1) prevColor = vec3(0);
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
     uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frameCount));
 
     vec3 currColor = vec3(0);
-    if (ubo.frameCount <= 1) {
-        ivec2 blockCoord = ivec2(round(screenCoord / ubo.lowResolutionScale) * ubo.lowResolutionScale);
-        if (ubo.lowResolutionScale == 1.0f || pixelCoord == blockCoord) {
-            currColor = computeFragmentColor(camera, seed);
-        }
-    } else {
-        currColor = computeFragmentColor(camera, seed);
-    }
+    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.resolution);
+    uint varianceIndex = varianceIndexFromCoord(blockCoord, texSize);
+    PixelInfo pixelInfo = pixelInfoBuffer.pixels[varianceIndex];
+    if (ubo.frameCount <= 1) pixelInfo = PixelInfo(0.0, 0.0, 0.0);
+    float sampleProb = computeSampleProbability(pixelInfo);
 
-    if (ubo.frameCount <= 2) {
-        prevColor = currColor;
+    float takenSamples = 0.0;
+    if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
+        currColor = computeFragmentColor(camera, fragPos, seed, 1.0, pixelInfo, takenSamples);
+        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count);
     }
+    
+    if (ubo.resolution < ubo.prevResolution) prevColor = currColor;
 
     float intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
@@ -185,7 +225,11 @@ void main() {
         if (foundIntersection(hit)) intersection = 1;
     }
 
-    float frame = float(max(ubo.frameCount, 1));
-    vec3 mixedColor = mix(prevColor, currColor, 1.0 / frame);
+    float prevCount = max(pixelInfo.count, 0.0);
+    float totalCount = prevCount + takenSamples;
+    vec3 mixedColor = prevColor;
+    if (totalCount > 0.0) {
+        mixedColor = (prevColor * prevCount + currColor * takenSamples) / totalCount;
+    }
     outColor = vec4(mixedColor, intersection);
 }

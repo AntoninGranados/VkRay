@@ -4,16 +4,34 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     scene.clear(engine);
 
     lightMode = LightMode::Day;
+}
+
+void initSuzanne(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+    scene.clear(engine);
+
+    lightMode = LightMode::Day;
+
+    // scene.pushMeshFromObj(
+    //     engine,
+    //     "Suzanne",
+    //     "./res/model/suzanne.obj",
+    //     Material {
+    //         .type = MaterialType::Lambertian,
+    //         .albedo = { 1.0f, 0.0f, 1.0f },
+    //     },
+    //     glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+    // );
 
     scene.pushMeshFromObj(
         engine,
-        "Suzanne",
-        "./res/model/suzanne.obj",
+        "Lucy",
+        "./res/model/lucy.obj",
         Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 1.0f, 0.0f, 1.0f },
+            .type = MaterialType::Glossy,
+            .albedo = { 1.0f, 1.0f, 1.0f },
+            .payload = { 3.0f, 0.1f },
         },
-        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.4f))
     );
 
     Material floorMat = {};
@@ -25,6 +43,23 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
         glm::vec3(0.0, -1.0, 0.0),
         glm::vec3(0.0,  1.0 , 0.0),
         floorMat
+    );
+}
+
+void initSponza(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+    scene.clear(engine);
+
+    lightMode = LightMode::Day;
+
+    scene.pushMeshFromObj(
+        engine,
+        "Sponza",
+        "./res/model/sponza.obj",
+        Material {
+            .type = MaterialType::Lambertian,
+            .albedo = { 1.0f, 1.0f, 1.0f },
+        },
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.1f))
     );
 }
 
@@ -59,6 +94,7 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     );
     */
 
+    /*
     scene.pushMeshFromObj(
         engine,
         "Suzanne",
@@ -68,7 +104,20 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
             .albedo = { 1.0f, 1.0f, 1.0f },
             .payload = { 3.0f, 0.1f },
         },
-        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(3.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+    );
+    */
+
+    scene.pushMeshFromObj(
+        engine,
+        "Lucy",
+        "./res/model/lucy.obj",
+        Material {
+            .type = MaterialType::Glossy,
+            .albedo = { 1.0f, 1.0f, 1.0f },
+            .payload = { 3.0f, 0.1f },
+        },
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.4f))
     );
     
     scene.pushBox(
@@ -134,7 +183,7 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
         Material {
             .type = MaterialType::Emissive,
             .albedo = { 1.0, 0.7, 0.5 },
-            .payload = { 5.0, 0.0 },
+            .payload = { 30.0, 0.0 },
         }
     );
 }

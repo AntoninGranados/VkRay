@@ -122,9 +122,8 @@ Hit rayPlaneIntersection(in Ray ray, in Object obj, in Plane plane) {
     return NO_HIT;
 }
 
-Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax) {
-    vec3 safeDir = sign(ray.dir) * max(abs(ray.dir), vec3(EPS));
-    vec3 invDir = 1.0 / safeDir;
+Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool computeNormal) {
+    vec3 invDir = 1.0 / ray.dir;
     vec3 t0 = (aabbMin - ray.origin) * invDir;
     vec3 t1 = (aabbMax - ray.origin) * invDir;
     vec3 tmin = min(t0, t1);
@@ -137,9 +136,11 @@ Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax) {
     }
 
     vec3 normal = vec3(0.0);
-    if (tNear == tmin.x) normal = vec3(sign(ray.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
-    else if (tNear == tmin.y) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
-    else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? 1.0 : -1.0);
+    if (computeNormal) {
+        if (tNear == tmin.x) normal = vec3(sign(ray.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
+        else if (tNear == tmin.y) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
+        else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? 1.0 : -1.0);
+    }
 
     return makeHit(ray, OBJECT_AABB, tNear, normal);
 }
@@ -149,7 +150,7 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
     vec3 localDir = (box.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
     Ray localRay = Ray(localOrigin, localDir);
 
-    Hit hit = rayAabbIntersection(localRay, vec3(-1.0), vec3(1.0));
+    Hit hit = rayAabbIntersection(localRay, vec3(-1.0), vec3(1.0), true);
     if (!foundIntersection(hit)) return hit;
 
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
@@ -178,39 +179,120 @@ float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
 }
 
 Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
+    if (mesh.bvhNodeCount == 0u) return NO_HIT;
+
     vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
     vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
     Ray localRay = Ray(localOrigin, localDir);
 
-    BvhNode bvhNode = bvhBuffer.bvhNodes[mesh.bvhOffset];
-
-    Hit hit = rayAabbIntersection(localRay, bvhNode.aabbMin, bvhNode.aabbMax);
-    if (!foundIntersection(hit)) return hit;
+    BvhNode root = bvhBuffer.bvhNodes[mesh.bvhOffset];
+    Hit rootHit = rayAabbIntersection(localRay, root.aabbMin, root.aabbMax, false);
+    if (!foundIntersection(rootHit)) return NO_HIT;
 
     float tClosest = INFINITY;
     bool foundHit = false;
     vec3 bestNormal = vec3(0.0, 1.0, 0.0);
-    for (uint i = 0; i < mesh.triangleCount; i++) {
-        uint base = mesh.indexOffset + i * 3u;
-        uint i0 = indexBuffer.indices[base + 0u];
-        uint i1 = indexBuffer.indices[base + 1u];
-        uint i2 = indexBuffer.indices[base + 2u];
 
-        vec3 v0 = vertexBuffer.vertices[i0].position;
-        vec3 v1 = vertexBuffer.vertices[i1].position;
-        vec3 v2 = vertexBuffer.vertices[i2].position;
+    uint stack[BVH_STACK_SIZE];
+    int stackPtr = 0;
+    stack[stackPtr++] = mesh.bvhOffset;
 
-        float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
-        if (tLocal > 0.0 && tLocal < tClosest) {
-            tClosest = tLocal;
-            bestNormal = normalize(cross(v1 - v0, v2 - v0));
-            foundHit = true;
+    while (stackPtr > 0) {
+        uint nodeIdx = stack[--stackPtr];
+        BvhNode node = bvhBuffer.bvhNodes[nodeIdx];
+
+        Hit nodeHit = rayAabbIntersection(localRay, node.aabbMin, node.aabbMax, false);
+        if (!foundIntersection(nodeHit) || nodeHit.t > tClosest) continue;
+
+        if (node.isLeaf != 0u) {
+            uint first = BVH_firstTriangle(node);
+            uint count = BVH_triangleCount(node);
+            for (uint i = 0; i < count; i++) {
+                uint tri = first + i;
+                uint base = tri * 3u;
+                uint i0 = indexBuffer.indices[base + 0u];
+                uint i1 = indexBuffer.indices[base + 1u];
+                uint i2 = indexBuffer.indices[base + 2u];
+
+                vec3 v0 = vertexBuffer.vertices[i0].position;
+                vec3 v1 = vertexBuffer.vertices[i1].position;
+                vec3 v2 = vertexBuffer.vertices[i2].position;
+
+                float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
+                if (tLocal > 0.0 && tLocal < tClosest) {
+                    tClosest = tLocal;
+                    bestNormal = normalize(cross(v1 - v0, v2 - v0));
+                    foundHit = true;
+                }
+            }
+        } else {
+            uint left = BVH_childLeft(node);
+            uint right = BVH_childRight(node);
+            if (stackPtr + 2 <= BVH_STACK_SIZE) {
+                stack[stackPtr++] = left;
+                stack[stackPtr++] = right;
+            }
         }
     }
 
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
     vec3 normal = normalize(normalMat * bestNormal);
     return foundHit ? makeHit(ray, obj, tClosest, normal) : NO_HIT;
+}
+
+Hit rayMeshIntersectionBvhDebug(in Ray ray, in Object obj, in Mesh mesh) {
+    if (mesh.bvhNodeCount == 0u) return NO_HIT;
+
+    vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
+    vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
+    Ray localRay = Ray(localOrigin, localDir);
+
+    const int DEBUG_DEPTH = 8;
+    uint stack[BVH_STACK_SIZE];
+    int stackDepth[BVH_STACK_SIZE];
+    int stackPtr = 0;
+
+    stack[stackPtr] = mesh.bvhOffset;
+    stackDepth[stackPtr] = 0;
+    stackPtr++;
+
+    float tClosest = INFINITY;
+    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+    bool foundHit = false;
+
+    while (stackPtr > 0) {
+        stackPtr--;
+        uint nodeIdx = stack[stackPtr];
+        int depth = stackDepth[stackPtr];
+        BvhNode node = bvhBuffer.bvhNodes[nodeIdx];
+
+        if (depth >= DEBUG_DEPTH || node.isLeaf != 0u) {
+            Hit nodeHit = rayAabbIntersection(localRay, node.aabbMin, node.aabbMax, true);
+            if (foundIntersection(nodeHit) && nodeHit.t < tClosest) {
+                tClosest = nodeHit.t;
+                bestNormal = nodeHit.normal;
+                foundHit = true;
+            }
+            continue;
+        }
+
+        uint left = BVH_childLeft(node);
+        uint right = BVH_childRight(node);
+        if (stackPtr + 2 <= BVH_STACK_SIZE) {
+            stack[stackPtr] = left;
+            stackDepth[stackPtr] = depth + 1;
+            stackPtr++;
+            stack[stackPtr] = right;
+            stackDepth[stackPtr] = depth + 1;
+            stackPtr++;
+        }
+    }
+
+    if (!foundHit) return NO_HIT;
+
+    mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+    vec3 normal = normalize(normalMat * bestNormal);
+    return makeHit(ray, obj, tClosest, normal);
 }
 
 // ================ SURFACE SAMPLING ================
