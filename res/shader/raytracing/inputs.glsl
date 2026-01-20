@@ -27,6 +27,7 @@ layout(std140, set = 0, binding = 0) uniform UBO {
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
+    int varianceSampling;
     int debugView;
 } ubo;
 

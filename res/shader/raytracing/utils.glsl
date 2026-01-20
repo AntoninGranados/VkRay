@@ -97,6 +97,7 @@ struct PixelInfo {
     float mean;
     float m2;
     float count;
+    float varianceProba;
 };
 
 struct Camera {

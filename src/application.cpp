@@ -71,7 +71,7 @@ Application::Application() {
         screenUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
 
         VkExtent2D extent = engine.getExtent();
-        size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * 3 * sizeof(float);
+        size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * 4 * sizeof(float);
         pixelInfoBuffers = engine.initSharedBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoBytes);
     }
 
@@ -653,6 +653,7 @@ void Application::drawUI(CommandBuffer commandBuffer) {
         ImGui::DragFloat("##Render Resolution", &renderResolution, 1.0f, 1.0f, 50.0f, "Render Res: %.0f");
         ImGui::PopItemWidth();
         ImGui::Checkbox("Importance Sampling", &importanceSampling);
+        ImGui::Checkbox("Variance Sampling", &varianceSampling);
 
         const char *debugViews[] = { "None", "Bounces", "Normal", "Selection Mask", "Variance" };
         ImGui::PushItemWidth(-FLT_MIN);
@@ -745,6 +746,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.maxBounces = maxBounces;
     raytracingUBO.samplesPerPixel = runtimeSamplesPerPixel;
     raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
+    raytracingUBO.varianceSampling = static_cast<int>(varianceSampling);
     raytracingUBO.debugView = static_cast<int>(debugView);
 
     // Screen UBO

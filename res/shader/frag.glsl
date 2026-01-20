@@ -4,6 +4,7 @@ struct PixelInfo {
     float mean;
     float m2;
     float count;
+    float varianceProba;
 };
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
@@ -44,13 +45,11 @@ vec3 visualizeVariance(vec2 uv, vec2 texSize) {
     ivec2 pixelCoord = ivec2(screenCoord);
     ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, ivec2(texSize), ubo.resolution);
     uint index = uint(blockCoord.y * int(texSize.x) + blockCoord.x);
-    PixelInfo stats = pixelInfoBuffer.pixels[index];
-    float count = stats.count;
-    float variance = (count > 1.0) ? (stats.m2 / (count - 1.0)) : 0.0;
-    float varianceMean = (count > 0.0) ? (variance / count) : 0.0;
-    float sigma = sqrt(max(varianceMean, 0.0));
-    float vis = clamp(sigma * 4.0, 0.0, 1.0);
-    return vec3(vis);
+    PixelInfo pixelInfo = pixelInfoBuffer.pixels[index];
+    
+    return vec3(pixelInfo.varianceProba);
+
+    // return vec3(pixelInfo.count / ubo.frameCount);
 }
 
 vec3 visualizeSelectionMask(float alpha) {

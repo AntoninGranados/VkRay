@@ -156,33 +156,60 @@ void updateVariance(in float value, inout PixelInfo pixelInfo) {
     pixelInfo.m2 += delta * delta2;
 }
 
-float computeSampleProbability(in PixelInfo pixelInfo) {
+float computeTemporalSigma(in PixelInfo pixelInfo) {
     float variance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
     float varianceMean = (pixelInfo.count > 0.0) ? (variance / pixelInfo.count) : 0.0;
-    float sigmaMean = sqrt(max(varianceMean, 0.0));
+    return sqrt(max(varianceMean, 0.0));
+}
+
+float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
+    const int radius = 1;
+    float mean = 0.0;
+    float meanSq = 0.0;
+    int samples = 0;
+    float stepSize = max(ubo.resolution, 1.0);
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            ivec2 p = blockCoord + ivec2(x, y) * int(stepSize);
+            p = clamp(p, ivec2(0), ivec2(texSize) - ivec2(1));
+            vec3 c = texelFetch(prevTex, p, 0).rgb;
+            float lum = luma(c);
+            mean += lum;
+            meanSq += lum * lum;
+            samples++;
+        }
+    }
+    mean /= float(samples);
+    meanSq /= float(samples);
+    return sqrt(max(meanSq - mean * mean, 0.0));
+}
+
+float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec2 texSize, float resolution) {
+    float temporalSigma = computeTemporalSigma(pixelInfo);
+    float spatialSigma = computeSpatialVariance(blockCoord, texSize);
+
+    float sigma = mix(temporalSigma, spatialSigma, 0.5);
     const float minAdaptiveSamples = 64.0;
-    return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : clamp(sigmaMean * 4.0, 0.2, 1.0);
+    float proba = clamp(sigma * 8.0, 0.0, 1.0);
+    pixelInfo.varianceProba = proba;
+    return (ubo.frameCount < minAdaptiveSamples) ? 1.0 : proba;
 }
 
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
-    vec3 color = vec3(0);
+    vec3 colorSum = vec3(0);
     takenSamples = 0.0;
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
             vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
             vec3 rayColor = traceRay(camera, ray, seed);
-            color.rgb += rayColor.rgb;
+            colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;
             updateVariance(luma(rayColor.rgb), pixelInfo);
         }
     }
-    if (takenSamples > 0.0) {
-        color.rgb /= takenSamples;
-    }
-
-    return color;
+    return colorSum;
 }
 
 void main() {
@@ -204,20 +231,26 @@ void main() {
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
     uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frameCount));
 
-    vec3 currColor = vec3(0);
     ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.resolution);
     uint varianceIndex = varianceIndexFromCoord(blockCoord, texSize);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[varianceIndex];
-    if (ubo.frameCount <= 1) pixelInfo = PixelInfo(0.0, 0.0, 0.0);
-    float sampleProb = computeSampleProbability(pixelInfo);
+    if (ubo.frameCount <= 1) pixelInfo = PixelInfo(0.0, 0.0, 0.0, 0.0);
+    float prevCount = max(pixelInfo.count, 0.0);
+    
+    // Compute sample probability
+    float sampleProb = 1.0;
+    if (ubo.varianceSampling != 0)
+        sampleProb = computeSampleProbability(pixelInfo, blockCoord, texSize, ubo.prevResolution);
 
+    // Compute sample color
     float takenSamples = 0.0;
+    vec3 colorSum = vec3(0);
     if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
-        currColor = computeFragmentColor(camera, fragPos, seed, 1.0, pixelInfo, takenSamples);
-        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count);
+        colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
+        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba);
     }
     
-    if (ubo.resolution < ubo.prevResolution) prevColor = currColor;
+    if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
     float intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
@@ -225,11 +258,10 @@ void main() {
         if (foundIntersection(hit)) intersection = 1;
     }
 
-    float prevCount = max(pixelInfo.count, 0.0);
     float totalCount = prevCount + takenSamples;
     vec3 mixedColor = prevColor;
     if (totalCount > 0.0) {
-        mixedColor = (prevColor * prevCount + currColor * takenSamples) / totalCount;
+        mixedColor = (prevColor * prevCount + colorSum) / totalCount;
     }
     outColor = vec4(mixedColor, intersection);
 }

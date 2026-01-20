@@ -38,6 +38,7 @@ struct RaytracingUBO {
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
+    int varianceSampling;
     int debugView;
 };
 
@@ -102,6 +103,7 @@ private:
     float prevResolution = resolution;
 
     bool importanceSampling = true;
+    bool varianceSampling = true;
     DebugView debugView = DebugView::None;
 
     bool uiCapturesMouse = false;
