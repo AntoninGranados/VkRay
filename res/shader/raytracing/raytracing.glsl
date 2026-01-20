@@ -189,10 +189,10 @@ float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec
     float spatialSigma = computeSpatialVariance(blockCoord, texSize);
 
     float sigma = mix(temporalSigma, spatialSigma, 0.5);
-    const float minAdaptiveSamples = 64.0;
-    float proba = clamp(sigma * 8.0, 0.0, 1.0);
+    float minAdaptiveSamples = max(float(ubo.varianceWarmupSamples), 0.0);
+    float proba = clamp(sigma * 8.0, 0.01, 1.0);
     pixelInfo.varianceProba = proba;
-    return (ubo.frameCount < minAdaptiveSamples) ? 1.0 : proba;
+    return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;
 }
 
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
@@ -225,16 +225,23 @@ void main() {
         prevBlockCoord = ivec2(floor(screenCoord / prevScale) * prevScale);
         prevBlockCoord = clamp(prevBlockCoord, ivec2(0), texSize - ivec2(1));
     }
+
+    // Init values in render start
     vec3 prevColor = texelFetch(prevTex, prevBlockCoord, 0).rgb;
-    if (ubo.frameCount <= 1) prevColor = vec3(0);
+    if (ubo.frameCount <= 1) {
+        prevColor = vec3(0);
+        
+        uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
+        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(0.0, 0.0, 0.0, 0.0);
+    }
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
     uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frameCount));
 
+    
     ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.resolution);
-    uint varianceIndex = varianceIndexFromCoord(blockCoord, texSize);
-    PixelInfo pixelInfo = pixelInfoBuffer.pixels[varianceIndex];
-    if (ubo.frameCount <= 1) pixelInfo = PixelInfo(0.0, 0.0, 0.0, 0.0);
+    uint blockVarianceIndex = varianceIndexFromCoord(blockCoord, texSize);
+    PixelInfo pixelInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
     float prevCount = max(pixelInfo.count, 0.0);
     
     // Compute sample probability
@@ -247,7 +254,7 @@ void main() {
     vec3 colorSum = vec3(0);
     if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
-        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba);
+        pixelInfoBuffer.pixels[blockVarianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba);
     }
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);

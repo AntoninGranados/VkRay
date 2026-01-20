@@ -34,7 +34,7 @@ public:
 
     void resetMouse() { firstMouse = true; }
 
-    bool drawUI();
+    bool drawUI(bool &restartRequested);
 
 private:
     enum class DragMode {

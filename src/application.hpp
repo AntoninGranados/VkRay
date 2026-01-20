@@ -8,6 +8,7 @@
 #include "./engine/engine.hpp"
 #include "./camera.hpp"
 #include "./notification.hpp"
+#include "./parameters.hpp"
 #include "./scene/scene.hpp"
 #include "./scene/scene_preset.hpp"
 #include "./scene/object/object.hpp"
@@ -39,6 +40,7 @@ struct RaytracingUBO {
     int samplesPerPixel;
     int importanceSampling;
     int varianceSampling;
+    int varianceWarmupSamples;
     int debugView;
 };
 
@@ -54,6 +56,14 @@ struct ScreenUBO {
     int frameCount;
     float resolution;
     int debugView;
+};
+
+struct UiState {
+    bool toggled = true;
+    bool capturesMouse = false;
+    bool capturesKeyboard = false;
+    bool toggledBeforeRender = true;
+    bool middleClickWasDown = false;
 };
 
 class Application {
@@ -90,27 +100,11 @@ private:
     ScreenUBO screenUBO;
     
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
-    LightMode lightMode = LightMode::Empty;
-    int maxBounces = 8;
-
-    int runtimeSamplesPerPixel = 1;
-    int renderSamplesPerPixel = 2048;
-
-    float movingResolution = 8.0f;
-    float runtimeResolution = 1.0f;
-    float renderResolution = 1.0f;
     float resolution = 1.0f;
     float prevResolution = resolution;
+    ParameterStore parameters;
 
-    bool importanceSampling = true;
-    bool varianceSampling = true;
-    DebugView debugView = DebugView::None;
-
-    bool uiCapturesMouse = false;
-    bool uiCapturesKeyboard = false;
-    bool uiToggled = true;
-    bool uiToggledBeforeRender = true;
-    bool middleClickWasDown = false;
+    UiState ui;
     bool renderMode = false;
     bool renderModePendingExit = false;
     double samplesPerSecEMA = 0.0;
@@ -127,9 +121,16 @@ private:
     static NotificationManager notificationManager;
     
     void initScene();
+    void initParameters();
 
     void onFrameStart(float dt);
     void drawUI(CommandBuffer commandBuffer);
+    void updateUiState();
+    void drawMainUi();
+    void drawRenderUi();
+    void handleInput(float dt);
+    void handleInputRuntime(float dt);
+    void handleInputRender(float dt);
     void fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO);
     float lastTime = 0.0f;
 

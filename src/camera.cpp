@@ -175,7 +175,7 @@ glm::mat4 Camera::getProjection(GLFWwindow* window) const {
     return proj;
 }
 
-bool Camera::drawUI() {
+bool Camera::drawUI(bool &restartRequested) {
     bool updated = false;
 
     glm::vec3 dir = getDirection();
@@ -185,14 +185,19 @@ bool Camera::drawUI() {
     ImGui::Text("Camera Fov:\n %4.1f°", fov);
     
     ImGui::Text("Camera Aperture:");
+    ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::DragFloat("##Camera Aperture", &aperture, 0.01, 0.0, 5.0)) {
         updated = true;
     }
 
     ImGui::Text("Camera Focus Depth:");
+    ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::DragFloat("##Camera Focus Depth", &focusDepth, 0.1, 0.0, 100.0)) {
         updated = true;
     }
 
+    // This is redundant (same value as the one returned) but it makes it consistent with the parameters update
+    if (updated)
+        restartRequested = true;
     return updated;
 }

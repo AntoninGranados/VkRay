@@ -36,7 +36,7 @@ Application::Application() {
             ImGui_ImplGlfw_CursorPosCallback(window, x, y);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
             const bool cameraLocked = app->camera.isLocked();
-            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse || ImGuizmo::IsUsing()))
+            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->ui.capturesMouse || ImGuizmo::IsUsing()))
                 return;
             if (app->camera.cursorPosCallback(window, x, y))
                 app->restartRender = true;
@@ -47,7 +47,7 @@ Application::Application() {
         [](GLFWwindow* window, double xoffset, double yoffset) {
             ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            if (ImGui::GetIO().WantCaptureMouse || app->uiCapturesMouse) return;
+            if (ImGui::GetIO().WantCaptureMouse || app->ui.capturesMouse) return;
             if (app->camera.scrollCallback(window, xoffset, yoffset))
                 app->restartRender = true;
         }
@@ -93,6 +93,7 @@ Application::Application() {
         screenshotBuffer = engine.initReadbackBuffer(static_cast<size_t>(screenshotWidth) * screenshotHeight * 4 * sizeof(float));
     }
     
+    initParameters();
     initScene();
 
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -184,7 +185,37 @@ void Application::initScene() {
         Application::notificationManager.pushMessage(type, content);
     });
 
-    initEmpty(engine, scene, lightMode);
+    LightMode mode = parameters.getEnum<LightMode>("lightMode");
+    initEmpty(engine, scene, mode);
+}
+
+void Application::initParameters() {
+    parameters.addInt("maxBounces", "Max Bounces", 8, 1, 20, 1, false, "Pathtracer");
+    parameters.addInt("runtimeSamples", "Runtime Samples", 1, 1, 10, 1, false, "Pathtracer");
+    parameters.addInt("renderSamples", "Render Samples", 2048, 1, 4096, 1, false, "Pathtracer");
+    parameters.addFloat("movingResolution", "Moving Resolution", 8.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
+    parameters.addFloat("runtimeResolution", "Runtime Resolution", 1.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
+    parameters.addFloat("renderResolution", "Render Resolution", 1.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
+    parameters.addBool("importanceSampling", "Importance Sampling", true, false, "Pathtracer");
+    parameters.addBool("varianceSampling", "Variance Sampling", true, false, "Pathtracer");
+    parameters.addInt("varianceWarmup", "Variance Warmup Samples", 64, 0, 2048, 1, false, "Pathtracer");
+    parameters.addEnum(
+        "debugView",
+        "Debug View",
+        static_cast<int>(DebugView::None),
+        { "None", "Bounces", "Normal", "Selection Mask", "Variance" },
+        true,
+        "Pathtracer"
+    );
+
+    parameters.addEnum(
+        "lightMode",
+        "Light Mode",
+        static_cast<int>(LightMode::Day),
+        { "Day", "Sunset", "Night", "Empty" },
+        true,
+        "Scene"
+    );
 }
 
 
@@ -352,7 +383,7 @@ void Application::run() {
             if (renderModePendingExit) {
                 renderMode = false;
                 renderModePendingExit = false;
-                uiToggled = uiToggledBeforeRender;
+                ui.toggled = ui.toggledBeforeRender;
                 samplesPerSecEMA = 0.0;
                 samplesPerSecInitialized = false;
                 samplesPerSecAccumTime = 0.0;
@@ -389,96 +420,17 @@ void Application::onFrameStart(float dt) {
     
     frame = (frame + 1) % 2;
     frameCount++;
-    sampleCount += static_cast<uint64_t>(runtimeSamplesPerPixel);
+    sampleCount += static_cast<uint64_t>(parameters.getInt("runtimeSamples"));
 
-    if (renderMode) {
-        resolution = renderResolution;
-
-        double dtSafe = std::max(static_cast<double>(dt), 0.0);
-        samplesPerSecAccumTime += dtSafe;
-        samplesPerSecAccumSamples += static_cast<double>(runtimeSamplesPerPixel);
-        if (samplesPerSecAccumTime >= 1.0) {
-            double instant = samplesPerSecAccumSamples / std::max(samplesPerSecAccumTime, 1e-6);
-            double alpha = 1.0 - std::exp(-samplesPerSecAccumTime / 5.0);
-            if (!samplesPerSecInitialized) {
-                samplesPerSecEMA = instant;
-                samplesPerSecInitialized = true;
-            } else {
-                samplesPerSecEMA += alpha * (instant - samplesPerSecEMA);
-            }
-            samplesPerSecAccumTime = 0.0;
-            samplesPerSecAccumSamples = 0.0;
-        }
-
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            renderMode = false;
-            renderModePendingExit = false;
-            uiToggled = uiToggledBeforeRender;
-            samplesPerSecEMA = 0.0;
-            samplesPerSecInitialized = false;
-            samplesPerSecAccumTime = 0.0;
-            samplesPerSecAccumSamples = 0.0;
-        }
-    } else {
-        resolution = runtimeResolution;
-        
-        const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (uiCapturesMouse || ImGui::GetIO().WantCaptureMouse));
-        const bool blockKeyboardInput = uiCapturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
-
-        // TODO refactor (remove duplicated code)
-        const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
-        if (!blockMouseInput && middleDown && !middleClickWasDown) {
-            double xpos, ypos;
-            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-            int width, height;
-            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-            float dist;
-            glm::vec3 p;
-            if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
-                camera.setFocusDepth(dist);
-                restartRender = true;
-            }
-        }
-        middleClickWasDown = middleDown;
-
-        if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            double xpos, ypos;
-            glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-            int width, height;
-            glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-            float dist;
-            glm::vec3 p;
-            scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
-        }
-        
-        if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            if (!uiToggled) uiToggled = true;
-            else scene.clearSelection();
-        }
-        
-        if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
-        restartRender = true;
-        
-        if (camera.isLocked() || blockMouseInput)
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        else
-            glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        
-        if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-        restartRender = true;
-        
-        if (scene.checkUpdate()) 
-        restartRender = true;
-    }
+    handleInput(dt);
     
     if (notificationManager.isCommandRequested(Command::Exit)) {
         shouldClose = true;
     } if (notificationManager.isCommandRequested(Command::Render)) {
         if (!renderMode) {
             scene.clearSelection();
-            uiToggledBeforeRender = uiToggled;
-            uiToggled = false;
+            ui.toggledBeforeRender = ui.toggled;
+            ui.toggled = false;
             renderMode = true;
             renderModePendingExit = false;
             restartRender = true;
@@ -494,6 +446,7 @@ void Application::onFrameStart(float dt) {
         screenshotRequested = true;
     }
 
+    int renderSamplesPerPixel = parameters.getInt("renderSamples");
     if (renderMode && renderSamplesPerPixel > 0 && !renderModePendingExit && !restartRender) {
         if (sampleCount >= static_cast<uint64_t>(renderSamplesPerPixel)) {
             screenshotRequested = true;
@@ -502,85 +455,100 @@ void Application::onFrameStart(float dt) {
     }
 
     if (restartRender) {
-        Buffer pixelInfoBuffer = engine.getBuffer(pixelInfoBuffers);
-        size_t pixelInfoFloatCount = pixelInfoBuffer.getSize() / sizeof(float);
-        std::vector<float> zeroData(pixelInfoFloatCount, 0.0f);
-        engine.fillBuffer(pixelInfoBuffer, zeroData.data());
+        // Buffer pixelInfoBuffer = engine.getBuffer(pixelInfoBuffers);
+        // size_t pixelInfoFloatCount = pixelInfoBuffer.getSize() / sizeof(float);
+        // std::vector<float> zeroData(pixelInfoFloatCount, 0.0f);
+        // engine.fillBuffer(pixelInfoBuffer, zeroData.data());
 
         frameCount = 1;
         sampleCount = 0;
         restartRender = false;
-        resolution = movingResolution;
+        resolution = parameters.getFloat("movingResolution");
     }
 }
 
 void Application::drawUI(CommandBuffer commandBuffer) {
-    if (!uiToggled && !renderMode) return;
+    if (!ui.toggled && !renderMode) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     
     ImGui::NewFrame();
-    ImGuiIO& io = ImGui::GetIO();
-    uiCapturesMouse = io.WantCaptureMouse;
-    uiCapturesKeyboard = io.WantCaptureKeyboard;
+    updateUiState();
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 5.0f;
     style.FrameRounding = 5.0f;
 
     if (renderMode) {
-        ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowBgAlpha(0.6f);
-        ImGui::Begin("Loading",
-            nullptr,
-            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
-        );
-        if (renderSamplesPerPixel > 0) {
-            float progress = static_cast<float>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel))
-                / static_cast<float>(renderSamplesPerPixel);
-            char overlay[64];
-            snprintf(
-                overlay,
-                sizeof(overlay),
-                "%llu / %d",
-                static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel)),
-                renderSamplesPerPixel
-            );
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
-            ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
-            ImGui::PopStyleColor();
-
-            ImVec2 textSize = ImGui::CalcTextSize(overlay);
-            ImVec2 barMin = ImGui::GetItemRectMin();
-            ImVec2 barMax = ImGui::GetItemRectMax();
-            ImVec2 textPos(
-                (barMin.x + barMax.x - textSize.x) * 0.5f,
-                (barMin.y + barMax.y - textSize.y) * 0.5f
-            );
-            ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
-        }
-        float samplesPerSec = static_cast<float>(samplesPerSecEMA);
-        ImGui::Text("%.1f samples/sec", samplesPerSec);
-        if (renderSamplesPerPixel > 0 && samplesPerSec > 0.0f) {
-            uint64_t remaining = 0;
-            if (sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
-                remaining = static_cast<uint64_t>(renderSamplesPerPixel) - sampleCount;
-            }
-            float etaSec = static_cast<float>(remaining) / samplesPerSec;
-            int etaMin = static_cast<int>(etaSec / 60.0f);
-            int etaRemSec = static_cast<int>(etaSec) % 60;
-            ImGui::Text("ETA: %dm %02ds", etaMin, etaRemSec);
-        } else {
-            ImGui::Text("ETA: --");
-        }
-        ImGui::End();
-
+        drawRenderUi();
         ImGui::Render();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
         return;
     }
 
+    drawMainUi();
+
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
+}
+
+void Application::updateUiState() {
+    ImGuiIO& io = ImGui::GetIO();
+    ui.capturesMouse = io.WantCaptureMouse;
+    ui.capturesKeyboard = io.WantCaptureKeyboard;
+}
+
+void Application::drawRenderUi() {
+    ImGui::SetNextWindowPos({0, 0});
+    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::Begin("Loading",
+        nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
+    );
+    int renderSamplesPerPixel = parameters.getInt("renderSamples");
+    if (renderSamplesPerPixel > 0) {
+        float progress = static_cast<float>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel))
+            / static_cast<float>(renderSamplesPerPixel);
+        char overlay[64];
+        snprintf(
+            overlay,
+            sizeof(overlay),
+            "%llu / %d",
+            static_cast<unsigned long long>(std::min<uint64_t>(sampleCount, renderSamplesPerPixel)),
+            renderSamplesPerPixel
+        );
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
+        ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
+        ImGui::PopStyleColor();
+
+        ImVec2 textSize = ImGui::CalcTextSize(overlay);
+        ImVec2 barMin = ImGui::GetItemRectMin();
+        ImVec2 barMax = ImGui::GetItemRectMax();
+        ImVec2 textPos(
+            (barMin.x + barMax.x - textSize.x) * 0.5f,
+            (barMin.y + barMax.y - textSize.y) * 0.5f
+        );
+        ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
+    }
+    float samplesPerSec = static_cast<float>(samplesPerSecEMA);
+    ImGui::Text("%.1f samples/sec", samplesPerSec);
+    if (renderSamplesPerPixel > 0 && samplesPerSec > 0.0f) {
+        uint64_t remaining = 0;
+        if (sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
+            remaining = static_cast<uint64_t>(renderSamplesPerPixel) - sampleCount;
+        }
+        float etaSec = static_cast<float>(remaining) / samplesPerSec;
+        int etaMin = static_cast<int>(etaSec / 60.0f);
+        int etaRemSec = static_cast<int>(etaSec) % 60;
+        ImGui::Text("ETA: %dm %02ds", etaMin, etaRemSec);
+    } else {
+        ImGui::Text("ETA: --");
+    }
+    ImGui::End();
+}
+
+void Application::drawMainUi() {
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::BeginFrame();
@@ -622,84 +590,58 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::Begin("FPS",
         nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration // | ImGuiWindowFlags_NoBackground
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%llu samples", static_cast<unsigned long long>(sampleCount));
-        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * runtimeSamplesPerPixel);
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * parameters.getInt("runtimeSamples"));
     }
     ImGui::End();
 
     ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
-        ImGui::SeparatorText("Camera");
-        restartRender |= camera.drawUI();
-        
-        ImGui::SeparatorText("Pathtracer");
-        
-        ImGui::PushItemWidth(-FLT_MIN);
-        if (ImGui::Button("Reset Accumulation (R)", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
-        restartRender = true;
-        ImGui::PopItemWidth();
-        
-        ImGui::PushItemWidth(-FLT_MIN);
-        ImGui::DragInt("##Max bounces", &maxBounces, 1, 1, 20, "Bounces: %d");
-        ImGui::DragInt("##Samples", &runtimeSamplesPerPixel, 1, 1, 10, "Runtime Samples: %d");
-        ImGui::DragInt("##Samples Per Pixel", &renderSamplesPerPixel, 1, 1, 4096, "Render Samples: %d");
-        ImGui::DragFloat("##Moving Resolution", &movingResolution, 1.0f, 1.0f, 50.0f, "Moving Res: %.0f");
-        if (ImGui::DragFloat("##Runtime Resolution", &runtimeResolution, 1.0f, 1.0f, 50.0f, "Runtime Res: %.0f")) { restartRender = true; }
-        ImGui::DragFloat("##Render Resolution", &renderResolution, 1.0f, 1.0f, 50.0f, "Render Res: %.0f");
-        ImGui::PopItemWidth();
-        ImGui::Checkbox("Importance Sampling", &importanceSampling);
-        ImGui::Checkbox("Variance Sampling", &varianceSampling);
-
-        const char *debugViews[] = { "None", "Bounces", "Normal", "Selection Mask", "Variance" };
-        ImGui::PushItemWidth(-FLT_MIN);
-        int currentDebugView = static_cast<int>(debugView);
-        ImGui::Combo("##DebugView", &currentDebugView, debugViews, IM_ARRAYSIZE(debugViews));
-        debugView = static_cast<DebugView>(currentDebugView);
-        ImGui::PopItemWidth();
-        
-        ImGui::SeparatorText("Scene");
-
-        const char *lightModes[4] = { "Day", "Sunset", "Night", "Empty" };
-        ImGui::PushItemWidth(-FLT_MIN);
-        int currentLigthMode = static_cast<int>(lightMode);
-        if (ImGui::Combo("##LightMode", &currentLigthMode, lightModes, IM_ARRAYSIZE(lightModes)))
-        restartRender = true;
-        lightMode = static_cast<LightMode>(currentLigthMode);
-        ImGui::PopItemWidth();
-
-        if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
-            ImGui::OpenPopup("Scene Preset");
+        if (ImGui::CollapsingHeader("Camera")) {
+            camera.drawUI(restartRender);
         }
-        scene.drawUI(engine);
+        
+        if (ImGui::CollapsingHeader("Pathtracer")) {
+            parameters.drawGroup("Pathtracer", restartRender);
+        }
+        
+        if (ImGui::CollapsingHeader("Scene")) {
+            parameters.drawGroup("Scene", restartRender);
+            if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
+                ImGui::OpenPopup("Scene Preset");
+            }
+            scene.drawUI(engine);
+        }
 
         if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            LightMode mode = parameters.getEnum<LightMode>("lightMode");
             if (ImGui::Button("Empty", { 200, 0 })) {
-                initEmpty(engine, scene, lightMode);
+                initEmpty(engine, scene, mode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Suzanne", { 200, 0 })) {
-                initSuzanne(engine, scene, lightMode);
+                initSuzanne(engine, scene, mode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Sponza", { 200, 0 })) {
-                initSponza(engine, scene, lightMode);
+                initSponza(engine, scene, mode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Cornell Box", { 200, 0 })) {
-                initCornellBox(engine, scene, lightMode);
+                initCornellBox(engine, scene, mode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Random Spheres", { 200, 0 })) {
-                initRandomSpheres(engine, scene, lightMode);
+                initRandomSpheres(engine, scene, mode);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -717,9 +659,95 @@ void Application::drawUI(CommandBuffer commandBuffer) {
     
     scene.drawSelectedUI(engine);
     notificationManager.drawNotifications();
+}
 
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
+void Application::handleInput(float dt) {
+    if (renderMode)
+        handleInputRender(dt);
+    else
+        handleInputRuntime(dt);
+}
+
+void Application::handleInputRender(float dt) {
+    resolution = parameters.getFloat("renderResolution");
+
+    double dtSafe = std::max(static_cast<double>(dt), 0.0);
+    samplesPerSecAccumTime += dtSafe;
+    samplesPerSecAccumSamples += static_cast<double>(parameters.getInt("runtimeSamples"));
+    if (samplesPerSecAccumTime >= 1.0) {
+        double instant = samplesPerSecAccumSamples / std::max(samplesPerSecAccumTime, 1e-6);
+        double alpha = 1.0 - std::exp(-samplesPerSecAccumTime / 5.0);
+        if (!samplesPerSecInitialized) {
+            samplesPerSecEMA = instant;
+            samplesPerSecInitialized = true;
+        } else {
+            samplesPerSecEMA += alpha * (instant - samplesPerSecEMA);
+        }
+        samplesPerSecAccumTime = 0.0;
+        samplesPerSecAccumSamples = 0.0;
+    }
+
+    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        renderMode = false;
+        renderModePendingExit = false;
+        ui.toggled = ui.toggledBeforeRender;
+        samplesPerSecEMA = 0.0;
+        samplesPerSecInitialized = false;
+        samplesPerSecAccumTime = 0.0;
+        samplesPerSecAccumSamples = 0.0;
+    }
+}
+
+void Application::handleInputRuntime(float dt) {
+    resolution = parameters.getFloat("runtimeResolution");
+    
+    const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (ui.capturesMouse || ImGui::GetIO().WantCaptureMouse));
+    const bool blockKeyboardInput = ui.capturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
+
+    const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+    if (!blockMouseInput && middleDown && !ui.middleClickWasDown) {
+        double xpos, ypos;
+        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+        int width, height;
+        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+        float dist;
+        glm::vec3 p;
+        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
+            camera.setFocusDepth(dist);
+            restartRender = true;
+        }
+    }
+    ui.middleClickWasDown = middleDown;
+
+    if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        double xpos, ypos;
+        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
+        int width, height;
+        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
+        float dist;
+        glm::vec3 p;
+        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
+    }
+    
+    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (!ui.toggled) ui.toggled = true;
+        else scene.clearSelection();
+    }
+    
+    if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
+    restartRender = true;
+    
+    if (camera.isLocked() || blockMouseInput)
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    else
+        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
+    restartRender = true;
+    
+    if (scene.checkUpdate()) 
+    restartRender = true;
 }
 
 void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
@@ -741,18 +769,19 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.frameCount = frameCount;
     raytracingUBO.time = glfwGetTime() - lastTime;
     
-    raytracingUBO.lightMode = lightMode;
+    raytracingUBO.lightMode = parameters.getEnum<LightMode>("lightMode");
 
-    raytracingUBO.maxBounces = maxBounces;
-    raytracingUBO.samplesPerPixel = runtimeSamplesPerPixel;
-    raytracingUBO.importanceSampling = static_cast<int>(importanceSampling);
-    raytracingUBO.varianceSampling = static_cast<int>(varianceSampling);
-    raytracingUBO.debugView = static_cast<int>(debugView);
+    raytracingUBO.maxBounces = parameters.getInt("maxBounces");
+    raytracingUBO.samplesPerPixel = parameters.getInt("runtimeSamples");
+    raytracingUBO.importanceSampling = static_cast<int>(parameters.getBool("importanceSampling"));
+    raytracingUBO.varianceSampling = static_cast<int>(parameters.getBool("varianceSampling"));
+    raytracingUBO.varianceWarmupSamples = parameters.getInt("varianceWarmup");
+    raytracingUBO.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
 
     // Screen UBO
     screenUBO.frameCount = frameCount;
     screenUBO.resolution = resolution;
-    screenUBO.debugView = static_cast<int>(debugView);
+    screenUBO.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
 }
 
 // TODO: make this function asynchronous ?
