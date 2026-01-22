@@ -1,0 +1,196 @@
+#include "ui_system.hpp"
+
+void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
+    if (!toggled && !ctx.renderer->renderMode) return;
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    
+    ImGui::NewFrame();
+    updateState();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 5.0f;
+    style.FrameRounding = 5.0f;
+
+    if (ctx.renderer->renderMode) drawRender(ctx);
+    else drawPreview(ctx);
+
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
+
+}
+
+void UiSystem::updateState() {
+    ImGuiIO& io = ImGui::GetIO();
+    capturesMouse = io.WantCaptureMouse;
+    capturesKeyboard = io.WantCaptureKeyboard;
+}
+
+void UiSystem::drawPreview(AppContext& ctx) {
+    bool& restartRender = *ctx.restartRender;
+    VkSmol& engine = *ctx.engine;
+    Camera& camera = *ctx.camera;
+    Scene& scene = *ctx.scene;
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::AllowAxisFlip(false);
+    ImGuizmo::BeginFrame();
+    
+    ImGuiID dockspace_id = ImGui::GetID("Dock space");
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(), dockspaceFlags);
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::Begin("Gizmo View", nullptr, ImGuiWindowFlags_NoBackground | 
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus |
+        ImGuiWindowFlags_NoMouseInputs |
+        ImGuiWindowFlags_NoDocking
+    );
+    {
+        ImVec2 windowPos = ImGui::GetWindowPos();
+        ImVec2 windowSize = ImGui::GetWindowSize();
+        ImGuizmo::SetDrawlist();
+        ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+
+        scene.drawGuizmo(
+            camera.getView(),
+            camera.getProjection(ctx.engine->getWindow().get())
+        );
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(2);
+    ImGui::SetNextWindowPos({0, 0});
+    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::Begin("FPS",
+        nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
+    );
+    {
+        ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        ImGui::Text("%u samples",ctx.renderer->sampleCount);
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * ctx.parameters->getInt("previewSamples"));
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    {
+        if (ImGui::CollapsingHeader("Camera")) {
+            camera.drawPreviewUI(restartRender);
+        }
+        
+        if (ImGui::CollapsingHeader("Pathtracer")) {
+            ctx.parameters->drawGroup("Pathtracer", restartRender);
+        }
+        
+        if (ImGui::CollapsingHeader("Scene")) {
+            ctx.parameters->drawGroup("Scene", restartRender);
+            if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
+                ImGui::OpenPopup("Scene Preset");
+            }
+            scene.drawUI(engine);
+        }
+
+        if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            LightMode mode;
+            if (ImGui::Button("Empty", { 200, 0 })) {
+                initEmpty(engine, scene, mode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Suzanne", { 200, 0 })) {
+                initSuzanne(engine, scene, mode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Sponza", { 200, 0 })) {
+                initSponza(engine, scene, mode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Cornell Box", { 200, 0 })) {
+                initCornellBox(engine, scene, mode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::Button("Random Spheres", { 200, 0 })) {
+                initRandomSpheres(engine, scene, mode);
+                restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ctx.parameters->setEnum<LightMode>("lightMode", mode);
+            
+            ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
+            if (ImGui::Button("Cancel", { 200, 0 })) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopStyleColor();
+            
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::End();
+    
+    scene.drawSelectedUI(engine);
+    ctx.notifications->drawNotifications();
+}
+
+void UiSystem::drawRender(AppContext& ctx) {
+    ImGui::SetNextWindowPos({0, 0});
+    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::Begin("Loading",
+        nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
+    );
+    int renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
+    if (renderSamplesPerPixel > 0) {
+        float progress = static_cast<float>(std::min<uint64_t>(ctx.renderer->sampleCount, renderSamplesPerPixel))
+            / static_cast<float>(renderSamplesPerPixel);
+        char overlay[64];
+        snprintf(
+            overlay,
+            sizeof(overlay),
+            "%llu / %d",
+            static_cast<unsigned long long>(std::min<uint64_t>(ctx.renderer->sampleCount, renderSamplesPerPixel)),
+            renderSamplesPerPixel
+        );
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
+        ImGui::ProgressBar(progress, ImVec2(ImGui::GetContentRegionAvail().x, 0.0f), "");
+        ImGui::PopStyleColor();
+
+        ImVec2 textSize = ImGui::CalcTextSize(overlay);
+        ImVec2 barMin = ImGui::GetItemRectMin();
+        ImVec2 barMax = ImGui::GetItemRectMax();
+        ImVec2 textPos(
+            (barMin.x + barMax.x - textSize.x) * 0.5f,
+            (barMin.y + barMax.y - textSize.y) * 0.5f
+        );
+        ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
+    }
+    float samplesPerSec = static_cast<float>(ctx.renderer->samplesPerSecEMA);
+    ImGui::Text("%.1f samples/sec", samplesPerSec);
+    if (renderSamplesPerPixel > 0 && samplesPerSec > 0.0f) {
+        uint64_t remaining = 0;
+        if (ctx.renderer->sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
+            remaining = static_cast<uint64_t>(renderSamplesPerPixel) - ctx.renderer->sampleCount;
+        }
+        float etaSec = static_cast<float>(remaining) / samplesPerSec;
+        int etaMin = static_cast<int>(etaSec / 60.0f);
+        int etaRemSec = static_cast<int>(etaSec) % 60;
+        ImGui::Text("ETA: %dm %02ds", etaMin, etaRemSec);
+    } else {
+        ImGui::Text("ETA: --");
+    }
+    ImGui::End();
+}

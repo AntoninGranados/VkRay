@@ -185,3 +185,15 @@ float &ParameterStore::getFloat(const std::string &id) {
 bool &ParameterStore::getBool(const std::string &id) {
     return getParam<BoolParam>(id).get();
 }
+
+void ParameterStore::setInt(const std::string &id, int value) {
+    getParam<IntParam>(id).get() = value;
+}
+
+void ParameterStore::setFloat(const std::string &id, float value) {
+    getParam<FloatParam>(id).get() = value;
+}
+
+void ParameterStore::setBool(const std::string &id, bool value) {
+    getParam<BoolParam>(id).get() = value;
+}

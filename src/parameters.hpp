@@ -138,9 +138,16 @@ public:
     int &getInt(const std::string &id);
     float &getFloat(const std::string &id);
     bool &getBool(const std::string &id);
+    void setInt(const std::string &id, int value);
+    void setFloat(const std::string &id, float value);
+    void setBool(const std::string &id, bool value);
     template <typename EnumT>
     EnumT getEnum(const std::string &id) {
         return static_cast<EnumT>(getParam<EnumParam>(id).get());
+    }
+    template <typename EnumT>
+    void setEnum(const std::string &id, EnumT value) {
+        getParam<EnumParam>(id).get() = static_cast<int>(value);
     }
 
 private:

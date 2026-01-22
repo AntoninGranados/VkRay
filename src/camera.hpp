@@ -10,7 +10,7 @@
 
 class Camera : public CameraHandle {
 public:
-    Camera(glm::vec3 position);
+    Camera(glm::vec3 position = glm::vec3(0.0f));
 
     bool cursorPosCallback(GLFWwindow *window, double x, double y);
     bool scrollCallback(GLFWwindow *window, double xoffset, double yoffset);

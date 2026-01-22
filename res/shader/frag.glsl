@@ -66,13 +66,10 @@ void main() {
     vec2 texSize = vec2(textureSize(tex, 0));
     vec2 texelSize = 1.0 / texSize;
 
-    vec3 color = texelData.rgb;
-    if (ubo.frameCount <= 1) {
-        vec2 screenCoord = uv * texSize;
-        ivec2 blockCoord = ivec2(floor(screenCoord / ubo.resolution) * ubo.resolution);
-        blockCoord = clamp(blockCoord, ivec2(0), ivec2(texSize) - ivec2(1));
-        color = texelFetch(tex, blockCoord, 0).rgb;
-    }
+    vec2 screenCoord = uv * texSize;
+    ivec2 blockCoord = ivec2(floor(screenCoord / ubo.resolution) * ubo.resolution);
+    blockCoord = clamp(blockCoord, ivec2(0), ivec2(texSize) - ivec2(1));
+    vec3 color = texelFetch(tex, blockCoord, 0).rgb;
 
     float targetMin = 0.5;
     float targetMax = 1.5;

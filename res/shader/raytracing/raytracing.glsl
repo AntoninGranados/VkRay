@@ -191,6 +191,7 @@ float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec
     float sigma = mix(temporalSigma, spatialSigma, 0.5);
     float minAdaptiveSamples = max(float(ubo.varianceWarmupSamples), 0.0);
     float proba = clamp(sigma * 8.0, 0.01, 1.0);
+    proba = sqrt(proba);
     pixelInfo.varianceProba = proba;
     return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;
 }
