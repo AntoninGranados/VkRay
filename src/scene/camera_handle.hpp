@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <functional>
+
 #include "imgui/imgui.h"
 #include "object/object.hpp"
 
@@ -27,7 +29,7 @@ public:
     ObjectType getType() override { return ObjectType::Camera; }
 
     float getFov() const { return fov; }
-    void setFov(const float newFov) { fov = newFov; }
+    void setFov(const float newFov) { fov = std::min(std::max(newFov, 1.0f), 160.0f); }
 
     glm::vec3 getPosition() const { return position; }
     void setPosition(const glm::vec3 newPosition) { position = newPosition; }
@@ -36,6 +38,10 @@ public:
 
     void setSelected(bool isSelected) { selected = isSelected; }
     void setManipulationEnabled(bool enabled) { manipulationEnabled = enabled; }
+    void setPreview(bool isPreview) { preview = isPreview; }
+    void setPreviewCallback(std::function<void(const CameraHandle&)> callback) {
+        previewCallback = std::move(callback);
+    }
 
     float getAperture() const { return aperture; };
     void setAperture(float newAperture) { aperture = newAperture; }
@@ -57,4 +63,6 @@ protected:
 
     bool selected = false;
     bool manipulationEnabled = true;
+    bool preview = false;
+    std::function<void(const CameraHandle&)> previewCallback;
 };

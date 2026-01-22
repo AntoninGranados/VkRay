@@ -17,6 +17,8 @@ glm::mat4 CameraHandle::getProjection(GLFWwindow* window) const {
 }
 
 float CameraHandle::rayIntersection(const Ray &ray) {
+    if (preview) return false;
+
     const float radius = selectionRadius;
     const glm::vec3 p = position - ray.origin;
     const float dp = glm::dot(ray.dir, p);
@@ -30,39 +32,10 @@ float CameraHandle::rayIntersection(const Ray &ray) {
     return t2 >= 0.0f ? t2 : -1.0f;
 }
 
-void drawWireframe(const glm::mat4 &view, const glm::mat4 &proj) {
-    
-}
+void CameraHandle::drawWireframe(const glm::mat4 &view, const glm::mat4 &proj) {
+    if (preview) return;
 
-bool CameraHandle::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
-    bool updated = false;
     glm::vec3 dir = getDirection();
-
-    glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
-    glm::vec3 camUpBasis = glm::normalize(glm::cross(right, dir));
-
-    glm::mat4 model(1.0f);
-    model[0] = glm::vec4(right, 0.0f);
-    model[1] = glm::vec4(camUpBasis, 0.0f);
-    model[2] = glm::vec4(dir, 0.0f);
-    model[3] = glm::vec4(position, 1.0f);
-
-    glm::mat4 delta(1.0f);
-    if (manipulationEnabled) {
-        if (ImGuizmo::Manipulate(
-            glm::value_ptr(view),
-            glm::value_ptr(proj),
-            ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE,
-            ImGuizmo::MODE::WORLD,
-            glm::value_ptr(model),
-            glm::value_ptr(delta)
-        )) {
-            if (isInvalid(model) || isInvalid(delta)) return false;
-            position = glm::vec3(model[3]);
-            direction = glm::normalize(glm::vec3(model[2]));
-            updated = true;
-        }
-    }
 
     ImVec2 windowPos = ImGui::GetWindowPos();
     ImVec2 windowSize = ImGui::GetWindowSize();
@@ -170,8 +143,40 @@ bool CameraHandle::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
             prevClip = clip;
         }
     }
+}
 
-    return updated;
+bool CameraHandle::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
+    drawWireframe(view, proj);
+
+    glm::vec3 dir = getDirection();
+
+    glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
+    glm::vec3 camUpBasis = glm::normalize(glm::cross(right, dir));
+
+    glm::mat4 model(1.0f);
+    model[0] = glm::vec4(right, 0.0f);
+    model[1] = glm::vec4(camUpBasis, 0.0f);
+    model[2] = glm::vec4(dir, 0.0f);
+    model[3] = glm::vec4(position, 1.0f);
+
+    glm::mat4 delta(1.0f);
+    if (manipulationEnabled) {
+        if (ImGuizmo::Manipulate(
+            glm::value_ptr(view),
+            glm::value_ptr(proj),
+            ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE,
+            ImGuizmo::MODE::WORLD,
+            glm::value_ptr(model),
+            glm::value_ptr(delta)
+        )) {
+        if (isInvalid(model) || isInvalid(delta)) return false;
+            position = glm::vec3(model[3]);
+            direction = glm::normalize(glm::vec3(model[2]));
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool CameraHandle::drawUI(std::vector<Material> &materials) {
@@ -211,6 +216,13 @@ bool CameraHandle::drawUI(std::vector<Material> &materials) {
     if (ImGui::DragFloat("##CameraHandleFocusDepth", &focusDepth, 0.1f, 0.0f, 100.0f))
         updated = true;
     ImGui::PopItemWidth();
+
+    if (previewCallback) {
+        if (ImGui::Button("Set as Preview Camera", { -FLT_MIN, 0 })) {
+            previewCallback(*this);
+            updated = true;
+        }
+    }
 
     return updated;
 }

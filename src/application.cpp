@@ -9,9 +9,12 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 #include <stb_image_write.h>
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+const float PREVIEW_VIEWPORT_SCALE = 0.8f;
 
 const std::vector<ScreenVertex> vertices = {
     { .position={ 1.0f, 1.0f} },
@@ -190,6 +193,22 @@ void Application::initScene() {
 
     scene.setMessageCallback([](NotificationType type, std::string content) {
         Application::notificationManager.pushMessage(type, content);
+    });
+    scene.setPreviewCameraCallback([this](const CameraHandle &handle) {
+                if (previewCameraHandle && scene.containsObject(previewCameraHandle))
+            previewCameraHandle->setPreview(false);
+        float dist = glm::length(camera.getTarget() - camera.getPosition());
+        if (dist < 0.1f) dist = 1.0f;
+        camera.setPosition(handle.getPosition());
+        camera.setTarget(handle.getPosition() + handle.getDirection() * dist);
+        float fovRad = glm::radians(handle.getFov());
+        float previewFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) / PREVIEW_VIEWPORT_SCALE);
+        camera.setFov(glm::degrees(previewFovRad));
+        camera.setAperture(handle.getAperture());
+        camera.setFocusDepth(handle.getFocusDepth());
+        previewCameraHandle = const_cast<CameraHandle*>(&handle);
+        previewCameraHandle->setPreview(true);
+        restartRender = true;
     });
 
     LightMode mode = parameters.getEnum<LightMode>("lightMode");
@@ -430,6 +449,20 @@ void Application::onFrameStart(float dt) {
     sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 
     handleInput(dt);
+
+    if (previewCameraHandle) {
+                if (!scene.containsObject(previewCameraHandle)) {
+            previewCameraHandle = nullptr;
+        } else {
+            previewCameraHandle->setPosition(camera.getPosition());
+            previewCameraHandle->setDirection(camera.getDirection());
+            float fovRad = glm::radians(camera.getFov());
+            float handleFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) * PREVIEW_VIEWPORT_SCALE);
+            previewCameraHandle->setFov(glm::max(1.0f, glm::degrees(handleFovRad)));
+            previewCameraHandle->setAperture(camera.getAperture());
+            previewCameraHandle->setFocusDepth(camera.getFocusDepth());
+        }
+    }
     
     if (notificationManager.isCommandRequested(Command::Exit)) {
         shouldClose = true;
@@ -659,6 +692,27 @@ void Application::drawMainUi() {
     
     scene.drawSelectedUI(engine);
     notificationManager.drawNotifications();
+
+    syncPreviewCameraFromHandle();
+}
+
+void Application::syncPreviewCameraFromHandle() {
+    if (!previewCameraHandle)
+        return;
+    if (!scene.containsObject(previewCameraHandle)) {
+        previewCameraHandle = nullptr;
+        return;
+    }
+
+        float dist = glm::length(camera.getTarget() - camera.getPosition());
+    if (dist < 0.1f) dist = 1.0f;
+    camera.setPosition(previewCameraHandle->getPosition());
+    camera.setTarget(previewCameraHandle->getPosition() + previewCameraHandle->getDirection() * dist);
+    float fovRad = glm::radians(previewCameraHandle->getFov());
+    float previewFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) / PREVIEW_VIEWPORT_SCALE);
+    camera.setFov(glm::degrees(previewFovRad));
+    camera.setAperture(previewCameraHandle->getAperture());
+    camera.setFocusDepth(previewCameraHandle->getFocusDepth());
 }
 
 
@@ -714,8 +768,10 @@ void Application::handleInputPreview(float dt) {
         glfwGetWindowSize(engine.getWindow().get(), &width, &height);
         float dist;
         glm::vec3 p;
-        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p)) {
+        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, false, false)) {
             camera.setFocusDepth(dist);
+            if (previewCameraHandle)
+                previewCameraHandle->setFocusDepth(dist);
             restartRender = true;
         }
     }
@@ -746,6 +802,12 @@ void Application::handleInputPreview(float dt) {
     
     if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
     restartRender = true;
+
+    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (previewCameraHandle)
+            previewCameraHandle->setPreview(false);
+        previewCameraHandle = nullptr;
+    }
     
     if (scene.checkUpdate()) 
     restartRender = true;
@@ -784,6 +846,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     screenUBO.frameCount = frameCount;
     screenUBO.resolution = resolution;
     screenUBO.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
+    screenUBO.previewBorderEnabled = previewCameraHandle ? 1 : 0;
 }
 
 // TODO: make this function asynchronous ?

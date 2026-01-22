@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -33,8 +34,11 @@ public:
     void destroy(VkSmol &engine);
     void clear(VkSmol &engine);
 
-    void setMessageCallback(void (*messageCallback_)(NotificationType, std::string)) {
+    void setMessageCallback(std::function<void(NotificationType, std::string)> messageCallback_) {
         messageCallback = messageCallback_;
+    }
+    void setPreviewCameraCallback(std::function<void(const CameraHandle&)> callback) {
+        previewCameraCallback = std::move(callback);
     }
 
     // The engine is needed in case we have to resize a buffer
@@ -54,7 +58,8 @@ public:
     void drawSelectedUI(VkSmol &engine);
 
     void clearSelection() { selectedObjectId = -1; }
-    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false);
+    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
+    bool containsObject(const Object *object) const;
 
     std::vector<bufferList_t> getBufferLists();
 
@@ -74,5 +79,6 @@ private:
     bool updated = false;
     bool bufferUpdated = false;
 
-    void (*messageCallback)(NotificationType, std::string) = nullptr;
+    std::function<void(NotificationType, std::string)> messageCallback;
+    std::function<void(const CameraHandle&)> previewCameraCallback;
 };

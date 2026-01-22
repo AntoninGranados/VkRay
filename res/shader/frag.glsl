@@ -12,6 +12,7 @@ layout(set = 0, binding = 1) uniform UBO {
     int frameCount;
     float resolution;
     int debugView;
+    int previewBorderEnabled;
 } ubo;
 layout(set = 0, binding = 2) buffer PixelInfoBuffer {
     PixelInfo pixels[];
@@ -56,6 +57,8 @@ vec3 visualizeSelectionMask(float alpha) {
     return vec3(step(0.5, alpha));
 }
 
+const vec3 edgeColor = vec3(1.0, 0.5, 0.062);
+
 void main() {
     vec2 uv = fragPos * 0.5 + 0.5;
 
@@ -99,8 +102,8 @@ void main() {
 
     float edgeAmount = centerMask > 0.5 ? 1.0 - neighborMask : neighborMask;
     float outline = smoothstep(0.0, feather, edgeAmount);
-    // color = mix(color, vec3(1.0, 0.5, 0.062), min(outline, 0.5));
-    color = mix(color, vec3(1.0, 0.5, 0.062), outline);
+    // color = mix(color, edgeColor, min(outline, 0.5));
+    color = mix(color, edgeColor, outline);
 
     if (ubo.debugView == debug_Variance) {
         outColor = vec4(visualizeVariance(uv, texSize), 1.0);
@@ -112,15 +115,17 @@ void main() {
         return;
     }
 
-    // if (abs(fragPos.x) > 0.8 || abs(fragPos.y) > 0.8) {
-    //     color *= 0.2;
-    // }
-    // if ((abs(fragPos.x) < 0.8 + 2*outlineWidth/texSize.x && abs(fragPos.x) > 0.8 - 2*outlineWidth/texSize.x) && abs(fragPos.y) < 0.8) {
-    //     color = vec3(1.0, 0.5, 0.062);
-    // }
-    // if ((abs(fragPos.y) < 0.8 + 2*outlineWidth/texSize.y && abs(fragPos.y) > 0.8 - 2*outlineWidth/texSize.y) && abs(fragPos.x) < 0.8) {
-    //     color = vec3(1.0, 0.5, 0.062);
-    // }
+    if (ubo.previewBorderEnabled != 0) {
+        if (abs(fragPos.x) > 0.8 || abs(fragPos.y) > 0.8) {
+            color *= 0.2;
+        }
+        if ((abs(fragPos.x) < 0.8 + 2*outlineWidth/texSize.x && abs(fragPos.x) > 0.8 - 2*outlineWidth/texSize.x) && abs(fragPos.y) < 0.8) {
+            color = edgeColor;
+        }
+        if ((abs(fragPos.y) < 0.8 + 2*outlineWidth/texSize.y && abs(fragPos.y) > 0.8 - 2*outlineWidth/texSize.y) && abs(fragPos.x) < 0.8) {
+            color = edgeColor;
+        }
+    }
 
     outColor = vec4(color, 1.0);
 }

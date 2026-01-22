@@ -108,7 +108,10 @@ void Scene::pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> verti
 }
 
 void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov) {
-    objects.push_back(new CameraHandle(name, position, direction, fov));
+    CameraHandle *cameraHandle = new CameraHandle(name, position, direction, fov);
+    if (previewCameraCallback)
+        cameraHandle->setPreviewCallback(previewCameraCallback);
+    objects.push_back(cameraHandle);
     updated = true;
 }
 
@@ -340,6 +343,8 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
         if (objects[i]->getType() != ObjectType::Camera)
             continue;
         CameraHandle *cameraHandle = static_cast<CameraHandle*>(objects[i]);
+        if (previewCameraCallback)
+            cameraHandle->setPreviewCallback(previewCameraCallback);
         const bool isSelected = static_cast<int>(i) == selectedObjectId;
         cameraHandle->setSelected(isSelected);
         cameraHandle->setManipulationEnabled(isSelected);
@@ -434,9 +439,8 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button("Camera", { 100, 0 })) {
-        glm::vec3 pos = glm::vec3(0.0f, 1.0f, -5.0f);
-        glm::vec3 target = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 direction = glm::normalize(target - pos);
+        glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
         pushCameraHandle(
             "Camera-" + std::to_string(objectId++),
             pos,
@@ -571,7 +575,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
 }
 
 
-bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select) {
+bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
     Ray ray = getRay(screenPos, screenSize, camera);
     float tClosest = std::numeric_limits<float>::infinity();
     int idClosest = -1;
@@ -579,6 +583,8 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     float t;
     int i = 0;
     for (Object *object : objects) {
+        if (!includeCameras && object->getType() == ObjectType::Camera)
+            continue;
         t = object->rayIntersection(ray);
         if (t >= 0.0f && t < tClosest) {
             tClosest = t;
@@ -591,6 +597,14 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     dist = tClosest;
     p = ray.origin + dist * ray.dir;
     return idClosest >= 0;
+}
+
+bool Scene::containsObject(const Object *object) const {
+    for (const Object *candidate : objects) {
+        if (candidate == object)
+            return true;
+    }
+    return false;
 }
 
 std::vector<bufferList_t> Scene::getBufferLists() {

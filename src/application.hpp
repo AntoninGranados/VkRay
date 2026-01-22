@@ -57,6 +57,7 @@ struct ScreenUBO {
     int frameCount;
     float resolution;
     int debugView;
+    int previewBorderEnabled;
 };
 
 struct UiState {
@@ -101,6 +102,7 @@ private:
     ScreenUBO screenUBO;
     
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
+    CameraHandle *previewCameraHandle = nullptr;
     float resolution = 1.0f;
     float prevResolution = resolution;
     ParameterStore parameters;
@@ -128,6 +130,7 @@ private:
     void drawUI(CommandBuffer commandBuffer);
     void updateUiState();
     void drawMainUi();
+    void syncPreviewCameraFromHandle();
     void drawRenderUi();
     void handleInput(float dt);
     void handleInputPreview(float dt);
