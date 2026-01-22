@@ -6,9 +6,10 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "material.hpp"
-#include "../../camera.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
+
+class Camera;
 
 // Gizmo motion limiting to avoid large jumps when manipulating objects
 constexpr float MAX_GIZMO_LINEAR_SPEED   = 50.0f;                // world units per second
@@ -46,12 +47,13 @@ Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera 
 
 // Objects
 enum class ObjectType : int {
-    None,
-    Sphere,
-    Plane,
-    Aabb,
-    Box,
-    Mesh,
+    None = 0,
+    Sphere = 1,
+    Plane = 2,
+    Aabb = 3,
+    Box = 4,
+    Mesh = 5,
+    Camera = 6,
 };
 
 struct ObjectHandle {

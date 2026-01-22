@@ -8,7 +8,10 @@ void updateYawPitchFromDirection(const glm::vec3 &dir, float &yaw, float &pitch)
     pitch = glm::degrees(asin(n.y));
 }
 
-Camera::Camera(glm::vec3 position): position(position), target(glm::vec3(0.0)) {
+Camera::Camera(glm::vec3 position)
+    : CameraHandle("Preview Camera", position, glm::vec3(0.0f, 0.0f, 1.0f), 80.0f),
+      target(glm::vec3(0.0f)) {
+    setDirection(target - position);
     orbitDistance = glm::length(target - position);
     if (orbitDistance < 0.1f) orbitDistance = 0.1f;
     updateYawPitchFromDirection(getDirection(), yaw, pitch);
@@ -33,7 +36,7 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
     lastY = y;
     
     const glm::vec3 dir = getDirection();
-    const glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    const glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
     const glm::vec3 camUp = glm::normalize(glm::cross(right, dir));
 
     if (dragMode == DragMode::Pan) {
@@ -41,6 +44,7 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
         glm::vec3 offset = (right * xoffset + camUp * yoffset) * panScale;
         position -= offset;
         target -= offset;
+        setTarget(target);
         return change;
     }
 
@@ -48,10 +52,11 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
         float dollyDelta = yoffset * dollySensitivity * orbitDistance;
         orbitDistance = glm::max(0.1f, orbitDistance + dollyDelta);
         position = target - dir * orbitDistance;
+        setTarget(target);
         return change;
     }
 
-    float zoomSensitivityFactor = glm::min(fov / 80.0f, 1.0f);
+    float zoomSensitivityFactor = glm::min(getFov() / 80.0f, 1.0f);
     xoffset *= sensitivity * zoomSensitivityFactor;
     yoffset *= sensitivity * zoomSensitivityFactor;
 
@@ -66,11 +71,13 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
 
     if (dragMode == DragMode::Look) {
         target = position + newDir * orbitDistance;
+        setTarget(target);
         return change;
     }
 
     if (dragMode == DragMode::Orbit) {
         position = target - newDir * orbitDistance;
+        setTarget(target);
         return change;
     }
 
@@ -78,9 +85,10 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
 }
 
 bool Camera::scrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
-    fov -= static_cast<float>(yoffset);
-    if (fov < 1.0f) fov = 1.0f;
-    if (fov > 160.0f) fov = 160.0f;
+    float newFov = getFov() - static_cast<float>(yoffset);
+    if (newFov < 1.0f) newFov = 1.0f;
+    if (newFov > 160.0f) newFov = 160.0f;
+    setFov(newFov);
     return yoffset != 0;
 }
 
@@ -119,7 +127,7 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
 
     if (dragMode == DragMode::Look) {
         glm::vec3 dir = getDirection();
-        glm::vec3 right = glm::normalize(glm::cross(dir, up));
+        glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             position += dir * velocity;
@@ -142,57 +150,45 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
             change = true;
         }
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            position += up * velocity;
-            target += up * velocity;
+            position += getUp() * velocity;
+            target += getUp() * velocity;
             change = true;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            position -= up * velocity;
-            target -= up * velocity;
+            position -= getUp() * velocity;
+            target -= getUp() * velocity;
             change = true;
         }
     }
 
+    if (change)
+        setTarget(target);
+
     return change;
 }
 
-glm::vec3 Camera::getDirection() const {
-    return glm::normalize(target - position);
-}
-
-glm::mat4 Camera::getView() const {
-    glm::mat4 view = glm::lookAt(position, target, up);
-    return view;
-}
-
-glm::mat4 Camera::getProjection(GLFWwindow* window) const {
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    float aspect = static_cast<float>(width) / static_cast<float>(height);
-    float fovY = glm::radians(fov);
-
-    glm::mat4 proj = glm::perspective(fovY, aspect, 1e-4f, 1e4f);
-    return proj;
-}
-
-bool Camera::drawUI(bool &restartRequested) {
+bool Camera::drawPreviewUI(bool &restartRequested) {
     bool updated = false;
 
     glm::vec3 dir = getDirection();
     ImGui::Text("Camera Position :\n (%4.1f, %4.1f, %4.1f)", position.x, position.y, position.z);
     ImGui::Text("Camera Direction:\n (%4.1f, %4.1f, %4.1f)", dir.x, dir.y, dir.z);
     ImGui::Text("Camera Target   :\n (%4.1f, %4.1f, %4.1f)", target.x, target.y, target.z);
-    ImGui::Text("Camera Fov:\n %4.1f°", fov);
+    ImGui::Text("Camera Fov:\n %4.1f°", getFov());
     
     ImGui::Text("Camera Aperture:");
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Camera Aperture", &aperture, 0.01, 0.0, 5.0)) {
+    float newAperture = getAperture();
+    if (ImGui::DragFloat("##Camera Aperture", &newAperture, 0.01, 0.0, 5.0)) {
+        setAperture(newAperture);
         updated = true;
     }
 
     ImGui::Text("Camera Focus Depth:");
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::DragFloat("##Camera Focus Depth", &focusDepth, 0.1, 0.0, 100.0)) {
+    float newFocusDepth = getFocusDepth();
+    if (ImGui::DragFloat("##Camera Focus Depth", &newFocusDepth, 0.1, 0.0, 100.0)) {
+        setFocusDepth(newFocusDepth);
         updated = true;
     }
 

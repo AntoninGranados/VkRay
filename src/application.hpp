@@ -10,6 +10,7 @@
 #include "./notification.hpp"
 #include "./parameters.hpp"
 #include "./scene/scene.hpp"
+#include "./scene/camera_handle.hpp"
 #include "./scene/scene_preset.hpp"
 #include "./scene/object/object.hpp"
 
@@ -129,7 +130,7 @@ private:
     void drawMainUi();
     void drawRenderUi();
     void handleInput(float dt);
-    void handleInputRuntime(float dt);
+    void handleInputPreview(float dt);
     void handleInputRender(float dt);
     void fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO);
     float lastTime = 0.0f;

@@ -15,6 +15,7 @@
 #include "object/plane.hpp"
 #include "object/box.hpp"
 #include "object/mesh.hpp"
+#include "camera_handle.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -43,6 +44,7 @@ public:
     void pushBoxTransform(VkSmol &engine, std::string name, const glm::mat4 &transform, Material mat);
     void pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat);
     bool pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform = glm::mat4(1.0f));
+    void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
 
     void fillBuffers(VkSmol &engine);
     

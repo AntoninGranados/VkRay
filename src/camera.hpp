@@ -6,8 +6,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui/imgui.h"
+#include "scene/camera_handle.hpp"
 
-class Camera {
+class Camera : public CameraHandle {
 public:
     Camera(glm::vec3 position);
 
@@ -15,26 +16,19 @@ public:
     bool scrollCallback(GLFWwindow *window, double xoffset, double yoffset);
     bool processInput(GLFWwindow *window, float deltaTime);
     
-    float getTanHFov() const { return glm::tan(glm::radians(fov) * 0.5); }
-    float getFov() const { return fov; }
-    glm::vec3 getPosition() const { return position; }
-    glm::vec3 getDirection() const;
-    glm::vec3 getUp() const { return up; }
-    glm::mat4 getView() const;
-    glm::mat4 getProjection(GLFWwindow* window) const;
+    float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
+    glm::vec3 getDirection() const { return glm::normalize(target - position); };
+    glm::mat4 getView() const { return glm::lookAt(position, target, getUp()); };
 
-    void setTarget(glm::vec3 newTarget) { target = newTarget; }
-    float getAperture() const { return aperture; };
-    void setAperture(float newAperture) { aperture = newAperture; }
-    float getFocusDepth() const { return focusDepth; };
-    void setFocusDepth(float newFocusDepth) { focusDepth = newFocusDepth; }
+    glm::vec3 getTarget() const { return target; }
+    void setTarget(glm::vec3 newTarget) { target = newTarget; setDirection(target - position); }
 
     bool isLocked() { return locked; }
     void toggleLock() { locked = !locked; }
 
     void resetMouse() { firstMouse = true; }
 
-    bool drawUI(bool &restartRequested);
+    bool drawPreviewUI(bool &restartRequested);
 
 private:
     enum class DragMode {
@@ -45,16 +39,9 @@ private:
         Dolly
     };
 
-    float fov = 80.0f;
-
-    float aperture = 0.0f;
-    float focusDepth = 10.0f;
-
-    glm::vec3 position;
-    glm::vec3 target;
-    glm::vec3 up = { 0.0, 1.0, 0.0 };
     float orbitDistance = 10.0f;
 
+    glm::vec3 target;
     float yaw   = 90.0f;
     float pitch = 0.0f;
 

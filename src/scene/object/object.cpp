@@ -1,5 +1,7 @@
 #include "object.hpp"
 
+#include "../../camera.hpp"
+
 Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera &camera) {
     const float invWidth = 1.0f / screenSize.x;
     const float invHeight = 1.0f / screenSize.y;

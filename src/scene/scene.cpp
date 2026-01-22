@@ -107,6 +107,11 @@ void Scene::pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> verti
     materials.push_back(mat);
 }
 
+void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov) {
+    objects.push_back(new CameraHandle(name, position, direction, fov));
+    updated = true;
+}
+
 bool Scene::pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform) {
     std::string baseDir = "./";
     size_t slash = path.find_last_of("/\\");
@@ -180,7 +185,8 @@ void Scene::fillBuffers(VkSmol &engine) {
     size_t totalVertices = 0;
     size_t totalIndices = 0;
     size_t totalBvhNodes = 0;
-    for (Object *object : objects) {
+    for (size_t objIndex = 0; objIndex < objects.size(); objIndex++) {
+        Object *object = objects[objIndex];
         if (object->getType() == ObjectType::Mesh) {
             Mesh *mesh = static_cast<Mesh*>(object);
             totalVertices += mesh->getVertices().size();
@@ -215,13 +221,16 @@ void Scene::fillBuffers(VkSmol &engine) {
     uint32_t indexOffset = 0;
     uint32_t bvhOffset = 0;
     
-    for (Object *object : objects) {
+    std::vector<int> gpuIndexForObject(objects.size(), -1);
+    for (size_t objIndex = 0; objIndex < objects.size(); objIndex++) {
+        Object *object = objects[objIndex];
         switch(object->getType()) {
             case ObjectType::Sphere: {
                 spheres[sphereId] = static_cast<Sphere*>(object)->getStruct();
                 addLight(materials[spheres[sphereId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
                 objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
                 sphereId++;
+                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
                 objectCount++;
             } break;
             case ObjectType::Plane: {
@@ -229,6 +238,7 @@ void Scene::fillBuffers(VkSmol &engine) {
                 // addLight(materials[planes[planeId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);    //! should not be counted as it can't be used for importance sampling
                 objectHandles[objectCount] = { .type=ObjectType::Plane, .id=planeId };
                 planeId++;
+                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
                 objectCount++;
             } break;
             case ObjectType::Box: {
@@ -236,6 +246,7 @@ void Scene::fillBuffers(VkSmol &engine) {
                 addLight(materials[boxes[boxId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
                 objectHandles[objectCount] = { .type=ObjectType::Box, .id=boxId };
                 boxId++;
+                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
                 objectCount++;
             } break;
             case ObjectType::Mesh: {
@@ -273,7 +284,10 @@ void Scene::fillBuffers(VkSmol &engine) {
                 indexOffset += static_cast<uint32_t>(meshIndices.size());
                 bvhOffset += static_cast<uint32_t>(meshBvhNodes.size());
                 meshId++;
+                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
                 objectCount++;
+            } break;
+            case ObjectType::Camera: {
             } break;
             default: break;
         }
@@ -284,7 +298,9 @@ void Scene::fillBuffers(VkSmol &engine) {
         materialData[i] = materials[i];
     }
 
-    int selected = static_cast<int>(selectedObjectId);
+    int selected = -1;
+    if (selectedObjectId >= 0 && static_cast<size_t>(selectedObjectId) < gpuIndexForObject.size())
+        selected = gpuIndexForObject[static_cast<size_t>(selectedObjectId)];
 
     // Fill the buffers
     sphereBuffers.fill(engine, spheres.data());
@@ -320,7 +336,22 @@ void Scene::fillBuffers(VkSmol &engine) {
 
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
-    if (selectedObjectId < 0) return;
+    for (size_t i = 0; i < objects.size(); i++) {
+        if (objects[i]->getType() != ObjectType::Camera)
+            continue;
+        CameraHandle *cameraHandle = static_cast<CameraHandle*>(objects[i]);
+        const bool isSelected = static_cast<int>(i) == selectedObjectId;
+        cameraHandle->setSelected(isSelected);
+        cameraHandle->setManipulationEnabled(isSelected);
+        ImGuizmo::PushID(static_cast<int>(i));
+        updated |= cameraHandle->drawGuizmo(view, proj);
+        ImGuizmo::PopID();
+    }
+
+    if (selectedObjectId < 0)
+        return;
+    if (objects[selectedObjectId]->getType() == ObjectType::Camera)
+        return;
     ImGuizmo::PushID(selectedObjectId); // To isolate the state of the gizmo
     updated |= objects[selectedObjectId]->drawGuizmo(view, proj);
     ImGuizmo::PopID();
@@ -337,6 +368,7 @@ void Scene::drawUI(VkSmol &engine) {
             case ObjectType::Plane:  ImGui::TextDisabled("Pln"); break;
             case ObjectType::Box:    ImGui::TextDisabled("Box"); break;
             case ObjectType::Mesh:   ImGui::TextDisabled("Msh"); break;
+            case ObjectType::Camera: ImGui::TextDisabled("Cam"); break;
             default: ImGui::TextDisabled("???");; break;
         }
         ImGui::SameLine();
@@ -401,6 +433,20 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         updated = true;
         ImGui::CloseCurrentPopup();
     }
+    if (ImGui::Button("Camera", { 100, 0 })) {
+        glm::vec3 pos = glm::vec3(0.0f, 1.0f, -5.0f);
+        glm::vec3 target = glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 direction = glm::normalize(target - pos);
+        pushCameraHandle(
+            "Camera-" + std::to_string(objectId++),
+            pos,
+            direction,
+            60.0f
+        );
+        selectedObjectId = objects.size() - 1;
+        updated = true;
+        ImGui::CloseCurrentPopup();
+    }
     ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
     if (ImGui::Button("Cancel", { 100, 0 })) {
         ImGui::CloseCurrentPopup();
@@ -419,6 +465,7 @@ void Scene::drawSelectedUI(VkSmol &engine) {
         case ObjectType::Plane:     typeName = "Plane"; break;
         case ObjectType::Box:       typeName = "Box"; break;
         case ObjectType::Mesh:      typeName = "Mesh"; break;
+        case ObjectType::Camera:    typeName = "Camera"; break;
         default: break; // UNREACHABLE
     }
 
@@ -484,6 +531,15 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                         materials[mesh->getStruct().materialHandle]
                     );
                 } break;
+                case ObjectType::Camera: {
+                    CameraHandle *cameraHandle = static_cast<CameraHandle*>(objects[selectedObjectId]);
+                    pushCameraHandle(
+                        cameraHandle->getName() + "-copy",
+                        cameraHandle->getPosition(),
+                        cameraHandle->getDirection(),
+                        cameraHandle->getFov()
+                    );
+                } break;
                 default: break;
             }
 
@@ -499,9 +555,11 @@ void Scene::drawSelectedUI(VkSmol &engine) {
                 case ObjectType::Plane:  planeBuffers.removeElement(); break;
                 case ObjectType::Box:    boxBuffers.removeElement(); break;
                 case ObjectType::Mesh:   meshBuffers.removeElement(); break;
+                case ObjectType::Camera: break;
                 default: break;
             }
-            objectBuffers.removeElement();
+            if (objects[selectedObjectId]->getType() != ObjectType::Camera)
+                objectBuffers.removeElement();
 
             objects.erase(std::next(objects.begin(), selectedObjectId));
             selectedObjectId = -1;

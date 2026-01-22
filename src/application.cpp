@@ -4,7 +4,14 @@
 #include <cmath>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #include <stb_image_write.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 const std::vector<ScreenVertex> vertices = {
     { .position={ 1.0f, 1.0f} },
@@ -191,10 +198,10 @@ void Application::initScene() {
 
 void Application::initParameters() {
     parameters.addInt("maxBounces", "Max Bounces", 8, 1, 20, 1, false, "Pathtracer");
-    parameters.addInt("runtimeSamples", "Runtime Samples", 1, 1, 10, 1, false, "Pathtracer");
+    parameters.addInt("previewSamples", "Preview Samples", 1, 1, 10, 1, false, "Pathtracer");
     parameters.addInt("renderSamples", "Render Samples", 2048, 1, 4096, 1, false, "Pathtracer");
     parameters.addFloat("movingResolution", "Moving Resolution", 8.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
-    parameters.addFloat("runtimeResolution", "Runtime Resolution", 1.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
+    parameters.addFloat("previewResolution", "Preview Resolution", 1.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
     parameters.addFloat("renderResolution", "Render Resolution", 1.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
     parameters.addBool("importanceSampling", "Importance Sampling", true, false, "Pathtracer");
     parameters.addBool("varianceSampling", "Variance Sampling", true, false, "Pathtracer");
@@ -420,7 +427,7 @@ void Application::onFrameStart(float dt) {
     
     frame = (frame + 1) % 2;
     frameCount++;
-    sampleCount += static_cast<uint64_t>(parameters.getInt("runtimeSamples"));
+    sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 
     handleInput(dt);
     
@@ -455,15 +462,10 @@ void Application::onFrameStart(float dt) {
     }
 
     if (restartRender) {
-        // Buffer pixelInfoBuffer = engine.getBuffer(pixelInfoBuffers);
-        // size_t pixelInfoFloatCount = pixelInfoBuffer.getSize() / sizeof(float);
-        // std::vector<float> zeroData(pixelInfoFloatCount, 0.0f);
-        // engine.fillBuffer(pixelInfoBuffer, zeroData.data());
-
         frameCount = 1;
         sampleCount = 0;
         restartRender = false;
-        resolution = parameters.getFloat("movingResolution");
+        if (!renderMode) resolution = parameters.getFloat("movingResolution");
     }
 }
 
@@ -482,15 +484,13 @@ void Application::drawUI(CommandBuffer commandBuffer) {
 
     if (renderMode) {
         drawRenderUi();
-        ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
-        return;
+    } else {
+        drawMainUi();
     }
-
-    drawMainUi();
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
+
 }
 
 void Application::updateUiState() {
@@ -595,7 +595,7 @@ void Application::drawMainUi() {
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%llu samples", static_cast<unsigned long long>(sampleCount));
-        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * parameters.getInt("runtimeSamples"));
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * parameters.getInt("previewSamples"));
     }
     ImGui::End();
 
@@ -603,7 +603,7 @@ void Application::drawMainUi() {
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::CollapsingHeader("Camera")) {
-            camera.drawUI(restartRender);
+            camera.drawPreviewUI(restartRender);
         }
         
         if (ImGui::CollapsingHeader("Pathtracer")) {
@@ -661,11 +661,12 @@ void Application::drawMainUi() {
     notificationManager.drawNotifications();
 }
 
+
 void Application::handleInput(float dt) {
     if (renderMode)
         handleInputRender(dt);
     else
-        handleInputRuntime(dt);
+        handleInputPreview(dt);
 }
 
 void Application::handleInputRender(float dt) {
@@ -673,7 +674,7 @@ void Application::handleInputRender(float dt) {
 
     double dtSafe = std::max(static_cast<double>(dt), 0.0);
     samplesPerSecAccumTime += dtSafe;
-    samplesPerSecAccumSamples += static_cast<double>(parameters.getInt("runtimeSamples"));
+    samplesPerSecAccumSamples += static_cast<double>(parameters.getInt("previewSamples"));
     if (samplesPerSecAccumTime >= 1.0) {
         double instant = samplesPerSecAccumSamples / std::max(samplesPerSecAccumTime, 1e-6);
         double alpha = 1.0 - std::exp(-samplesPerSecAccumTime / 5.0);
@@ -699,8 +700,8 @@ void Application::handleInputRender(float dt) {
     }
 }
 
-void Application::handleInputRuntime(float dt) {
-    resolution = parameters.getFloat("runtimeResolution");
+void Application::handleInputPreview(float dt) {
+    resolution = parameters.getFloat("previewResolution");
     
     const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (ui.capturesMouse || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ui.capturesKeyboard || ImGui::GetIO().WantCaptureKeyboard;
@@ -750,6 +751,7 @@ void Application::handleInputRuntime(float dt) {
     restartRender = true;
 }
 
+
 void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     // Raytracing UBO
     raytracingUBO.cameraPos = camera.getPosition();
@@ -772,7 +774,7 @@ void Application::fillUBOs(RaytracingUBO &raytracingUBO, ScreenUBO &screenUBO) {
     raytracingUBO.lightMode = parameters.getEnum<LightMode>("lightMode");
 
     raytracingUBO.maxBounces = parameters.getInt("maxBounces");
-    raytracingUBO.samplesPerPixel = parameters.getInt("runtimeSamples");
+    raytracingUBO.samplesPerPixel = parameters.getInt("previewSamples");
     raytracingUBO.importanceSampling = static_cast<int>(parameters.getBool("importanceSampling"));
     raytracingUBO.varianceSampling = static_cast<int>(parameters.getBool("varianceSampling"));
     raytracingUBO.varianceWarmupSamples = parameters.getInt("varianceWarmup");
