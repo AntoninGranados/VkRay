@@ -1,12 +1,8 @@
 #pragma once
 
-#include "./engine/engine.hpp"
-#include "./scene/scene.hpp"
-#include "./camera.hpp"
-#include "./parameters.hpp"
-#include "./notification.hpp"
+#include <glm/glm.hpp>
 
-struct RendererState {
+struct RenderState {
     bool renderMode = false;
     bool pendingExit = false;
     double samplesPerSecEMA = 0.0;
@@ -51,16 +47,22 @@ struct ScreenUBO {
     int previewBorderEnabled;
 };
 
+class VkSmol;
+class Scene;
+class Camera;
+class ParameterSystem;
+class NotificationSystem;
+class UiSystem;
 
 struct AppContext {
     VkSmol* engine;
     Scene* scene;
     Camera* camera;
-    ParameterStore* parameters;
-    NotificationManager* notifications;
+    ParameterSystem* parameters;
+    NotificationSystem* notifications;
+    UiSystem* ui;
 
-    RendererState* renderer;
-
+    RenderState* renderState;
     PathtracerUBO* pathtracerUBO;
     ScreenUBO* screenUBO;
 

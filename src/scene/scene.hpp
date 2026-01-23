@@ -8,7 +8,7 @@
 
 #include "../engine/engine.hpp"
 #include "../camera.hpp"
-#include "../notification.hpp"
+#include "../notification_system.hpp"
 
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
@@ -27,6 +27,8 @@ enum LightMode : int {
     Night,
     Empty,
 };
+
+enum class ScenePreset : int;
 
 class Scene {
 public:
@@ -56,6 +58,7 @@ public:
     void drawUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
     void drawNewObjectPopUp(VkSmol &engine);
     void drawSelectedUI(VkSmol &engine);
+    LightMode loadPreset(VkSmol &engine, ScenePreset preset);
 
     void clearSelection() { selectedObjectId = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);

@@ -96,7 +96,7 @@ private:
     std::vector<const char*> itemsName;
 };
 
-class ParameterStore {
+class ParameterSystem {
 public:
     IntParam &addInt(
         const std::string &id,

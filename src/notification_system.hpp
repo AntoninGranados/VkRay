@@ -25,12 +25,11 @@ enum Command : int {
     Key,
     Render,
     Reload,
-    Screenshot,
 
     Count,
 };
 
-class NotificationManager {
+class NotificationSystem {
 public:
     void drawNotifications();
     
@@ -54,7 +53,6 @@ private:
         { "key", "display the keymaps" },
         { "render", "render mode (ESC to go to normal)" },
         { "reload", "reload the shaders" },
-        { "screenshot", "save the current render to a .png" },
     };
     
     std::vector<std::pair<std::string, std::string> > keymaps = {

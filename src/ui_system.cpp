@@ -1,7 +1,7 @@
 #include "ui_system.hpp"
 
 void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
-    if (!toggled && !ctx.renderer->renderMode) return;
+    if (!toggled && !ctx.renderState->renderMode) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -13,7 +13,7 @@ void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
     style.WindowRounding = 5.0f;
     style.FrameRounding = 5.0f;
 
-    if (ctx.renderer->renderMode) drawRender(ctx);
+    if (ctx.renderState->renderMode) drawRender(ctx);
     else drawPreview(ctx);
 
     ImGui::Render();
@@ -78,7 +78,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
     );
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-        ImGui::Text("%u samples",ctx.renderer->sampleCount);
+        ImGui::Text("%u samples",ctx.renderState->sampleCount);
         ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * ctx.parameters->getInt("previewSamples"));
     }
     ImGui::End();
@@ -103,29 +103,29 @@ void UiSystem::drawPreview(AppContext& ctx) {
         }
 
         if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-            LightMode mode;
+            LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
             if (ImGui::Button("Empty", { 200, 0 })) {
-                initEmpty(engine, scene, mode);
+                mode = scene.loadPreset(engine, ScenePreset::Empty);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::Button("Suzanne", { 200, 0 })) {
-                initSuzanne(engine, scene, mode);
+            if (ImGui::Button("Mesh", { 200, 0 })) {
+                mode = scene.loadPreset(engine, ScenePreset::Mesh);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Sponza", { 200, 0 })) {
-                initSponza(engine, scene, mode);
+                mode = scene.loadPreset(engine, ScenePreset::Sponza);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Cornell Box", { 200, 0 })) {
-                initCornellBox(engine, scene, mode);
+                mode = scene.loadPreset(engine, ScenePreset::CornellBox);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Random Spheres", { 200, 0 })) {
-                initRandomSpheres(engine, scene, mode);
+                mode = scene.loadPreset(engine, ScenePreset::RandomSpheres);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -155,14 +155,14 @@ void UiSystem::drawRender(AppContext& ctx) {
     );
     int renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
     if (renderSamplesPerPixel > 0) {
-        float progress = static_cast<float>(std::min<uint64_t>(ctx.renderer->sampleCount, renderSamplesPerPixel))
+        float progress = static_cast<float>(std::min<uint64_t>(ctx.renderState->sampleCount, renderSamplesPerPixel))
             / static_cast<float>(renderSamplesPerPixel);
         char overlay[64];
         snprintf(
             overlay,
             sizeof(overlay),
             "%llu / %d",
-            static_cast<unsigned long long>(std::min<uint64_t>(ctx.renderer->sampleCount, renderSamplesPerPixel)),
+            static_cast<unsigned long long>(std::min<uint64_t>(ctx.renderState->sampleCount, renderSamplesPerPixel)),
             renderSamplesPerPixel
         );
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
@@ -178,12 +178,12 @@ void UiSystem::drawRender(AppContext& ctx) {
         );
         ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
     }
-    float samplesPerSec = static_cast<float>(ctx.renderer->samplesPerSecEMA);
+    float samplesPerSec = static_cast<float>(ctx.renderState->samplesPerSecEMA);
     ImGui::Text("%.1f samples/sec", samplesPerSec);
     if (renderSamplesPerPixel > 0 && samplesPerSec > 0.0f) {
         uint64_t remaining = 0;
-        if (ctx.renderer->sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
-            remaining = static_cast<uint64_t>(renderSamplesPerPixel) - ctx.renderer->sampleCount;
+        if (ctx.renderState->sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
+            remaining = static_cast<uint64_t>(renderSamplesPerPixel) - ctx.renderState->sampleCount;
         }
         float etaSec = static_cast<float>(remaining) / samplesPerSec;
         int etaMin = static_cast<int>(etaSec / 60.0f);

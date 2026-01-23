@@ -2,6 +2,7 @@
 // 001000000
 
 #include "scene.hpp"
+#include "scene_preset.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -60,6 +61,28 @@ void Scene::clear(VkSmol &engine) {
     materials.clear();
     selectedObjectId = -1;
     bufferUpdated = true;
+}
+
+LightMode Scene::loadPreset(VkSmol &engine, ScenePreset preset) {
+    LightMode mode = LightMode::Day;
+    switch (preset) {
+        case ScenePreset::Empty:
+            initEmpty(engine, *this, mode);
+            break;
+        case ScenePreset::Mesh:
+            initMesh(engine, *this, mode);
+            break;
+        case ScenePreset::Sponza:
+            initSponza(engine, *this, mode);
+            break;
+        case ScenePreset::CornellBox:
+            initCornellBox(engine, *this, mode);
+            break;
+        case ScenePreset::RandomSpheres:
+            initRandomSpheres(engine, *this, mode);
+            break;
+    }
+    return mode;
 }
 
 

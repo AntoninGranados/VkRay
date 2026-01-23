@@ -1,4 +1,4 @@
-#include "parameters.hpp"
+#include "parameter_system.hpp"
 
 #include "imgui/imgui.h"
 
@@ -102,7 +102,7 @@ bool EnumParam::draw() {
     return changed;
 }
 
-IntParam &ParameterStore::addInt(
+IntParam &ParameterSystem::addInt(
     const std::string &id,
     const std::string &label,
     int value,
@@ -118,7 +118,7 @@ IntParam &ParameterStore::addInt(
     return static_cast<IntParam&>(*params.back());
 }
 
-FloatParam &ParameterStore::addFloat(
+FloatParam &ParameterSystem::addFloat(
     const std::string &id,
     const std::string &label,
     float value,
@@ -134,7 +134,7 @@ FloatParam &ParameterStore::addFloat(
     return static_cast<FloatParam&>(*params.back());
 }
 
-BoolParam &ParameterStore::addBool(
+BoolParam &ParameterSystem::addBool(
     const std::string &id,
     const std::string &label,
     bool value,
@@ -147,7 +147,7 @@ BoolParam &ParameterStore::addBool(
     return static_cast<BoolParam&>(*params.back());
 }
 
-EnumParam &ParameterStore::addEnum(
+EnumParam &ParameterSystem::addEnum(
     const std::string &id,
     const std::string &label,
     int value,
@@ -161,7 +161,7 @@ EnumParam &ParameterStore::addEnum(
     return static_cast<EnumParam&>(*params.back());
 }
 
-bool ParameterStore::drawGroup(const std::string &group, bool &restartRequested) {
+bool ParameterSystem::drawGroup(const std::string &group, bool &restartRequested) {
     bool changed = false;
     for (const auto &param : params) {
         if (param->group != group) continue;
@@ -174,26 +174,26 @@ bool ParameterStore::drawGroup(const std::string &group, bool &restartRequested)
     return changed;
 }
 
-int &ParameterStore::getInt(const std::string &id) {
+int &ParameterSystem::getInt(const std::string &id) {
     return getParam<IntParam>(id).get();
 }
 
-float &ParameterStore::getFloat(const std::string &id) {
+float &ParameterSystem::getFloat(const std::string &id) {
     return getParam<FloatParam>(id).get();
 }
 
-bool &ParameterStore::getBool(const std::string &id) {
+bool &ParameterSystem::getBool(const std::string &id) {
     return getParam<BoolParam>(id).get();
 }
 
-void ParameterStore::setInt(const std::string &id, int value) {
+void ParameterSystem::setInt(const std::string &id, int value) {
     getParam<IntParam>(id).get() = value;
 }
 
-void ParameterStore::setFloat(const std::string &id, float value) {
+void ParameterSystem::setFloat(const std::string &id, float value) {
     getParam<FloatParam>(id).get() = value;
 }
 
-void ParameterStore::setBool(const std::string &id, bool value) {
+void ParameterSystem::setBool(const std::string &id, bool value) {
     getParam<BoolParam>(id).get() = value;
 }

@@ -6,7 +6,7 @@ void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     lightMode = LightMode::Day;
 }
 
-void initSuzanne(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+void initMesh(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     scene.clear(engine);
 
     lightMode = LightMode::Day;

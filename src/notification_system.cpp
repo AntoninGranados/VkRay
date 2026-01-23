@@ -1,8 +1,8 @@
-#include "notification.hpp"
+#include "notification_system.hpp"
 
 constexpr int MAX_NOTIFICATION_COUNT = 32;
 
-void NotificationManager::drawNotifications() {
+void NotificationSystem::drawNotifications() {
     ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
     ImGui::SetNextWindowSize({ 300, 500 });
@@ -57,7 +57,7 @@ void NotificationManager::drawNotifications() {
     ImGui::End();
 }
 
-void NotificationManager::pushMessage(NotificationType type, std::string content) {
+void NotificationSystem::pushMessage(NotificationType type, std::string content) {
     notifications.push_back({
         .type = type,
         .content = content
@@ -66,13 +66,13 @@ void NotificationManager::pushMessage(NotificationType type, std::string content
         notifications.erase(notifications.begin());
 }
 
-void NotificationManager::pushNotification(Notification notification) {
+void NotificationSystem::pushNotification(Notification notification) {
     notifications.push_back(notification);
     if (notifications.size() > MAX_NOTIFICATION_COUNT)
         notifications.erase(notifications.begin());
 }
 
-bool NotificationManager::isCommandRequested(enum Command command) {
+bool NotificationSystem::isCommandRequested(enum Command command) {
     if (requestedCommands[command]) {
         requestedCommands[command] = false;
         return true;
@@ -80,7 +80,7 @@ bool NotificationManager::isCommandRequested(enum Command command) {
     return false;
 }
 
-void NotificationManager::parseInput(char *buff) {
+void NotificationSystem::parseInput(char *buff) {
     if (strcmp(buff, "clear") == 0) {
         requestedCommands[Command::Clear] = true;
         notifications.clear();
@@ -96,14 +96,12 @@ void NotificationManager::parseInput(char *buff) {
         requestedCommands[Command::Render] = true;
     } else if (strcmp(buff, "reload") == 0) {
         requestedCommands[Command::Reload] = true;
-    } else if (strcmp(buff, "screenshot") == 0) {
-        requestedCommands[Command::Screenshot] = true;
     } else {
         notifications.push_back({ NotificationType::Error, "Unrecognised command" });
     }
 }
 
-void NotificationManager::pushHelp() {
+void NotificationSystem::pushHelp() {
     notifications.push_back({ NotificationType::Info, "Available commands:" });
     char buff[128];
     for (auto &command : commands) {
@@ -112,7 +110,7 @@ void NotificationManager::pushHelp() {
     }
 }
 
-void NotificationManager::pushKeymaps() {
+void NotificationSystem::pushKeymaps() {
     notifications.push_back({ NotificationType::Info, "Keymaps:" });
     char buff[128];
     for (auto &keymap : keymaps) {
