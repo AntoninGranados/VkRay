@@ -268,8 +268,9 @@ void Application::handleInputPreview(float dt) {
         else scene.clearSelection();
     }
     
-    if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt))
-    restartRender = true;
+    if (!blockKeyboardInput && camera.processInput(engine.getWindow().get(), dt)) {
+        restartRender = true;
+    }
     
     if (camera.isLocked() || blockMouseInput)
         glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -284,10 +285,10 @@ void Application::handleInputPreview(float dt) {
             previewCameraHandle->setPreview(false);
         previewCameraHandle = nullptr;
         camera.setAperture(0.0f);
+        restartRender = true;
     }
     
-    if (scene.checkUpdate()) 
-    restartRender = true;
+    if (scene.checkUpdate()) restartRender = true;
 }
 
 

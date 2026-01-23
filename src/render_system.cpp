@@ -209,11 +209,6 @@ void RenderSystem::buildPipeline(AppContext& ctx) {
 void RenderSystem::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    frame = (frame + 1) % 2;
-
-    engine.fillBuffer(engine.getBuffer(pathtracingUniformBuffers), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(screenUniformBuffers), ctx.screenUBO);
-
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
         std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
@@ -241,6 +236,10 @@ void RenderSystem::render(AppContext& ctx) {
     }
 
     engine.beginFrame();
+    
+    engine.fillBuffer(engine.getBuffer(pathtracingUniformBuffers), ctx.pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(screenUniformBuffers), ctx.screenUBO);
+    frame = (frame + 1) % 2;
     
     renderMain(ctx);
     renderUi(ctx);
@@ -350,7 +349,7 @@ void RenderSystem::renderMain(AppContext& ctx) {
             commandBuffer,
             nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
+            {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
         engine.getDescriptorSet(screenDescriptorSets[frame]).bind(commandBuffer, screenPipeline.getLayout());
