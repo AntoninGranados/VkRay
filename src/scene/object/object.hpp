@@ -76,7 +76,7 @@ public:
     
     virtual float getArea() = 0;
     void getStruct(void) {};
-    std::string getName() { return name; }
+    std::string getName() const { return name; }
     void setName(std::string newName) { name = newName; }
     virtual ObjectType getType() = 0;
 

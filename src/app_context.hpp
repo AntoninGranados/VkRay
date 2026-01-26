@@ -47,6 +47,14 @@ struct ScreenUBO {
     int previewBorderEnabled;
 };
 
+struct PixelInfo {
+    float mean;
+    float m2;
+    int count;
+    float varianceProba;
+    int selectionMask;
+};
+
 class VkSmol;
 class Scene;
 class Camera;

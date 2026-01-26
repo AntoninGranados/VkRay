@@ -40,7 +40,7 @@ void RenderSystem::init(AppContext& ctx) {
         screenUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
 
         VkExtent2D extent = engine.getExtent();
-        size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * 4 * sizeof(float);
+        size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo);
         pixelInfoBuffers = engine.initSharedBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoBytes);
     }
 
@@ -209,6 +209,18 @@ void RenderSystem::buildPipeline(AppContext& ctx) {
 void RenderSystem::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
+    uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
+    if (ctx.renderState->renderMode && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
+        if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
+            renderOutput.requested = true;
+            ctx.renderState->pendingExit = true;
+        }
+    }
+
+    engine.beginFrame();
+
+    ctx.scene->fillBuffers(engine);
+
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
         std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
@@ -226,16 +238,6 @@ void RenderSystem::render(AppContext& ctx) {
             descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
         }
     }
-
-    uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
-    if (ctx.renderState->renderMode && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
-        if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
-            renderOutput.requested = true;
-            ctx.renderState->pendingExit = true;
-        }
-    }
-
-    engine.beginFrame();
     
     engine.fillBuffer(engine.getBuffer(pathtracingUniformBuffers), ctx.pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(screenUniformBuffers), ctx.screenUBO);

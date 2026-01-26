@@ -96,8 +96,9 @@ struct Mesh {
 struct PixelInfo {
     float mean;
     float m2;
-    float count;
+    int count;
     float varianceProba;
+    int selectionMask;
 };
 
 struct Camera {

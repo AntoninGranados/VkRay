@@ -149,7 +149,7 @@ ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize
 }
 
 void updateVariance(in float value, inout PixelInfo pixelInfo) {
-    pixelInfo.count += 1.0;
+    pixelInfo.count += 1;
     float delta = value - pixelInfo.mean;
     pixelInfo.mean += delta / pixelInfo.count;
     float delta2 = value - pixelInfo.mean;
@@ -233,7 +233,7 @@ void main() {
         prevColor = vec3(0);
         
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
-        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(0.0, 0.0, 0.0, 0.0);
+        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(0.0, 0.0, 0, 0.0, 0);
     }
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
@@ -255,21 +255,25 @@ void main() {
     vec3 colorSum = vec3(0);
     if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
-        pixelInfoBuffer.pixels[blockVarianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba);
+        pixelInfoBuffer.pixels[blockVarianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba, pixelInfo.selectionMask);
     }
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
-    float intersection = 0;
+    int intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
         Hit hit = rayObjectIntersection(getRay(camera, fragPos, false, seed), objectBuffer.objects[objectBuffer.selectedObjectId]);
         if (foundIntersection(hit)) intersection = 1;
     }
+    uint selectionIndex = varianceIndexFromCoord(pixelCoord, texSize);
+    PixelInfo selectionInfo = pixelInfoBuffer.pixels[selectionIndex];
+    selectionInfo.selectionMask = intersection;
+    pixelInfoBuffer.pixels[selectionIndex] = selectionInfo;
 
     float totalCount = prevCount + takenSamples;
     vec3 mixedColor = prevColor;
     if (totalCount > 0.0) {
         mixedColor = (prevColor * prevCount + colorSum) / totalCount;
     }
-    outColor = vec4(mixedColor, intersection);
+    outColor = vec4(mixedColor, 1.0);
 }

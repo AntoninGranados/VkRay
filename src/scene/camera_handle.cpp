@@ -49,7 +49,7 @@ void CameraHandle::drawWireframe(const glm::mat4 &view, const glm::mat4 &proj) {
     const float aspect = 16.0f / 9.0f;
     const float fovY = glm::radians(getFov());
     const float nearDist = 0.5f;
-    const float farDist = 2.5f;
+    const float farDist = 1.5f;
     const float nearHalfH = tanf(fovY * 0.5f) * nearDist;
     const float nearHalfW = nearHalfH * aspect;
     const float farHalfH = tanf(fovY * 0.5f) * farDist;

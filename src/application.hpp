@@ -54,13 +54,14 @@ private:
     int frameCount = 0;
     bool shouldClose = false;
     
-    CameraHandle *previewCameraHandle = nullptr;
+    CameraHandle *cameraHandle = nullptr;
     
     void initParameters();
     void initScene();
 
     void onFrameStart(float dt);
-    void syncPreviewCameraFromHandle();
+    void syncHandleFromCamera();
+    void syncCameraFromHandle();
     void handleInput(float dt);
     void handleInputPreview(float dt);
     void handleInputRender(float dt);

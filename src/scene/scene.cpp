@@ -85,6 +85,15 @@ LightMode Scene::loadPreset(VkSmol &engine, ScenePreset preset) {
     return mode;
 }
 
+CameraHandle* Scene::getFirstCameraHandle() const {
+    for (Object* object : objects) {
+        if (object->getType() == ObjectType::Camera) {
+            return static_cast<CameraHandle*>(object);
+        }
+    }
+    return nullptr;
+}
+
 
 void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat) {
     bufferUpdated |= sphereBuffers.addElement(engine);

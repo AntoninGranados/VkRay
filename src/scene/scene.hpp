@@ -59,6 +59,7 @@ public:
     void drawNewObjectPopUp(VkSmol &engine);
     void drawSelectedUI(VkSmol &engine);
     LightMode loadPreset(VkSmol &engine, ScenePreset preset);
+    CameraHandle* getFirstCameraHandle() const;
 
     void clearSelection() { selectedObjectId = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
@@ -69,7 +70,6 @@ public:
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
     bool checkBufferUpdate();
-
 private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
