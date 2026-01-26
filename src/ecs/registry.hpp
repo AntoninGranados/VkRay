@@ -7,17 +7,42 @@
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
+#include <vector>
 
 namespace ecs {
 
 class Registry {
 public:
-    Entity createEntity() { return newEntity(); }
-    void destroyEntity(const Entity& e) { ecs::destroyEntity(e); }
-    bool isAlive(const Entity& e) const { return ecs::isAlive(e); }
+    Entity createEntity() {
+        uint32_t id;
+        if (!freeIds.empty()) {
+            id = freeIds.back();
+            freeIds.pop_back();
+        } else {
+            id = static_cast<uint32_t>(generations.size());
+            generations.push_back(0);
+        }
+        return Entity{ id, generations[id] };
+    }
+
+    void destroyEntity(const Entity& e) {
+        if (!isAlive(e))
+            return;
+        generations[e.getId()]++;
+        freeIds.push_back(e.getId());
+    }
+
+    bool isAlive(const Entity& e) const {
+        return e.getId() < generations.size() && generations[e.getId()] == e.getGen();
+    }
 
     template<typename T>
     ComponentStorage<T>& storage() {
+        return getStorage<T>();
+    }
+
+    template<typename T>
+    const ComponentStorage<T>& storage() const {
         return getStorage<T>();
     }
 
@@ -33,6 +58,11 @@ public:
 
     template<typename T>
     T& get(const Entity& e) {
+        return getStorage<T>().get(e);
+    }
+
+    template<typename T>
+    const T& get(const Entity& e) const {
         return getStorage<T>().get(e);
     }
 
@@ -64,7 +94,17 @@ private:
         return static_cast<StorageImpl<T>*>(it->second.get())->storage;
     }
 
+    template<typename T>
+    const ComponentStorage<T>& getStorage() const {
+        const std::type_index key(typeid(T));
+        auto it = storages.find(key);
+        assert(it != storages.end());
+        return static_cast<StorageImpl<T>*>(it->second.get())->storage;
+    }
+
     std::unordered_map<std::type_index, std::unique_ptr<IStorage>> storages;
+    std::vector<uint32_t> generations;
+    std::vector<uint32_t> freeIds;
 };
 
 } // namespace ecs

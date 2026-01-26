@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
 namespace ecs {
@@ -14,21 +16,6 @@ struct Transform {
 
     glm::mat4 local { 1.0f };
     bool updated = true;
-
-    void setPosition(const glm::vec3& newPosition) {
-        position = newPosition;
-        updated = true;
-    }
-
-    void setRotation(const glm::quat& newRotation) {
-        rotation = newRotation;
-        updated = true;
-    }
-
-    void setScale(const glm::vec3& newScale) {
-        scale = newScale;
-        updated = true;
-    }
 
     void updateLocal() {
         if (!updated) return;

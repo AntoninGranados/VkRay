@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -100,8 +101,31 @@ void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    objects.push_back(new Sphere(name, center, radius, static_cast<int>(materials.size())));
+    const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
+
+    ecs::Entity e = registry.createEntity();
+    
+    registry.add<ecs::Selectable>(e, ecs::Selectable{});
+
+    ecs::Name c_name;
+    c_name.value = name;
+    registry.add<ecs::Name>(e, c_name);
+    
+    ecs::Sphere c_sphere;
+    c_sphere.radius = radius;
+    registry.add<ecs::Sphere>(e, c_sphere);
+    
+    ecs::MaterialRef c_material;
+    c_material.handle = materialHandle;
+    registry.add<ecs::MaterialRef>(e, c_material);
+    
+    ecs::Transform c_transform;
+    c_transform.position = center;
+    c_transform.updated = true;
+    registry.add<ecs::Transform>(e, c_transform);
+
+    entities.push_back(e);
 }
 
 void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat) {
@@ -257,17 +281,37 @@ void Scene::fillBuffers(VkSmol &engine) {
     uint32_t bvhOffset = 0;
     
     std::vector<int> gpuIndexForObject(objects.size(), -1);
+
+    const auto& sphereStorage = registry.storage<ecs::Sphere>();
+    const auto& sphereEntities = sphereStorage.entities();
+    const auto& sphereData = sphereStorage.data();
+    const auto& transformStorage = registry.storage<ecs::Transform>();
+    const auto& materialStorage = registry.storage<ecs::MaterialRef>();
+
+    for (size_t i = 0; i < sphereData.size(); i++) {
+        const ecs::Entity& e = sphereEntities[i];
+        if (!transformStorage.has(e) || !materialStorage.has(e)) continue;
+
+        const ecs::Transform& transform = transformStorage.get(e);
+        const ecs::Sphere& sphere = sphereData[i];
+        const ecs::MaterialRef& matRef = materialStorage.get(e);
+
+        spheres[sphereId] = GpuSphere{
+            .center = transform.position,
+            .radius = sphere.radius,
+            .materialHandle = matRef.handle,
+        };
+
+        const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
+        addLight(materials[spheres[sphereId].materialHandle], area, objectCount, lightCount, lights, totalLightArea);
+        objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
+        sphereId++;
+        objectCount++;
+    }
+
     for (size_t objIndex = 0; objIndex < objects.size(); objIndex++) {
         Object *object = objects[objIndex];
         switch(object->getType()) {
-            case ObjectType::Sphere: {
-                spheres[sphereId] = static_cast<Sphere*>(object)->getStruct();
-                addLight(materials[spheres[sphereId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
-                objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
-                sphereId++;
-                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
-                objectCount++;
-            } break;
             case ObjectType::Plane: {
                 planes[planeId] = static_cast<Plane*>(object)->getStruct();
                 // addLight(materials[planes[planeId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);    //! should not be counted as it can't be used for importance sampling
@@ -321,8 +365,6 @@ void Scene::fillBuffers(VkSmol &engine) {
                 meshId++;
                 gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
                 objectCount++;
-            } break;
-            case ObjectType::Camera: {
             } break;
             default: break;
         }

@@ -18,6 +18,10 @@
 #include "object/mesh.hpp"
 #include "camera_handle.hpp"
 
+#include "../ecs/registry.hpp"
+#include "../ecs/entity.hpp"
+#include "../ecs/components.hpp"
+
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
 
@@ -84,4 +88,7 @@ private:
 
     std::function<void(NotificationType, std::string)> messageCallback;
     std::function<void(const CameraHandle&)> previewCameraCallback;
+
+    ecs::Registry registry;
+    std::vector<ecs::Entity> entities;
 };
