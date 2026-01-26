@@ -1,11 +1,12 @@
 #include "mesh.hpp"
+#include "mesh_simplify.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <numeric>
 
-Mesh::Mesh(std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, MaterialHandle materialHandle):
+Mesh::Mesh(const std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, MaterialHandle materialHandle):
     Object(name), vertices(vertices), indices(indices), transform(transform), materialHandle(materialHandle) {
     buildBvh();
 }
@@ -137,7 +138,56 @@ bool Mesh::drawUI(std::vector<Material> &materials) {
         );
     }
 
+    ImGui::Separator();
+    updated |= drawSimplificationUI();
+
+
     updated |= drawMaterialUI(materials[materialHandle]);
+    return updated;
+}
+
+bool Mesh::drawSimplificationUI() {
+    bool updated = false;
+    ImGui::Text("Simplification:");
+    ImGui::PushItemWidth(-FLT_MIN);
+    if (ImGui::SliderFloat("##SimplifyRatio", &simplifyRatio, 0.05f, 1.0f, "%.2f")) {
+         if (!hasSimplifyBackup) {
+            simplifyBackupVertices = vertices;
+            simplifyBackupIndices = indices;
+            hasSimplifyBackup = true;
+        }
+        const std::vector<Vertex>& sourceVertices = hasSimplifyBackup ? simplifyBackupVertices : vertices;
+        const std::vector<uint32_t>& sourceIndices = hasSimplifyBackup ? simplifyBackupIndices : indices;
+        Mesh sourceMesh(getName(), sourceVertices, sourceIndices, transform, materialHandle);
+        Mesh simplified = simplifyMesh(sourceMesh, simplifyRatio);
+        replaceGeometry(simplified.getVertices(), simplified.getIndices());
+        updated = true;
+    }
+    ImGui::PopItemWidth();
+    ImGui::Text("Triangles: %zu", indices.size() / 3);
+    if (hasSimplifyBackup) {
+        ImGui::Text("Original triangles: %zu", simplifyBackupIndices.size() / 3);
+    }
+
+    if (ImGui::Button("Apply Simplification", { -FLT_MIN, 0 })) {
+        if (!hasSimplifyBackup) {
+            Mesh simplified = simplifyMesh(*this, simplifyRatio);
+            replaceGeometry(simplified.getVertices(), simplified.getIndices());
+            updated = true;
+        } else {
+            Mesh sourceMesh(getName(), simplifyBackupVertices, simplifyBackupIndices, transform, materialHandle);
+            Mesh simplified = simplifyMesh(sourceMesh, simplifyRatio);
+            replaceGeometry(simplified.getVertices(), simplified.getIndices());
+            updated = true;
+        }
+        simplifyRatio = 1.0f;
+        simplifyBackupVertices.clear();
+        simplifyBackupIndices.clear();
+        simplifyBackupVertices.shrink_to_fit();
+        simplifyBackupIndices.shrink_to_fit();
+        hasSimplifyBackup = false;
+    }
+
     return updated;
 }
 
@@ -255,4 +305,10 @@ void Mesh::buildBvh() {
         reordered[newTri * 3 + 2] = indices[oldTri * 3 + 2];
     }
     indices.swap(reordered);
+}
+
+void Mesh::replaceGeometry(const std::vector<Vertex>& newVertices, const std::vector<uint32_t>& newIndices) {
+    vertices = newVertices;
+    indices = newIndices;
+    buildBvh();
 }

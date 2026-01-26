@@ -125,8 +125,7 @@ void Application::onFrameStart(float dt) {
     
     syncCameraFromHandle();
     handleInput(dt);
-    syncHandleFromCamera();
-    
+    syncHandleFromCamera();    
     
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;

@@ -39,7 +39,7 @@ struct Vertex {
 
 class Mesh: public Object {
 public:
-    Mesh(std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices, glm::mat4 transform, MaterialHandle materialHandle);
+    Mesh(const std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices, glm::mat4 transform, MaterialHandle materialHandle);
     float rayIntersection(const Ray &ray) override;
     bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) override;
     bool drawUI(std::vector<Material> &materials) override;
@@ -50,6 +50,7 @@ public:
     const std::vector<uint32_t>& getIndices() const { return indices; }
     const std::vector<GpuBvhNode>& getBvhNodes() const { return bvhNodes; }
     const glm::mat4 getTransform() const { return transform; }
+    MaterialHandle getMaterialHandle() const { return materialHandle; }
     ObjectType getType() override { return ObjectType::Mesh; };
 
 private:
@@ -61,12 +62,21 @@ private:
     glm::mat4 transform;
     MaterialHandle materialHandle;
 
+    float simplifyRatio = 1.0f;
+    bool hasSimplifyBackup = false;
+    std::vector<Vertex> simplifyBackupVertices;
+    std::vector<uint32_t> simplifyBackupIndices;
+
     struct TriBounds {
         glm::vec3 min;
         glm::vec3 max;
         glm::vec3 centroid;
     };
+
+    bool drawSimplificationUI();
     
     size_t buildBvhNode(std::vector<TriBounds> &triBounds, std::vector<uint32_t> &triIndices, uint32_t start, uint32_t count);
     void buildBvh();
+
+    void replaceGeometry(const std::vector<Vertex>& newVertices, const std::vector<uint32_t>& newIndices);
 };

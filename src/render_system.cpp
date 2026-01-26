@@ -255,11 +255,15 @@ void RenderSystem::render(AppContext& ctx) {
 
         if (ctx.renderState->pendingExit) {
             ctx.ui->restorToggledState();
+            ctx.renderState->renderMode = false;
             ctx.renderState->pendingExit = false;
             ctx.renderState->samplesPerSecEMA = 0.0;
             ctx.renderState->samplesPerSecInitialized = false;
             ctx.renderState->samplesPerSecAccumTime = 0.0;
             ctx.renderState->samplesPerSecAccumSamples = 0.0;
+            if (ctx.restartRender) {
+                *ctx.restartRender = true;
+            }
         }
     }
 }
