@@ -71,7 +71,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
     ImGui::End();
     ImGui::PopStyleVar(2);
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
@@ -83,7 +83,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
     }
     ImGui::End();
 
-    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::CollapsingHeader("Camera")) {
@@ -148,7 +148,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
 
 void UiSystem::drawRender(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(0.6f);
+    ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin("Loading",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration

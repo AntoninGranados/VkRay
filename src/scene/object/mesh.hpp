@@ -5,6 +5,7 @@
 
 #include "object.hpp"
 #include "material.hpp"
+#include "../raycast.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 

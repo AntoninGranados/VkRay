@@ -5,14 +5,9 @@
 
 #include "object.hpp"
 #include "material.hpp"
+#include "../raycast.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
-
-struct GpuBox {
-    alignas(16) glm::mat4 transform;
-    alignas(16) glm::mat4 invTransform;
-    MaterialHandle materialHandle;
-};
 
 class Box: public Object {
 public:

@@ -6,6 +6,10 @@ namespace ecs {
 
 struct MaterialRef {
     MaterialHandle handle = 0;
+
+    void setHandle(MaterialHandle newHandle) {
+        handle = newHandle;
+    }
 };
 
 } // namespace ecs

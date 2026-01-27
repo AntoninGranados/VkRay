@@ -12,15 +12,15 @@
 
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
-#include "object/sphere.hpp"
-#include "object/plane.hpp"
 #include "object/box.hpp"
 #include "object/mesh.hpp"
 #include "camera_handle.hpp"
+#include "raycast.hpp"
 
 #include "../ecs/registry.hpp"
 #include "../ecs/entity.hpp"
 #include "../ecs/components.hpp"
+#include "../ecs/component_ui_registry.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -51,7 +51,6 @@ public:
     void pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat);
     void pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
     void pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
-    void pushBoxTransform(VkSmol &engine, std::string name, const glm::mat4 &transform, Material mat);
     void pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat);
     bool pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform = glm::mat4(1.0f));
     void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
@@ -65,7 +64,7 @@ public:
     LightMode loadPreset(VkSmol &engine, ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
-    void clearSelection() { selectedObjectId = -1; }
+    void clearSelection() { selectedEntity = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
     bool containsObject(const Object *object) const;
 
@@ -78,10 +77,12 @@ private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
     
-    int selectedObjectId = -1;
-    int objectId = 0;   // Used for unique object naming
-    std::vector<Object*> objects;
+    int selectedEntity = -1;
+    ecs::Registry registry;
+    std::vector<ecs::Entity> entities;
     std::vector<Material> materials;
+
+    std::vector<Object*> objects;
 
     bool updated = false;
     bool bufferUpdated = false;
@@ -89,6 +90,4 @@ private:
     std::function<void(NotificationType, std::string)> messageCallback;
     std::function<void(const CameraHandle&)> previewCameraCallback;
 
-    ecs::Registry registry;
-    std::vector<ecs::Entity> entities;
 };

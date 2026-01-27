@@ -4,8 +4,10 @@
 #include "scene.hpp"
 #include "scene_preset.hpp"
 
+#include <utility>
 #include <iostream>
 #include <cstring>
+
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -27,6 +29,8 @@ void Scene::init(VkSmol &engine) {
     materialBuffers.init(engine, sizeof(Material));
     objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
     lightBuffers.init(engine, sizeof(GpuLight), LIGHT_HEADER_SIZE);
+
+    ecs::ComponentUiRegistry::init();
 }
 
 void Scene::destroy(VkSmol &engine) {
@@ -60,7 +64,7 @@ void Scene::clear(VkSmol &engine) {
 
     objects.clear();
     materials.clear();
-    selectedObjectId = -1;
+    selectedEntity = -1;
     bufferUpdated = true;
 }
 
@@ -108,22 +112,23 @@ void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float
     
     registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
-    ecs::Name c_name;
-    c_name.value = name;
-    registry.add<ecs::Name>(e, c_name);
+    ecs::Name nameComponent;
+    nameComponent.setValue(std::move(name));
+    registry.add<ecs::Name>(e, nameComponent);
+
+    ecs::Sphere sphereComponent;
+    sphereComponent.setRadius(radius);
+    registry.add<ecs::Sphere>(e, sphereComponent);
+
+    ecs::MaterialRef materialRefComponent;
+    materialRefComponent.setHandle(materialHandle);
+    registry.add<ecs::MaterialRef>(e, materialRefComponent);
     
-    ecs::Sphere c_sphere;
-    c_sphere.radius = radius;
-    registry.add<ecs::Sphere>(e, c_sphere);
-    
-    ecs::MaterialRef c_material;
-    c_material.handle = materialHandle;
-    registry.add<ecs::MaterialRef>(e, c_material);
-    
-    ecs::Transform c_transform;
-    c_transform.position = center;
-    c_transform.updated = true;
-    registry.add<ecs::Transform>(e, c_transform);
+    ecs::Transform transformComponent;
+    transformComponent.setPosition(center);
+    transformComponent.setRotationToggle(false);
+    transformComponent.setScaleToggle(false);
+    registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
 }
@@ -133,8 +138,30 @@ void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::ve
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    objects.push_back(new Plane(name, point, normal, static_cast<int>(materials.size())));
+    const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
+
+    ecs::Entity e = registry.createEntity();
+    
+    registry.add<ecs::Selectable>(e, ecs::Selectable{});
+
+    ecs::Name nameComponent;
+    nameComponent.setValue(std::move(name));
+    registry.add<ecs::Name>(e, nameComponent);
+
+    registry.add<ecs::Plane>(e, ecs::Plane{});
+
+    ecs::MaterialRef materialRefComponent;
+    materialRefComponent.setHandle(materialHandle);
+    registry.add<ecs::MaterialRef>(e, materialRefComponent);
+    
+    ecs::Transform transformComponent;
+    transformComponent.setPosition(point);
+    transformComponent.setRotation(glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal));
+    transformComponent.setScaleToggle(false);
+    registry.add<ecs::Transform>(e, transformComponent);
+
+    entities.push_back(e);
 }
 
 void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat) {
@@ -142,16 +169,35 @@ void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::
     glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), center);
     transform = glm::scale(transform, halfExtents);
-    pushBoxTransform(engine, name, transform, mat);
-}
-
-void Scene::pushBoxTransform(VkSmol &engine, std::string name, const glm::mat4 &transform, Material mat) {
+    
     bufferUpdated |= boxBuffers.addElement(engine);
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    objects.push_back(new Box(name, transform, static_cast<int>(materials.size())));
+    const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
+
+    ecs::Entity e = registry.createEntity();
+    
+    registry.add<ecs::Selectable>(e, ecs::Selectable{});
+
+    ecs::Name nameComponent;
+    nameComponent.setValue(std::move(name));
+    registry.add<ecs::Name>(e, nameComponent);
+
+    registry.add<ecs::Box>(e, ecs::Box{});
+
+    ecs::MaterialRef materialRefComponent;
+    materialRefComponent.setHandle(materialHandle);
+    registry.add<ecs::MaterialRef>(e, materialRefComponent);
+    
+    ecs::Transform transformComponent;
+    transformComponent.setPosition(center);
+    // transformComponent.setRotation(glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal));
+    transformComponent.setScale(halfExtents);
+    registry.add<ecs::Transform>(e, transformComponent);
+
+    entities.push_back(e);
 }
 
 void Scene::pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat) {
@@ -273,102 +319,68 @@ void Scene::fillBuffers(VkSmol &engine) {
     int planeId = 0;
     int boxId = 0;
     int meshId = 0;
-    uint32_t objectCount = 0;
+    // uint32_t objectCount = 0;
+    uint32_t entityCount = 0;
     int lightCount = 0;
     float totalLightArea = 0;
     uint32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
     uint32_t bvhOffset = 0;
     
-    std::vector<int> gpuIndexForObject(objects.size(), -1);
+    std::vector<int> entityToGpuIndex(entities.size(), -1);
 
     const auto& sphereStorage = registry.storage<ecs::Sphere>();
-    const auto& sphereEntities = sphereStorage.entities();
-    const auto& sphereData = sphereStorage.data();
+    const auto& planeStorage = registry.storage<ecs::Plane>();
+    const auto& boxStorage = registry.storage<ecs::Box>();
     const auto& transformStorage = registry.storage<ecs::Transform>();
     const auto& materialStorage = registry.storage<ecs::MaterialRef>();
-
-    for (size_t i = 0; i < sphereData.size(); i++) {
-        const ecs::Entity& e = sphereEntities[i];
+    
+    for (size_t i = 0; i < entities.size(); i++) {
+        const ecs::Entity& e = entities[i];
         if (!transformStorage.has(e) || !materialStorage.has(e)) continue;
-
+        
         const ecs::Transform& transform = transformStorage.get(e);
-        const ecs::Sphere& sphere = sphereData[i];
         const ecs::MaterialRef& matRef = materialStorage.get(e);
 
-        spheres[sphereId] = GpuSphere{
-            .center = transform.position,
-            .radius = sphere.radius,
-            .materialHandle = matRef.handle,
-        };
-
-        const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
-        addLight(materials[spheres[sphereId].materialHandle], area, objectCount, lightCount, lights, totalLightArea);
-        objectHandles[objectCount] = { .type=ObjectType::Sphere, .id=sphereId };
-        sphereId++;
-        objectCount++;
-    }
-
-    for (size_t objIndex = 0; objIndex < objects.size(); objIndex++) {
-        Object *object = objects[objIndex];
-        switch(object->getType()) {
-            case ObjectType::Plane: {
-                planes[planeId] = static_cast<Plane*>(object)->getStruct();
-                // addLight(materials[planes[planeId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);    //! should not be counted as it can't be used for importance sampling
-                objectHandles[objectCount] = { .type=ObjectType::Plane, .id=planeId };
-                planeId++;
-                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
-                objectCount++;
-            } break;
-            case ObjectType::Box: {
-                boxes[boxId] = static_cast<Box*>(object)->getStruct();
-                addLight(materials[boxes[boxId].materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
-                objectHandles[objectCount] = { .type=ObjectType::Box, .id=boxId };
-                boxId++;
-                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
-                objectCount++;
-            } break;
-            case ObjectType::Mesh: {
-                Mesh *mesh = static_cast<Mesh*>(object);
-                const std::vector<Vertex> &meshVerts = mesh->getVertices();
-                const std::vector<uint32_t> &meshIndices = mesh->getIndices();
-                const std::vector<GpuBvhNode> &meshBvhNodes = mesh->getBvhNodes();
-
-                for (size_t i = 0; i < meshVerts.size(); i++) {
-                    vertices[vertexOffset + i] = meshVerts[i];
-                }
-                for (size_t i = 0; i < meshIndices.size(); i++) {
-                    indices[indexOffset + i] = meshIndices[i] + vertexOffset;
-                }
-                for (size_t i = 0; i < meshBvhNodes.size(); i++) {
-                    GpuBvhNode node = meshBvhNodes[i];
-                    if (node.isLeaf != 0) {
-                        node.data0 = static_cast<size_t>(node.data0 + (indexOffset / 3));
-                    } else {
-                        node.data0 = static_cast<size_t>(node.data0 + bvhOffset);
-                        node.data1 = static_cast<size_t>(node.data1 + bvhOffset);
-                    }
-                    bvhNodes[bvhOffset + i] = node;
-                }
-
-                GpuMesh meshStruct = mesh->getStruct();
-                meshStruct.indexOffset = indexOffset;
-                meshStruct.bvhOffset = bvhOffset;
-                meshes[meshId] = meshStruct;
-
-                addLight(materials[meshStruct.materialHandle], object->getArea(), objectCount, lightCount, lights, totalLightArea);
-                objectHandles[objectCount] = { .type=ObjectType::Mesh, .id=meshId };
-
-                vertexOffset += static_cast<uint32_t>(meshVerts.size());
-                indexOffset += static_cast<uint32_t>(meshIndices.size());
-                bvhOffset += static_cast<uint32_t>(meshBvhNodes.size());
-                meshId++;
-                gpuIndexForObject[objIndex] = static_cast<int>(objectCount);
-                objectCount++;
-            } break;
-            default: break;
+        if (sphereStorage.has(e)) {
+            const ecs::Sphere& sphere = sphereStorage.get(e);
+            
+            spheres[sphereId] = GpuSphere{
+                .center = transform.position,
+                .radius = sphere.radius,
+                .materialHandle = matRef.handle,
+            };
+            
+            if (materials[matRef.handle].type == MaterialType::Emissive) {
+                const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
+                addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
+            }
+            objectHandles[entityCount] = { .type=ObjectType::Sphere, .id=sphereId };
+            sphereId++;
+        } else if (planeStorage.has(e)) {
+            planes[planeId] = GpuPlane{
+                .point = transform.position,
+                .normal = glm::normalize(transform.rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
+                .materialHandle = matRef.handle,
+            };
+            objectHandles[entityCount] = { .type=ObjectType::Plane, .id=planeId };
+            planeId++;
+        } else if (boxStorage.has(e)) {
+            boxes[boxId] = GpuBox{
+                .transform = transform.local,
+                .invTransform = glm::inverse(transform.local),
+                .materialHandle = matRef.handle,
+            };
+            objectHandles[entityCount] = { .type=ObjectType::Box, .id=boxId };
+            boxId++;
+        } else {
+            continue;
         }
+
+        entityToGpuIndex[i] = entityCount;
+        entityCount++;
     }
+    
     bufferUpdated |= lightBuffers.setElementCount(engine, lightCount);
 
     for (size_t i = 0; i < materials.size() && i < materialData.size(); i++) {
@@ -376,8 +388,8 @@ void Scene::fillBuffers(VkSmol &engine) {
     }
 
     int selected = -1;
-    if (selectedObjectId >= 0 && static_cast<size_t>(selectedObjectId) < gpuIndexForObject.size())
-        selected = gpuIndexForObject[static_cast<size_t>(selectedObjectId)];
+    if (selectedEntity >= 0)
+        selected = entityToGpuIndex[static_cast<size_t>(selectedEntity)];
 
     // Fill the buffers
     sphereBuffers.fill(engine, spheres.data());
@@ -391,6 +403,7 @@ void Scene::fillBuffers(VkSmol &engine) {
 
     size_t offset;
     
+    uint32_t objectCount = entityCount;
     std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
     offset = 0;
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
@@ -413,27 +426,44 @@ void Scene::fillBuffers(VkSmol &engine) {
 
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
-    for (size_t i = 0; i < objects.size(); i++) {
-        if (objects[i]->getType() != ObjectType::Camera)
-            continue;
-        CameraHandle *cameraHandle = static_cast<CameraHandle*>(objects[i]);
-        if (previewCameraCallback)
-            cameraHandle->setPreviewCallback(previewCameraCallback);
-        const bool isSelected = static_cast<int>(i) == selectedObjectId;
-        cameraHandle->setSelected(isSelected);
-        cameraHandle->setManipulationEnabled(isSelected);
-        ImGuizmo::PushID(static_cast<int>(i));
-        updated |= cameraHandle->drawGuizmo(view, proj);
-        ImGuizmo::PopID();
-    }
+    if (selectedEntity < 0) return;
 
-    if (selectedObjectId < 0)
-        return;
-    if (objects[selectedObjectId]->getType() == ObjectType::Camera)
-        return;
-    ImGuizmo::PushID(selectedObjectId); // To isolate the state of the gizmo
-    updated |= objects[selectedObjectId]->drawGuizmo(view, proj);
+    ecs::Entity e = entities[selectedEntity];
+    if (!registry.has<ecs::Transform>(e)) return;
+
+    ecs::Transform& t = registry.get<ecs::Transform>(e);
+    t.updateLocal();
+    glm::mat4 model = t.local;
+
+    int opFlags = 0;
+    if (t.positionToggled) opFlags |= ImGuizmo::OPERATION::TRANSLATE;
+    if (t.rotationToggled) opFlags |= ImGuizmo::OPERATION::ROTATE;
+    if (t.scaleToggled) opFlags |= ImGuizmo::OPERATION::SCALE;
+    if (opFlags == 0) return;
+
+    ImGuizmo::PushID(selectedEntity);
+    if (ImGuizmo::Manipulate(
+            glm::value_ptr(view),
+            glm::value_ptr(proj),
+            static_cast<ImGuizmo::OPERATION>(opFlags),
+            ImGuizmo::MODE::WORLD,
+            glm::value_ptr(model)))
+    {
+        glm::vec3 translation, rotationEuler, scale;
+        ImGuizmo::DecomposeMatrixToComponents(
+            glm::value_ptr(model),
+            glm::value_ptr(translation),
+            glm::value_ptr(rotationEuler),
+            glm::value_ptr(scale));
+
+        if (t.positionToggled) t.setPosition(translation);
+        if (t.rotationToggled) t.setRotation(glm::quat(glm::radians(rotationEuler)));
+        if (t.scaleToggled) t.setScale(scale);
+        updated = true;
+    }
     ImGuizmo::PopID();
+
+    t.updateLocal();
 }
 
 void Scene::drawUI(VkSmol &engine) {
@@ -441,9 +471,27 @@ void Scene::drawUI(VkSmol &engine) {
         ImGui::OpenPopup("New Object");
     }
 
+    for (size_t i = 0; i < entities.size(); i++) {
+        const ecs::Entity& e = entities[i];
+
+        std::string displayName = "???";
+        if (registry.has<ecs::Name>(e)) displayName = registry.get<ecs::Name>(e).value;
+        
+        if (registry.has<ecs::EditorOnly>(e)) {
+            ImGui::TextDisabled("%s", displayName.c_str());
+        } else {
+            bool value = false;
+            if (ImGui::Selectable(displayName.c_str(), value, ImGuiSelectableFlags_AllowDoubleClick)) {
+                if (ImGui::IsMouseDoubleClicked(0)) {
+                    selectedEntity = i;
+                }
+            }
+        }
+
+    }
+
     for (size_t i = 0; i < objects.size(); i++) {
         switch (objects[i]->getType()) {
-            case ObjectType::Sphere: ImGui::TextDisabled("Sph"); break;
             case ObjectType::Plane:  ImGui::TextDisabled("Pln"); break;
             case ObjectType::Box:    ImGui::TextDisabled("Box"); break;
             case ObjectType::Mesh:   ImGui::TextDisabled("Msh"); break;
@@ -452,12 +500,8 @@ void Scene::drawUI(VkSmol &engine) {
         }
         ImGui::SameLine();
 
-        bool value = i == selectedObjectId;
         std::string displayName = objects[i]->getName().length() > 0 ? objects[i]->getName() : "???";
-        if (ImGui::Selectable(displayName.c_str(), value, ImGuiSelectableFlags_AllowDoubleClick)) {
-            if (ImGui::IsMouseDoubleClicked(0))
-                selectedObjectId = i;
-        }
+        ImGui::TextDisabled("%s", displayName.c_str());
     }
 
     drawNewObjectPopUp(engine);
@@ -470,7 +514,7 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
     if (ImGui::Button("Sphere", { 100, 0 })) {
         pushSphere(
             engine,
-            "Sphere-" + std::to_string(objectId++),
+            "Sphere",
             glm::vec3(0.0, 0.0, 0.0),
             1.0,
             Material {
@@ -478,14 +522,14 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
                 .albedo = { 1.0, 0.0, 1.0 },
             }
         );
-        selectedObjectId = objects.size() - 1;
+        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button("Plane", { 100, 0 })) {
         pushPlane(
             engine,
-            "Plane-" + std::to_string(objectId++),
+            "Plane",
             glm::vec3( 0.0, 0.0, 0.0),
             glm::vec3( 0.0, 1.0, 0.0),
             Material {
@@ -493,14 +537,14 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
                 .albedo = { 1.0, 0.0, 1.0 },
             }
         );
-        selectedObjectId = objects.size() - 1;
+        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button("Box", { 100, 0 })) {
         pushBox(
             engine,
-            "Box-" + std::to_string(objectId++),
+            "Box",
             glm::vec3(-1.0,-1.0,-1.0),
             glm::vec3( 1.0, 1.0, 1.0),
             Material {
@@ -508,7 +552,7 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
                 .albedo = { 1.0, 0.0, 1.0 },
             }
         );
-        selectedObjectId = objects.size() - 1;
+        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
     }
@@ -516,12 +560,11 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
         pushCameraHandle(
-            "Camera-" + std::to_string(objectId++),
+            "Camera",
             pos,
             direction,
             60.0f
         );
-        selectedObjectId = objects.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
     }
@@ -535,143 +578,81 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
 }
 
 void Scene::drawSelectedUI(VkSmol &engine) {
-    if (selectedObjectId < 0) return;
+    if (selectedEntity < 0) return;
+    ecs::Entity& e = entities[selectedEntity];
 
-    std::string typeName;
-    switch (objects[selectedObjectId]->getType()) {
-        case ObjectType::Sphere:    typeName = "Sphere"; break;
-        case ObjectType::Plane:     typeName = "Plane"; break;
-        case ObjectType::Box:       typeName = "Box"; break;
-        case ObjectType::Mesh:      typeName = "Mesh"; break;
-        case ObjectType::Camera:    typeName = "Camera"; break;
-        default: break; // UNREACHABLE
-    }
+    std::string title = "Entity";
 
-    ImGui::SetNextWindowBgAlpha(0.6f);
-    ImGui::SetNextWindowSize({ 200, 0 });
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowSizeConstraints(
+        { 250.0f, 0.0f }, { 250.0f, 600.0f }
+    );
     ImGui::Begin(
-        typeName.c_str(),
+        title.c_str(),
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
     );
     {
-        char buff[128] = {};
-        const std::string &name = objects[selectedObjectId]->getName();
-        std::strncpy(buff, name.c_str(), sizeof(buff) - 1);
-        ImGui::Text("Name:");
-        ImGui::PushItemWidth(-FLT_MIN);
-        ImGui::InputText("##Name", buff, 128);
-        ImGui::PopItemWidth();
-        objects[selectedObjectId]->setName(std::string(buff));
-        
-        updated |= objects[selectedObjectId]->drawUI(materials);
-        
-        ImGui::Separator();
-        if (ImGui::Button("Clone", { -FLT_MIN, 0 })) {
-            switch(objects[selectedObjectId]->getType()) {
-                case ObjectType::Sphere: {
-                    Sphere *sphere = static_cast<Sphere*>(objects[selectedObjectId]);
-                    pushSphere(
-                        engine,
-                        sphere->getName() + "-copy",
-                        sphere->getStruct().center,
-                        sphere->getStruct().radius,
-                        materials[sphere->getStruct().materialHandle]
-                    ); 
-                } break;
-                case ObjectType::Plane: {
-                    Plane *plane = static_cast<Plane*>(objects[selectedObjectId]);
-                    pushPlane(
-                        engine,
-                        plane->getName() + "-copy",
-                        plane->getStruct().point,
-                        plane->getStruct().normal,
-                        materials[plane->getStruct().materialHandle]
-                    ); 
-                } break;
-                case ObjectType::Box: {
-                    Box *box = static_cast<Box*>(objects[selectedObjectId]);
-                    pushBoxTransform(
-                        engine,
-                        box->getName() + "-copy",
-                        box->getTransform(),
-                        materials[box->getStruct().materialHandle]
-                    );
-                } break;
-                case ObjectType::Mesh: {
-                    Mesh *mesh = static_cast<Mesh*>(objects[selectedObjectId]);
-                    pushMesh(
-                        engine,
-                        mesh->getName() + "-copy",
-                        mesh->getVertices(),
-                        mesh->getIndices(),
-                        mesh->getTransform(),
-                        materials[mesh->getStruct().materialHandle]
-                    );
-                } break;
-                case ObjectType::Camera: {
-                    CameraHandle *cameraHandle = static_cast<CameraHandle*>(objects[selectedObjectId]);
-                    pushCameraHandle(
-                        cameraHandle->getName() + "-copy",
-                        cameraHandle->getPosition(),
-                        cameraHandle->getDirection(),
-                        cameraHandle->getFov()
-                    );
-                } break;
-                default: break;
-            }
+        auto& ui_reg = ecs::ComponentUiRegistry::get();
+        updated |= ui_reg.draw(registry, e);
 
-            selectedObjectId = objects.size()-1;
-            updated = true;
-        }
-
-        ImGui::Separator();
-        ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
-        if (ImGui::Button("Delete", { -FLT_MIN, 0 })) {
-            switch(objects[selectedObjectId]->getType()) {
-                case ObjectType::Sphere: sphereBuffers.removeElement(); break;
-                case ObjectType::Plane:  planeBuffers.removeElement(); break;
-                case ObjectType::Box:    boxBuffers.removeElement(); break;
-                case ObjectType::Mesh:   meshBuffers.removeElement(); break;
-                case ObjectType::Camera: break;
-                default: break;
-            }
-            if (objects[selectedObjectId]->getType() != ObjectType::Camera)
-                objectBuffers.removeElement();
-
-            objects.erase(std::next(objects.begin(), selectedObjectId));
-            selectedObjectId = -1;
+        ImGui::PushStyleColor(ImGuiCol_Button, { 1.0f, 0.03f, 0.0f, 1.0f });
+        if (ImGui::Button("Delete Entity", { -FLT_MIN, 0 })) {
+            registry.destroyEntity(e);
+            entities.erase(std::next(entities.begin(), selectedEntity));
+            selectedEntity = -1;
             updated = true;
         }
         ImGui::PopStyleColor();
     }
+    
     ImGui::End();
 }
 
 
 bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
-    Ray ray = getRay(screenPos, screenSize, camera);
+    const Ray ray = getRay(screenPos, screenSize, camera);
     float tClosest = std::numeric_limits<float>::infinity();
     int idClosest = -1;
 
-    float t;
+    float t = -1.0f;
     int i = 0;
-    for (Object *object : objects) {
-        if (!includeCameras && object->getType() == ObjectType::Camera)
-            continue;
-        t = object->rayIntersection(ray);
+
+    auto& sphereStorage = registry.storage<ecs::Sphere>();
+    auto& planeStorage = registry.storage<ecs::Plane>();
+    auto& boxStorage = registry.storage<ecs::Box>();
+    auto& transformStorage = registry.storage<ecs::Transform>();
+    auto& selectableStorage = registry.storage<ecs::Selectable>();
+
+    for (size_t i = 0; i < entities.size(); i++) {
+        const ecs::Entity& e = entities[i];
+
+        if (!selectableStorage.has(e) || !transformStorage.has(e)) continue;
+
+        auto& transform = transformStorage.get(e);
+        
+        if (sphereStorage.has(e)) {
+            auto& sphere = sphereStorage.get(e);
+            t = raySphereIntersection(ray, transform.position, sphere.radius);
+        } else if (planeStorage.has(e)) {
+            glm::vec3 normal = glm::normalize(transform.rotation * glm::vec3(0.0f, 1.0f, 0.0f));
+            t = rayPlaneIntersection(ray, transform.position, normal);
+        } else if (boxStorage.has(e)) {
+            t = rayBoxIntersection(ray, transform.local);
+        }
+
         if (t >= 0.0f && t < tClosest) {
             tClosest = t;
             idClosest = i;
         }
-        i++;
     }
-
-    if (select) selectedObjectId = idClosest;
+    
+    if (select) selectedEntity = idClosest;
     dist = tClosest;
     p = ray.origin + dist * ray.dir;
     return idClosest >= 0;
 }
+
 
 bool Scene::containsObject(const Object *object) const {
     for (const Object *candidate : objects) {

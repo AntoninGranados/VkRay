@@ -6,8 +6,27 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "material.hpp"
+#include "../raycast.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
+
+struct GpuSphere {
+    alignas(16) glm::vec3 center;
+    float radius;
+    MaterialHandle materialHandle;
+};
+
+struct GpuPlane {
+    alignas(16) glm::vec3 point;
+    alignas(16) glm::vec3 normal;
+    MaterialHandle materialHandle;
+};
+
+struct GpuBox {
+    alignas(16) glm::mat4 transform;
+    alignas(16) glm::mat4 invTransform;
+    MaterialHandle materialHandle;
+};
 
 class Camera;
 
@@ -37,13 +56,6 @@ inline float clampScalarDelta(float delta, float maxDelta) {
     if (maxDelta <= 0.0f) return 0.0f;
     return glm::clamp(delta, -maxDelta, maxDelta);
 }
-
-// Raytracing
-struct Ray {
-    glm::vec3 origin;
-    glm::vec3 dir;
-};
-Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera &camera);
 
 // Objects
 enum class ObjectType : int {

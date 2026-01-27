@@ -28,6 +28,8 @@ public:
     void destroyEntity(const Entity& e) {
         if (!isAlive(e))
             return;
+        for (auto& [_, storage] : storages)
+            storage->remove(e);
         generations[e.getId()]++;
         freeIds.push_back(e.getId());
     }
@@ -53,7 +55,8 @@ public:
 
     template<typename T>
     bool has(const Entity& e) const {
-        return getStorage<T>().has(e);
+        const ComponentStorage<T>* storage = findStorage<T>();
+        return storage ? storage->has(e) : false;
     }
 
     template<typename T>
@@ -74,11 +77,16 @@ public:
 private:
     struct IStorage {
         virtual ~IStorage() = default;
+        virtual void remove(const Entity& e) = 0;
     };
 
     template<typename T>
     struct StorageImpl final : IStorage {
         ComponentStorage<T> storage;
+
+        void remove(const Entity& e) override {
+            storage.remove(e);
+        }
     };
 
     template<typename T>
@@ -100,6 +108,24 @@ private:
         auto it = storages.find(key);
         assert(it != storages.end());
         return static_cast<StorageImpl<T>*>(it->second.get())->storage;
+    }
+
+    template<typename T>
+    ComponentStorage<T>* findStorage() {
+        const std::type_index key(typeid(T));
+        auto it = storages.find(key);
+        if (it == storages.end())
+            return nullptr;
+        return &static_cast<StorageImpl<T>*>(it->second.get())->storage;
+    }
+
+    template<typename T>
+    const ComponentStorage<T>* findStorage() const {
+        const std::type_index key(typeid(T));
+        auto it = storages.find(key);
+        if (it == storages.end())
+            return nullptr;
+        return &static_cast<StorageImpl<T>*>(it->second.get())->storage;
     }
 
     std::unordered_map<std::type_index, std::unique_ptr<IStorage>> storages;
