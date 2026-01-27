@@ -142,7 +142,8 @@ void UiSystem::drawPreview(AppContext& ctx) {
     }
     ImGui::End();
     
-    scene.drawSelectedUI(engine);
+    scene.drawSelectedMaterialUI();
+    scene.drawSelectedEntityUI();
     ctx.notifications->drawNotifications();
 }
 

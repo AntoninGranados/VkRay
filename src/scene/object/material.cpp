@@ -111,8 +111,15 @@ bool drawCheckerboardUI(Material &material) {
 bool drawMaterialUI(Material &material) {
     bool updated = false;
 
-    ImGui::SeparatorText("Material");
+    material.name.resize(128);
+
+    ImGui::PushItemWidth(-FLT_MIN);
+    ImGui::Text("Name:");
+    if (ImGui::InputText("##Name", material.name.data(), 128))
+    ImGui::PopItemWidth();
+    
     const char *types[] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Glossy", "Checkerboard" };
+    ImGui::Text("Type:");
     ImGui::PushItemWidth(-FLT_MIN);
     if (ImGui::Combo("##Mat Type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;

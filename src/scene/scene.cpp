@@ -7,6 +7,7 @@
 #include <utility>
 #include <iostream>
 #include <cstring>
+#include <cstdio>
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -30,7 +31,11 @@ void Scene::init(VkSmol &engine) {
     objectBuffers.init(engine, sizeof(ObjectHandle), OBJECT_HEADER_SIZE);
     lightBuffers.init(engine, sizeof(GpuLight), LIGHT_HEADER_SIZE);
 
+    auto& uiReg = ecs::ComponentUiRegistry::get();
+    uiReg.setMaterials(&materials);
     ecs::ComponentUiRegistry::init();
+
+    materials.push_back(DEFAULT_MATERIAL);
 }
 
 void Scene::destroy(VkSmol &engine) {
@@ -66,6 +71,8 @@ void Scene::clear(VkSmol &engine) {
     materials.clear();
     selectedEntity = -1;
     bufferUpdated = true;
+
+    materials.push_back(DEFAULT_MATERIAL);
 }
 
 LightMode Scene::loadPreset(VkSmol &engine, ScenePreset preset) {
@@ -105,8 +112,8 @@ void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    const MaterialHandle materialHandle = static_cast<int>(materials.size());
-    materials.push_back(mat);
+    // const MaterialHandle materialHandle = static_cast<int>(materials.size());
+    // materials.push_back(mat);
 
     ecs::Entity e = registry.createEntity();
     
@@ -121,7 +128,7 @@ void Scene::pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float
     registry.add<ecs::Sphere>(e, sphereComponent);
 
     ecs::MaterialRef materialRefComponent;
-    materialRefComponent.setHandle(materialHandle);
+    materialRefComponent.setHandle(MaterialHandle(0));
     registry.add<ecs::MaterialRef>(e, materialRefComponent);
     
     ecs::Transform transformComponent;
@@ -138,8 +145,8 @@ void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::ve
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    const MaterialHandle materialHandle = static_cast<int>(materials.size());
-    materials.push_back(mat);
+    // const MaterialHandle materialHandle = static_cast<int>(materials.size());
+    // materials.push_back(mat);
 
     ecs::Entity e = registry.createEntity();
     
@@ -152,7 +159,7 @@ void Scene::pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::ve
     registry.add<ecs::Plane>(e, ecs::Plane{});
 
     ecs::MaterialRef materialRefComponent;
-    materialRefComponent.setHandle(materialHandle);
+    materialRefComponent.setHandle(MaterialHandle(0));
     registry.add<ecs::MaterialRef>(e, materialRefComponent);
     
     ecs::Transform transformComponent;
@@ -174,8 +181,8 @@ void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
 
-    const MaterialHandle materialHandle = static_cast<int>(materials.size());
-    materials.push_back(mat);
+    // const MaterialHandle materialHandle = static_cast<int>(materials.size());
+    // materials.push_back(mat);
 
     ecs::Entity e = registry.createEntity();
     
@@ -188,19 +195,21 @@ void Scene::pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::
     registry.add<ecs::Box>(e, ecs::Box{});
 
     ecs::MaterialRef materialRefComponent;
-    materialRefComponent.setHandle(materialHandle);
+    materialRefComponent.setHandle(MaterialHandle(0));
     registry.add<ecs::MaterialRef>(e, materialRefComponent);
     
     ecs::Transform transformComponent;
     transformComponent.setPosition(center);
-    // transformComponent.setRotation(glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal));
     transformComponent.setScale(halfExtents);
+    transformComponent.updateLocal();
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
 }
 
 void Scene::pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat) {
+    return;
+
     bufferUpdated |= meshBuffers.addElement(engine);
     bufferUpdated |= materialBuffers.addElement(engine);
     bufferUpdated |= objectBuffers.addElement(engine);
@@ -218,6 +227,8 @@ void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 dir
 }
 
 bool Scene::pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform) {
+    return true;
+    
     std::string baseDir = "./";
     size_t slash = path.find_last_of("/\\");
     if (slash != std::string::npos) {
@@ -311,7 +322,7 @@ void Scene::fillBuffers(VkSmol &engine) {
     std::vector<uint32_t> indices(indexBuffers.getCapacity());
     std::vector<GpuBvhNode> bvhNodes(bvhBuffers.getCapacity());
     std::vector<GpuMesh> meshes(meshBuffers.getCapacity());
-    std::vector<Material> materialData(materialBuffers.getCapacity());
+    std::vector<GpuMaterial> materialData(materialBuffers.getCapacity());
     std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
     std::vector<GpuLight> lights;
 
@@ -337,10 +348,13 @@ void Scene::fillBuffers(VkSmol &engine) {
     
     for (size_t i = 0; i < entities.size(); i++) {
         const ecs::Entity& e = entities[i];
-        if (!transformStorage.has(e) || !materialStorage.has(e)) continue;
+        if (!transformStorage.has(e)) continue;
         
         const ecs::Transform& transform = transformStorage.get(e);
-        const ecs::MaterialRef& matRef = materialStorage.get(e);
+        MaterialHandle handle = 0;
+        if (materialStorage.has(e)) {
+            handle = materialStorage.get(e).handle;
+        }
 
         if (sphereStorage.has(e)) {
             const ecs::Sphere& sphere = sphereStorage.get(e);
@@ -348,10 +362,10 @@ void Scene::fillBuffers(VkSmol &engine) {
             spheres[sphereId] = GpuSphere{
                 .center = transform.position,
                 .radius = sphere.radius,
-                .materialHandle = matRef.handle,
+                .materialHandle = handle,
             };
             
-            if (materials[matRef.handle].type == MaterialType::Emissive) {
+            if (materials[handle].type == MaterialType::Emissive) {
                 const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
                 addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
             }
@@ -361,7 +375,7 @@ void Scene::fillBuffers(VkSmol &engine) {
             planes[planeId] = GpuPlane{
                 .point = transform.position,
                 .normal = glm::normalize(transform.rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
-                .materialHandle = matRef.handle,
+                .materialHandle = handle,
             };
             objectHandles[entityCount] = { .type=ObjectType::Plane, .id=planeId };
             planeId++;
@@ -369,8 +383,19 @@ void Scene::fillBuffers(VkSmol &engine) {
             boxes[boxId] = GpuBox{
                 .transform = transform.local,
                 .invTransform = glm::inverse(transform.local),
-                .materialHandle = matRef.handle,
+                .materialHandle = handle,
             };
+
+            if (materials[handle].type == MaterialType::Emissive) {
+                const glm::vec3 axisX = glm::vec3(transform.local[0]);
+                const glm::vec3 axisY = glm::vec3(transform.local[1]);
+                const glm::vec3 axisZ = glm::vec3(transform.local[2]);
+                const float hx = glm::length(axisX);
+                const float hy = glm::length(axisY);
+                const float hz = glm::length(axisZ);
+                const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
+                addLight(materials[handle], area, entityCount, lightCount, lights, totalLightArea);
+            }
             objectHandles[entityCount] = { .type=ObjectType::Box, .id=boxId };
             boxId++;
         } else {
@@ -384,7 +409,11 @@ void Scene::fillBuffers(VkSmol &engine) {
     bufferUpdated |= lightBuffers.setElementCount(engine, lightCount);
 
     for (size_t i = 0; i < materials.size() && i < materialData.size(); i++) {
-        materialData[i] = materials[i];
+        materialData[i] = GpuMaterial{
+            .type = materials[i].type,
+            .albedo = materials[i].albedo,
+            .payload = { *materials[i].payload }
+        };
     }
 
     int selected = -1;
@@ -467,54 +496,121 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 }
 
 void Scene::drawUI(VkSmol &engine) {
-    if (ImGui::Button("Add object", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("New Object")) {
-        ImGui::OpenPopup("New Object");
-    }
+    bool openNewObjectPopup = false;
 
-    for (size_t i = 0; i < entities.size(); i++) {
-        const ecs::Entity& e = entities[i];
+    // Draw entity list
+    if (ImGui::BeginTable("Entities", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableNextRow();
 
-        std::string displayName = "???";
-        if (registry.has<ecs::Name>(e)) displayName = registry.get<ecs::Name>(e).value;
-        
-        if (registry.has<ecs::EditorOnly>(e)) {
-            ImGui::TextDisabled("%s", displayName.c_str());
-        } else {
-            bool value = false;
-            if (ImGui::Selectable(displayName.c_str(), value, ImGuiSelectableFlags_AllowDoubleClick)) {
-                if (ImGui::IsMouseDoubleClicked(0)) {
-                    selectedEntity = i;
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Entities");
+        if (ImGui::BeginListBox("##Entities", ImVec2(-FLT_MIN, 0.0f))) {
+            for (size_t i = 0; i < entities.size(); i++) {
+                const ecs::Entity& e = entities[i];
+
+                std::string displayName = "???";
+                if (registry.has<ecs::Name>(e)) displayName = registry.get<ecs::Name>(e).value;
+                
+                if (registry.has<ecs::EditorOnly>(e)) {
+                    ImGui::TextDisabled("%s", displayName.c_str());
+                } else {
+                    if (ImGui::Selectable(displayName.c_str(), selectedEntity == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::IsMouseDoubleClicked(0)) { selectedEntity = i; }
+                    }
                 }
             }
+
+            ImGui::EndListBox();
+        }
+        
+        ImGui::TableSetColumnIndex(1);
+        ImGui::NewLine();
+        if (ImGui::Button("+##Entity", ImVec2(32, 0)))
+            openNewObjectPopup = true;
+        if (ImGui::Button("-##Entity", ImVec2(32, 0)) && selectedEntity >= 0) {
+            ecs::Entity e = entities[static_cast<size_t>(selectedEntity)];
+            registry.destroyEntity(e);
+            entities.erase(std::next(entities.begin(), selectedEntity));
+            selectedEntity = -1;
+            updated = true;
+            bufferUpdated = true;
         }
 
+        ImGui::EndTable();
     }
 
-    for (size_t i = 0; i < objects.size(); i++) {
-        switch (objects[i]->getType()) {
-            case ObjectType::Plane:  ImGui::TextDisabled("Pln"); break;
-            case ObjectType::Box:    ImGui::TextDisabled("Box"); break;
-            case ObjectType::Mesh:   ImGui::TextDisabled("Msh"); break;
-            case ObjectType::Camera: ImGui::TextDisabled("Cam"); break;
-            default: ImGui::TextDisabled("???");; break;
+    // Draw material list
+    if (ImGui::BeginTable("Materials", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Materials");
+        if (ImGui::BeginListBox("##Materials", ImVec2(-FLT_MIN, 0.0f))) {
+            for (size_t i = 0; i < materials.size(); i++) {
+                if (ImGui::Selectable(materials[i].name.c_str(), selectedMaterial == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (ImGui::IsMouseDoubleClicked(0)) { selectedMaterial = i; }
+                }
+
+            }
+
+            ImGui::EndListBox();
         }
-        ImGui::SameLine();
+        
+        ImGui::TableSetColumnIndex(1);
+        ImGui::NewLine();
+        if (ImGui::Button("+##Materials", ImVec2(32, 0))) {
+            Material mat = DEFAULT_MATERIAL;
+            char matName[64];
+            std::snprintf(matName, sizeof(matName), "Material-%02d", materialN++);
+            mat.name = matName;
+            materials.push_back(mat);
+            selectedMaterial = static_cast<int>(materials.size() - 1);
+            updated = true;
+            bufferUpdated = true;
+        }
+        if (ImGui::Button("-##Materials", ImVec2(32, 0)) &&
+            selectedMaterial > 0 &&
+            selectedMaterial < static_cast<int>(materials.size()))
+        {
+            const int removed = selectedMaterial;
+            materials.erase(materials.begin() + removed);
+            selectedMaterial = -1;
 
-        std::string displayName = objects[i]->getName().length() > 0 ? objects[i]->getName() : "???";
-        ImGui::TextDisabled("%s", displayName.c_str());
+            auto& matRefs = registry.storage<ecs::MaterialRef>();
+            const auto& refEntities = matRefs.entities();
+            for (size_t i = 0; i < matRefs.size(); i++) {
+                ecs::MaterialRef& ref = matRefs.get(refEntities[i]);
+                if (ref.handle == removed)
+                    ref.handle = 0;
+                else if (ref.handle > removed)
+                    ref.handle--;
+            }
+            updated = true;
+            bufferUpdated = true;
+        }
+
+        ImGui::EndTable();
     }
 
+    if (openNewObjectPopup) ImGui::OpenPopup("New Object");
     drawNewObjectPopUp(engine);
 }
 
 void Scene::drawNewObjectPopUp(VkSmol &engine) {
-    if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
-        return;
+    if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
     
+    char nameBuffer[64];
+    std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", entityN);
+    std::string name(nameBuffer);
+
     if (ImGui::Button("Sphere", { 100, 0 })) {
         pushSphere(
             engine,
-            "Sphere",
+            name,
             glm::vec3(0.0, 0.0, 0.0),
             1.0,
             Material {
@@ -525,11 +621,12 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
+        entityN++;
     }
     if (ImGui::Button("Plane", { 100, 0 })) {
         pushPlane(
             engine,
-            "Plane",
+            name,
             glm::vec3( 0.0, 0.0, 0.0),
             glm::vec3( 0.0, 1.0, 0.0),
             Material {
@@ -540,11 +637,12 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
+        entityN++;
     }
     if (ImGui::Button("Box", { 100, 0 })) {
         pushBox(
             engine,
-            "Box",
+            name,
             glm::vec3(-1.0,-1.0,-1.0),
             glm::vec3( 1.0, 1.0, 1.0),
             Material {
@@ -555,18 +653,20 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
         selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
+        entityN++;
     }
     if (ImGui::Button("Camera", { 100, 0 })) {
         glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
         pushCameraHandle(
-            "Camera",
+            name,
             pos,
             direction,
             60.0f
         );
         updated = true;
         ImGui::CloseCurrentPopup();
+        entityN++;
     }
     ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
     if (ImGui::Button("Cancel", { 100, 0 })) {
@@ -577,36 +677,41 @@ void Scene::drawNewObjectPopUp(VkSmol &engine) {
     ImGui::EndPopup();
 }
 
-void Scene::drawSelectedUI(VkSmol &engine) {
+void Scene::drawSelectedMaterialUI() {
+    if (selectedMaterial < 0) return;
+
+    bool open = true;
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
+    ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    {
+        auto& mat = materials[selectedMaterial];
+        updated |= drawMaterialUI(mat);
+    }
+    ImGui::End();
+
+    if (!open) selectedMaterial = -1;
+}
+
+void Scene::drawSelectedEntityUI() {
     if (selectedEntity < 0) return;
     ecs::Entity& e = entities[selectedEntity];
 
-    std::string title = "Entity";
-
+    bool open = true;
     ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::SetNextWindowSizeConstraints(
-        { 250.0f, 0.0f }, { 250.0f, 600.0f }
-    );
+    ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
     ImGui::Begin(
-        title.c_str(),
-        nullptr,
+        "Entity",
+        &open,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
     );
     {
         auto& ui_reg = ecs::ComponentUiRegistry::get();
         updated |= ui_reg.draw(registry, e);
-
-        ImGui::PushStyleColor(ImGuiCol_Button, { 1.0f, 0.03f, 0.0f, 1.0f });
-        if (ImGui::Button("Delete Entity", { -FLT_MIN, 0 })) {
-            registry.destroyEntity(e);
-            entities.erase(std::next(entities.begin(), selectedEntity));
-            selectedEntity = -1;
-            updated = true;
-        }
-        ImGui::PopStyleColor();
     }
-    
     ImGui::End();
+
+    if (!open) selectedEntity = -1;
 }
 
 
@@ -616,7 +721,6 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     int idClosest = -1;
 
     float t = -1.0f;
-    int i = 0;
 
     auto& sphereStorage = registry.storage<ecs::Sphere>();
     auto& planeStorage = registry.storage<ecs::Plane>();

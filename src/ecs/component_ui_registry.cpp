@@ -1,6 +1,7 @@
 #include "./component_ui_registry.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <limits>
 
 namespace ecs {
 
@@ -26,7 +27,6 @@ void ComponentUiRegistry::init() {
         if (ImGui::InputText("##Value", n.value.data(), 128))
         ImGui::PopItemWidth();
 
-        n.value = std::string(n.value.c_str());
         return false;
     });
 
@@ -87,7 +87,33 @@ void ComponentUiRegistry::init() {
         t.updateLocal();
         return update;
     });
+
+    ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, ecs::Registry& r, ecs::Entity e){
+        auto* mats = ComponentUiRegistry::get().materials;
+        if (!mats || mats->empty()) return false;
+
+        ImGui::SeparatorText("Material");
+        ImGui::PushItemWidth(-FLT_MIN);
+        
+        bool update = false;
+        int current = ref.handle;
+        const char* preview = (*mats)[current].name.empty() ? "Material" : (*mats)[current].name.c_str();
+        if (ImGui::BeginCombo("##Material", preview)) {
+            for (int i = 0; i < static_cast<int>(mats->size()); i++) {
+                const char* label = (*mats)[i].name.empty() ? "Material" : (*mats)[i].name.c_str();
+                const bool selected = (i == current);
+                if (ImGui::Selectable(label, selected)) {
+                    ref.handle = i;
+                    update = true;
+                }
+                if (selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::PopItemWidth();
+
+        return update;
+    });
 }
 
 } // namespace ecs
-

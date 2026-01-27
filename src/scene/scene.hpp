@@ -12,7 +12,6 @@
 
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
-#include "object/box.hpp"
 #include "object/mesh.hpp"
 #include "camera_handle.hpp"
 #include "raycast.hpp"
@@ -60,7 +59,8 @@ public:
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
     void drawUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
     void drawNewObjectPopUp(VkSmol &engine);
-    void drawSelectedUI(VkSmol &engine);
+    void drawSelectedMaterialUI();
+    void drawSelectedEntityUI();
     LightMode loadPreset(VkSmol &engine, ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
@@ -78,9 +78,12 @@ private:
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
     
     int selectedEntity = -1;
+    MaterialHandle selectedMaterial = -1;
     ecs::Registry registry;
     std::vector<ecs::Entity> entities;
+    int entityN = 0;
     std::vector<Material> materials;
+    int materialN = 0;
 
     std::vector<Object*> objects;
 

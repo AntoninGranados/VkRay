@@ -6,6 +6,7 @@
 #include "./imgui/imgui.h"
 
 #include <functional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -26,7 +27,7 @@ public:
 
             T& t = registry.get<T>(e);
             ImGui::PushID(&t);
-            ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+            ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
             bool update = fn(t, registry, e);
             ImGui::EndChild();
             ImGui::PopID();
@@ -43,10 +44,11 @@ public:
 
     static ComponentUiRegistry& get();
     static void init();
+    void setMaterials(std::vector<Material>* materials_) { materials = materials_; }
 
 private:
     std::vector<Drawer> drawers;
+    std::vector<Material>* materials = nullptr;
 };
 
 } // namespace ecs
-
