@@ -10,6 +10,9 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
+class Camera;
+
+
 struct GpuSphere {
     alignas(16) glm::vec3 center;
     float radius;
@@ -28,7 +31,29 @@ struct GpuBox {
     MaterialHandle materialHandle;
 };
 
-class Camera;
+struct GpuBvhNode {
+    alignas(16) glm::vec3 aabbMin;
+    alignas(16) glm::vec3 aabbMax;
+    uint32_t data0; // left or first triangle
+    uint32_t data1; // right or triangle count
+    uint32_t isLeaf;
+};
+
+#define BVH_childLeft(node)   (node.data0)
+#define BVH_childRight(node)  (node.data1)
+#define BVH_firstTriangle(node) (node.data0)
+#define BVH_triangleCount(node) (node.data1)
+
+struct GpuMesh {
+    alignas(16) glm::mat4 transform;
+    alignas(16) glm::mat4 invTransform;
+    uint32_t indexOffset;
+    uint32_t triangleCount;
+    uint32_t bvhOffset;
+    uint32_t bvhNodeCount;
+    MaterialHandle materialHandle;
+};
+
 
 // Gizmo motion limiting to avoid large jumps when manipulating objects
 constexpr float MAX_GIZMO_LINEAR_SPEED   = 50.0f;                // world units per second

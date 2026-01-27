@@ -1,5 +1,7 @@
 #include "ui_system.hpp"
 
+#include "notification_system.hpp"
+
 void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
     if (!toggled && !ctx.renderState->renderMode) return;
 
@@ -29,7 +31,6 @@ void UiSystem::updateState() {
 
 void UiSystem::drawPreview(AppContext& ctx) {
     bool& restartRender = *ctx.restartRender;
-    VkSmol& engine = *ctx.engine;
     Camera& camera = *ctx.camera;
     Scene& scene = *ctx.scene;
 
@@ -99,33 +100,33 @@ void UiSystem::drawPreview(AppContext& ctx) {
             if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
                 ImGui::OpenPopup("Scene Preset");
             }
-            scene.drawUI(engine);
+            scene.drawUI();
         }
 
         if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
             LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
             if (ImGui::Button("Empty", { 200, 0 })) {
-                mode = scene.loadPreset(engine, ScenePreset::Empty);
+                mode = scene.loadPreset(ScenePreset::Empty);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Mesh", { 200, 0 })) {
-                mode = scene.loadPreset(engine, ScenePreset::Mesh);
+                mode = scene.loadPreset(ScenePreset::Mesh);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Sponza", { 200, 0 })) {
-                mode = scene.loadPreset(engine, ScenePreset::Sponza);
+                mode = scene.loadPreset(ScenePreset::Sponza);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Cornell Box", { 200, 0 })) {
-                mode = scene.loadPreset(engine, ScenePreset::CornellBox);
+                mode = scene.loadPreset(ScenePreset::CornellBox);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             if (ImGui::Button("Random Spheres", { 200, 0 })) {
-                mode = scene.loadPreset(engine, ScenePreset::RandomSpheres);
+                mode = scene.loadPreset(ScenePreset::RandomSpheres);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }

@@ -52,6 +52,11 @@ void ComponentUiRegistry::init() {
         ImGui::SeparatorText("Box");
         return false;
     });
+    
+    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& p, ecs::Registry& r, ecs::Entity e){
+        ImGui::SeparatorText("Mesh");
+        return false;
+    });
 
     ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
         bool update = false;
@@ -68,8 +73,12 @@ void ComponentUiRegistry::init() {
         }
         
         if (t.rotationToggled) {
-            ImGui::Text("Rotation:");
-            update |= ImGui::DragFloat4("##Rotation", glm::value_ptr(t.rotation), 0.01f);
+            ImGui::Text("Rotation (Euler):");
+            glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
+            if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
+                t.rotation = glm::quat(glm::radians(euler));
+                update = true;
+            }
         } else {
             ImGui::TextDisabled("Rotation");
         }
@@ -111,6 +120,8 @@ void ComponentUiRegistry::init() {
             ImGui::EndCombo();
         }
         ImGui::PopItemWidth();
+
+        update |= drawMaterialUI((*mats)[current]);
 
         return update;
     });

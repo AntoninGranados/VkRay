@@ -41,7 +41,7 @@ Application::~Application() {
 
     renderer.destroy(ctx);
     
-    scene.destroy(engine);
+    scene.destroy();
     engine.terminate();
 }
 
@@ -75,11 +75,9 @@ void Application::initParameters() {
 }
 
 void Application::initScene() {
-    scene.init(engine);
+    scene.setContext(ctx);
+    scene.init();
 
-    scene.setMessageCallback([this](NotificationType type, std::string content) {
-        notifications.pushMessage(type, content);
-    });
     scene.setPreviewCameraCallback([this](const CameraHandle &handle) {
         if (cameraHandle && scene.containsObject(cameraHandle))
             cameraHandle->setPreview(false);
@@ -97,7 +95,7 @@ void Application::initScene() {
         restartRender = true;
     });
 
-    LightMode mode = scene.loadPreset(engine, ScenePreset::Empty);
+    LightMode mode = scene.loadPreset(ScenePreset::Empty);
     parameters.setEnum<LightMode>("lightMode", mode);
 }
 

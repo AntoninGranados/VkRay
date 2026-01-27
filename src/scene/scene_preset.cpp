@@ -1,13 +1,13 @@
 #include "scene_preset.hpp"
 
-void initEmpty(VkSmol &engine, Scene &scene, LightMode &lightMode) {
-    scene.clear(engine);
+void initEmpty(Scene &scene, LightMode &lightMode) {
+    scene.clear();
 
     lightMode = LightMode::Day;
 }
 
-void initMesh(VkSmol &engine, Scene &scene, LightMode &lightMode) {
-    scene.clear(engine);
+void initMesh(Scene &scene, LightMode &lightMode) {
+    scene.clear();
 
     lightMode = LightMode::Day;
 
@@ -22,49 +22,53 @@ void initMesh(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     //     glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
     // );
 
-    scene.pushMeshFromObj(
-        engine,
+    const MaterialHandle lucyHandle = scene.pushMaterial(Material{
+        .name = "Lucy",
+        .type = MaterialType::Glossy,
+        .albedo = { 1.0f, 1.0f, 1.0f },
+        .payload = { 3.0f, 0.1f },
+    });
+    scene.pushMesh(
         "Lucy",
         "./res/model/lucy.obj",
-        Material {
-            .type = MaterialType::Glossy,
-            .albedo = { 1.0f, 1.0f, 1.0f },
-            .payload = { 3.0f, 0.1f },
-        },
-        glm::scale(glm::mat4(1.0f), glm::vec3(0.4f))
+        glm::mat4(1.0f),
+        lucyHandle
     );
 
-    Material floorMat = {};
-    floorMat.type = MaterialType::Lambertian;
-    floorMat.albedo = { 1.0, 1.0, 1.0 };
+    Material floorMat = {
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0, 1.0, 1.0 },
+        .name = "Floor",
+    };
+    const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
     scene.pushPlane(
-        engine,
         "Floor",
         glm::vec3(0.0, -1.0, 0.0),
         glm::vec3(0.0,  1.0 , 0.0),
-        floorMat
+        floorHandle
     );
 }
 
-void initSponza(VkSmol &engine, Scene &scene, LightMode &lightMode) {
-    scene.clear(engine);
+void initSponza(Scene &scene, LightMode &lightMode) {
+    scene.clear();
 
     lightMode = LightMode::Day;
 
-    scene.pushMeshFromObj(
-        engine,
+    const MaterialHandle sponzaHandle = scene.pushMaterial(Material{
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0f, 1.0f, 1.0f },
+        .name = "Sponza",
+    });
+    scene.pushMesh(
         "Sponza",
         "./res/model/sponza.obj",
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 1.0f, 1.0f, 1.0f },
-        },
-        glm::scale(glm::mat4(1.0f), glm::vec3(0.1f))
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.1f)),
+        sponzaHandle
     );
 }
 
-void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
-    scene.clear(engine);
+void initCornellBox(Scene &scene, LightMode &lightMode) {
+    scene.clear();
 
     lightMode = LightMode::Empty;
     
@@ -108,115 +112,132 @@ void initCornellBox(VkSmol &engine, Scene &scene, LightMode &lightMode) {
     );
     */
 
-    scene.pushMeshFromObj(
-        engine,
+    const MaterialHandle lucyHandle = scene.pushMaterial(Material{
+        .name = "Lucy",
+        .type = MaterialType::Glossy,
+        .albedo = { 1.0f, 1.0f, 1.0f },
+        .payload = { 3.0f, 0.1f },
+    });
+    scene.pushMesh(
         "Lucy",
         "./res/model/lucy.obj",
-        Material {
-            .type = MaterialType::Glossy,
-            .albedo = { 1.0f, 1.0f, 1.0f },
-            .payload = { 3.0f, 0.1f },
-        },
-        glm::scale(glm::mat4(1.0f), glm::vec3(0.4f))
+        glm::mat4(1.0f),
+        lucyHandle
     );
     
+    Material leftMat {
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0, 0.1, 0.1 },
+        .name = "Left",
+    };
+    const MaterialHandle leftHandle = scene.pushMaterial(leftMat);
     scene.pushBox(
-        engine,
         "Left",
         glm::vec3(4.0,-4.0,-4.0),
         glm::vec3(4.1, 4.0, 4.0),
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 1.0, 0.1, 0.1 },
-        }
+        leftHandle
     );
     
+    Material rightMat {
+        .type = MaterialType::Lambertian,
+        .albedo = { 0.1, 1.0, 0.1 },
+        .name = "Right",
+    };
+    const MaterialHandle rightHandle = scene.pushMaterial(rightMat);
     scene.pushBox(
-        engine,
         "Right",
         glm::vec3(-4.1,-4.0,-4.0),
         glm::vec3(-4.0, 4.0, 4.0),
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 0.1, 1.0, 0.1 },
-        }
+        rightHandle
     );
     
+    Material topMat {
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0, 1.0, 1.0 },
+        .name = "Top",
+    };
+    const MaterialHandle topHandle = scene.pushMaterial(topMat);
     scene.pushBox(
-        engine,
         "Top",
         glm::vec3(-4.0, 4.0,-4.0),
         glm::vec3( 4.0, 4.1, 4.0),
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 1.0, 1.0, 1.0 },
-        }
+        topHandle
     );
     
+    Material bottomMat {
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0, 1.0, 1.0 },
+        .name = "Bottom",
+    };
+    const MaterialHandle bottomHandle = scene.pushMaterial(bottomMat);
     scene.pushBox(
-        engine,
         "Bottom",
         glm::vec3(-4.0,-4.1,-4.0),
         glm::vec3( 4.0,-4.0, 4.0),
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 1.0, 1.0, 1.0 },
-        }
+        bottomHandle
     );
     
+    Material backMat {
+        .type = MaterialType::Lambertian,
+        .albedo = { 0.2, 0.2, 0.6 },
+        .name = "Back",
+    };
+    const MaterialHandle backHandle = scene.pushMaterial(backMat);
     scene.pushBox(
-        engine,
         "Back",
         glm::vec3(-4.0,-4.0, 4.0),
         glm::vec3( 4.0, 4.0, 4.1),
-        Material {
-            .type = MaterialType::Lambertian,
-            .albedo = { 0.2, 0.2, 0.6 },
-        }
+        backHandle
     );
     
+    Material lightBoxMat {
+        .type = MaterialType::Emissive,
+        .albedo = { 1.0, 0.7, 0.5 },
+        .payload = { 30.0, 0.0 },
+        .name = "Light",
+    };
+    const MaterialHandle lightHandle = scene.pushMaterial(lightBoxMat);
     scene.pushBox(
-        engine,
         "Light",
         glm::vec3(-1.0, 3.9,-1.0),
         glm::vec3( 1.0, 4.0, 1.0),
-        Material {
-            .type = MaterialType::Emissive,
-            .albedo = { 1.0, 0.7, 0.5 },
-            .payload = { 30.0, 0.0 },
-        }
+        lightHandle
     );
 }
 
 #define RAND_FLOAT static_cast<float>(rand() % 100000) / 100000.0f
-void initRandomSpheres(VkSmol &engine, Scene &scene, LightMode &lightMode) {
+void initRandomSpheres(Scene &scene, LightMode &lightMode) {
     srand(time(nullptr));
 
-    scene.clear(engine);
+    scene.clear();
 
     lightMode = LightMode::Empty;
 
-    Material floorMat = {};
-    floorMat.type = MaterialType::Lambertian;
-    floorMat.albedo = { 1.0, 1.0, 1.0 };
+    Material floorMat = {
+        .type = MaterialType::Lambertian,
+        .albedo = { 1.0, 1.0, 1.0 },
+        .name = "Floor",
+    };
+    const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
     scene.pushPlane(
-        engine,
         "Floor",
         glm::vec3(0.0, -1.0, 0.0),
         glm::vec3(0.0,  1.0 , 0.0),
-        floorMat
+        floorHandle
     );
     
-    Material lightMat = {};
-    lightMat.type = MaterialType::Emissive;
-    lightMat.albedo = { 1.0, 1.0, 1.0 };
+    Material lightMat = {
+        .type = MaterialType::Emissive,
+        .albedo = { 1.0, 1.0, 1.0 },
+        .name = "Light",
+    };
     emissiveIntensity(lightMat) = 15.0f;
+    const MaterialHandle lightHandle = scene.pushMaterial(lightMat);
     scene.pushSphere(
-        engine,
         "Light",
         glm::vec3(0.0, 15.0, 0.0),
         3.0f,
-        lightMat
+        lightHandle
     );
 
     Material sphereMat = {};
@@ -243,12 +264,13 @@ void initRandomSpheres(VkSmol &engine, Scene &scene, LightMode &lightMode) {
             glossyFuzz(sphereMat) = 0.0f;
         }
 
+        const MaterialHandle sphereHandle = scene.pushMaterial(sphereMat);
+        sphereMat.name = "Sphere-" + std::to_string(i);
         scene.pushSphere(
-            engine,
             std::string("Sphere" + std::to_string(i)),
             pos,
             1.0,
-            sphereMat
+            sphereHandle
         );
         i += 1;
     }}

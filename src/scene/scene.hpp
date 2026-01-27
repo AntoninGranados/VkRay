@@ -8,11 +8,10 @@
 
 #include "../engine/engine.hpp"
 #include "../camera.hpp"
-#include "../notification_system.hpp"
 
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
-#include "object/mesh.hpp"
+#include "asset/mesh.hpp"
 #include "camera_handle.hpp"
 #include "raycast.hpp"
 
@@ -23,6 +22,8 @@
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
+
+struct AppContext;
 
 enum LightMode : int {
     Day,
@@ -35,33 +36,31 @@ enum class ScenePreset : int;
 
 class Scene {
 public:
-    void init(VkSmol &engine);
-    void destroy(VkSmol &engine);
-    void clear(VkSmol &engine);
+    void init();
+    void destroy();
+    void clear();
 
-    void setMessageCallback(std::function<void(NotificationType, std::string)> messageCallback_) {
-        messageCallback = messageCallback_;
-    }
     void setPreviewCameraCallback(std::function<void(const CameraHandle&)> callback) {
         previewCameraCallback = std::move(callback);
     }
+    void setContext(const AppContext& context) { ctx = &context; }
 
     // The engine is needed in case we have to resize a buffer
-    void pushSphere(VkSmol &engine, std::string name, glm::vec3 center, float radius, Material mat);
-    void pushPlane(VkSmol &engine, std::string name, glm::vec3 point, glm::vec3 normal, Material mat);
-    void pushBox(VkSmol &engine, std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, Material mat);
-    void pushMesh(VkSmol &engine, std::string name, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::mat4 transform, Material mat);
-    bool pushMeshFromObj(VkSmol &engine, const std::string &name, const std::string &path, Material mat, const glm::mat4 &transform = glm::mat4(1.0f));
+    MaterialHandle pushMaterial(const Material &mat);
+    void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle);
+    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle);
+    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle);
+    void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle);
     void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
 
-    void fillBuffers(VkSmol &engine);
+    void fillBuffers();
     
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
-    void drawUI(VkSmol &engine);   // The engine is needed in case we have to resize a buffer
-    void drawNewObjectPopUp(VkSmol &engine);
+    void drawUI();
+    void drawNewObjectPopUp();
     void drawSelectedMaterialUI();
     void drawSelectedEntityUI();
-    LightMode loadPreset(VkSmol &engine, ScenePreset preset);
+    LightMode loadPreset(ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
     void clearSelection() { selectedEntity = -1; }
@@ -84,13 +83,14 @@ private:
     int entityN = 0;
     std::vector<Material> materials;
     int materialN = 0;
+    std::vector<MeshAsset> meshAssets;
 
     std::vector<Object*> objects;
 
     bool updated = false;
     bool bufferUpdated = false;
 
-    std::function<void(NotificationType, std::string)> messageCallback;
     std::function<void(const CameraHandle&)> previewCameraCallback;
+    const AppContext* ctx = nullptr;
 
 };

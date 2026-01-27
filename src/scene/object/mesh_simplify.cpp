@@ -6,6 +6,7 @@
 #include <queue>
 #include <cmath>
 
+/*
 struct Face {
     uint32_t v[3];
     bool alive = true;
@@ -230,3 +231,4 @@ Mesh simplifyMesh(const Mesh& input, float targetRatio) {
         input.getMaterialHandle()
     );
 }
+*/

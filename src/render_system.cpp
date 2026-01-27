@@ -219,7 +219,7 @@ void RenderSystem::render(AppContext& ctx) {
 
     engine.beginFrame();
 
-    ctx.scene->fillBuffers(engine);
+    ctx.scene->fillBuffers();
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {

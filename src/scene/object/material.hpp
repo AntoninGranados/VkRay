@@ -8,6 +8,8 @@
 
 #include "imgui/imgui.h"
 
+typedef int MaterialHandle;
+
 enum MaterialType {
     Lambertian = 0,
     Metal,
@@ -40,7 +42,6 @@ struct Material {
 #define glossyFuzz(mat) mat.payload[1]
 #define checkerboardScale(mat) mat.payload[0]
 
-typedef int MaterialHandle;
 
 bool drawLambertianUI(Material &mat);
 bool drawMetalUI(Material &mat);
