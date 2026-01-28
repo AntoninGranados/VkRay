@@ -54,10 +54,21 @@ public:
     const std::string& getPath() const { return path; }
     void setPath(const std::string& newPath) { path = newPath; }
     static std::string nameFromPath(const std::string& path);
+    
+    float getSimplifyRatio() const { return simplifyRatio; }
+    bool setSimplifyRatio(float ratio);
+    bool applySimplification();
+    bool revertSimplification();
 
 private:
     std::string name;
     std::string path = "";
+    float simplifyRatio = 1.0f;
+    bool hasSaved = false;
+    std::vector<Vertex> savedVertices;
+    std::vector<uint32_t> savedIndices;
+    std::vector<Vertex> baseVertices;
+    std::vector<uint32_t> baseIndices;
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;

@@ -1,4 +1,5 @@
 #include "mesh.hpp"
+#include "mesh_simplify.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -12,6 +13,11 @@
 
 MeshAsset::MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
 name(name), vertices(vertices), indices(indices) {
+    savedVertices = this->vertices;
+    savedIndices = this->indices;
+    baseVertices = this->vertices;
+    baseIndices = this->indices;
+    hasSaved = true;
     buildBvh();
 }
 
@@ -73,7 +79,60 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     }
 
     buildBvh();
+    savedVertices = vertices;
+    savedIndices = indices;
+    baseVertices = vertices;
+    baseIndices = indices;
+    hasSaved = true;
+    simplifyRatio = 1.0f;
 
+    return true;
+}
+
+bool MeshAsset::setSimplifyRatio(float ratio) {
+    ratio = glm::clamp(ratio, 0.01f, 1.0f);
+    if (std::abs(ratio - simplifyRatio) < 1e-6f) return false;
+
+    if (ratio >= 1.0f - 1e-6f) {
+        simplifyRatio = 1.0f;
+        if (baseVertices.empty() || baseIndices.empty()) return false;
+        vertices = baseVertices;
+        indices = baseIndices;
+        buildBvh();
+        return true;
+    }
+
+    if (baseVertices.empty() || baseIndices.empty()) {
+        baseVertices = vertices;
+        baseIndices = indices;
+    }
+
+    MeshAsset base(name, baseVertices, baseIndices);
+    base.setPath(path);
+    MeshAsset simplified = simplifyMesh(base, ratio);
+    vertices = simplified.getVertices();
+    indices = simplified.getIndices();
+    buildBvh();
+    simplifyRatio = ratio;
+    return true;
+}
+
+bool MeshAsset::applySimplification() {
+    if (std::abs(simplifyRatio - 1.0f) < 1e-6f) return false;
+    baseVertices = vertices;
+    baseIndices = indices;
+    simplifyRatio = 1.0f;
+    return true;
+}
+
+bool MeshAsset::revertSimplification() {
+    if (!hasSaved) return false;
+    baseVertices = savedVertices;
+    baseIndices = savedIndices;
+    vertices = baseVertices;
+    indices = baseIndices;
+    buildBvh();
+    simplifyRatio = 1.0f;
     return true;
 }
 
@@ -171,6 +230,7 @@ void MeshAsset::buildBvh() {
 }
 
 bool drawMeshAssetUI(MeshAsset &mesh) {
+    bool updated = false;
     std::string name = mesh.getName();
     name.resize(128);
 
@@ -178,6 +238,7 @@ bool drawMeshAssetUI(MeshAsset &mesh) {
     ImGui::Text("Name:");
     if (ImGui::InputText("##Name", name.data(), 128)) {
         mesh.setName(name);
+        updated = true;
     }
     ImGui::PopItemWidth();
     
@@ -190,5 +251,31 @@ bool drawMeshAssetUI(MeshAsset &mesh) {
     ImGui::Text("Vertices: %zu", mesh.getVertices().size());
     ImGui::Text("Faces:    %zu", mesh.getIndices().size() / 3);
 
-    return false;
+    ImGui::Separator();
+    
+    float ratio = mesh.getSimplifyRatio();
+    ImGui::Text("Simplify Ratio:");
+    ImGui::PushItemWidth(-FLT_MIN);
+    if (ImGui::SliderFloat("##SimplifyRatio", &ratio, 0.05f, 1.0f, "%.2f")) {
+        updated |= mesh.setSimplifyRatio(ratio);
+    }
+    ImGui::PopItemWidth();
+    if (ImGui::BeginTable("##SimplifyButtons", 2, ImGuiTableFlags_SizingStretchSame)) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        if (ImGui::Button("Apply", ImVec2(-FLT_MIN, 0.0f))) {
+            updated |= mesh.applySimplification();
+        }
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+        if (ImGui::Button("Revert", ImVec2(-FLT_MIN, 0.0f))) {
+            updated |= mesh.revertSimplification();
+        }
+        ImGui::PopStyleColor(3);
+        ImGui::EndTable();
+    }
+
+    return updated;
 }

@@ -98,7 +98,10 @@ void ComponentUiRegistry::init() {
 
         if (t.positionToggled) {
             ImGui::Text("Position:");
-            update |= ImGui::DragFloat3("##Position", glm::value_ptr(t.position), 0.01f);
+            if (ImGui::DragFloat3("##Position", glm::value_ptr(t.position), 0.01f)) {
+                t.updated = true;
+                update = true;
+            }
         } else {
             ImGui::TextDisabled("Position");
         }
@@ -108,6 +111,7 @@ void ComponentUiRegistry::init() {
             glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
             if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
                 t.rotation = glm::quat(glm::radians(euler));
+                t.updated = true;
                 update = true;
             }
         } else {
@@ -116,15 +120,16 @@ void ComponentUiRegistry::init() {
         
         if (t.scaleToggled) {
             ImGui::Text("Scale:");
-            update |= ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f);
+            if (ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f)) {
+                t.updated = true;
+                update = true;
+            }
         } else {
             ImGui::TextDisabled("Scale");
         }
         
         ImGui::PopItemWidth();
 
-        t.updated = update;
-        t.updateLocal();
         return update;
     });
 

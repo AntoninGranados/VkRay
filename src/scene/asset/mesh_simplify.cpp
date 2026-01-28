@@ -105,7 +105,7 @@ MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
 
     const size_t triCount = indices.size() / 3;
     size_t targetTris = static_cast<size_t>(std::floor(triCount * targetRatio));
-    targetTris = std::max(targetTris, 1ul); // Need to have at least on triangle to work
+    targetTris = std::max(targetTris, 8ul); // At least 8 triangle per mesh to simplify
 
     std::vector<Face> faces;
     Face face;

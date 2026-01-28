@@ -37,8 +37,15 @@ void Scene::init() {
     uiReg.setMeshAssets(&meshAssets);
     ecs::ComponentUiRegistry::init();
 
+    initSystems();
+
     pushMaterial(DEFAULT_MATERIAL);
     meshAssets.push_back(DEFAULT_MESH_ASSET);
+}
+
+void Scene::initSystems() {
+    scheduler.clear();
+    scheduler.add(ecs::transformSystem);
 }
 
 void Scene::destroy() {
@@ -85,24 +92,18 @@ void Scene::clear() {
     meshAssets.push_back(DEFAULT_MESH_ASSET);
 }
 
+void Scene::runSystems(AppContext& ctx) {
+    scheduler.run(registry, ctx);
+}
+
 LightMode Scene::loadPreset(ScenePreset preset) {
     LightMode mode = LightMode::Day;
     switch (preset) {
-        case ScenePreset::Empty:
-            initEmpty(*this, mode);
-            break;
-        case ScenePreset::Mesh:
-            initMesh(*this, mode);
-            break;
-        case ScenePreset::Sponza:
-            initSponza(*this, mode);
-            break;
-        case ScenePreset::CornellBox:
-            initCornellBox(*this, mode);
-            break;
-        case ScenePreset::RandomSpheres:
-            initRandomSpheres(*this, mode);
-            break;
+        case ScenePreset::Empty:         initEmpty(*this, mode);         break;
+        case ScenePreset::Mesh:          initMesh(*this, mode);          break;
+        case ScenePreset::Sponza:        initSponza(*this, mode);        break;
+        case ScenePreset::CornellBox:    initCornellBox(*this, mode);    break;
+        case ScenePreset::RandomSpheres: initRandomSpheres(*this, mode); break;
     }
     return mode;
 }
@@ -213,7 +214,6 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     ecs::Transform transformComponent;
     transformComponent.setPosition(center);
     transformComponent.setScale(halfExtents);
-    transformComponent.updateLocal();
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -262,18 +262,19 @@ void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &t
     transformComponent.setPosition(translation);
     transformComponent.setRotation(glm::quat(glm::radians(rotationEuler)));
     transformComponent.setScale(scale);
-    transformComponent.updateLocal();
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
 }
 
 void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov) {
+    /*
     CameraHandle *cameraHandle = new CameraHandle(name, position, direction, fov);
     if (previewCameraCallback)
-        cameraHandle->setPreviewCallback(previewCameraCallback);
+    cameraHandle->setPreviewCallback(previewCameraCallback);
     objects.push_back(cameraHandle);
     updated = true;
+    */
 }
 
 // TODO refactor this
@@ -361,10 +362,8 @@ void Scene::fillBuffers() {
                 .materialHandle = handle,
             };
             
-            if (materials[handle].type == MaterialType::Emissive) {
-                const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
-                addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
-            }
+            const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
+            addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
             objectHandles[entityCount] = { .type=ObjectType::Sphere, .id=sphereId };
             sphereId++;
         } else if (planeStorage.has(e)) {
@@ -382,16 +381,15 @@ void Scene::fillBuffers() {
                 .materialHandle = handle,
             };
 
-            if (materials[handle].type == MaterialType::Emissive) {
-                const glm::vec3 axisX = glm::vec3(transform.local[0]);
-                const glm::vec3 axisY = glm::vec3(transform.local[1]);
-                const glm::vec3 axisZ = glm::vec3(transform.local[2]);
-                const float hx = glm::length(axisX);
-                const float hy = glm::length(axisY);
-                const float hz = glm::length(axisZ);
-                const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
-                addLight(materials[handle], area, entityCount, lightCount, lights, totalLightArea);
-            }
+            const glm::vec3 axisX = glm::vec3(transform.local[0]);
+            const glm::vec3 axisY = glm::vec3(transform.local[1]);
+            const glm::vec3 axisZ = glm::vec3(transform.local[2]);
+            const float hx = glm::length(axisX);
+            const float hy = glm::length(axisY);
+            const float hz = glm::length(axisZ);
+            const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
+            addLight(materials[handle], area, entityCount, lightCount, lights, totalLightArea);
+            
             objectHandles[entityCount] = { .type=ObjectType::Box, .id=boxId };
             boxId++;
         } else if (meshStorage.has(e)) {
@@ -497,7 +495,6 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (!registry.has<ecs::Transform>(e)) return;
 
     ecs::Transform& t = registry.get<ecs::Transform>(e);
-    t.updateLocal();
     glm::mat4 model = t.local;
 
     int opFlags = 0;
@@ -532,8 +529,6 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
         updated = true;
     }
     ImGuizmo::PopID();
-
-    t.updateLocal();
 }
 
 void Scene::drawUI() {
@@ -841,7 +836,9 @@ void Scene::drawSelectedMeshAssetUI() {
     ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
     ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
-        updated |= drawMeshAssetUI(meshAssets[selectedMeshAsset]);
+        bool changed = drawMeshAssetUI(meshAssets[selectedMeshAsset]);
+        updated |= changed;
+        bufferUpdated |= changed;
     }
     ImGui::End();
 

@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <vector>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -19,6 +20,8 @@
 #include "../ecs/entity.hpp"
 #include "../ecs/components.hpp"
 #include "../ecs/component_ui_registry.hpp"
+#include "../ecs/system_scheduler.hpp"
+#include "../ecs/systems/transform_system.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -33,6 +36,13 @@ enum LightMode : int {
 };
 
 enum class ScenePreset : int;
+
+struct PackingMaps {
+    std::unordered_map<ecs::Entity, int> sphereId;
+    std::unordered_map<ecs::Entity, int> planeId;
+    std::unordered_map<ecs::Entity, int> boxId;
+    std::unordered_map<ecs::Entity, int> meshId;
+};
 
 class Scene {
 public:
@@ -62,14 +72,29 @@ public:
     void drawSelectedEntityUI();
     void drawSelectedMaterialUI();
     void drawSelectedMeshAssetUI();
+    void runSystems(AppContext& ctx);
     LightMode loadPreset(ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
+    const int getSelectionId() { return selectedEntity; }
     void clearSelection() { selectedEntity = -1; }
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
     bool containsObject(const Object *object) const;
 
     std::vector<bufferList_t> getBufferLists();
+    ObjectBuffers& getSphereBuffers() { return sphereBuffers; };
+    ObjectBuffers& getPlaneBuffers() { return planeBuffers; };
+    ObjectBuffers& getBoxBuffers() { return boxBuffers; };
+    ObjectBuffers& getVertexBuffers() { return vertexBuffers; };
+    ObjectBuffers& getIndexBuffers() { return indexBuffers; };
+    ObjectBuffers& getBvhBuffers() { return bvhBuffers; };
+    ObjectBuffers& getMeshBuffers() { return meshBuffers; };
+    ObjectBuffers& getMaterialBuffers() { return materialBuffers; };
+    ObjectBuffers& getObjectBuffers() { return objectBuffers; };
+    ObjectBuffers& getLightBuffers() { return lightBuffers; };
+    std::vector<Material>& getMaterials() { return materials; };
+    std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
+    PackingMaps& getPackingMaps() { return packingMaps; }
 
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
@@ -77,8 +102,11 @@ public:
 private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
+
+    PackingMaps packingMaps;
     
     ecs::Registry registry;
+    ecs::SystemScheduler scheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;
@@ -98,5 +126,7 @@ private:
 
     std::function<void(const CameraHandle&)> previewCameraCallback;
     const AppContext* ctx = nullptr;
+
+    void initSystems();
 
 };
