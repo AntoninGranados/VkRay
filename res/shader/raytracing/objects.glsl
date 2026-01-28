@@ -5,8 +5,6 @@
 #include "materials.glsl"
 #include "inputs.glsl"
 
-const float TRI_EPS = 1e-6;
-
 Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {
     vec3 p = ray.origin + ray.dir * t;
     bool front_face = true;

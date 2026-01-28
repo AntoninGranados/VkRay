@@ -34,9 +34,11 @@ void Scene::init() {
 
     auto& uiReg = ecs::ComponentUiRegistry::get();
     uiReg.setMaterials(&materials);
+    uiReg.setMeshAssets(&meshAssets);
     ecs::ComponentUiRegistry::init();
 
     pushMaterial(DEFAULT_MATERIAL);
+    meshAssets.push_back(DEFAULT_MESH_ASSET);
 }
 
 void Scene::destroy() {
@@ -74,10 +76,13 @@ void Scene::clear() {
 
     objects.clear();
     materials.clear();
+    meshAssets.clear();
     selectedEntity = -1;
+    selectedMeshAsset = -1;
     bufferUpdated = true;
 
     pushMaterial(DEFAULT_MATERIAL);
+    meshAssets.push_back(DEFAULT_MESH_ASSET);
 }
 
 LightMode Scene::loadPreset(ScenePreset preset) {
@@ -215,14 +220,18 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
 }
 
 void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle) {
-    if (!ctx || !ctx->engine) return;
-
     MeshHandle handle = static_cast<MeshHandle>(meshAssets.size());
-    meshAssets.emplace_back(name);
+    meshAssets.emplace_back(MeshAsset(name));
     if (!meshAssets.back().loadFromObj(*ctx, path)) {
         meshAssets.pop_back();
         return;
     }
+
+    pushMesh(name, handle, transform, materialHandle);
+}
+
+void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle) {
+    if (!ctx || !ctx->engine) return;
 
     bufferUpdated |= meshBuffers.addElement(*ctx->engine);
     bufferUpdated |= objectBuffers.addElement(*ctx->engine);
@@ -235,7 +244,7 @@ void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 
     registry.add<ecs::Name>(e, nameComponent);
 
     ecs::MeshRef meshRef;
-    meshRef.setHandle(handle);
+    meshRef.setHandle(meshHandle);
     registry.add<ecs::MeshRef>(e, meshRef);
 
     ecs::MaterialRef materialRef;
@@ -440,7 +449,7 @@ void Scene::fillBuffers() {
         materialData[i] = GpuMaterial{
             .type = materials[i].type,
             .albedo = materials[i].albedo,
-            .payload = { *materials[i].payload }
+            .payload = { materials[i].payload[0], materials[i].payload[1] }
         };
     }
 
@@ -496,6 +505,11 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (t.rotationToggled) opFlags |= ImGuizmo::OPERATION::ROTATE;
     if (t.scaleToggled) opFlags |= ImGuizmo::OPERATION::SCALE;
     if (opFlags == 0) return;
+    // Keep gizmo orientation in world space: avoid mixing scale with other ops.
+    if ((opFlags & ImGuizmo::OPERATION::SCALE) && (opFlags & (ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE)))
+    {
+        opFlags &= ~ImGuizmo::OPERATION::SCALE;
+    }
 
     ImGuizmo::PushID(selectedEntity);
     if (ImGuizmo::Manipulate(
@@ -525,6 +539,7 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
 void Scene::drawUI() {
     assert(ctx);
     bool openNewObjectPopup = false;
+    bool openNewMeshAssetPopup = false;
 
     // Draw entity list
     if (ImGui::BeginTable("Entities", 2, ImGuiTableFlags_None)) {
@@ -579,7 +594,10 @@ void Scene::drawUI() {
         ImGui::Text("Materials");
         if (ImGui::BeginListBox("##Materials", ImVec2(-FLT_MIN, 0.0f))) {
             for (size_t i = 0; i < materials.size(); i++) {
-                if (ImGui::Selectable(materials[i].name.c_str(), selectedMaterial == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+                const std::string& materialName = materials[i].name;
+                const char* display = materialName.empty() ? "Material" : materialName.c_str();
+                std::string label = std::string(display) + "##Material" + std::to_string(i);
+                if (ImGui::Selectable(label.c_str(), selectedMaterial == i, ImGuiSelectableFlags_AllowDoubleClick)) {
                     if (ImGui::IsMouseDoubleClicked(0)) { selectedMaterial = i; }
                 }
 
@@ -621,6 +639,80 @@ void Scene::drawUI() {
         }
 
         ImGui::EndTable();
+    }
+
+    // Draw mesh asset list
+    if (ImGui::BeginTable("MeshAssets", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Mesh Assets");
+        if (ImGui::BeginListBox("##MeshAssets", ImVec2(-FLT_MIN, 0.0f))) {
+            for (size_t i = 0; i < meshAssets.size(); i++) {
+                const std::string& meshName = meshAssets[i].getName();
+                const char* display = meshName.empty() ? "Mesh" : meshName.c_str();
+                std::string label = std::string(display) + "##MeshAsset" + std::to_string(i);
+                if (ImGui::Selectable(label.c_str(), selectedMeshAsset == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (ImGui::IsMouseDoubleClicked(0)) { selectedMeshAsset = static_cast<int>(i); }
+                }
+            }
+            ImGui::EndListBox();
+        }
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::NewLine();
+        if (ImGui::Button("+##MeshAssets", ImVec2(32, 0)))
+            openNewMeshAssetPopup = true;
+        if (ImGui::Button("-##MeshAssets", ImVec2(32, 0)) && selectedMeshAsset > 0 && selectedMeshAsset < static_cast<int>(meshAssets.size())) {
+            const int removed = selectedMeshAsset;
+            meshAssets.erase(meshAssets.begin() + removed);
+            selectedMeshAsset = -1;
+
+            auto& meshRefs = registry.storage<ecs::MeshRef>();
+            const auto& refEntities = meshRefs.entities();
+            for (size_t i = 0; i < meshRefs.size(); i++) {
+                ecs::MeshRef& ref = meshRefs.get(refEntities[i]);
+                if (ref.handle == removed)
+                    ref.handle = 0;
+                else if (ref.handle > removed)
+                    ref.handle--;
+            }
+            updated = true;
+            bufferUpdated = true;
+        }
+
+        ImGui::EndTable();
+    }
+
+    if (openNewMeshAssetPopup) ImGui::OpenPopup("New Mesh Asset");
+    if (ImGui::BeginPopupModal("New Mesh Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        static char meshPath[256] = "";
+        ImGui::Text("Path:");
+        ImGui::PushItemWidth(420.0f);
+        ImGui::InputText("##MeshPath", meshPath, sizeof(meshPath));
+        ImGui::PopItemWidth();
+
+        bool hasPath = std::strlen(meshPath) > 0;
+        ImGui::BeginDisabled(!hasPath);
+        if (ImGui::Button("Load", ImVec2(100, 0))) {
+            MeshAsset asset(MeshAsset::nameFromPath(meshPath));
+            if (asset.loadFromObj(*ctx, meshPath)) {
+                meshAssets.push_back(std::move(asset));
+                selectedMeshAsset = static_cast<int>(meshAssets.size()) - 1;
+                updated = true;
+                bufferUpdated = true;
+                meshPath[0] = '\0';
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 
     if (openNewObjectPopup) ImGui::OpenPopup("New Object");
@@ -670,6 +762,18 @@ void Scene::drawNewObjectPopUp() {
         ImGui::CloseCurrentPopup();
         entityN++;
     }
+    if (ImGui::Button("Mesh", { 100, 0 })) {
+        pushMesh(
+            name,
+            0,
+            glm::mat3(1.0),
+            0
+        );
+        selectedEntity = entities.size() - 1;
+        updated = true;
+        ImGui::CloseCurrentPopup();
+        entityN++;
+    }
     if (ImGui::Button("Camera", { 100, 0 })) {
         glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -692,22 +796,6 @@ void Scene::drawNewObjectPopUp() {
     ImGui::EndPopup();
 }
 
-void Scene::drawSelectedMaterialUI() {
-    if (selectedMaterial < 0) return;
-
-    bool open = true;
-    ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
-    ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
-    {
-        auto& mat = materials[selectedMaterial];
-        updated |= drawMaterialUI(mat);
-    }
-    ImGui::End();
-
-    if (!open) selectedMaterial = -1;
-}
-
 void Scene::drawSelectedEntityUI() {
     if (selectedEntity < 0) return;
     ecs::Entity& e = entities[selectedEntity];
@@ -727,6 +815,37 @@ void Scene::drawSelectedEntityUI() {
     ImGui::End();
 
     if (!open) selectedEntity = -1;
+}
+
+void Scene::drawSelectedMaterialUI() {
+    if (selectedMaterial < 0) return;
+
+    bool open = true;
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
+    ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    {
+        auto& mat = materials[selectedMaterial];
+        updated |= drawMaterialUI(mat);
+    }
+    ImGui::End();
+
+    if (!open) selectedMaterial = -1;
+}
+
+void Scene::drawSelectedMeshAssetUI() {
+     if (selectedMeshAsset < 0) return;
+
+    bool open = true;
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
+    ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    {
+        updated |= drawMeshAssetUI(meshAssets[selectedMeshAsset]);
+    }
+    ImGui::End();
+
+    if (!open) selectedMeshAsset = -1;
 }
 
 

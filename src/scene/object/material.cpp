@@ -115,7 +115,8 @@ bool drawMaterialUI(Material &material) {
 
     ImGui::PushItemWidth(-FLT_MIN);
     ImGui::Text("Name:");
-    if (ImGui::InputText("##Name", material.name.data(), 128))
+    
+    ImGui::InputText("##Name", material.name.data(), 128);
     ImGui::PopItemWidth();
     
     const char *types[] = { "Lambertian", "Metal", "Dielectric", "Emissive", "Glossy", "Checkerboard" };

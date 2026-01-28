@@ -6,7 +6,6 @@
 #include <queue>
 #include <cmath>
 
-/*
 struct Face {
     uint32_t v[3];
     bool alive = true;
@@ -100,7 +99,7 @@ Edge computeEdge(
     return Edge{ v0, v1, pos, cost, version[v0], version[v1] };
 }
 
-Mesh simplifyMesh(const Mesh& input, float targetRatio) {
+MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
     std::vector<Vertex> vertices = input.getVertices();
     std::vector<uint32_t> indices = input.getIndices();
 
@@ -223,12 +222,11 @@ Mesh simplifyMesh(const Mesh& input, float targetRatio) {
 
     remapIndices(vertices, indices);
 
-    return Mesh(
+    MeshAsset mesh = MeshAsset(
         input.getName(),
         std::move(vertices),
-        std::move(indices),
-        input.getTransform(),
-        input.getMaterialHandle()
+        std::move(indices)
     );
+    mesh.setPath(input.getPath());
+    return mesh;
 }
-*/

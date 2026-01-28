@@ -10,6 +10,21 @@
 
 #include "../../notification_system.hpp"
 
+MeshAsset::MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
+name(name), vertices(vertices), indices(indices) {
+    buildBvh();
+}
+
+std::string MeshAsset::nameFromPath(const std::string& path) {
+    if (path.empty()) return "Mesh";
+    size_t end = path.find_last_of('.');
+    size_t slash = path.find_last_of("/\\");
+    if (end == std::string::npos || end < slash) end = path.size();
+    size_t start = (slash == std::string::npos) ? 0 : slash + 1;
+    if (start >= end) return "Mesh";
+    return path.substr(start, end - start);
+}
+
 bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     path = _path;
 
@@ -153,4 +168,27 @@ void MeshAsset::buildBvh() {
         reordered[newTri * 3 + 2] = indices[oldTri * 3 + 2];
     }
     indices.swap(reordered);
+}
+
+bool drawMeshAssetUI(MeshAsset &mesh) {
+    std::string name = mesh.getName();
+    name.resize(128);
+
+    ImGui::PushItemWidth(-FLT_MIN);
+    ImGui::Text("Name:");
+    if (ImGui::InputText("##Name", name.data(), 128)) {
+        mesh.setName(name);
+    }
+    ImGui::PopItemWidth();
+    
+    if (!mesh.getPath().empty()) {
+        ImGui::Text("Path:");
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", mesh.getPath().c_str());
+    }
+
+    ImGui::Text("Vertices: %zu", mesh.getVertices().size());
+    ImGui::Text("Faces:    %zu", mesh.getIndices().size() / 3);
+
+    return false;
 }

@@ -1,7 +1,8 @@
 #ifndef UTILS_GLSL
 #define UTILS_GLSL
 
-#define EPS 1e-3
+#define TRI_EPS 1e-12
+#define EPS 1e-6
 #define PI 3.14159265
 #define INFINITY abs(1.0/0.0)
 

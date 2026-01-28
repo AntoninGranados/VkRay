@@ -47,10 +47,11 @@ public:
 
     // The engine is needed in case we have to resize a buffer
     MaterialHandle pushMaterial(const Material &mat);
-    void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle);
-    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle);
-    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle);
-    void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle);
+    void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
+    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle = 0);
+    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle = 0);
+    void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
+    void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
     void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
 
     void fillBuffers();
@@ -58,8 +59,9 @@ public:
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
     void drawUI();
     void drawNewObjectPopUp();
-    void drawSelectedMaterialUI();
     void drawSelectedEntityUI();
+    void drawSelectedMaterialUI();
+    void drawSelectedMeshAssetUI();
     LightMode loadPreset(ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
@@ -76,13 +78,17 @@ private:
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
     
-    int selectedEntity = -1;
-    MaterialHandle selectedMaterial = -1;
     ecs::Registry registry;
+    
+    int selectedEntity = -1;
     std::vector<ecs::Entity> entities;
     int entityN = 0;
+    
+    MaterialHandle selectedMaterial = -1;
     std::vector<Material> materials;
     int materialN = 0;
+    
+    MeshHandle selectedMeshAsset = -1;
     std::vector<MeshAsset> meshAssets;
 
     std::vector<Object*> objects;

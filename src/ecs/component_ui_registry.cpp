@@ -1,5 +1,7 @@
 #include "./component_ui_registry.hpp"
 
+#include "../scene/asset/mesh.hpp"
+
 #include <glm/gtc/type_ptr.hpp>
 #include <limits>
 
@@ -18,13 +20,15 @@ void ComponentUiRegistry::init() {
     auto& ui_reg = ComponentUiRegistry::get();
 
     ui_reg.add<ecs::Name>([](ecs::Name& n, ecs::Registry& r, ecs::Entity e){
-        n.value.resize(128);
+        if (!ImGui::CollapsingHeader("Name")) return false;
 
-        ImGui::SeparatorText("Name");
+        n.value.resize(128);
 
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::Text("Value:");
-        if (ImGui::InputText("##Value", n.value.data(), 128))
+        if (ImGui::InputText("##Value", n.value.data(), 128)) {
+            n.value = std::string(n.value.c_str());
+        }
         ImGui::PopItemWidth();
 
         return false;
@@ -32,8 +36,8 @@ void ComponentUiRegistry::init() {
 
     ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, ecs::Registry& r, ecs::Entity e){
         bool update = false;
-
-        ImGui::SeparatorText("Sphere");
+        
+        if (!ImGui::CollapsingHeader("Sphere")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::Text("Radius:");
@@ -44,24 +48,51 @@ void ComponentUiRegistry::init() {
     });
     
     ui_reg.add<ecs::Plane>([](ecs::Plane& p, ecs::Registry& r, ecs::Entity e){
-        ImGui::SeparatorText("Plane");
+        ImGui::CollapsingHeader("Plane", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
     ui_reg.add<ecs::Box>([](ecs::Box& p, ecs::Registry& r, ecs::Entity e){
-        ImGui::SeparatorText("Box");
+        ImGui::CollapsingHeader("Box", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
-    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& p, ecs::Registry& r, ecs::Entity e){
-        ImGui::SeparatorText("Mesh");
-        return false;
+    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, ecs::Registry& r, ecs::Entity e){
+        auto* meshes = ComponentUiRegistry::get().meshAssets;
+        if (!meshes || meshes->empty()) return false;
+
+        if (!ImGui::CollapsingHeader("Mesh")) return false;
+        ImGui::PushItemWidth(-FLT_MIN);
+        
+        bool update = false;
+        int current = ref.handle;
+        const std::string& currentName = (*meshes)[current].getName();
+        const char* preview = currentName.empty() ? "Mesh" : currentName.c_str();
+        if (ImGui::BeginCombo("##Mesh", preview)) {
+            for (int i = 0; i < static_cast<int>(meshes->size()); i++) {
+                const std::string& meshName = (*meshes)[i].getName();
+                const char* display = meshName.empty() ? "Mesh" : meshName.c_str();
+                std::string label = std::string(display) + "##MeshItem" + std::to_string(i);
+                const bool selected = (i == current);
+                if (ImGui::Selectable(label.c_str(), selected)) {
+                    ref.handle = i;
+                    update = true;
+                }
+                if (selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::PopItemWidth();
+
+        update |= drawMeshAssetUI((*meshes)[current]);
+
+        return update;
     });
 
     ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
         bool update = false;
-        
-        ImGui::SeparatorText("Transform");
+
+        if (!ImGui::CollapsingHeader("Transform")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
 
@@ -101,7 +132,7 @@ void ComponentUiRegistry::init() {
         auto* mats = ComponentUiRegistry::get().materials;
         if (!mats || mats->empty()) return false;
 
-        ImGui::SeparatorText("Material");
+        if (!ImGui::CollapsingHeader("Material")) return false;
         ImGui::PushItemWidth(-FLT_MIN);
         
         bool update = false;
@@ -109,9 +140,10 @@ void ComponentUiRegistry::init() {
         const char* preview = (*mats)[current].name.empty() ? "Material" : (*mats)[current].name.c_str();
         if (ImGui::BeginCombo("##Material", preview)) {
             for (int i = 0; i < static_cast<int>(mats->size()); i++) {
-                const char* label = (*mats)[i].name.empty() ? "Material" : (*mats)[i].name.c_str();
+                const char* display = (*mats)[i].name.empty() ? "Material" : (*mats)[i].name.c_str();
+                std::string label = std::string(display) + "##MaterialItem" + std::to_string(i);
                 const bool selected = (i == current);
-                if (ImGui::Selectable(label, selected)) {
+                if (ImGui::Selectable(label.c_str(), selected)) {
                     ref.handle = i;
                     update = true;
                 }
