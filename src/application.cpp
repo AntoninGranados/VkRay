@@ -115,8 +115,10 @@ void Application::run() {
 
 
 void Application::onFrameStart(float dt) {
-    fillUBOs();
     renderState.prevResolution = renderState.resolution;
+    
+    scene.runSystems(ctx);
+    fillUBOs();
     
     frameCount++;
     renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
@@ -124,7 +126,6 @@ void Application::onFrameStart(float dt) {
     syncCameraFromHandle();
     handleInput(dt);
     syncHandleFromCamera();    
-    scene.runSystems(ctx);
     
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;
@@ -289,9 +290,8 @@ void Application::handleInputPreview(float dt) {
     if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
     restartRender = true;
 
-    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (cameraHandle)
-            cameraHandle->setPreview(false);
+    if (cameraHandle != nullptr && glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (cameraHandle) cameraHandle->setPreview(false);
         cameraHandle = nullptr;
         camera.setAperture(0.0f);
         restartRender = true;

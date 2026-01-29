@@ -46,6 +46,14 @@ void Scene::init() {
 void Scene::initSystems() {
     scheduler.clear();
     scheduler.add(ecs::transformSystem);
+
+    scheduler.add(ecs::spherePackingSystem);
+    scheduler.add(ecs::planePackingSystem);
+    scheduler.add(ecs::boxPackingSystem);
+    scheduler.add(ecs::meshPackingSystem);
+    scheduler.add(ecs::materialPackingSystem);
+    scheduler.add(ecs::objectPackingSystem);
+    scheduler.add(ecs::lightPackingSystem);
 }
 
 void Scene::destroy() {
@@ -116,6 +124,7 @@ CameraHandle* Scene::getFirstCameraHandle() const {
     }
     return nullptr;
 }
+
 
 MaterialHandle Scene::pushMaterial(const Material &mat) {
     assert(ctx && ctx->engine);
@@ -277,216 +286,6 @@ void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 dir
     */
 }
 
-// TODO refactor this
-inline void addLight(const Material &mat, const float &area, const int &objectId, int &lightCount, std::vector<GpuLight> &lights, float &totalLightArea) {
-    if (mat.type == MaterialType::Emissive) {
-        lightCount++;
-        lights.push_back(GpuLight{
-            .objectId = objectId,
-            .area = area,
-            .pdfA = 1.0f/area,
-        });
-        totalLightArea += area;
-    }
-};
-
-// TODO: Only refill them after an update (not every frame)
-void Scene::fillBuffers() {
-    assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
-    const auto& sphereStorage = registry.storage<ecs::Sphere>();
-    const auto& planeStorage = registry.storage<ecs::Plane>();
-    const auto& boxStorage = registry.storage<ecs::Box>();
-    const auto& meshStorage = registry.storage<ecs::MeshRef>();
-    const auto& transformStorage = registry.storage<ecs::Transform>();
-    const auto& materialStorage = registry.storage<ecs::MaterialRef>();
-
-    size_t totalVertices = 0;
-    size_t totalIndices = 0;
-    size_t totalBvhNodes = 0;
-
-    for (const ecs::Entity& e : entities) {
-        if (!meshStorage.has(e)) continue;
-        const ecs::MeshRef& ref = meshStorage.get(e);
-        if (ref.handle < 0 || static_cast<size_t>(ref.handle) >= meshAssets.size()) continue;
-        
-        const MeshAsset& asset = meshAssets[ref.handle];
-        totalVertices += asset.getVertices().size();
-        totalIndices += asset.getIndices().size();
-        totalBvhNodes += asset.getBvhNodes().size();
-    }
-
-    bufferUpdated |= vertexBuffers.setElementCount(engine, totalVertices);
-    bufferUpdated |= indexBuffers.setElementCount(engine, totalIndices);
-    bufferUpdated |= bvhBuffers.setElementCount(engine, totalBvhNodes);
-
-    std::vector<GpuSphere> spheres(sphereBuffers.getCapacity());
-    std::vector<GpuPlane> planes(planeBuffers.getCapacity());
-    std::vector<GpuBox> boxes(boxBuffers.getCapacity());
-    std::vector<Vertex> vertices(vertexBuffers.getCapacity());
-    std::vector<uint32_t> indices(indexBuffers.getCapacity());
-    std::vector<GpuBvhNode> bvhNodes(bvhBuffers.getCapacity());
-    std::vector<GpuMesh> meshes(meshBuffers.getCapacity());
-    std::vector<GpuMaterial> materialData(materialBuffers.getCapacity());
-    std::vector<ObjectHandle> objectHandles(objectBuffers.getCapacity());
-    std::vector<GpuLight> lights;
-
-    int sphereId = 0;
-    int planeId = 0;
-    int boxId = 0;
-    int meshId = 0;
-    uint32_t entityCount = 0;
-    int lightCount = 0;
-    float totalLightArea = 0;
-    uint32_t vertexOffset = 0;
-    uint32_t indexOffset = 0;
-    uint32_t bvhOffset = 0;
-    
-    std::vector<int> entityToGpuIndex(entities.size(), -1);
-    for (size_t i = 0; i < entities.size(); i++) {
-        const ecs::Entity& e = entities[i];
-        if (!transformStorage.has(e)) continue;
-        
-        const ecs::Transform& transform = transformStorage.get(e);
-        MaterialHandle handle = 0;
-        if (materialStorage.has(e)) {
-            handle = materialStorage.get(e).handle;
-        }
-
-        if (sphereStorage.has(e)) {
-            const ecs::Sphere& sphere = sphereStorage.get(e);
-            
-            spheres[sphereId] = GpuSphere{
-                .center = transform.position,
-                .radius = sphere.radius,
-                .materialHandle = handle,
-            };
-            
-            const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
-            addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
-            objectHandles[entityCount] = { .type=ObjectType::Sphere, .id=sphereId };
-            sphereId++;
-        } else if (planeStorage.has(e)) {
-            planes[planeId] = GpuPlane{
-                .point = transform.position,
-                .normal = glm::normalize(transform.rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
-                .materialHandle = handle,
-            };
-            objectHandles[entityCount] = { .type=ObjectType::Plane, .id=planeId };
-            planeId++;
-        } else if (boxStorage.has(e)) {
-            boxes[boxId] = GpuBox{
-                .transform = transform.local,
-                .invTransform = glm::inverse(transform.local),
-                .materialHandle = handle,
-            };
-
-            const glm::vec3 axisX = glm::vec3(transform.local[0]);
-            const glm::vec3 axisY = glm::vec3(transform.local[1]);
-            const glm::vec3 axisZ = glm::vec3(transform.local[2]);
-            const float hx = glm::length(axisX);
-            const float hy = glm::length(axisY);
-            const float hz = glm::length(axisZ);
-            const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
-            addLight(materials[handle], area, entityCount, lightCount, lights, totalLightArea);
-            
-            objectHandles[entityCount] = { .type=ObjectType::Box, .id=boxId };
-            boxId++;
-        } else if (meshStorage.has(e)) {
-            const ecs::MeshRef& meshRef = meshStorage.get(e);
-            if (meshRef.handle < 0 || static_cast<size_t>(meshRef.handle) >= meshAssets.size())
-                continue;
-            const MeshAsset& asset = meshAssets[meshRef.handle];
-            const auto& meshVerts = asset.getVertices();
-            const auto& meshIndices = asset.getIndices();
-            const auto& meshBvhNodes = asset.getBvhNodes();
-
-            for (size_t v = 0; v < meshVerts.size(); v++) {
-                vertices[vertexOffset + v] = meshVerts[v];
-            }
-            for (size_t idx = 0; idx < meshIndices.size(); idx++) {
-                indices[indexOffset + idx] = meshIndices[idx] + vertexOffset;
-            }
-            for (size_t n = 0; n < meshBvhNodes.size(); n++) {
-                GpuBvhNode node = meshBvhNodes[n];
-                if (node.isLeaf != 0) {
-                    node.data0 = static_cast<size_t>(node.data0 + (indexOffset / 3));
-                } else {
-                    node.data0 = static_cast<size_t>(node.data0 + bvhOffset);
-                    node.data1 = static_cast<size_t>(node.data1 + bvhOffset);
-                }
-                bvhNodes[bvhOffset + n] = node;
-            }
-
-            meshes[meshId] = GpuMesh{
-                .transform = transform.local,
-                .invTransform = glm::inverse(transform.local),
-                .indexOffset = indexOffset,
-                .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
-                .bvhOffset = bvhOffset,
-                .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
-                .materialHandle = handle,
-            };
-
-            objectHandles[entityCount] = { .type=ObjectType::Mesh, .id=meshId };
-            vertexOffset += static_cast<uint32_t>(meshVerts.size());
-            indexOffset += static_cast<uint32_t>(meshIndices.size());
-            bvhOffset += static_cast<uint32_t>(meshBvhNodes.size());
-            meshId++;
-        } else {
-            continue;
-        }
-
-        entityToGpuIndex[i] = entityCount;
-        entityCount++;
-    }
-    
-    bufferUpdated |= lightBuffers.setElementCount(engine, lightCount);
-
-    for (size_t i = 0; i < materials.size() && i < materialData.size(); i++) {
-        materialData[i] = GpuMaterial{
-            .type = materials[i].type,
-            .albedo = materials[i].albedo,
-            .payload = { materials[i].payload[0], materials[i].payload[1] }
-        };
-    }
-
-    int selected = -1;
-    if (selectedEntity >= 0)
-        selected = entityToGpuIndex[static_cast<size_t>(selectedEntity)];
-
-    // Fill the buffers
-    sphereBuffers.fill(engine, spheres.data());
-    planeBuffers.fill(engine, planes.data());
-    boxBuffers.fill(engine, boxes.data());
-    materialBuffers.fill(engine, materialData.data());
-    vertexBuffers.fill(engine, vertices.data());
-    indexBuffers.fill(engine, indices.data());
-    meshBuffers.fill(engine, meshes.data());
-    bvhBuffers.fill(engine, bvhNodes.data());
-
-    size_t offset;
-    
-    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
-    offset = 0;
-    memcpy(objectData.data() + offset, &entityCount, sizeof(entityCount));
-    offset += sizeof(entityCount);
-    memcpy(objectData.data() + offset, &selected, sizeof(selected));
-    offset += sizeof(selected);
-    if (entityCount > 0)
-        memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
-
-    objectBuffers.fill(engine, objectData.data());
-
-    std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
-    offset = 0;
-    memcpy(lightData.data() + offset, &totalLightArea, sizeof(totalLightArea));
-    offset += sizeof(totalLightArea);
-    memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
-        
-    lightBuffers.fill(engine, lightData.data());
-}
-
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedEntity < 0) return;
@@ -571,7 +370,6 @@ void Scene::drawUI() {
             ecs::Entity e = entities[static_cast<size_t>(selectedEntity)];
             registry.destroyEntity(e);
             entities.erase(std::next(entities.begin(), selectedEntity));
-            selectedEntity = -1;
             updated = true;
             bufferUpdated = true;
         }
@@ -618,7 +416,6 @@ void Scene::drawUI() {
         {
             const int removed = selectedMaterial;
             materials.erase(materials.begin() + removed);
-            selectedMaterial = -1;
 
             auto& matRefs = registry.storage<ecs::MaterialRef>();
             const auto& refEntities = matRefs.entities();
@@ -663,7 +460,6 @@ void Scene::drawUI() {
         if (ImGui::Button("-##MeshAssets", ImVec2(32, 0)) && selectedMeshAsset > 0 && selectedMeshAsset < static_cast<int>(meshAssets.size())) {
             const int removed = selectedMeshAsset;
             meshAssets.erase(meshAssets.begin() + removed);
-            selectedMeshAsset = -1;
 
             auto& meshRefs = registry.storage<ecs::MeshRef>();
             const auto& refEntities = meshRefs.entities();
@@ -936,4 +732,10 @@ bool Scene::checkBufferUpdate() {
         return true;
     }
     return false;
+}
+
+const ecs::Entity* Scene::getSelectedEntity() const {
+    if (selectedEntity < 0 || static_cast<size_t>(selectedEntity) >= entities.size())
+        return nullptr;
+    return &entities[static_cast<size_t>(selectedEntity)];
 }

@@ -1,4 +1,4 @@
-#include "transform_system.hpp"
+#include "gpu_packing_system.hpp"
 
 #include <vector>
 
@@ -10,21 +10,24 @@
 #include "../../scene/object/object.hpp"
 
 namespace ecs {
+constexpr size_t OBJECT_HEADER_SIZE = sizeof(uint32_t) + sizeof(int32_t);
+constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
 
 void spherePackingSystem(Registry& registry, AppContext& ctx) {
     auto& spheres = registry.storage<ecs::Sphere>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
     auto& packingMaps = ctx.scene->getPackingMaps();
-
+    
     std::vector<GpuSphere> gpuSpheres;
     packingMaps.sphereId.clear();
     size_t sphereId = 0;
 
     for (const auto& e : spheres.entities()) {
+
         if (!transforms.has(e)) continue;
-        Sphere& s = spheres.get(e);
-        Transform& t = transforms.get(e);
+        ecs::Sphere& s = spheres.get(e);
+        ecs::Transform& t = transforms.get(e);
 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
         
@@ -34,17 +37,17 @@ void spherePackingSystem(Registry& registry, AppContext& ctx) {
             .materialHandle = handle,
         });
                 
-        // const float area = 4.0f * glm::pi<float>() * sphere.radius * sphere.radius;
-        // addLight(materials[spheres[sphereId].materialHandle], area, entityCount, lightCount, lights, totalLightArea);
         packingMaps.sphereId[e] = sphereId++;
     }
+    if (gpuSpheres.size() == 0) return;
 
     auto& sphereBuffers = ctx.scene->getSphereBuffers();
-    sphereBuffers.setElementCount(*ctx.engine, sphereId);
+    sphereBuffers.setElementCount(*ctx.engine, gpuSpheres.size());
     sphereBuffers.fill(*ctx.engine, gpuSpheres.data());
 }
 
 void planePackingSystem(Registry& registry, AppContext& ctx) {
+
     auto& planes = registry.storage<ecs::Plane>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -56,8 +59,8 @@ void planePackingSystem(Registry& registry, AppContext& ctx) {
 
     for (const auto& e : planes.entities()) {
         if (!transforms.has(e)) continue;
-        // Plane& p = planes.get(e);
-        Transform& t = transforms.get(e);
+        // ecs::Plane& p = planes.get(e);
+        ecs::Transform& t = transforms.get(e);
 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
         
@@ -69,13 +72,15 @@ void planePackingSystem(Registry& registry, AppContext& ctx) {
         
         packingMaps.planeId[e] = planeId++;
     }
+    if (gpuPlanes.size() == 0) return;
 
     auto& planeBuffers = ctx.scene->getPlaneBuffers();
-    planeBuffers.setElementCount(*ctx.engine, planeId);
+    planeBuffers.setElementCount(*ctx.engine, gpuPlanes.size());
     planeBuffers.fill(*ctx.engine, gpuPlanes.data());
 }
 
 void boxPackingSystem(Registry& registry, AppContext& ctx) {
+
     auto& boxes = registry.storage<ecs::Box>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -87,8 +92,8 @@ void boxPackingSystem(Registry& registry, AppContext& ctx) {
 
     for (const auto& e : boxes.entities()) {
         if (!transforms.has(e)) continue;
-        // Box& b = boxes.get(e);
-        Transform& t = transforms.get(e);
+        // ecs::Box& b = boxes.get(e);
+        ecs::Transform& t = transforms.get(e);
 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
         
@@ -98,25 +103,269 @@ void boxPackingSystem(Registry& registry, AppContext& ctx) {
             .materialHandle = handle,
         });
 
-        // const glm::vec3 axisX = glm::vec3(transform.local[0]);
-        // const glm::vec3 axisY = glm::vec3(transform.local[1]);
-        // const glm::vec3 axisZ = glm::vec3(transform.local[2]);
-        // const float hx = glm::length(axisX);
-        // const float hy = glm::length(axisY);
-        // const float hz = glm::length(axisZ);
-        // const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
-        // addLight(materials[handle], area, entityCount, lightCount, lights, totalLightArea);
         packingMaps.boxId[e] = boxId++;
     }
+    if (gpuBoxes.size() == 0) return;
 
     auto& boxBuffers = ctx.scene->getBoxBuffers();
-    boxBuffers.setElementCount(*ctx.engine, boxId);
+    boxBuffers.setElementCount(*ctx.engine, gpuBoxes.size());
     boxBuffers.fill(*ctx.engine, gpuBoxes.data());
 }
 
 void meshPackingSystem(Registry& registry, AppContext& ctx) {
-    // TODO: pack vertices, indices, BVHs (ie. mesh structure)
-    // TODO: pach mesh (ie. mesh objects/mesh refs)
+    auto& meshRefs = registry.storage<ecs::MeshRef>();
+    auto& transforms = registry.storage<ecs::Transform>();
+    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& packingMaps = ctx.scene->getPackingMaps();
+
+    std::vector<GpuMesh> meshTemplates;
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    std::vector<GpuBvhNode> bvhNodes;
+
+    for (const auto& mesh : ctx.scene->getMeshAssets()) {
+        auto& meshVertices = mesh.getVertices();
+        auto& meshIndices = mesh.getIndices();
+        auto& meshBvhNodes = mesh.getBvhNodes();
+
+        uint32_t vertexOffset = static_cast<uint32_t>(vertices.size());
+        uint32_t indexOffset = static_cast<uint32_t>(indices.size());
+        uint32_t bvhOffset = static_cast<uint32_t>(bvhNodes.size());
+        meshTemplates.push_back(GpuMesh{
+            .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
+            .indexOffset = indexOffset,
+            .bvhOffset = bvhOffset,
+            .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
+        });
+
+        vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
+        // Offset the indices by the vertex offset
+        for (size_t i = 0; i < meshIndices.size(); i++) {
+            indices.push_back(meshIndices[i] + vertexOffset);
+        }
+        // Offset the BVH links and leaf links
+        for (size_t n = 0; n < meshBvhNodes.size(); n++) {
+            const GpuBvhNode& node = meshBvhNodes[n];
+            uint32_t data0, data1;
+            if (node.isLeaf != 0) {
+                data0 = static_cast<uint32_t>(node.data0 + (indexOffset / 3));
+                data1 = LEAF_SIZE;
+            } else {
+                data0 = static_cast<uint32_t>(node.data0 + bvhOffset);
+                data1 = static_cast<uint32_t>(node.data1 + bvhOffset);
+            }
+            bvhNodes.push_back(GpuBvhNode{
+                .aabbMax = node.aabbMax,
+                .aabbMin = node.aabbMin,
+                .isLeaf = node.isLeaf,
+                .data0 = data0,
+                .data1 = data1
+            });
+        }
+    }
+    if (vertices.size() == 0) return;
+    if (indices.size() == 0) return;
+    if (bvhNodes.size() == 0) return;
+
+    auto& vertexBuffers = ctx.scene->getVertexBuffers();
+    vertexBuffers.setElementCount(*ctx.engine, vertices.size());
+    vertexBuffers.fill(*ctx.engine, vertices.data());
+
+    auto& indexBuffers = ctx.scene->getIndexBuffers();
+    indexBuffers.setElementCount(*ctx.engine, indices.size());
+    indexBuffers.fill(*ctx.engine, indices.data());
+
+    auto& bvhBuffers = ctx.scene->getBvhBuffers();
+    bvhBuffers.setElementCount(*ctx.engine, bvhNodes.size());
+    bvhBuffers.fill(*ctx.engine, bvhNodes.data());
+
+    std::vector<GpuMesh> meshes;
+    packingMaps.meshId.clear();
+    size_t meshId = 0;
+
+    for (const auto& e : meshRefs.entities()) {
+        if (!transforms.has(e)) continue;
+        ecs::MeshRef& meshRef = meshRefs.get(e);
+        const GpuMesh& meshTemplate = meshTemplates[meshRef.handle];
+        ecs::Transform& t = transforms.get(e);
+
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+
+        meshes.push_back(GpuMesh{
+            .transform = t.local,
+            .invTransform = glm::inverse(t.local),
+            .indexOffset = meshTemplate.indexOffset,
+            .triangleCount = meshTemplate.triangleCount,
+            .bvhOffset = meshTemplate.bvhOffset,
+            .bvhNodeCount = meshTemplate.bvhNodeCount,
+            .materialHandle = handle,
+        });
+
+        packingMaps.meshId[e] = meshId++;
+    }
+    if (meshes.size() == 0) return;
+
+    auto& meshBuffers = ctx.scene->getMeshBuffers();
+    meshBuffers.setElementCount(*ctx.engine, meshes.size());
+    meshBuffers.fill(*ctx.engine, meshes.data());
+}
+
+void materialPackingSystem(Registry& registry, AppContext& ctx) {
+    std::vector<GpuMaterial> materials;
+
+    for (const auto& mat : ctx.scene->getMaterials()) {
+        materials.push_back(GpuMaterial{
+            .type = mat.type,
+            .albedo = mat.albedo,
+            .payload = { mat.payload[0], mat.payload[1] }
+        });
+    }
+    if (materials.size() == 0) return;
+
+    auto& materialBuffers = ctx.scene->getMaterialBuffers();
+    materialBuffers.setElementCount(*ctx.engine, materials.size());
+    materialBuffers.fill(*ctx.engine, materials.data());
+}
+
+void objectPackingSystem(Registry& registry, AppContext& ctx) {
+    const auto& packingMaps = ctx.scene->getPackingMaps();
+
+    std::vector<ObjectHandle> objectHandles;
+    const ecs::Entity* selectedEntity = ctx.scene->getSelectedEntity();
+    int32_t objectSelected = -1;
+    int32_t objectId = 0;
+
+    // Spheres
+    for (const auto& [e, id] : packingMaps.sphereId) {
+        objectHandles.push_back(ObjectHandle{
+            .type = ObjectType::Sphere,
+            .id = id,
+        });
+        if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
+        objectId++;
+    }
+    // Planes
+    for (const auto& [e, id] : packingMaps.planeId) {
+        objectHandles.push_back(ObjectHandle{
+            .type = ObjectType::Plane,
+            .id = id,
+        });
+        if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
+        objectId++;
+    }
+    // Boxes
+    for (const auto& [e, id] : packingMaps.boxId) {
+        objectHandles.push_back(ObjectHandle{
+            .type = ObjectType::Box,
+            .id = id,
+        });
+        if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
+        objectId++;
+    }
+    // Meshes
+    for (const auto& [e, id] : packingMaps.meshId) {
+        objectHandles.push_back(ObjectHandle{
+            .type = ObjectType::Mesh,
+            .id = id,
+        });
+        if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
+        objectId++;
+    }
+
+    if (objectHandles.size() == 0) return;
+
+    auto& objectBuffers = ctx.scene->getObjectBuffers();
+    objectBuffers.setElementCount(*ctx.engine, objectHandles.size());
+
+    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
+    size_t offset = 0;
+    uint32_t objectCount = objectHandles.size();
+    // Compute the object buffers data (including the header)
+    memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
+    offset += sizeof(objectCount);
+    memcpy(objectData.data() + offset, &objectSelected, sizeof(objectSelected));
+    offset += sizeof(objectSelected);
+    memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
+
+    objectBuffers.fill(*ctx.engine, objectData.data());
+}
+
+void lightPackingSystem(Registry& registry, AppContext& ctx) {
+    const auto& spheres = registry.storage<ecs::Sphere>();
+    const auto& meshRefs = registry.storage<ecs::MeshRef>();
+    const auto& transforms = registry.storage<ecs::Transform>();
+    const auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    const auto& materials = ctx.scene->getMaterials();
+    const auto& meshAssets = ctx.scene->getMeshAssets();
+    const auto& packingMaps = ctx.scene->getPackingMaps();
+
+    std::vector<GpuLight> lights;
+    int32_t objectId = 0;
+    float totalArea = 0.0f;
+
+    // Spheres
+    for (const auto& [e, _] : packingMaps.sphereId) {
+        objectId++;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+
+        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).radius, 2.0f);
+        totalArea += area;
+        lights.push_back(GpuLight{
+            .area = area,
+            .pdfA = 1.0f / area,
+            .objectId = objectId-1,
+        });
+    }
+    // Planes can't be used for importance sampling (infinite area)
+    objectId += packingMaps.boxId.size();
+    // Boxes
+    for (const auto& [e, _] : packingMaps.boxId) {
+        objectId++;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+
+        const glm::mat4& local = transforms.get(e).local;
+        const glm::vec3 axisX = glm::vec3(local[0]);
+        const glm::vec3 axisY = glm::vec3(local[1]);
+        const glm::vec3 axisZ = glm::vec3(local[2]);
+        const float hx = glm::length(axisX);
+        const float hy = glm::length(axisY);
+        const float hz = glm::length(axisZ);
+        const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
+        totalArea += area;
+        lights.push_back(GpuLight{
+            .area = area,
+            .pdfA = 1.0f / area,
+            .objectId = objectId-1,
+        });
+    }
+    // Meshes
+    for (const auto& [e, _] : packingMaps.meshId) {
+        objectId++;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+
+        const glm::mat4& t = transforms.get(e).local;
+        const float area = meshAssets[meshRefs.get(e).handle].computeArea(t);
+        totalArea += area;
+        lights.push_back(GpuLight{
+            .area = area,
+            .pdfA = 1.0f / area,
+            .objectId = objectId-1,
+        });
+    }
+
+    if (lights.size() == 0) return;
+
+    auto& lightBuffers = ctx.scene->getLightBuffers();
+    lightBuffers.setElementCount(*ctx.engine, lights.size());
+
+    std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
+    // Compute the light buffers data (including the header)
+    size_t offset = 0;
+    memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
+    offset += sizeof(totalArea);
+    memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
+        
+    lightBuffers.fill(*ctx.engine, lightData.data());
 }
 
 } // namespace ecs

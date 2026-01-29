@@ -55,6 +55,8 @@ public:
     void setPath(const std::string& newPath) { path = newPath; }
     static std::string nameFromPath(const std::string& path);
     
+    float computeArea(const glm::mat4& transform) const;
+
     float getSimplifyRatio() const { return simplifyRatio; }
     bool setSimplifyRatio(float ratio);
     bool applySimplification();

@@ -219,8 +219,6 @@ void RenderSystem::render(AppContext& ctx) {
 
     engine.beginFrame();
 
-    ctx.scene->fillBuffers();
-
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
         std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {

@@ -22,6 +22,7 @@
 #include "../ecs/component_ui_registry.hpp"
 #include "../ecs/system_scheduler.hpp"
 #include "../ecs/systems/transform_system.hpp"
+#include "../ecs/systems/gpu_packing_system.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -55,7 +56,6 @@ public:
     }
     void setContext(const AppContext& context) { ctx = &context; }
 
-    // The engine is needed in case we have to resize a buffer
     MaterialHandle pushMaterial(const Material &mat);
     void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
     void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle = 0);
@@ -63,8 +63,6 @@ public:
     void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
     void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
     void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
-
-    void fillBuffers();
     
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
     void drawUI();
@@ -78,6 +76,7 @@ public:
 
     const int getSelectionId() { return selectedEntity; }
     void clearSelection() { selectedEntity = -1; }
+    const ecs::Entity* getSelectedEntity() const;
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
     bool containsObject(const Object *object) const;
 

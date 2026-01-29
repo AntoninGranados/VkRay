@@ -31,6 +31,26 @@ std::string MeshAsset::nameFromPath(const std::string& path) {
     return path.substr(start, end - start);
 }
 
+float MeshAsset::computeArea(const glm::mat4& transform) const {
+    if (indices.empty()) return 0.0f;
+    const glm::mat3 linear(transform);
+    double area = 0.0;
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        const uint32_t i0 = indices[i + 0];
+        const uint32_t i1 = indices[i + 1];
+        const uint32_t i2 = indices[i + 2];
+        if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size())
+            continue;
+        const glm::vec3 v0 = vertices[i0].position;
+        const glm::vec3 v1 = vertices[i1].position;
+        const glm::vec3 v2 = vertices[i2].position;
+        const glm::vec3 e1 = linear * (v1 - v0);
+        const glm::vec3 e2 = linear * (v2 - v0);
+        area += 0.5 * glm::length(glm::cross(e1, e2));
+    }
+    return static_cast<float>(area);
+}
+
 bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     path = _path;
 

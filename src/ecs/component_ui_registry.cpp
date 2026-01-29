@@ -84,7 +84,9 @@ void ComponentUiRegistry::init() {
         }
         ImGui::PopItemWidth();
 
+        ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
         update |= drawMeshAssetUI((*meshes)[current]);
+        ImGui::EndChild();
 
         return update;
     });
@@ -158,7 +160,9 @@ void ComponentUiRegistry::init() {
         }
         ImGui::PopItemWidth();
 
+        ImGui::BeginChild("MaterialData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
         update |= drawMaterialUI((*mats)[current]);
+        ImGui::EndChild();
 
         return update;
     });
