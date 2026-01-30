@@ -9,12 +9,21 @@ void updateYawPitchFromDirection(const glm::vec3 &dir, float &yaw, float &pitch)
 }
 
 Camera::Camera(glm::vec3 position)
-    : CameraHandle("Preview Camera", position, glm::vec3(0.0f, 0.0f, 1.0f), 80.0f),
+    : position(position),
       target(glm::vec3(0.0f)) {
-    setDirection(target - position);
     orbitDistance = glm::length(target - position);
     if (orbitDistance < 0.1f) orbitDistance = 0.1f;
     updateYawPitchFromDirection(getDirection(), yaw, pitch);
+}
+
+glm::mat4 Camera::getProjection(GLFWwindow* window) const {
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    float aspect = static_cast<float>(width) / static_cast<float>(height);
+    float fovY = glm::radians(fov);
+
+    glm::mat4 proj = glm::perspective(fovY, aspect, 1e-4f, 1e4f);
+    return proj;
 }
 
 bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {

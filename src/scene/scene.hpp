@@ -13,7 +13,6 @@
 #include "object/object_buffers.hpp"
 #include "object/object.hpp"
 #include "asset/mesh.hpp"
-#include "camera_handle.hpp"
 #include "raycast.hpp"
 
 #include "../ecs/registry.hpp"
@@ -21,8 +20,6 @@
 #include "../ecs/components.hpp"
 #include "../ecs/component_ui_registry.hpp"
 #include "../ecs/system_scheduler.hpp"
-#include "../ecs/systems/transform_system.hpp"
-#include "../ecs/systems/gpu_packing_system.hpp"
 
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
@@ -51,10 +48,7 @@ public:
     void destroy();
     void clear();
 
-    void setPreviewCameraCallback(std::function<void(const CameraHandle&)> callback) {
-        previewCameraCallback = std::move(callback);
-    }
-    void setContext(const AppContext& context) { ctx = &context; }
+    void setContext(AppContext& context) { ctx = &context; }
 
     MaterialHandle pushMaterial(const Material &mat);
     void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
@@ -62,7 +56,7 @@ public:
     void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle = 0);
     void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
     void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
-    void pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov);
+    void pushCamera(std::string name, const glm::mat4 &transform);
     
     void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
     void drawUI();
@@ -70,17 +64,20 @@ public:
     void drawSelectedEntityUI();
     void drawSelectedMaterialUI();
     void drawSelectedMeshAssetUI();
+    
+    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
+    
     void runSystems(AppContext& ctx) { scheduler.run(registry, ctx); }
+    void runDrawSystems(AppContext& ctx) { drawScheduler.run(registry, ctx); }
     void gpuPacking(AppContext& ctx) { packingScheduler.run(registry, ctx); }
+    
     LightMode loadPreset(ScenePreset preset);
-    CameraHandle* getFirstCameraHandle() const;
-
+    
     const int getSelectionId() { return selectedEntity; }
-    void clearSelection() { selectedEntity = -1; }
     const ecs::Entity* getSelectedEntity() const;
-    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
-    bool containsObject(const Object *object) const;
-
+    void clearSelection() { selectedEntity = -1; }
+    Camera& getCamera() { return camera; }
+    
     std::vector<bufferList_t> getBufferLists();
     ObjectBuffers& getSphereBuffers() { return sphereBuffers; };
     ObjectBuffers& getPlaneBuffers() { return planeBuffers; };
@@ -107,7 +104,7 @@ private:
     PackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler scheduler, packingScheduler;
+    ecs::SystemScheduler scheduler, packingScheduler, drawScheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;
@@ -120,13 +117,12 @@ private:
     MeshHandle selectedMeshAsset = -1;
     std::vector<MeshAsset> meshAssets;
 
-    std::vector<Object*> objects;
+    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
 
     bool updated = false;
     bool bufferUpdated = false;
 
-    std::function<void(const CameraHandle&)> previewCameraCallback;
-    const AppContext* ctx = nullptr;
+    AppContext* ctx = nullptr;
 
     void initSystems();
 

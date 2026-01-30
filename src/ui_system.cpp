@@ -64,6 +64,8 @@ void UiSystem::drawPreview(AppContext& ctx) {
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
+        scene.runDrawSystems(ctx);
+
         scene.drawGuizmo(
             camera.getView(),
             camera.getProjection(ctx.engine->getWindow().get())

@@ -13,6 +13,9 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "../ecs/systems/transform_system.hpp"
+#include "../ecs/systems/gpu_packing_system.hpp"
+#include "../ecs/systems/camera_system.hpp"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
@@ -55,6 +58,9 @@ void Scene::initSystems() {
     packingScheduler.add(ecs::materialPackingSystem);
     packingScheduler.add(ecs::objectPackingSystem);
     packingScheduler.add(ecs::lightPackingSystem);
+
+    drawScheduler.clear();
+    drawScheduler.add(ecs::cameraDrawingSystem);
 }
 
 void Scene::destroy() {
@@ -96,7 +102,6 @@ void Scene::clear() {
     materials.clear();
     materialN = 0;
     meshAssets.clear();
-    objects.clear();
     selectedEntity = -1;
     selectedMaterial = -1;
     selectedMeshAsset = -1;
@@ -117,16 +122,6 @@ LightMode Scene::loadPreset(ScenePreset preset) {
     }
     return mode;
 }
-
-CameraHandle* Scene::getFirstCameraHandle() const {
-    for (Object* object : objects) {
-        if (object->getType() == ObjectType::Camera) {
-            return static_cast<CameraHandle*>(object);
-        }
-    }
-    return nullptr;
-}
-
 
 MaterialHandle Scene::pushMaterial(const Material &mat) {
     const MaterialHandle materialHandle = static_cast<int>(materials.size());
@@ -255,14 +250,34 @@ void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &t
     entities.push_back(e);
 }
 
-void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 direction, float fov) {
-    /*
-    CameraHandle *cameraHandle = new CameraHandle(name, position, direction, fov);
-    if (previewCameraCallback)
-    cameraHandle->setPreviewCallback(previewCameraCallback);
-    objects.push_back(cameraHandle);
-    updated = true;
-    */
+void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
+    glm::vec3 translation, rotationEuler, scale;
+    ImGuizmo::DecomposeMatrixToComponents(
+        glm::value_ptr(transform),
+        glm::value_ptr(translation),
+        glm::value_ptr(rotationEuler),
+        glm::value_ptr(scale));
+
+    ecs::Entity e = registry.createEntity();
+    registry.add<ecs::Selectable>(e, ecs::Selectable{});
+
+    ecs::Name nameComponent;
+    nameComponent.setValue(std::move(name));
+    registry.add<ecs::Name>(e, nameComponent);
+    
+    ecs::CameraObject cameraComponent;
+    cameraComponent.setFov(60.0f);
+    cameraComponent.setAperture(0.0f);
+    cameraComponent.setFocusDepth(0.0f);
+    registry.add<ecs::CameraObject>(e, cameraComponent);
+
+    
+    ecs::Transform transformComponent;
+    transformComponent.setPosition(translation);
+    transformComponent.setRotation(glm::quat(rotationEuler));
+    registry.add<ecs::Transform>(e, transformComponent);
+
+    entities.push_back(e);
 }
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
@@ -500,59 +515,32 @@ void Scene::drawNewObjectPopUp() {
     std::string name(nameBuffer);
 
     if (ImGui::Button("Sphere", { 200, 0 })) {
-        pushSphere(
-            name,
-            glm::vec3(0.0, 0.0, 0.0),
-            1.0,
-            0
-        );
+        pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
     if (ImGui::Button("Plane", { 200, 0 })) {
-        pushPlane(
-            name,
-            glm::vec3( 0.0, 0.0, 0.0),
-            glm::vec3( 0.0, 1.0, 0.0),
-            0
-        );
+        pushPlane(name, glm::vec3( 0.0, 0.0, 0.0), glm::vec3( 0.0, 1.0, 0.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
     if (ImGui::Button("Box", { 200, 0 })) {
-        pushBox(
-            name,
-            glm::vec3(-1.0,-1.0,-1.0),
-            glm::vec3( 1.0, 1.0, 1.0),
-            0
-        );
+        pushBox(name, glm::vec3(-1.0,-1.0,-1.0), glm::vec3( 1.0, 1.0, 1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
     if (ImGui::Button("Mesh", { 200, 0 })) {
-        pushMesh(
-            name,
-            0,
-            glm::mat3(1.0),
-            0
-        );
+        pushMesh(name, 0, glm::mat3(1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
     if (ImGui::Button("Camera", { 200, 0 })) {
-        glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
-        glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
-        pushCameraHandle(
-            name,
-            pos,
-            direction,
-            60.0f
-        );
-        updated = true;
+        pushCamera(name, glm::mat3(1.0));
+        // updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
@@ -622,7 +610,7 @@ void Scene::drawSelectedMeshAssetUI() {
 }
 
 
-bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, const Camera &camera, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
+bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
     const Ray ray = getRay(screenPos, screenSize, camera);
     float tClosest = std::numeric_limits<float>::infinity();
     int idClosest = -1;
@@ -633,6 +621,7 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     auto& planeStorage = registry.storage<ecs::Plane>();
     auto& boxStorage = registry.storage<ecs::Box>();
     auto& meshStorage = registry.storage<ecs::MeshRef>();
+    auto& cameraStorage = registry.storage<ecs::CameraObject>();
     auto& transformStorage = registry.storage<ecs::Transform>();
     auto& selectableStorage = registry.storage<ecs::Selectable>();
 
@@ -657,6 +646,9 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
                 const MeshAsset& asset = meshAssets[meshRef.handle];
                 t = rayMeshIntersection(ray, transform.local, asset.getVertices(), asset.getIndices());
             }
+        } else if (includeCameras && cameraStorage.has(e)) {
+            constexpr float cameraSelectRadius = 0.6f;
+            t = raySphereIntersection(ray, transform.position, cameraSelectRadius);
         }
 
         if (t >= 0.0f && t < tClosest) {
@@ -671,14 +663,6 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, con
     return idClosest >= 0;
 }
 
-
-bool Scene::containsObject(const Object *object) const {
-    for (const Object *candidate : objects) {
-        if (candidate == object)
-            return true;
-    }
-    return false;
-}
 
 std::vector<bufferList_t> Scene::getBufferLists() {
     std::vector<bufferList_t> bufferLists = {

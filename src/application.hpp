@@ -10,7 +10,6 @@
 #include "./notification_system.hpp"
 #include "./parameter_system.hpp"
 #include "./scene/scene.hpp"
-#include "./scene/camera_handle.hpp"
 #include "./scene/scene_preset.hpp"
 #include "./scene/object/object.hpp"
 
@@ -37,7 +36,6 @@ public:
 private:
     VkSmol engine;
     Scene scene;
-    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
     ParameterSystem parameters;
     NotificationSystem notifications;
     UiSystem ui;
@@ -48,21 +46,17 @@ private:
 
     bool restartRender = false;
     
-    AppContext ctx{ &engine, &scene, &camera, &parameters, &notifications, &ui, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
+    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
     
     RenderSystem renderer;
 
     int frameCount = 0;
     bool shouldClose = false;
     
-    CameraHandle *cameraHandle = nullptr;
-    
     void initParameters();
     void initScene();
 
     void onFrameStart(float dt);
-    void syncHandleFromCamera();
-    void syncCameraFromHandle();
     void handleInput(float dt);
     void handleInputPreview(float dt);
     void handleInputRender(float dt);

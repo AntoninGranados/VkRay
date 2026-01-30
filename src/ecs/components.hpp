@@ -7,6 +7,7 @@
 #include "./components/objects/plane.hpp"
 #include "./components/objects/box.hpp"
 #include "./components/objects/mesh.hpp"
+#include "./components/objects/camera_object.hpp"
 
 #include "./components/editor/editor_only.hpp"
 #include "./components/editor/name.hpp"

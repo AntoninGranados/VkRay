@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <cmath>
 
-const float PREVIEW_VIEWPORT_SCALE = 0.8f;
-
 Application::Application() {
     engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0));
 
@@ -13,10 +11,10 @@ Application::Application() {
         [](GLFWwindow* window, double x, double y) {
             ImGui_ImplGlfw_CursorPosCallback(window, x, y);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            const bool cameraLocked = app->camera.isLocked();
+            const bool cameraLocked = app->ctx.camera->isLocked();
             if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured() || ImGuizmo::IsUsing()))
                 return;
-            app->restartRender |= app->camera.cursorPosCallback(window, x, y);
+            app->restartRender |= app->ctx.camera->cursorPosCallback(window, x, y);
         }
     );
 
@@ -26,7 +24,7 @@ Application::Application() {
             ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
             if (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured()) return;
-            app->restartRender |= app->camera.scrollCallback(window, xoffset, yoffset);
+            app->restartRender |= app->ctx.camera->scrollCallback(window, xoffset, yoffset);
         }
     );
 
@@ -78,25 +76,9 @@ void Application::initScene() {
     scene.setContext(ctx);
     scene.init();
 
-    scene.setPreviewCameraCallback([this](const CameraHandle &handle) {
-        if (cameraHandle && scene.containsObject(cameraHandle))
-            cameraHandle->setPreview(false);
-        float dist = glm::length(camera.getTarget() - camera.getPosition());
-        if (dist < 0.1f) dist = 1.0f;
-        camera.setPosition(handle.getPosition());
-        camera.setTarget(handle.getPosition() + handle.getDirection() * dist);
-        float fovRad = glm::radians(handle.getFov());
-        float previewFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) / PREVIEW_VIEWPORT_SCALE);
-        camera.setFov(glm::degrees(previewFovRad));
-        camera.setAperture(handle.getAperture());
-        camera.setFocusDepth(handle.getFocusDepth());
-        cameraHandle = const_cast<CameraHandle*>(&handle);
-        cameraHandle->setPreview(true);
-        restartRender = true;
-    });
-
     LightMode mode = scene.loadPreset(ScenePreset::Empty);
     parameters.setEnum<LightMode>("lightMode", mode);
+    ctx.camera = &scene.getCamera();
 }
 
 
@@ -119,9 +101,7 @@ void Application::onFrameStart(float dt) {
 
     renderState.prevResolution = renderState.resolution;
 
-    syncCameraFromHandle();
     handleInput(dt);
-    syncHandleFromCamera();
 
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;
@@ -130,16 +110,6 @@ void Application::onFrameStart(float dt) {
             scene.clearSelection();
             ui.saveToggledState();
             ui.setToggle(false);
-            CameraHandle* firstCamera = scene.getFirstCameraHandle();
-            if (firstCamera) {
-                float dist = glm::length(camera.getTarget() - camera.getPosition());
-                if (dist < 0.1f) dist = 1.0f;
-                camera.setPosition(firstCamera->getPosition());
-                camera.setTarget(firstCamera->getPosition() + firstCamera->getDirection() * dist);
-                camera.setFov(firstCamera->getFov());
-                camera.setAperture(firstCamera->getAperture());
-                camera.setFocusDepth(firstCamera->getFocusDepth());
-            }
             renderState.renderMode = true;
             renderState.pendingExit = false;
             renderState.samplesPerSecEMA = 0.0;
@@ -165,41 +135,6 @@ void Application::onFrameStart(float dt) {
     frameCount++;
     renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 }
-
-void Application::syncHandleFromCamera() {
-    if (!cameraHandle) return;
-    if (!scene.containsObject(cameraHandle)) {
-        cameraHandle = nullptr;
-        return;
-    }
-
-    cameraHandle->setPosition(camera.getPosition());
-    cameraHandle->setDirection(camera.getDirection());
-    float fovRad = glm::radians(camera.getFov());
-    float handleFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) * PREVIEW_VIEWPORT_SCALE);
-    cameraHandle->setFov(glm::max(1.0f, glm::degrees(handleFovRad)));
-    cameraHandle->setAperture(camera.getAperture());
-    cameraHandle->setFocusDepth(camera.getFocusDepth());
-}
-
-void Application::syncCameraFromHandle() {
-    if (!cameraHandle) return;
-    if (!scene.containsObject(cameraHandle)) {
-        cameraHandle = nullptr;
-        return;
-    }
-
-    float dist = glm::length(camera.getTarget() - camera.getPosition());
-    if (dist < 0.1f) dist = 1.0f;
-    camera.setPosition(cameraHandle->getPosition());
-    camera.setTarget(cameraHandle->getPosition() + cameraHandle->getDirection() * dist);
-    float fovRad = glm::radians(cameraHandle->getFov());
-    float previewFovRad = 2.0f * atanf(tanf(fovRad * 0.5f) / PREVIEW_VIEWPORT_SCALE);
-    camera.setFov(glm::degrees(previewFovRad));
-    camera.setAperture(cameraHandle->getAperture());
-    camera.setFocusDepth(cameraHandle->getFocusDepth());
-}
-
 
 void Application::handleInput(float dt) {
     glfwPollEvents();
@@ -244,7 +179,7 @@ void Application::handleInputRender(float dt) {
 void Application::handleInputPreview(float dt) {
     renderState.resolution = parameters.getFloat("previewResolution");
     
-    const bool blockMouseInput = ImGuizmo::IsUsing() || (camera.isLocked() && (ui.isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
+    const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ui.isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ui.isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
     const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
@@ -255,10 +190,8 @@ void Application::handleInputPreview(float dt) {
         glfwGetWindowSize(engine.getWindow().get(), &width, &height);
         float dist;
         glm::vec3 p;
-        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, false, false)) {
-            camera.setFocusDepth(dist);
-            if (cameraHandle)
-                cameraHandle->setFocusDepth(dist);
+        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, false, false)) {
+            ctx.camera->setFocusDepth(dist);
             restartRender = true;
         }
     }
@@ -271,7 +204,7 @@ void Application::handleInputPreview(float dt) {
         glfwGetWindowSize(engine.getWindow().get(), &width, &height);
         float dist;
         glm::vec3 p;
-        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, camera, dist, p, true);
+        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, true);
     }
     
     if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -280,10 +213,10 @@ void Application::handleInputPreview(float dt) {
     }
     
     if (!blockKeyboardInput) {
-        restartRender |= camera.processInput(engine.getWindow().get(), dt);
+        restartRender |= ctx.camera->processInput(engine.getWindow().get(), dt);
     }
     
-    if (camera.isLocked() || blockMouseInput)
+    if (ctx.camera->isLocked() || blockMouseInput)
         glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     else
         glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -291,13 +224,6 @@ void Application::handleInputPreview(float dt) {
     if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
     restartRender = true;
 
-    if (cameraHandle != nullptr && glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (cameraHandle) cameraHandle->setPreview(false);
-        cameraHandle = nullptr;
-        camera.setAperture(0.0f);
-        restartRender = true;
-    }
-    
     if (scene.checkUpdate()) restartRender = true;
 }
 
@@ -307,11 +233,11 @@ void Application::fillUBOs() {
     auto& screen = *ctx.screenUBO;
 
     // Raytracing UBO
-    pathtracer.cameraPos = camera.getPosition();
-    pathtracer.cameraDir = camera.getDirection();
-    pathtracer.tanHFov = camera.getTanHFov();
-    pathtracer.aperture = camera.getAperture();
-    pathtracer.focusDepth = camera.getFocusDepth();
+    pathtracer.cameraPos = ctx.camera->getPosition();
+    pathtracer.cameraDir = ctx.camera->getDirection();
+    pathtracer.tanHFov = ctx.camera->getTanHFov();
+    pathtracer.aperture = ctx.camera->getAperture();
+    pathtracer.focusDepth = ctx.camera->getFocusDepth();
 
     VkExtent2D extent = engine.getExtent();
     pathtracer.screenSize = { (float)extent.width, (float)extent.height };
@@ -337,5 +263,5 @@ void Application::fillUBOs() {
     screen.frameCount = frameCount;
     screen.resolution = renderState.resolution;
     screen.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
-    screen.previewBorderEnabled = cameraHandle ? 1 : 0;
+    screen.previewBorderEnabled = 0;
 }

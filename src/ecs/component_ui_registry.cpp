@@ -91,6 +91,23 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
+    ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, ecs::Registry& r, ecs::Entity e){
+        bool update = false;
+        
+        if (!ImGui::CollapsingHeader("Camera")) return false;
+
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::Text("FOV:");
+        update |= ImGui::DragFloat("##FOV", &c.fov, 0.1f, 1.0f, 160.0f);
+        ImGui::Text("Aperture:");
+        update |= ImGui::DragFloat("##Aperture", &c.aperture, 0.01f, 0.0f, 10.0f);
+        ImGui::Text("Focus Depth:");
+        update |= ImGui::DragFloat("##FocusDepth", &c.focusDepth, 0.01f, 0.0f, FLT_MAX);
+        ImGui::PopItemWidth();
+
+        return update;
+    });
+
     ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
