@@ -95,6 +95,7 @@ public:
     std::vector<Material>& getMaterials() { return materials; };
     std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
     PackingMaps& getPackingMaps() { return packingMaps; }
+    void markBufferUpdated() { bufferUpdated = true; }
 
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
