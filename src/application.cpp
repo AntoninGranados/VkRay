@@ -90,15 +90,17 @@ void Application::run() {
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
         
+        scene.runPreUpdate(ctx);
+        
         onFrameStart(deltaTime);
         renderer.render(ctx);
+
+        scene.runPostUpdate(ctx);
     }
 }
 
 
 void Application::onFrameStart(float dt) {
-    scene.runSystems(ctx);
-
     renderState.prevResolution = renderState.resolution;
 
     handleInput(dt);
@@ -263,5 +265,5 @@ void Application::fillUBOs() {
     screen.frameCount = frameCount;
     screen.resolution = renderState.resolution;
     screen.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
-    screen.previewBorderEnabled = 0;
+    screen.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
 }

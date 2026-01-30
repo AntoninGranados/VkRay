@@ -1,5 +1,7 @@
 #include "camera_system.hpp"
 
+#include <GLFW/glfw3.h>
+
 #include <vector>
 #include <algorithm>
 
@@ -10,6 +12,7 @@
 
 #include "../../camera.hpp"
 #include "../../scene/scene.hpp"
+#include "../../engine/engine.hpp"
 
 namespace ecs {
 
@@ -26,10 +29,11 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
         if (!transforms.has(e)) continue;
         const auto& c = cameras.get(e);
         const auto& t = transforms.get(e);
+        if (c.isPreview) continue;
 
-        glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
         const glm::vec3 up = glm::normalize(t.rotation * glm::vec3(0.0f, 1.0f, 0.0f));
-        if (glm::length(dir) < 1e-6f) dir = glm::vec3(0.0f, 0.0f, 1.0f);
+        if (glm::length(dir) < 1e-6f) dir = glm::vec3(0.0f, 0.0f, -1.0f);
 
         const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
         const float fov = glm::radians(c.fov);
@@ -139,6 +143,78 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
                 drawClipped(prevClip, clip);
                 prevClip = clip;
             }
+        }
+    }
+}
+
+void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
+    auto& cameras = registry.storage<ecs::CameraObject>();
+    auto& transforms = registry.storage<ecs::Transform>();
+    constexpr float previewViewportScale = 0.8f;
+    
+    for (const auto& e : cameras.entities()) {
+        ecs::CameraObject& c = cameras.get(e);
+        if (!c.isPreview || !transforms.has(e)) continue;
+
+        ecs::Transform& t = transforms.get(e);
+        Camera& camera = *ctx.camera;
+
+        const float dist = glm::max(0.1f, glm::length(camera.getTarget() - camera.getPosition()));
+        const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
+
+        camera.setPosition(t.position);
+        camera.setTarget(t.position + dir * dist);
+        const float baseFovRad = glm::radians(c.fov);
+        const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
+        camera.setFov(glm::degrees(previewFovRad));
+        camera.setAperture(c.aperture);
+        camera.setFocusDepth(c.focusDepth);
+        break;
+    }
+}
+
+void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
+    auto& cameras = registry.storage<ecs::CameraObject>();
+    auto& transforms = registry.storage<ecs::Transform>();
+    bool escapePressed = glfwGetKey(ctx.engine->getWindow().get(), GLFW_KEY_ESCAPE);
+    Camera& camera = *ctx.camera;
+    constexpr float previewViewportScale = 0.8f;
+
+    for (const auto& e : cameras.entities()) {
+        ecs::CameraObject& c = cameras.get(e);
+        if (!c.isPreview) continue;
+
+        // TODO reset the roll
+        if (escapePressed) {
+            c.setPreview(false);
+            *ctx.restartRender = true;
+            ctx.camera->setAperture(0.0f);
+            continue;
+        }
+
+        if (c.previewJustSet) {
+            c.previewJustSet = false;
+            continue;
+        }
+
+        if (c.updated) {
+            const float baseFovRad = glm::radians(c.fov);
+            const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
+            camera.setFov(glm::degrees(previewFovRad));
+            camera.setAperture(c.aperture);
+            camera.setFocusDepth(c.focusDepth);
+            c.updated = false;
+        }
+
+        if (!transforms.has(e)) continue;
+        ecs::Transform& t = transforms.get(e);
+
+        if (t.updated) {
+            const float dist = glm::max(0.1f, glm::length(camera.getTarget() - camera.getPosition()));
+            const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
+            camera.setPosition(t.position);
+            camera.setTarget(t.position + dir * dist);
+            // t.updated = false;
         }
     }
 }

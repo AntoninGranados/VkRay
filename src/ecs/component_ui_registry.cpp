@@ -1,5 +1,7 @@
 #include "./component_ui_registry.hpp"
 
+#include <GLFW/glfw3.h>
+
 #include "../scene/asset/mesh.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -103,6 +105,14 @@ void ComponentUiRegistry::init() {
         update |= ImGui::DragFloat("##Aperture", &c.aperture, 0.01f, 0.0f, 10.0f);
         ImGui::Text("Focus Depth:");
         update |= ImGui::DragFloat("##FocusDepth", &c.focusDepth, 0.01f, 0.0f, FLT_MAX);
+        
+        if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
+            c.isPreview = true;
+            c.previewJustSet = true;
+            update = true;
+        }
+        if (update)
+            c.updated = true;
         ImGui::PopItemWidth();
 
         return update;

@@ -67,9 +67,10 @@ public:
     
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
     
-    void runSystems(AppContext& ctx) { scheduler.run(registry, ctx); }
-    void runDrawSystems(AppContext& ctx) { drawScheduler.run(registry, ctx); }
-    void gpuPacking(AppContext& ctx) { packingScheduler.run(registry, ctx); }
+    void runPreUpdate(AppContext& ctx) { preUpdateScheduler.run(registry, ctx); }
+    void runOnRender(AppContext& ctx) { onRenderScheduler.run(registry, ctx); }
+    void runOnUi(AppContext& ctx) { onUiScheduler.run(registry, ctx); }
+    void runPostUpdate(AppContext& ctx) { postUpdateScheduler.run(registry, ctx); }
     
     LightMode loadPreset(ScenePreset preset);
     
@@ -77,6 +78,7 @@ public:
     const ecs::Entity* getSelectedEntity() const;
     void clearSelection() { selectedEntity = -1; }
     Camera& getCamera() { return camera; }
+    bool isPreviewingCamera();
     
     std::vector<bufferList_t> getBufferLists();
     ObjectBuffers& getSphereBuffers() { return sphereBuffers; };
@@ -104,7 +106,7 @@ private:
     PackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler scheduler, packingScheduler, drawScheduler;
+    ecs::SystemScheduler preUpdateScheduler, onRenderScheduler, onUiScheduler, postUpdateScheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;

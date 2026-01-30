@@ -10,7 +10,7 @@
 #pragma clang diagnostic pop
 #endif
 
-static std::string buildScreenshotPath() {
+static std::string buildRenderOutputPath() {
     auto now = std::chrono::system_clock::now();
     auto nowSecs = std::chrono::time_point_cast<std::chrono::seconds>(now);
     auto value = nowSecs.time_since_epoch().count();
@@ -219,7 +219,7 @@ void RenderSystem::render(AppContext& ctx) {
     
     engine.beginFrame();
     
-    ctx.scene->gpuPacking(ctx);
+    ctx.scene->runOnRender(ctx);
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
@@ -248,9 +248,10 @@ void RenderSystem::render(AppContext& ctx) {
 
     engine.endFrame();
 
+    // Save render
     if (renderOutput.pendingSave) {
         engine.waitIdle();
-        saveScreenshotBuffer(ctx, buildScreenshotPath());
+        saveScreenshotBuffer(ctx, buildRenderOutputPath());
         renderOutput.pendingSave = false;
 
         if (ctx.renderState->pendingExit) {

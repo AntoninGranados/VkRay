@@ -47,20 +47,25 @@ void Scene::init() {
 }
 
 void Scene::initSystems() {
-    scheduler.clear();
-    scheduler.add(ecs::transformSystem);
+    preUpdateScheduler.clear();
+    preUpdateScheduler.add(ecs::transformSystem);
+    preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
-    packingScheduler.clear();
-    packingScheduler.add(ecs::spherePackingSystem);
-    packingScheduler.add(ecs::planePackingSystem);
-    packingScheduler.add(ecs::boxPackingSystem);
-    packingScheduler.add(ecs::meshPackingSystem);
-    packingScheduler.add(ecs::materialPackingSystem);
-    packingScheduler.add(ecs::objectPackingSystem);
-    packingScheduler.add(ecs::lightPackingSystem);
+    onRenderScheduler.clear();
+    onRenderScheduler.add(ecs::spherePackingSystem);
+    onRenderScheduler.add(ecs::planePackingSystem);
+    onRenderScheduler.add(ecs::boxPackingSystem);
+    onRenderScheduler.add(ecs::meshPackingSystem);
+    onRenderScheduler.add(ecs::materialPackingSystem);
+    onRenderScheduler.add(ecs::objectPackingSystem);
+    onRenderScheduler.add(ecs::lightPackingSystem);
 
-    drawScheduler.clear();
-    drawScheduler.add(ecs::cameraDrawingSystem);
+    
+    onUiScheduler.clear();
+    onUiScheduler.add(ecs::cameraDrawingSystem);
+    
+    postUpdateScheduler.clear();
+    postUpdateScheduler.add(ecs::cameraPostUpdateSystem);
 }
 
 void Scene::destroy() {
@@ -268,13 +273,14 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
     ecs::CameraObject cameraComponent;
     cameraComponent.setFov(60.0f);
     cameraComponent.setAperture(0.0f);
-    cameraComponent.setFocusDepth(0.0f);
+    cameraComponent.setFocusDepth(1.0f);
     registry.add<ecs::CameraObject>(e, cameraComponent);
 
     
     ecs::Transform transformComponent;
     transformComponent.setPosition(translation);
     transformComponent.setRotation(glm::quat(rotationEuler));
+    transformComponent.setScaleToggle(false);
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -647,6 +653,7 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, flo
                 t = rayMeshIntersection(ray, transform.local, asset.getVertices(), asset.getIndices());
             }
         } else if (includeCameras && cameraStorage.has(e)) {
+            if (cameraStorage.get(e).isPreview) continue;
             constexpr float cameraSelectRadius = 0.6f;
             t = raySphereIntersection(ray, transform.position, cameraSelectRadius);
         }
@@ -702,4 +709,13 @@ const ecs::Entity* Scene::getSelectedEntity() const {
     if (selectedEntity < 0 || static_cast<size_t>(selectedEntity) >= entities.size())
         return nullptr;
     return &entities[static_cast<size_t>(selectedEntity)];
+}
+
+bool Scene::isPreviewingCamera() {
+    auto& cameras = registry.storage<ecs::CameraObject>();
+    for (const auto& e : cameras.entities()) {
+        if (cameras.get(e).isPreview)
+            return true;
+    }
+    return false;
 }
