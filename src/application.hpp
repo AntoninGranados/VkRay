@@ -23,7 +23,8 @@ enum class DebugView : int {
     Bounces,
     Normal,
     SelectionMask,
-    Variance
+    Variance,
+    HitChecks
 };
 
 class Application {

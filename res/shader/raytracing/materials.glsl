@@ -69,7 +69,7 @@ void scatterMetal(in Material mat, in Ray ray, in Hit hit, out ScatterResult res
 }
 
 void scatterDielectric(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout uint seed) {
-    float ri = hit.front_face ? (1.0/dielectricIoR(mat)) : dielectricIoR(mat);
+    float ri = hit.frontFace ? (1.0/dielectricIoR(mat)) : dielectricIoR(mat);
 
     float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
     float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
@@ -96,7 +96,7 @@ void scatterEmissive(in Material mat, in Ray ray, in Hit hit, out ScatterResult 
 }
 
 void scatterGlossy(in Material mat, in Ray ray, in Hit hit, out ScatterResult result, inout uint seed) {
-    float ri = hit.front_face ? (1.0/glossyIoR(mat)) : glossyIoR(mat);
+    float ri = hit.frontFace ? (1.0/glossyIoR(mat)) : glossyIoR(mat);
 
     float cos_theta = min(dot(-ray.dir, hit.normal), 1.0);
 

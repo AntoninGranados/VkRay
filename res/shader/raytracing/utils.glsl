@@ -38,6 +38,7 @@ struct Material {
 #define debug_Normal        Enum(2)
 #define debug_SelectionMask Enum(3)
 #define debug_Variance      Enum(4)
+#define debug_HitChecks     Enum(5)
 
 struct Object {
     Enum type;
@@ -117,10 +118,11 @@ struct Hit {
     vec3 p;
     vec3 normal;
     float t;
-    bool front_face;
+    bool frontFace;
     Object object;
+    int hitChecks;
 };
-#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE)
+#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE, 0)
 #define foundIntersection(h) ((h).object.type != obj_None)
 
 // ============== LIGHTS ==============

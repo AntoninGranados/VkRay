@@ -37,15 +37,18 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
 }
 
 Hit intersection(in Ray ray) {
-    Hit bestHit = Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
-
+    Hit bestHit = NO_HIT;
+    
+    int hitChecks = 0;
     for (int i = 0; i < objectBuffer.objectCount; i++) {
         Hit hit = rayObjectIntersection(ray, objectBuffer.objects[i]);
+        hitChecks += hit.hitChecks;
         if (foundIntersection(hit) && hit.t < bestHit.t) {
             bestHit = hit;
         }
     }
 
+    bestHit.hitChecks = hitChecks;
     return bestHit;
 }
 
@@ -82,6 +85,13 @@ vec3 skyColor(vec3 dir) {
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     Ray primaryRay = ray;
     Hit hit = intersection(ray);
+
+    if (ubo.debugView == debug_HitChecks) {
+        float v = hit.hitChecks / 64.0;
+        v = clamp(v, 0, 1);
+        return vec3(v);
+    }
+
     vec3 throughput = vec3(1.0);
     vec3 radiance = vec3(0.0);
 
@@ -132,6 +142,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     return radiance;
 }
 
+
 float luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
@@ -155,6 +166,7 @@ void updateVariance(in float value, inout PixelInfo pixelInfo) {
     float delta2 = value - pixelInfo.mean;
     pixelInfo.m2 += delta * delta2;
 }
+
 
 float computeTemporalSigma(in PixelInfo pixelInfo) {
     float variance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;

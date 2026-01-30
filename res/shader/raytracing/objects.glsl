@@ -12,7 +12,7 @@ Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {
         normal = -normal;
         front_face = false;
     }
-    return Hit(p, normal, t, front_face, obj);
+    return Hit(p, normal, t, front_face, obj, 1);
 }
 
 // ================ NORMALS ================
@@ -92,8 +92,7 @@ Hit raySphereIntersection(in Ray ray, in Object obj, in Sphere sphere) {
     float dp = dot(ray.dir, p);
     float c = dot(p, p) - sphere.radius*sphere.radius;
     float delta = dp*dp - c;
-    if (delta < 0)
-        return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+    if (delta < 0) return NO_HIT;
 
     float t1 = dp - sqrt(delta);
     if (t1 >= 0) {
@@ -195,12 +194,14 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
     int stackPtr = 0;
     stack[stackPtr++] = mesh.bvhOffset;
 
+    int hitChecks = 1;
     while (stackPtr > 0) {
         uint nodeIdx = stack[--stackPtr];
         BvhNode node = bvhBuffer.bvhNodes[nodeIdx];
 
         Hit nodeHit = rayAabbIntersection(localRay, node.aabbMin, node.aabbMax, false);
         if (!foundIntersection(nodeHit) || nodeHit.t > tClosest) continue;
+        hitChecks++;
 
         if (node.isLeaf != 0u) {
             uint first = BVH_firstTriangle(node);
@@ -235,7 +236,9 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
 
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
     vec3 normal = normalize(normalMat * bestNormal);
-    return foundHit ? makeHit(ray, obj, tClosest, normal) : NO_HIT;
+    Hit hit = foundHit ? makeHit(ray, obj, tClosest, normal) : NO_HIT;
+    hit.hitChecks = hitChecks;
+    return hit;
 }
 
 Hit rayMeshIntersectionBvhDebug(in Ray ray, in Object obj, in Mesh mesh) {

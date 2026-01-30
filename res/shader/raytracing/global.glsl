@@ -12,7 +12,7 @@ Hit rayObjectIntersection(in Ray ray, in Object obj) {
         case obj_Plane:  return rayPlaneIntersection(ray, obj, planeBuffer.planes[obj.id]);
         case obj_Box:    return rayBoxIntersection(ray, obj, boxBuffer.boxes[obj.id]);
         case obj_Mesh:   return rayMeshIntersection(ray, obj, meshBuffer.meshes[obj.id]);
-        default:         return Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE);
+        default:         return NO_HIT;
     }
 }
 
