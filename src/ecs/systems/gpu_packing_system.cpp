@@ -1,6 +1,7 @@
 #include "gpu_packing_system.hpp"
 
 #include <vector>
+#include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -24,7 +25,6 @@ void spherePackingSystem(Registry& registry, AppContext& ctx) {
     size_t sphereId = 0;
 
     for (const auto& e : spheres.entities()) {
-
         if (!transforms.has(e)) continue;
         ecs::Sphere& s = spheres.get(e);
         ecs::Transform& t = transforms.get(e);
@@ -39,10 +39,10 @@ void spherePackingSystem(Registry& registry, AppContext& ctx) {
                 
         packingMaps.sphereId[e] = sphereId++;
     }
-    if (gpuSpheres.size() == 0) return;
 
     auto& sphereBuffers = ctx.scene->getSphereBuffers();
     sphereBuffers.setElementCount(*ctx.engine, gpuSpheres.size());
+    if (gpuSpheres.size() == 0) gpuSpheres.resize(sphereBuffers.getCapacity());
     sphereBuffers.fill(*ctx.engine, gpuSpheres.data());
 }
 
@@ -72,10 +72,10 @@ void planePackingSystem(Registry& registry, AppContext& ctx) {
         
         packingMaps.planeId[e] = planeId++;
     }
-    if (gpuPlanes.size() == 0) return;
 
     auto& planeBuffers = ctx.scene->getPlaneBuffers();
     planeBuffers.setElementCount(*ctx.engine, gpuPlanes.size());
+    if (gpuPlanes.size() == 0) gpuPlanes.resize(planeBuffers.getCapacity());
     planeBuffers.fill(*ctx.engine, gpuPlanes.data());
 }
 
@@ -105,10 +105,10 @@ void boxPackingSystem(Registry& registry, AppContext& ctx) {
 
         packingMaps.boxId[e] = boxId++;
     }
-    if (gpuBoxes.size() == 0) return;
 
     auto& boxBuffers = ctx.scene->getBoxBuffers();
     boxBuffers.setElementCount(*ctx.engine, gpuBoxes.size());
+    if (gpuBoxes.size() == 0) gpuBoxes.resize(boxBuffers.getCapacity());
     boxBuffers.fill(*ctx.engine, gpuBoxes.data());
 }
 
@@ -163,20 +163,20 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
             });
         }
     }
-    if (vertices.size() == 0) return;
-    if (indices.size() == 0) return;
-    if (bvhNodes.size() == 0) return;
 
     auto& vertexBuffers = ctx.scene->getVertexBuffers();
     vertexBuffers.setElementCount(*ctx.engine, vertices.size());
+    if (vertices.size() == 0) vertices.resize(vertexBuffers.getCapacity());
     vertexBuffers.fill(*ctx.engine, vertices.data());
 
     auto& indexBuffers = ctx.scene->getIndexBuffers();
     indexBuffers.setElementCount(*ctx.engine, indices.size());
+    if (indices.size() == 0) indices.resize(indexBuffers.getCapacity());
     indexBuffers.fill(*ctx.engine, indices.data());
 
     auto& bvhBuffers = ctx.scene->getBvhBuffers();
     bvhBuffers.setElementCount(*ctx.engine, bvhNodes.size());
+    if (bvhNodes.size() == 0) bvhNodes.resize(bvhBuffers.getCapacity());
     bvhBuffers.fill(*ctx.engine, bvhNodes.data());
 
     std::vector<GpuMesh> meshes;
@@ -203,10 +203,10 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
 
         packingMaps.meshId[e] = meshId++;
     }
-    if (meshes.size() == 0) return;
 
     auto& meshBuffers = ctx.scene->getMeshBuffers();
     meshBuffers.setElementCount(*ctx.engine, meshes.size());
+    if (meshes.size() == 0) meshes.resize(meshBuffers.getCapacity());
     meshBuffers.fill(*ctx.engine, meshes.data());
 }
 
@@ -220,10 +220,10 @@ void materialPackingSystem(Registry& registry, AppContext& ctx) {
             .payload = { mat.payload[0], mat.payload[1] }
         });
     }
-    if (materials.size() == 0) return;
 
     auto& materialBuffers = ctx.scene->getMaterialBuffers();
     materialBuffers.setElementCount(*ctx.engine, materials.size());
+    if (materials.size() == 0) materials.resize(materialBuffers.getCapacity());
     materialBuffers.fill(*ctx.engine, materials.data());
 }
 
@@ -272,10 +272,9 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
         objectId++;
     }
 
-    if (objectHandles.size() == 0) return;
-
     auto& objectBuffers = ctx.scene->getObjectBuffers();
     objectBuffers.setElementCount(*ctx.engine, objectHandles.size());
+    if (objectHandles.size() == 0) objectHandles.resize(objectBuffers.getCapacity());
 
     std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
@@ -357,6 +356,7 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
 
     auto& lightBuffers = ctx.scene->getLightBuffers();
     lightBuffers.setElementCount(*ctx.engine, lights.size());
+    if (lights.size() == 0) lights.resize(lightBuffers.getCapacity());
 
     std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
     // Compute the light buffers data (including the header)

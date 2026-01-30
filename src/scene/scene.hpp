@@ -70,7 +70,8 @@ public:
     void drawSelectedEntityUI();
     void drawSelectedMaterialUI();
     void drawSelectedMeshAssetUI();
-    void runSystems(AppContext& ctx);
+    void runSystems(AppContext& ctx) { scheduler.run(registry, ctx); }
+    void gpuPacking(AppContext& ctx) { packingScheduler.run(registry, ctx); }
     LightMode loadPreset(ScenePreset preset);
     CameraHandle* getFirstCameraHandle() const;
 
@@ -105,7 +106,7 @@ private:
     PackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler scheduler;
+    ecs::SystemScheduler scheduler, packingScheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;

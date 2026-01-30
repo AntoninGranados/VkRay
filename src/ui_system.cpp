@@ -132,11 +132,13 @@ void UiSystem::drawPreview(AppContext& ctx) {
             }
             ctx.parameters->setEnum<LightMode>("lightMode", mode);
             
-            ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
             if (ImGui::Button("Cancel", { 200, 0 })) {
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::PopStyleColor();
+            ImGui::PopStyleColor(3);
             
             ImGui::EndPopup();
         }

@@ -115,18 +115,14 @@ void Application::run() {
 
 
 void Application::onFrameStart(float dt) {
-    renderState.prevResolution = renderState.resolution;
-    
     scene.runSystems(ctx);
-    fillUBOs();
-    
-    frameCount++;
-    renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
-    
+
+    renderState.prevResolution = renderState.resolution;
+
     syncCameraFromHandle();
     handleInput(dt);
-    syncHandleFromCamera();    
-    
+    syncHandleFromCamera();
+
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;
     } if (notifications.isCommandRequested(Command::Render)) {
@@ -163,6 +159,11 @@ void Application::onFrameStart(float dt) {
         restartRender = false;
         if (!renderState.renderMode) renderState.resolution = parameters.getFloat("movingResolution");
     }
+
+    fillUBOs();
+
+    frameCount++;
+    renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 }
 
 void Application::syncHandleFromCamera() {

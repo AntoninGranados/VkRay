@@ -216,8 +216,10 @@ void RenderSystem::render(AppContext& ctx) {
             ctx.renderState->pendingExit = true;
         }
     }
-
+    
     engine.beginFrame();
+    
+    ctx.scene->gpuPacking(ctx);
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
@@ -340,7 +342,7 @@ void RenderSystem::renderMain(AppContext& ctx) {
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
     }
-    
+
     {   // Screen
         engine.barrier(
             commandBuffer,

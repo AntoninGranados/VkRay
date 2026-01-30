@@ -47,13 +47,14 @@ void Scene::initSystems() {
     scheduler.clear();
     scheduler.add(ecs::transformSystem);
 
-    scheduler.add(ecs::spherePackingSystem);
-    scheduler.add(ecs::planePackingSystem);
-    scheduler.add(ecs::boxPackingSystem);
-    scheduler.add(ecs::meshPackingSystem);
-    scheduler.add(ecs::materialPackingSystem);
-    scheduler.add(ecs::objectPackingSystem);
-    scheduler.add(ecs::lightPackingSystem);
+    packingScheduler.clear();
+    packingScheduler.add(ecs::spherePackingSystem);
+    packingScheduler.add(ecs::planePackingSystem);
+    packingScheduler.add(ecs::boxPackingSystem);
+    packingScheduler.add(ecs::meshPackingSystem);
+    packingScheduler.add(ecs::materialPackingSystem);
+    packingScheduler.add(ecs::objectPackingSystem);
+    packingScheduler.add(ecs::lightPackingSystem);
 }
 
 void Scene::destroy() {
@@ -89,19 +90,20 @@ void Scene::clear() {
     objectBuffers.clear(engine);
     lightBuffers.clear(engine);
 
-    objects.clear();
+    for (auto& e : entities) { registry.destroyEntity(e); }
+    entities.clear();
+    entityN = 0;
     materials.clear();
+    materialN = 0;
     meshAssets.clear();
+    objects.clear();
     selectedEntity = -1;
+    selectedMaterial = -1;
     selectedMeshAsset = -1;
     bufferUpdated = true;
 
     pushMaterial(DEFAULT_MATERIAL);
     meshAssets.push_back(DEFAULT_MESH_ASSET);
-}
-
-void Scene::runSystems(AppContext& ctx) {
-    scheduler.run(registry, ctx);
 }
 
 LightMode Scene::loadPreset(ScenePreset preset) {
@@ -127,20 +129,12 @@ CameraHandle* Scene::getFirstCameraHandle() const {
 
 
 MaterialHandle Scene::pushMaterial(const Material &mat) {
-    assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
-    bufferUpdated |= materialBuffers.addElement(engine);
     const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
     return materialHandle;
 }
 
 void Scene::pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle) {
-    assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
-    bufferUpdated |= sphereBuffers.addElement(engine);
-    bufferUpdated |= objectBuffers.addElement(engine);
-
     ecs::Entity e = registry.createEntity();
     
     registry.add<ecs::Selectable>(e, ecs::Selectable{});
@@ -167,11 +161,6 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
 }
 
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle) {
-    assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
-    bufferUpdated |= planeBuffers.addElement(engine);
-    bufferUpdated |= objectBuffers.addElement(engine);
-
     ecs::Entity e = registry.createEntity();
     
     registry.add<ecs::Selectable>(e, ecs::Selectable{});
@@ -196,15 +185,10 @@ void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Mater
 }
 
 void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle) {
-    assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
     glm::vec3 center = (cornerMin + cornerMax) * 0.5f;
     glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), center);
     transform = glm::scale(transform, halfExtents);
-    
-    bufferUpdated |= boxBuffers.addElement(engine);
-    bufferUpdated |= objectBuffers.addElement(engine);
 
     ecs::Entity e = registry.createEntity();
     
@@ -240,11 +224,6 @@ void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 
 }
 
 void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle) {
-    if (!ctx || !ctx->engine) return;
-
-    bufferUpdated |= meshBuffers.addElement(*ctx->engine);
-    bufferUpdated |= objectBuffers.addElement(*ctx->engine);
-
     ecs::Entity e = registry.createEntity();
     registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
@@ -285,7 +264,6 @@ void Scene::pushCameraHandle(std::string name, glm::vec3 position, glm::vec3 dir
     updated = true;
     */
 }
-
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedEntity < 0) return;
@@ -372,6 +350,7 @@ void Scene::drawUI() {
             entities.erase(std::next(entities.begin(), selectedEntity));
             updated = true;
             bufferUpdated = true;
+            selectedEntity = -1;
         }
 
         ImGui::EndTable();
@@ -406,7 +385,7 @@ void Scene::drawUI() {
             char matName[64];
             std::snprintf(matName, sizeof(matName), "Material-%02d", materialN++);
             mat.name = matName;
-            selectedMaterial = pushMaterial(mat);
+            pushMaterial(mat);
             updated = true;
             bufferUpdated = true;
         }
@@ -491,7 +470,6 @@ void Scene::drawUI() {
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*ctx, meshPath)) {
                 meshAssets.push_back(std::move(asset));
-                selectedMeshAsset = static_cast<int>(meshAssets.size()) - 1;
                 updated = true;
                 bufferUpdated = true;
                 meshPath[0] = '\0';
@@ -500,9 +478,13 @@ void Scene::drawUI() {
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
         if (ImGui::Button("Cancel", ImVec2(100, 0))) {
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor(3);
         ImGui::EndPopup();
     }
 
@@ -517,55 +499,51 @@ void Scene::drawNewObjectPopUp() {
     std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", entityN);
     std::string name(nameBuffer);
 
-    if (ImGui::Button("Sphere", { 100, 0 })) {
+    if (ImGui::Button("Sphere", { 200, 0 })) {
         pushSphere(
             name,
             glm::vec3(0.0, 0.0, 0.0),
             1.0,
             0
         );
-        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Plane", { 100, 0 })) {
+    if (ImGui::Button("Plane", { 200, 0 })) {
         pushPlane(
             name,
             glm::vec3( 0.0, 0.0, 0.0),
             glm::vec3( 0.0, 1.0, 0.0),
             0
         );
-        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Box", { 100, 0 })) {
+    if (ImGui::Button("Box", { 200, 0 })) {
         pushBox(
             name,
             glm::vec3(-1.0,-1.0,-1.0),
             glm::vec3( 1.0, 1.0, 1.0),
             0
         );
-        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Mesh", { 100, 0 })) {
+    if (ImGui::Button("Mesh", { 200, 0 })) {
         pushMesh(
             name,
             0,
             glm::mat3(1.0),
             0
         );
-        selectedEntity = entities.size() - 1;
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Camera", { 100, 0 })) {
+    if (ImGui::Button("Camera", { 200, 0 })) {
         glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
         pushCameraHandle(
@@ -578,11 +556,13 @@ void Scene::drawNewObjectPopUp() {
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    ImGui::PushStyleColor(ImGuiCol_Button, { 1.0, 0.03, 0.0, 1.0 });
-    if (ImGui::Button("Cancel", { 100, 0 })) {
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::Button("Cancel", { 200, 0 })) {
         ImGui::CloseCurrentPopup();
     }
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(3);
 
     ImGui::EndPopup();
 }
