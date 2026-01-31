@@ -5,7 +5,7 @@
 namespace ecs {
 
 struct MaterialRef {
-    MaterialHandle handle = -1;
+    MaterialHandle handle = 0;
 
     void setHandle(MaterialHandle newHandle) {
         handle = newHandle;

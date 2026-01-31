@@ -140,8 +140,6 @@ MaterialHandle Scene::pushMaterial(const Material &mat) {
 
 void Scene::pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle) {
     ecs::Entity e = registry.createEntity();
-    
-    registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
     ecs::Name nameComponent;
     nameComponent.setValue(std::move(name));
@@ -166,8 +164,6 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
 
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle) {
     ecs::Entity e = registry.createEntity();
-    
-    registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
     ecs::Name nameComponent;
     nameComponent.setValue(std::move(name));
@@ -195,8 +191,6 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     transform = glm::scale(transform, halfExtents);
 
     ecs::Entity e = registry.createEntity();
-    
-    registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
     ecs::Name nameComponent;
     nameComponent.setValue(std::move(name));
@@ -229,7 +223,6 @@ void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 
 
 void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle) {
     ecs::Entity e = registry.createEntity();
-    registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
     ecs::Name nameComponent;
     nameComponent.setValue(std::move(name));
@@ -268,7 +261,6 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
         glm::value_ptr(scale));
 
     ecs::Entity e = registry.createEntity();
-    registry.add<ecs::Selectable>(e, ecs::Selectable{});
 
     ecs::Name nameComponent;
     nameComponent.setValue(std::move(name));
@@ -357,6 +349,7 @@ void Scene::drawUI() {
 
                 std::string displayName = "???";
                 if (registry.has<ecs::Name>(e)) displayName = registry.get<ecs::Name>(e).value;
+                if (displayName.empty()) displayName = "???";
                 
                 if (registry.has<ecs::EditorOnly>(e)) {
                     ImGui::TextDisabled("%s", displayName.c_str());
@@ -498,7 +491,7 @@ void Scene::drawUI() {
 
         bool hasPath = std::strlen(meshPath) > 0;
         ImGui::BeginDisabled(!hasPath);
-        if (ImGui::Button(ICON_FA_UPLOAD " Load", ImVec2(100, 0))) {
+        if (ImGui::Button(ICON_FA_UPLOAD " Load", ImVec2(200, 0))) {
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*ctx, meshPath)) {
                 meshAssets.push_back(std::move(asset));
@@ -513,7 +506,7 @@ void Scene::drawUI() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(100, 0))) {
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(200, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor(3);
@@ -531,6 +524,12 @@ void Scene::drawNewObjectPopUp() {
     std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", entityN);
     std::string name(nameBuffer);
 
+    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", { 200, 0 })) {
+        entities.push_back(registry.createEntity());
+        updated = true;
+        ImGui::CloseCurrentPopup();
+        entityN++;
+    }
     if (ImGui::Button(ICON_FA_CIRCLE " Sphere", { 200, 0 })) {
         pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
         updated = true;
@@ -575,6 +574,7 @@ void Scene::drawNewObjectPopUp() {
 void Scene::drawSelectedEntityUI() {
     if (selectedEntity < 0) return;
     ecs::Entity& e = entities[selectedEntity];
+    bool openNewComponentPopup = false;
 
     bool open = true;
     ImGui::SetNextWindowBgAlpha(0.8f);
@@ -584,11 +584,37 @@ void Scene::drawSelectedEntityUI() {
         &open,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
     );
-    {
+    {   
+        ImGui::Text("Add Component");
+        ImGui::SameLine();
+        if (ImGui::Button("+##AddComponent", {32, 0})) {
+            openNewComponentPopup = true;
+        }
+        
         auto& ui_reg = ecs::ComponentUiRegistry::get();
         updated |= ui_reg.draw(registry, e);
     }
     ImGui::End();
+
+    if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
+    if (ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        for (auto& [label, add_fun] : componentTypes()) {
+            if (ImGui::Button(label.c_str(), ImVec2(200, 0))) {
+                add_fun(registry, e);
+                *ctx->restartRender = true;
+                ImGui::CloseCurrentPopup();
+            }
+        }
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(200, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor(3);
+        ImGui::EndPopup();
+    }
 
     if (!open) selectedEntity = -1;
 }
@@ -640,12 +666,11 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, flo
     auto& meshStorage = registry.storage<ecs::MeshRef>();
     auto& cameraStorage = registry.storage<ecs::CameraObject>();
     auto& transformStorage = registry.storage<ecs::Transform>();
-    auto& selectableStorage = registry.storage<ecs::Selectable>();
 
     for (size_t i = 0; i < entities.size(); i++) {
         const ecs::Entity& e = entities[i];
 
-        if (!selectableStorage.has(e) || !transformStorage.has(e)) continue;
+        if (!transformStorage.has(e)) continue;
 
         auto& transform = transformStorage.get(e);
         

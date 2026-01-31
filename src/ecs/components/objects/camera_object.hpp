@@ -3,12 +3,12 @@
 namespace ecs {
 
 struct CameraObject {
-    float fov;
-    float aperture;
-    float focusDepth;
-    bool isPreview;
-    bool previewJustSet;
-    bool updated;
+    float fov = 60.0f;
+    float aperture = 0.0f;
+    float focusDepth = 1.0f;
+    bool isPreview = false;
+    bool previewJustSet = false;
+    bool updated = false;
 
     void setFov(float newFov) { fov = newFov; }
     void setAperture(float newAperture) { aperture = newAperture; }

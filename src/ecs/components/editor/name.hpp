@@ -6,7 +6,7 @@
 namespace ecs {
 
 struct Name {
-    std::string value;
+    std::string value = "NoName";
 
     void setValue(std::string newValue) {
         value = std::move(newValue);

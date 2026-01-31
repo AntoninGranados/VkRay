@@ -1,14 +1,14 @@
 #pragma once
 
-#include "./registry.hpp"
-#include "./components.hpp"
-
-#include "./imgui/imgui.h"
-
 #include <functional>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "./registry.hpp"
+#include "./components.hpp"
+
+#include "./imgui/imgui.h"
 
 class MeshAsset;
 
@@ -33,7 +33,13 @@ public:
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
             ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+            
+            if (ImGui::Button("-##Remove", { 32, 0 })) {
+                registry.remove<T>(e);
+            }
+            ImGui::SameLine();
             bool update = fn(t, registry, e);
+            
             ImGui::EndChild();
             ImGui::PopStyleColor(3);
             ImGui::PopID();
