@@ -260,7 +260,7 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
     if (objectBuffers.setElementCount(*ctx.engine, objectHandles.size())) {
         ctx.scene->markBufferUpdated();
     }
-    if (objectHandles.size() == 0) objectHandles.resize(objectBuffers.getCapacity());
+    objectHandles.resize(objectBuffers.getCapacity());
 
     std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
@@ -302,7 +302,7 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
         });
     }
     // Planes can't be used for importance sampling (infinite area)
-    objectId += packingMaps.boxId.size();
+    objectId += packingMaps.planeId.size();
     // Boxes
     for (const auto& [e, _] : packingMaps.boxId) {
         objectId++;
@@ -338,13 +338,11 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
         });
     }
 
-    if (lights.size() == 0) return;
-
     auto& lightBuffers = ctx.scene->getLightBuffers();
     if (lightBuffers.setElementCount(*ctx.engine, lights.size())) {
         ctx.scene->markBufferUpdated();
     }
-    if (lights.size() == 0) lights.resize(lightBuffers.getCapacity());
+    lights.resize(lightBuffers.getCapacity());
 
     std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
     // Compute the light buffers data (including the header)

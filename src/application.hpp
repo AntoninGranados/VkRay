@@ -6,7 +6,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "./engine/engine.hpp"
-#include "./camera.hpp"
 #include "./notification_system.hpp"
 #include "./parameter_system.hpp"
 #include "./scene/scene.hpp"

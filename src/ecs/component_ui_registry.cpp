@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "IconsFontAwesome7.h"
+
 #include "../scene/asset/mesh.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -22,7 +24,7 @@ void ComponentUiRegistry::init() {
     auto& ui_reg = ComponentUiRegistry::get();
 
     ui_reg.add<ecs::Name>([](ecs::Name& n, ecs::Registry& r, ecs::Entity e){
-        if (!ImGui::CollapsingHeader("Name")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_TAG " Name")) return false;
 
         n.value.resize(128);
 
@@ -39,7 +41,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, ecs::Registry& r, ecs::Entity e){
         bool update = false;
         
-        if (!ImGui::CollapsingHeader("Sphere")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_CIRCLE " Sphere")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::Text("Radius:");
@@ -50,12 +52,12 @@ void ComponentUiRegistry::init() {
     });
     
     ui_reg.add<ecs::Plane>([](ecs::Plane& p, ecs::Registry& r, ecs::Entity e){
-        ImGui::CollapsingHeader("Plane", ImGuiTreeNodeFlags_Bullet);
+        ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
     ui_reg.add<ecs::Box>([](ecs::Box& p, ecs::Registry& r, ecs::Entity e){
-        ImGui::CollapsingHeader("Box", ImGuiTreeNodeFlags_Bullet);
+        ImGui::CollapsingHeader(ICON_FA_BOX " Box", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
@@ -63,7 +65,7 @@ void ComponentUiRegistry::init() {
         auto* meshes = ComponentUiRegistry::get().meshAssets;
         if (!meshes || meshes->empty()) return false;
 
-        if (!ImGui::CollapsingHeader("Mesh")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh")) return false;
         ImGui::PushItemWidth(-FLT_MIN);
         
         bool update = false;
@@ -95,8 +97,8 @@ void ComponentUiRegistry::init() {
 
     ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, ecs::Registry& r, ecs::Entity e){
         bool update = false;
-        
-        if (!ImGui::CollapsingHeader("Camera")) return false;
+
+        if (!ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::Text("FOV:");
@@ -121,7 +123,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
-        if (!ImGui::CollapsingHeader("Transform")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
 
@@ -166,7 +168,7 @@ void ComponentUiRegistry::init() {
         auto* mats = ComponentUiRegistry::get().materials;
         if (!mats || mats->empty()) return false;
 
-        if (!ImGui::CollapsingHeader("Material")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_PALETTE " Material")) return false;
         ImGui::PushItemWidth(-FLT_MIN);
         
         bool update = false;

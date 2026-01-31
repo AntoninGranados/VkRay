@@ -28,7 +28,10 @@ std::string MeshAsset::nameFromPath(const std::string& path) {
     if (end == std::string::npos || end < slash) end = path.size();
     size_t start = (slash == std::string::npos) ? 0 : slash + 1;
     if (start >= end) return "Mesh";
-    return path.substr(start, end - start);
+
+    std::string name = path.substr(start, end - start);
+    name[0] = std::toupper(name[0]);
+    return name;
 }
 
 float MeshAsset::computeArea(const glm::mat4& transform) const {

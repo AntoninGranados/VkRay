@@ -13,9 +13,13 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "IconsFontAwesome7.h"
+
 #include "../ecs/systems/transform_system.hpp"
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
+
+#include "IconsFontAwesome7.h"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
@@ -314,6 +318,11 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
             ImGuizmo::MODE::WORLD,
             glm::value_ptr(model)))
     {
+        if (isInvalid(model)) {
+            ImGuizmo::PopID();
+            return;
+        }
+
         glm::vec3 translation, rotationEuler, scale;
         ImGuizmo::DecomposeMatrixToComponents(
             glm::value_ptr(model),
@@ -428,6 +437,7 @@ void Scene::drawUI() {
             }
             updated = true;
             bufferUpdated = true;
+            selectedMaterial = -1;
         }
 
         ImGui::EndTable();
@@ -472,6 +482,7 @@ void Scene::drawUI() {
             }
             updated = true;
             bufferUpdated = true;
+            selectedMeshAsset = -1;
         }
 
         ImGui::EndTable();
@@ -487,7 +498,7 @@ void Scene::drawUI() {
 
         bool hasPath = std::strlen(meshPath) > 0;
         ImGui::BeginDisabled(!hasPath);
-        if (ImGui::Button("Load", ImVec2(100, 0))) {
+        if (ImGui::Button(ICON_FA_UPLOAD " Load", ImVec2(100, 0))) {
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*ctx, meshPath)) {
                 meshAssets.push_back(std::move(asset));
@@ -502,7 +513,7 @@ void Scene::drawUI() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(100, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor(3);
@@ -520,31 +531,31 @@ void Scene::drawNewObjectPopUp() {
     std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", entityN);
     std::string name(nameBuffer);
 
-    if (ImGui::Button("Sphere", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", { 200, 0 })) {
         pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Plane", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_SQUARE " Plane", { 200, 0 })) {
         pushPlane(name, glm::vec3( 0.0, 0.0, 0.0), glm::vec3( 0.0, 1.0, 0.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Box", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_BOX " Box", { 200, 0 })) {
         pushBox(name, glm::vec3(-1.0,-1.0,-1.0), glm::vec3( 1.0, 1.0, 1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Mesh", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_CUBE " Mesh", { 200, 0 })) {
         pushMesh(name, 0, glm::mat3(1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button("Camera", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_VIDEO " Camera", { 200, 0 })) {
         pushCamera(name, glm::mat3(1.0));
         // updated = true;
         ImGui::CloseCurrentPopup();
@@ -553,7 +564,7 @@ void Scene::drawNewObjectPopUp() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-    if (ImGui::Button("Cancel", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_BAN " Cancel", { 200, 0 })) {
         ImGui::CloseCurrentPopup();
     }
     ImGui::PopStyleColor(3);

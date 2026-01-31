@@ -5,7 +5,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
-#include <stb_image_write.h>
+#include <stb_image/stb_image_write.h>
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif

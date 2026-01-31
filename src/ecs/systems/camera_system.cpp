@@ -204,6 +204,7 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
             camera.setAperture(c.aperture);
             camera.setFocusDepth(c.focusDepth);
             c.updated = false;
+            continue;
         }
 
         if (!transforms.has(e)) continue;
@@ -214,8 +215,17 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
             const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
             camera.setPosition(t.position);
             camera.setTarget(t.position + dir * dist);
-            // t.updated = false;
+            t.updated = false;
+            continue;
         }
+
+        const float previewFovRad = glm::radians(camera.getFov());
+        const float baseFovRad = 2.0f * atanf(tanf(previewFovRad * 0.5f) * previewViewportScale);
+        c.setFov(glm::degrees(baseFovRad));
+        c.setAperture(camera.getAperture());
+        c.setFocusDepth(camera.getFocusDepth());
+        t.setPosition(camera.getPosition());
+        t.setRotation(glm::quatLookAt(glm::normalize(camera.getDirection()), camera.getUp()));
     }
 }
 

@@ -2,6 +2,8 @@
 
 #include "notification_system.hpp"
 
+#include "IconsFontAwesome7.h"
+
 void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
     if (!toggled && !ctx.renderState->renderMode) return;
 
@@ -75,7 +77,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
     ImGui::PopStyleVar(2);
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::Begin("FPS",
+    ImGui::Begin(ICON_FA_GAUGE_HIGH " FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
@@ -87,25 +89,25 @@ void UiSystem::drawPreview(AppContext& ctx) {
     ImGui::End();
 
     ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::Begin("Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin(ICON_FA_CIRCLE_INFO " Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
-        if (ImGui::CollapsingHeader("Camera")) {
+        if (ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) {
             camera.drawPreviewUI(restartRender);
         }
         
-        if (ImGui::CollapsingHeader("Pathtracer")) {
+        if (ImGui::CollapsingHeader(ICON_FA_GEAR " Pathtracer")) {
             ctx.parameters->drawGroup("Pathtracer", restartRender);
         }
         
-        if (ImGui::CollapsingHeader("Scene")) {
+        if (ImGui::CollapsingHeader(ICON_FA_CUBES " Scene")) {
             ctx.parameters->drawGroup("Scene", restartRender);
-            if (ImGui::Button("Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
-                ImGui::OpenPopup("Scene Preset");
+            if (ImGui::Button(ICON_FA_LIST " Load Scene Preset", { -FLT_MIN, 0 }) && !ImGui::IsPopupOpen("Scene Preset")) {
+                ImGui::OpenPopup(ICON_FA_LIST " Scene Preset");
             }
             scene.drawUI();
         }
 
-        if (ImGui::BeginPopupModal("Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        if (ImGui::BeginPopupModal(ICON_FA_LIST " Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
             LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
             if (ImGui::Button("Empty", { 200, 0 })) {
                 mode = scene.loadPreset(ScenePreset::Empty);
@@ -137,7 +139,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-            if (ImGui::Button("Cancel", { 200, 0 })) {
+            if (ImGui::Button(ICON_FA_BAN " Cancel", { 200, 0 })) {
                 ImGui::CloseCurrentPopup();
             }
             ImGui::PopStyleColor(3);
@@ -156,7 +158,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
 void UiSystem::drawRender(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::Begin("Loading",
+    ImGui::Begin(ICON_FA_STOPWATCH " Loading",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
