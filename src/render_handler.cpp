@@ -1,4 +1,4 @@
-#include "render_system.hpp"
+#include "render_handler.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #if defined(__clang__)
@@ -10,6 +10,8 @@
 #pragma clang diagnostic pop
 #endif
 
+#include "./parameter_handler.hpp"
+
 static std::string buildRenderOutputPath() {
     auto now = std::chrono::system_clock::now();
     auto nowSecs = std::chrono::time_point_cast<std::chrono::seconds>(now);
@@ -17,7 +19,7 @@ static std::string buildRenderOutputPath() {
     return "screenshot_" + std::to_string(value) + ".png";
 }
 
-void RenderSystem::init(AppContext& ctx) {
+void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     glfwSetWindowAttrib(engine.getWindow().get(), GLFW_RESIZABLE, GLFW_FALSE);
@@ -116,7 +118,7 @@ void RenderSystem::init(AppContext& ctx) {
     }
 }
 
-void RenderSystem::destroy(AppContext& ctx) {
+void RenderHandler::destroy(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     engine.destroyDescriptorSetLayout(setLayout);
@@ -139,9 +141,9 @@ void RenderSystem::destroy(AppContext& ctx) {
     engine.destroyGraphicsPipeline(screenPipeline);
 }
 
-void RenderSystem::buildPipeline(AppContext& ctx) {
+void RenderHandler::buildPipeline(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-    NotificationSystem& notifications = *ctx.notifications;
+    NotificationHandler& notifications = *ctx.notifications;
 
     engine.waitIdle();
 
@@ -206,7 +208,7 @@ void RenderSystem::buildPipeline(AppContext& ctx) {
 }
 
 
-void RenderSystem::render(AppContext& ctx) {
+void RenderHandler::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
@@ -269,7 +271,7 @@ void RenderSystem::render(AppContext& ctx) {
     }
 }
 
-void RenderSystem::renderMain(AppContext& ctx) {
+void RenderHandler::renderMain(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer commandBuffer = engine.beginRecordingRender();
@@ -383,7 +385,7 @@ void RenderSystem::renderMain(AppContext& ctx) {
     engine.endRecoringRender(commandBuffer);
 }
 
-void RenderSystem::renderUi(AppContext& ctx) {
+void RenderHandler::renderUi(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer commandBuffer = engine.beginRecordingUiRender();
@@ -418,7 +420,7 @@ void RenderSystem::renderUi(AppContext& ctx) {
 }
 
 
-void RenderSystem::copyImageToScreenshotBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
+void RenderHandler::copyImageToScreenshotBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
     VkSmol& engine = *ctx.engine;
 
     engine.barrier(
@@ -438,7 +440,7 @@ void RenderSystem::copyImageToScreenshotBuffer(AppContext& ctx, CommandBuffer& c
     );
 }
 
-void RenderSystem::saveScreenshotBuffer(AppContext& ctx, std::string path) {
+void RenderHandler::saveScreenshotBuffer(AppContext& ctx, std::string path) {
     VkSmol& engine = *ctx.engine;
 
     size_t floatCount = static_cast<size_t>(renderOutput.width) * renderOutput.height * 4;

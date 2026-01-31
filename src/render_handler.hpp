@@ -4,8 +4,8 @@
 #include "./engine/engine.hpp"
 #include "./scene/scene.hpp"
 #include "./camera.hpp"
-#include "./notification_system.hpp"
-#include "./ui_system.hpp"
+#include "./notification_handler.hpp"
+#include "./ui_handler.hpp"
 
 #include "./imgui/imgui.h"
 #include "./imgui/ImGuizmo.h"
@@ -34,7 +34,7 @@ struct RenderOutput {
     uint32_t height  = 0;
 };
 
-class RenderSystem {
+class RenderHandler {
 public:
     void init(AppContext& ctx);
     void destroy(AppContext& ctx);

@@ -1,8 +1,8 @@
-#include "notification_system.hpp"
+#include "notification_handler.hpp"
 
 constexpr int MAX_NOTIFICATION_COUNT = 32;
 
-void NotificationSystem::drawNotifications() {
+void NotificationHandler::drawNotifications() {
     ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::SetNextWindowPos({ 0, ImGui::GetMainViewport()->Size.y - 500 });
     ImGui::SetNextWindowSize({ 300, 500 });
@@ -57,7 +57,7 @@ void NotificationSystem::drawNotifications() {
     ImGui::End();
 }
 
-void NotificationSystem::pushMessage(NotificationType type, std::string content) {
+void NotificationHandler::pushMessage(NotificationType type, std::string content) {
     notifications.push_back({
         .type = type,
         .content = content
@@ -66,13 +66,13 @@ void NotificationSystem::pushMessage(NotificationType type, std::string content)
         notifications.erase(notifications.begin());
 }
 
-void NotificationSystem::pushNotification(Notification notification) {
+void NotificationHandler::pushNotification(Notification notification) {
     notifications.push_back(notification);
     if (notifications.size() > MAX_NOTIFICATION_COUNT)
         notifications.erase(notifications.begin());
 }
 
-bool NotificationSystem::isCommandRequested(enum Command command) {
+bool NotificationHandler::isCommandRequested(enum Command command) {
     if (requestedCommands[command]) {
         requestedCommands[command] = false;
         return true;
@@ -80,7 +80,7 @@ bool NotificationSystem::isCommandRequested(enum Command command) {
     return false;
 }
 
-void NotificationSystem::parseInput(char *buff) {
+void NotificationHandler::parseInput(char *buff) {
     if (strcmp(buff, "clear") == 0) {
         requestedCommands[Command::Clear] = true;
         notifications.clear();
@@ -101,7 +101,7 @@ void NotificationSystem::parseInput(char *buff) {
     }
 }
 
-void NotificationSystem::pushHelp() {
+void NotificationHandler::pushHelp() {
     notifications.push_back({ NotificationType::Info, "Available commands:" });
     char buff[128];
     for (auto &command : commands) {
@@ -110,7 +110,7 @@ void NotificationSystem::pushHelp() {
     }
 }
 
-void NotificationSystem::pushKeymaps() {
+void NotificationHandler::pushKeymaps() {
     notifications.push_back({ NotificationType::Info, "Keymaps:" });
     char buff[128];
     for (auto &keymap : keymaps) {

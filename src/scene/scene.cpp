@@ -723,6 +723,8 @@ const ecs::Entity* Scene::getSelectedEntity() const {
 }
 
 bool Scene::isPreviewingCamera() {
+    if (ctx->renderState->renderMode) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
+
     auto& cameras = registry.storage<ecs::CameraObject>();
     for (const auto& e : cameras.entities()) {
         if (cameras.get(e).isPreview)

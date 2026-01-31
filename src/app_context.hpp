@@ -58,17 +58,19 @@ struct PixelInfo {
 class VkSmol;
 class Scene;
 class Camera;
-class ParameterSystem;
-class NotificationSystem;
-class UiSystem;
+class ParameterHandler;
+class NotificationHandler;
+class UiHandler;
+class AnimationHandler;
 
 struct AppContext {
     VkSmol* engine;
     Scene* scene;
     Camera* camera;
-    ParameterSystem* parameters;
-    NotificationSystem* notifications;
-    UiSystem* ui;
+    ParameterHandler* parameters;
+    NotificationHandler* notifications;
+    UiHandler* ui;
+    AnimationHandler* animation;
 
     RenderState* renderState;
     PathtracerUBO* pathtracerUBO;

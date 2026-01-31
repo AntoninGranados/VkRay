@@ -1,10 +1,13 @@
-#include "ui_system.hpp"
+#include "ui_handler.hpp"
 
-#include "notification_system.hpp"
+#include "./parameter_handler.hpp"
+#include "./scene/scene_preset.hpp"
+#include "./notification_handler.hpp"
+#include "./animation_handler.hpp"
 
 #include "IconsFontAwesome7.h"
 
-void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
+void UiHandler::draw(CommandBuffer commandBuffer, AppContext& ctx) {
     if (!toggled && !ctx.renderState->renderMode) return;
 
     ImGui_ImplVulkan_NewFrame();
@@ -25,13 +28,13 @@ void UiSystem::draw(CommandBuffer commandBuffer, AppContext& ctx) {
 
 }
 
-void UiSystem::updateState() {
+void UiHandler::updateState() {
     ImGuiIO& io = ImGui::GetIO();
     capturesMouse = io.WantCaptureMouse;
     capturesKeyboard = io.WantCaptureKeyboard;
 }
 
-void UiSystem::drawPreview(AppContext& ctx) {
+void UiHandler::drawPreview(AppContext& ctx) {
     bool& restartRender = *ctx.restartRender;
     Camera& camera = *ctx.camera;
     Scene& scene = *ctx.scene;
@@ -75,9 +78,10 @@ void UiSystem::drawPreview(AppContext& ctx) {
     }
     ImGui::End();
     ImGui::PopStyleVar(2);
+
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(0.8f);
-    ImGui::Begin(ICON_FA_GAUGE_HIGH " FPS",
+    ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
@@ -85,6 +89,45 @@ void UiSystem::drawPreview(AppContext& ctx) {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%u samples",ctx.renderState->sampleCount);
         ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * ctx.parameters->getInt("previewSamples"));
+    }
+    ImGui::End();
+
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImVec2 animPos(
+        mainViewport->Pos.x + mainViewport->Size.x * 0.5f,
+        mainViewport->Pos.y + mainViewport->Size.y - 10.0f
+    );
+    ImGui::SetNextWindowPos(animPos, ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::Begin("Animation",
+        nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration
+    );
+    {
+        bool paused = ctx.animation->isPaused();
+        if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {
+            ctx.animation->toggle();
+        }
+
+        ImGui::SameLine();
+
+        int frame = ctx.animation->getFrame();
+        int endFrame = ctx.animation->getEndFrame();
+        ImGui::PushItemWidth(500);
+        if (ImGui::SliderInt("##Frame", &frame, 0, endFrame-1, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+            ctx.animation->pause();
+            ctx.animation->reset(frame);
+        }
+        ImGui::PopItemWidth();
+        
+        ImGui::SameLine();
+        
+        ImGui::PushItemWidth(40);
+        if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1, 500)) {
+            ctx.animation->pause();
+            ctx.animation->setEndFrame(endFrame);
+        }
+        ImGui::PopItemWidth();
     }
     ImGui::End();
 
@@ -155,7 +198,7 @@ void UiSystem::drawPreview(AppContext& ctx) {
     ctx.notifications->drawNotifications();
 }
 
-void UiSystem::drawRender(AppContext& ctx) {
+void UiHandler::drawRender(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(0.8f);
     ImGui::Begin(ICON_FA_STOPWATCH " Loading",

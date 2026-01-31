@@ -5,6 +5,9 @@
 
 #include <IconsFontAwesome7.h>
 
+#include "./scene/scene_preset.hpp"
+#include "./scene/object/object.hpp"
+
 Application::Application() {
     engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0));
 
@@ -104,6 +107,7 @@ void Application::run() {
         startTime = currentTime;
         
         scene.runPreUpdate(ctx);
+        animation.step(deltaTime);
         
         onFrameStart(deltaTime);
         renderer.render(ctx);

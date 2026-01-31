@@ -29,7 +29,7 @@ enum Command : int {
     Count,
 };
 
-class NotificationSystem {
+class NotificationHandler {
 public:
     void drawNotifications();
     

@@ -6,15 +6,14 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "./engine/engine.hpp"
-#include "./notification_system.hpp"
-#include "./parameter_system.hpp"
+#include "./notification_handler.hpp"
+#include "./parameter_handler.hpp"
 #include "./scene/scene.hpp"
-#include "./scene/scene_preset.hpp"
-#include "./scene/object/object.hpp"
 
 #include "./app_context.hpp"
-#include "./ui_system.hpp"
-#include "./render_system.hpp"
+#include "./ui_handler.hpp"
+#include "./animation_handler.hpp"
+#include "./render_handler.hpp"
 
 enum class DebugView : int {
     None = 0,
@@ -35,9 +34,10 @@ public:
 private:
     VkSmol engine;
     Scene scene;
-    ParameterSystem parameters;
-    NotificationSystem notifications;
-    UiSystem ui;
+    ParameterHandler parameters;
+    NotificationHandler notifications;
+    UiHandler ui;
+    AnimationHandler animation = AnimationHandler(250, 24.0);
 
     RenderState renderState;
     PathtracerUBO pathtracerUBO{};
@@ -45,9 +45,9 @@ private:
 
     bool restartRender = false;
     
-    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
+    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &animation, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
     
-    RenderSystem renderer;
+    RenderHandler renderer;
 
     int frameCount = 0;
     bool shouldClose = false;
