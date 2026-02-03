@@ -18,6 +18,7 @@
 #include "../ecs/systems/transform_system.hpp"
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
+#include "../notification_handler.hpp"
 
 #include "IconsFontAwesome7.h"
 
@@ -281,6 +282,7 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
 
     entities.push_back(e);
 }
+
 
 void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     if (selectedEntity < 0) return;
@@ -592,16 +594,35 @@ void Scene::drawSelectedEntityUI() {
         }
         
         auto& ui_reg = ecs::ComponentUiRegistry::get();
-        updated |= ui_reg.draw(registry, e);
+        updated |= ui_reg.draw(*ctx, registry, e);
     }
     ImGui::End();
 
     if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
     if (ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-        for (auto& [label, add_fun] : componentTypes()) {
-            if (ImGui::Button(label.c_str(), ImVec2(200, 0))) {
-                add_fun(registry, e);
-                *ctx->restartRender = true;
+        for (auto& [id, funcs] : componentFuncs()) {
+            if (ImGui::Button(componentLabel(id).c_str(), ImVec2(200, 0))) {
+                bool verifyRestrictions = true;
+                const auto& restrictions = componentRestrictions()[id];
+                for (auto& requirement : restrictions.requirements) {
+                    if (!componentFuncs()[requirement].has(registry, e)) {
+                        verifyRestrictions = false;
+                        ctx->notifications->pushMessage(NotificationType::Warning, "Missing component " + componentLabel(requirement));
+                    }
+                }
+                for (auto& conflict : restrictions.conflicts) {
+                    if (componentFuncs()[conflict].has(registry, e)) {
+                        verifyRestrictions = false;
+                        ctx->notifications->pushMessage(NotificationType::Warning, "Conflicting component " + componentLabel(conflict));
+                    }
+                }
+
+                if (!verifyRestrictions) {
+                    ctx->notifications->pushMessage(NotificationType::Error, "Failed to add component, not all restrictions met");
+                } else {
+                    funcs.add(registry, e);
+                    *ctx->restartRender = true;
+                }
                 ImGui::CloseCurrentPopup();
             }
         }

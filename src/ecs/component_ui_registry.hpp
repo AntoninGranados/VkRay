@@ -7,6 +7,7 @@
 
 #include "./registry.hpp"
 #include "./components.hpp"
+#include "../app_context.hpp"
 
 #include "./imgui/imgui.h"
 
@@ -16,15 +17,15 @@ namespace ecs {
 
 class ComponentUiRegistry {
 public:
-    using Drawer = std::function<bool(Registry&, Entity)>;
+    using Drawer = std::function<bool(AppContext& ctx, Registry&, Entity)>;
 
     void addDrawer(Drawer drawer) {
         drawers.push_back(std::move(drawer));
     }
 
-    template<typename T, typename Func>
-    void add(Func&& func) {
-        drawers.emplace_back([fn = std::forward<Func>(func)](Registry& registry, Entity e) {
+    template<typename T>
+    void add(std::function<bool(T& t, AppContext& ctx, Registry& registry, Entity e)> func) {
+        drawers.emplace_back([func](AppContext& ctx, Registry& registry, Entity e) {
             if (!registry.has<T>(e)) return false;
 
             T& t = registry.get<T>(e);
@@ -36,9 +37,10 @@ public:
             
             if (ImGui::Button("-##Remove", { 32, 0 })) {
                 registry.remove<T>(e);
+                *ctx.restartRender = true;
             }
             ImGui::SameLine();
-            bool update = fn(t, registry, e);
+            bool update = func(t, ctx, registry, e);
             
             ImGui::EndChild();
             ImGui::PopStyleColor(3);
@@ -47,10 +49,10 @@ public:
         });
     }
 
-    bool draw(Registry& registry, Entity e) const {
+    bool draw(AppContext& ctx, Registry& registry, Entity e) const {
         bool changed = false;
         for (const Drawer& drawer : drawers)
-            changed |= drawer(registry, e);
+            changed |= drawer(ctx, registry, e);
         return changed;
     }
 

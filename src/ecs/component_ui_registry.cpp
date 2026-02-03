@@ -1,13 +1,14 @@
 #include "./component_ui_registry.hpp"
 
+#include <limits>
+
 #include <GLFW/glfw3.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "IconsFontAwesome7.h"
 
 #include "../scene/asset/mesh.hpp"
 
-#include <glm/gtc/type_ptr.hpp>
-#include <limits>
 
 namespace ecs {
 
@@ -23,7 +24,7 @@ void ComponentUiRegistry::init() {
 
     auto& ui_reg = ComponentUiRegistry::get();
 
-    ui_reg.add<ecs::Name>([](ecs::Name& n, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Name>([](ecs::Name& n, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         if (!ImGui::CollapsingHeader(ICON_FA_TAG " Name")) return false;
 
         n.value.resize(128);
@@ -38,7 +39,7 @@ void ComponentUiRegistry::init() {
         return false;
     });
 
-    ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         bool update = false;
         
         if (!ImGui::CollapsingHeader(ICON_FA_CIRCLE " Sphere")) return false;
@@ -51,17 +52,17 @@ void ComponentUiRegistry::init() {
         return update;
     });
     
-    ui_reg.add<ecs::Plane>([](ecs::Plane& p, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Plane>([](ecs::Plane& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
-    ui_reg.add<ecs::Box>([](ecs::Box& p, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Box>([](ecs::Box& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_BOX " Box", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
     
-    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         auto* meshes = ComponentUiRegistry::get().meshAssets;
         if (!meshes || meshes->empty()) return false;
 
@@ -95,7 +96,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) return false;
@@ -120,7 +121,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Transform>([](ecs::Transform& t, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform")) return false;
@@ -164,7 +165,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         auto* mats = ComponentUiRegistry::get().materials;
         if (!mats || mats->empty()) return false;
 
