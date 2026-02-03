@@ -21,12 +21,16 @@ public:
     bool wasMiddleClickDown() { return middleClickWasDown; }
     void setMiddleClickState(bool middleClickDown) { middleClickWasDown = middleClickDown; }
 
+    bool wasSpaceDown() { return spaceWasDown; }
+    void setSpaceState(bool spaceDown) { spaceWasDown = spaceDown; }
+
 private:
     bool toggled = true;
     bool toggleState = true;
     bool capturesMouse = false;
     bool capturesKeyboard = false;
     bool middleClickWasDown = false;
+    bool spaceWasDown = false;
 
     void updateState();
 

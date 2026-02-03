@@ -11,11 +11,12 @@
 #endif
 
 #include "./parameter_handler.hpp"
+#include "./animation_handler.hpp"
 
 static std::string buildRenderOutputPath() {
     auto now = std::chrono::system_clock::now();
-    auto nowSecs = std::chrono::time_point_cast<std::chrono::seconds>(now);
-    auto value = nowSecs.time_since_epoch().count();
+    auto nowMilli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    auto value = nowMilli.time_since_epoch().count();
     return "screenshot_" + std::to_string(value) + ".png";
 }
 
@@ -212,10 +213,10 @@ void RenderHandler::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
-    if (ctx.renderState->renderMode && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
+    if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
             renderOutput.requested = true;
-            ctx.renderState->pendingExit = true;
+            ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle; // we don't want to exist when rendering an animation
         }
     }
     
@@ -253,20 +254,41 @@ void RenderHandler::render(AppContext& ctx) {
     // Save render
     if (renderOutput.pendingSave) {
         engine.waitIdle();
-        saveScreenshotBuffer(ctx, buildRenderOutputPath());
-        renderOutput.pendingSave = false;
+        std::string path = buildRenderOutputPath();
+        
+        bool toVideo = false;
+        if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
+            char buff[64];
+            std::snprintf(buff, 64, "anim/frame_%05d.png", ctx.animation->getFrame());
+            path = std::string(buff);
+
+            ctx.renderState->samplesPerSecEMA = 0.0;
+            ctx.renderState->samplesPerSecInitialized = false;
+            ctx.renderState->samplesPerSecAccumTime = 0.0;
+            ctx.renderState->samplesPerSecAccumSamples = 0.0;
+
+            ctx.animation->stepFixed();
+            if (ctx.animation->getFrame() == 0) {
+                ctx.renderState->pendingExit = true;
+                toVideo = true;
+            }
+        }
 
         if (ctx.renderState->pendingExit) {
             ctx.ui->restorToggledState();
-            ctx.renderState->renderMode = false;
+            ctx.renderState->renderMode = RenderMode::Preview;
             ctx.renderState->pendingExit = false;
             ctx.renderState->samplesPerSecEMA = 0.0;
             ctx.renderState->samplesPerSecInitialized = false;
             ctx.renderState->samplesPerSecAccumTime = 0.0;
             ctx.renderState->samplesPerSecAccumSamples = 0.0;
-            if (ctx.restartRender) {
-                *ctx.restartRender = true;
-            }
+        }
+
+        renderOutput.pendingSave = false;
+        *ctx.restartRender = true;
+        saveScreenshotBuffer(ctx, path);
+        if (toVideo) {
+            std::system("ffmpeg -framerate 24 -i anim/frame_%05d.png out.mp4");
         }
     }
 }

@@ -6,4 +6,7 @@ bin/
 build/
 
 imgui.ini
+
+anim/
 *.png
+*.mp4

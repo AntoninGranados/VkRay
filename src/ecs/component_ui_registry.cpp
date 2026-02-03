@@ -8,7 +8,8 @@
 #include "IconsFontAwesome7.h"
 
 #include "../scene/asset/mesh.hpp"
-
+#include "../animation_handler.hpp"
+#include "../ui_constants.hpp"
 
 namespace ecs {
 
@@ -16,6 +17,20 @@ ComponentUiRegistry& ComponentUiRegistry::get() {
     static ComponentUiRegistry r;
     return r;
 }
+
+void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity e, ecs::TransformAnim& anim, std::function<void()> func) {
+    bool hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());
+    if (hasKeyframe) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_col);
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    }
+    if (ImGui::Button(hasKeyframe ? ICON_FA_CIRCLE : ICON_FA_CIRCLE_DOT "##KeyframePos")) {
+        func();
+    }
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+};
 
 void ComponentUiRegistry::init() {
     static bool init = false;
@@ -126,9 +141,18 @@ void ComponentUiRegistry::init() {
 
         if (!ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform")) return false;
 
+        bool isAnimated = r.has<ecs::TransformAnim>(e);
+
         ImGui::PushItemWidth(-FLT_MIN);
 
         if (t.positionToggled) {
+            if (isAnimated) {
+                auto& anim = r.get<ecs::TransformAnim>(e);
+                keyframeButton(
+                    ctx, r, e, anim,
+                    [&]() { anim.insertPositionKeyframe(ctx.animation->getFrame(), t.position); }
+                );
+            }
             ImGui::Text("Position:");
             if (ImGui::DragFloat3("##Position", glm::value_ptr(t.position), 0.01f)) {
                 t.updated = true;
@@ -163,6 +187,11 @@ void ComponentUiRegistry::init() {
         ImGui::PopItemWidth();
 
         return update;
+    });
+
+    ui_reg.add<ecs::TransformAnim>([](ecs::TransformAnim& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+        ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform Anim", ImGuiTreeNodeFlags_Bullet);
+        return false;
     });
 
     ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){

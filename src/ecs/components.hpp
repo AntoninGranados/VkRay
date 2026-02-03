@@ -17,6 +17,8 @@
 #include "./components/editor/editor_only.hpp"
 #include "./components/editor/name.hpp"
 
+#include "./components/animation/transform_anim.hpp"
+
 #define REQ_NONE {}
 #define CONFLICT_NONE {}
 
@@ -32,6 +34,7 @@
     X(MeshRef,      REQ_TRANSFORM, CONFLICT_OBJECTS)    \
     X(CameraObject, REQ_TRANSFORM, CONFLICT_OBJECTS)    \
     X(MaterialRef,  REQ_NONE, CONFLICT_NONE)            \
+    X(TransformAnim,REQ_TRANSFORM, CONFLICT_NONE)       \
 
 #define COMPONENTS_ID(Id, Req, Conflict) Id,
 enum class ComponentId {

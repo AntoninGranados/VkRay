@@ -1,6 +1,3 @@
-// 000101001
-// 001000000
-
 #include "scene.hpp"
 #include "scene_preset.hpp"
 
@@ -14,13 +11,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "IconsFontAwesome7.h"
+#include "../ui_constants.hpp"
 
 #include "../ecs/systems/transform_system.hpp"
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
+#include "../ecs/systems/animation_system.hpp"
 #include "../notification_handler.hpp"
-
-#include "IconsFontAwesome7.h"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
@@ -53,6 +50,7 @@ void Scene::init() {
 
 void Scene::initSystems() {
     preUpdateScheduler.clear();
+    preUpdateScheduler.add(ecs::transformAnimationSystem);
     preUpdateScheduler.add(ecs::transformSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
@@ -493,7 +491,7 @@ void Scene::drawUI() {
 
         bool hasPath = std::strlen(meshPath) > 0;
         ImGui::BeginDisabled(!hasPath);
-        if (ImGui::Button(ICON_FA_UPLOAD " Load", ImVec2(200, 0))) {
+        if (ImGui::Button(ICON_FA_UPLOAD " Load", ui::button_size)) {
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*ctx, meshPath)) {
                 meshAssets.push_back(std::move(asset));
@@ -505,13 +503,11 @@ void Scene::drawUI() {
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(200, 0))) {
+        ui::PushCancelStyleColor();
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
             ImGui::CloseCurrentPopup();
         }
-        ImGui::PopStyleColor(3);
+        ui::PopCancelStyleColor();
         ImGui::EndPopup();
     }
 
@@ -526,49 +522,47 @@ void Scene::drawNewObjectPopUp() {
     std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", entityN);
     std::string name(nameBuffer);
 
-    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::button_size)) {
         entities.push_back(registry.createEntity());
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::button_size)) {
         pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button(ICON_FA_SQUARE " Plane", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::button_size)) {
         pushPlane(name, glm::vec3( 0.0, 0.0, 0.0), glm::vec3( 0.0, 1.0, 0.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button(ICON_FA_BOX " Box", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_BOX " Box", ui::button_size)) {
         pushBox(name, glm::vec3(-1.0,-1.0,-1.0), glm::vec3( 1.0, 1.0, 1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button(ICON_FA_CUBE " Mesh", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::button_size)) {
         pushMesh(name, 0, glm::mat3(1.0));
         updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    if (ImGui::Button(ICON_FA_VIDEO " Camera", { 200, 0 })) {
+    if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::button_size)) {
         pushCamera(name, glm::mat3(1.0));
         // updated = true;
         ImGui::CloseCurrentPopup();
         entityN++;
     }
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-    if (ImGui::Button(ICON_FA_BAN " Cancel", { 200, 0 })) {
+    ui::PushCancelStyleColor();
+    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
         ImGui::CloseCurrentPopup();
     }
-    ImGui::PopStyleColor(3);
+    ui::PopCancelStyleColor();
 
     ImGui::EndPopup();
 }
@@ -579,7 +573,7 @@ void Scene::drawSelectedEntityUI() {
     bool openNewComponentPopup = false;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
     ImGui::Begin(
         "Entity",
@@ -601,7 +595,7 @@ void Scene::drawSelectedEntityUI() {
     if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
     if (ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
         for (auto& [id, funcs] : componentFuncs()) {
-            if (ImGui::Button(componentLabel(id).c_str(), ImVec2(200, 0))) {
+            if (ImGui::Button(componentLabel(id).c_str(), ui::button_size)) {
                 bool verifyRestrictions = true;
                 const auto& restrictions = componentRestrictions()[id];
                 for (auto& requirement : restrictions.requirements) {
@@ -627,13 +621,11 @@ void Scene::drawSelectedEntityUI() {
             }
         }
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ImVec2(200, 0))) {
+        ui::PushCancelStyleColor();
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
             ImGui::CloseCurrentPopup();
         }
-        ImGui::PopStyleColor(3);
+        ui::PopCancelStyleColor();
         ImGui::EndPopup();
     }
 
@@ -644,7 +636,7 @@ void Scene::drawSelectedMaterialUI() {
     if (selectedMaterial < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
     ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
@@ -660,7 +652,7 @@ void Scene::drawSelectedMeshAssetUI() {
      if (selectedMeshAsset < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::SetNextWindowSizeConstraints({ 250.0f, 0.0f }, { 250.0f, 600.0f });
     ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
@@ -769,7 +761,7 @@ const ecs::Entity* Scene::getSelectedEntity() const {
 }
 
 bool Scene::isPreviewingCamera() {
-    if (ctx->renderState->renderMode) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
+    if (ctx->renderState->renderMode != RenderMode::Preview) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
 
     auto& cameras = registry.storage<ecs::CameraObject>();
     for (const auto& e : cameras.entities()) {

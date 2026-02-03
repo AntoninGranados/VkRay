@@ -37,7 +37,7 @@ private:
     ParameterHandler parameters;
     NotificationHandler notifications;
     UiHandler ui;
-    AnimationHandler animation = AnimationHandler(250, 24.0);
+    AnimationHandler animation = AnimationHandler(128, 24.0);
 
     RenderState renderState;
     PathtracerUBO pathtracerUBO{};

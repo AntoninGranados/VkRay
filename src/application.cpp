@@ -107,7 +107,7 @@ void Application::run() {
         startTime = currentTime;
         
         scene.runPreUpdate(ctx);
-        animation.step(deltaTime);
+        if (!animation.isPaused()) animation.step(deltaTime);
         
         onFrameStart(deltaTime);
         renderer.render(ctx);
@@ -125,17 +125,31 @@ void Application::onFrameStart(float dt) {
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;
     } if (notifications.isCommandRequested(Command::Render)) {
-        if (!renderState.renderMode) {
+        if (renderState.renderMode == RenderMode::Preview) {
             scene.clearSelection();
             ui.saveToggledState();
             ui.setToggle(false);
-            renderState.renderMode = true;
+            renderState.renderMode = RenderMode::RenderSingle;
             renderState.pendingExit = false;
             renderState.samplesPerSecEMA = 0.0;
             renderState.samplesPerSecInitialized = false;
             renderState.samplesPerSecAccumTime = 0.0;
             renderState.samplesPerSecAccumSamples = 0.0;
             restartRender = true;
+        }
+    } if (notifications.isCommandRequested(Command::RenderAnim)) {
+        if (renderState.renderMode == RenderMode::Preview) {
+            scene.clearSelection();
+            ui.saveToggledState();
+            ui.setToggle(false);
+            renderState.renderMode = RenderMode::RenderAnimation;
+            renderState.pendingExit = false;
+            renderState.samplesPerSecEMA = 0.0;
+            renderState.samplesPerSecInitialized = false;
+            renderState.samplesPerSecAccumTime = 0.0;
+            renderState.samplesPerSecAccumSamples = 0.0;
+            restartRender = true;
+            animation.reset(0);
         }
     } if (notifications.isCommandRequested(Command::Reload)) {
         renderer.buildPipeline(ctx);
@@ -146,7 +160,7 @@ void Application::onFrameStart(float dt) {
         frameCount = 1;
         renderState.sampleCount = 0;
         restartRender = false;
-        if (!renderState.renderMode) renderState.resolution = parameters.getFloat("movingResolution");
+        if (renderState.renderMode == RenderMode::Preview) renderState.resolution = parameters.getFloat("movingResolution");
     }
 
     fillUBOs();
@@ -158,7 +172,7 @@ void Application::onFrameStart(float dt) {
 void Application::handleInput(float dt) {
     glfwPollEvents();
 
-    if (renderState.renderMode)
+    if (renderState.renderMode != RenderMode::Preview)
         handleInputRender(dt);
     else
         handleInputPreview(dt);
@@ -186,7 +200,7 @@ void Application::handleInputRender(float dt) {
     glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         ui.restorToggledState();
-        renderState.renderMode = false;
+        renderState.renderMode = RenderMode::Preview;
         renderState.pendingExit = false;
         renderState.samplesPerSecEMA = 0.0;
         renderState.samplesPerSecInitialized = false;
@@ -229,6 +243,13 @@ void Application::handleInputPreview(float dt) {
     if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         if (!ui.isToggled()) ui.toggle();
         else scene.clearSelection();
+    }
+
+    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (!ui.wasSpaceDown()) animation.toggle();
+        ui.setSpaceState(true);
+    } else {
+        ui.setSpaceState(false);
     }
     
     if (!blockKeyboardInput) {

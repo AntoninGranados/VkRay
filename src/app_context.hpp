@@ -2,8 +2,14 @@
 
 #include <glm/glm.hpp>
 
+enum class RenderMode {
+    Preview,
+    RenderSingle,
+    RenderAnimation
+};
+
 struct RenderState {
-    bool renderMode = false;
+    RenderMode renderMode = RenderMode::Preview;
     bool pendingExit = false;
     double samplesPerSecEMA = 0.0;
     bool samplesPerSecInitialized = false;

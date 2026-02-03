@@ -139,7 +139,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (ubo.debugView == debug_Normal) {
         return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
-    return radiance;
+    // return radiance;
+    return clamp(radiance, vec3(0.0), vec3(1.0));
 }
 
 
@@ -167,7 +168,6 @@ void updateVariance(in float value, inout PixelInfo pixelInfo) {
     pixelInfo.m2 += delta * delta2;
 }
 
-
 float computeTemporalSigma(in PixelInfo pixelInfo) {
     float variance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
     float varianceMean = (pixelInfo.count > 0.0) ? (variance / pixelInfo.count) : 0.0;
@@ -175,7 +175,7 @@ float computeTemporalSigma(in PixelInfo pixelInfo) {
 }
 
 float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
-    const int radius = 1;
+    const int radius = 2;
     float mean = 0.0;
     float meanSq = 0.0;
     int samples = 0;
@@ -197,23 +197,23 @@ float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
 }
 
 float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec2 texSize, float resolution) {
-    float temporalSigma = computeTemporalSigma(pixelInfo);
+    float temporalVariance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
     float spatialSigma = computeSpatialVariance(blockCoord, texSize);
 
-    float sigma = mix(temporalSigma, spatialSigma, 0.5);
+    float sigma = mix(sqrt(max(temporalVariance, 0.0)), spatialSigma, 0.5);
     float minAdaptiveSamples = max(float(ubo.varianceWarmupSamples), 0.0);
-    float proba = clamp(sigma * 8.0, 0.01, 1.0);
-    proba = sqrt(proba);
+    float proba = clamp(sigma * 4.0, 0.1, 1.0);
     pixelInfo.varianceProba = proba;
     return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;
 }
+
 
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
-            vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screenSize;
+            vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
             vec3 rayColor = traceRay(camera, ray, seed);
             colorSum.rgb += rayColor.rgb;

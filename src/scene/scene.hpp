@@ -77,6 +77,7 @@ public:
     const int getSelectionId() { return selectedEntity; }
     const ecs::Entity* getSelectedEntity() const;
     void clearSelection() { selectedEntity = -1; }
+    const ecs::Registry& getRegistry() const { return registry; }
     Camera& getCamera() { return camera; }
     bool isPreviewingCamera();
     

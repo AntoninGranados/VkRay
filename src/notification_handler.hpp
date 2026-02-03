@@ -24,6 +24,7 @@ enum Command : int {
     Help,
     Key,
     Render,
+    RenderAnim,
     Reload,
 
     Count,
@@ -52,6 +53,7 @@ private:
         { "help", "display this help message" },
         { "key", "display the keymaps" },
         { "render", "render mode (ESC to go to normal)" },
+        { "render-anim", "render animation mode (ESC to go to normal)" },
         { "reload", "reload the shaders" },
     };
     

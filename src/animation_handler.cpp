@@ -20,8 +20,6 @@ void AnimationHandler::reset(int _frame) {
 }
 
 void AnimationHandler::step(double _dt) {
-    if (paused) return;
-
     dt = _dt;
     
     int newFrame = static_cast<int>(std::floor((time + _dt) * fps));
@@ -34,9 +32,7 @@ void AnimationHandler::step(double _dt) {
     }
 }
 
-void AnimationHandler::stepFixed() {
-    if (paused) return;
-    
+void AnimationHandler::stepFixed() {    
     dt = fixedDt;
 
     int newFrame = frame + 1;

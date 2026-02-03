@@ -94,6 +94,8 @@ void NotificationHandler::parseInput(char *buff) {
         pushKeymaps();
     } else if (strcmp(buff, "render") == 0) {
         requestedCommands[Command::Render] = true;
+    } else if (strcmp(buff, "render-anim") == 0) {
+        requestedCommands[Command::RenderAnim] = true;
     } else if (strcmp(buff, "reload") == 0) {
         requestedCommands[Command::Reload] = true;
     } else {

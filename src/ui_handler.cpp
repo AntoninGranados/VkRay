@@ -1,14 +1,17 @@
 #include "ui_handler.hpp"
 
+#include "IconsFontAwesome7.h"
+
 #include "./parameter_handler.hpp"
 #include "./scene/scene_preset.hpp"
 #include "./notification_handler.hpp"
 #include "./animation_handler.hpp"
 
-#include "IconsFontAwesome7.h"
+#include "./ui_constants.hpp"
+
 
 void UiHandler::draw(CommandBuffer commandBuffer, AppContext& ctx) {
-    if (!toggled && !ctx.renderState->renderMode) return;
+    if (!toggled && ctx.renderState->renderMode == RenderMode::Preview) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -17,10 +20,10 @@ void UiHandler::draw(CommandBuffer commandBuffer, AppContext& ctx) {
     updateState();
 
     ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 5.0f;
-    style.FrameRounding = 5.0f;
+    style.WindowRounding = ui::widget_rounding;
+    style.FrameRounding = ui::widget_rounding;
 
-    if (ctx.renderState->renderMode) drawRender(ctx);
+    if (ctx.renderState->renderMode != RenderMode::Preview) drawRender(ctx);
     else drawPreview(ctx);
 
     ImGui::Render();
@@ -79,8 +82,8 @@ void UiHandler::drawPreview(AppContext& ctx) {
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowPos({ 0, 0 });
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
@@ -98,7 +101,7 @@ void UiHandler::drawPreview(AppContext& ctx) {
         mainViewport->Pos.y + mainViewport->Size.y - 10.0f
     );
     ImGui::SetNextWindowPos(animPos, ImGuiCond_Always, ImVec2(0.5f, 1.0f));
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::Begin("Animation",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration
@@ -108,9 +111,66 @@ void UiHandler::drawPreview(AppContext& ctx) {
         if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {
             ctx.animation->toggle();
         }
-
         ImGui::SameLine();
 
+        const float barWidth = 400.0f;
+        const float barHeight = 16.0f;
+
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const float frameHeight = ImGui::GetFrameHeight();
+        ImVec2 p = ImGui::GetCursorScreenPos();
+
+        ImGui::InvisibleButton("Timeline", ImVec2(barWidth, frameHeight));
+        bool hovered = ImGui::IsItemHovered();
+        if (hovered && ImGui::IsMouseDown(0)) {
+            float t = (ImGui::GetIO().MousePos.x - p.x) / barWidth;
+            t = std::clamp(t, 0.0f, 1.0f);
+            ctx.animation->reset(static_cast<int>(t * ctx.animation->getEndFrame()));
+            ctx.animation->pause();
+        }
+
+        // Draw bar
+        ImU32 barCol = IM_COL32(140, 140, 140, 128);
+        ImU32 fillCol = IM_COL32(80, 160, 255, 255);
+        ImVec2 barMin = ImVec2(p.x, p.y + (frameHeight - barHeight) * 0.5f);
+        ImVec2 barMax = ImVec2(p.x + barWidth, barMin.y + barHeight);
+        dl->AddRectFilled(barMin, barMax, barCol, 3.0f);
+
+        // Draw current time fill
+        float tNorm = (ctx.animation->getFrame() > 0.0f) ? (float(ctx.animation->getFrame()) / ctx.animation->getEndFrame()) : 0.0f;
+        tNorm = std::clamp(tNorm, 0.0f, 1.0f);
+        dl->AddRectFilled(ImVec2(barMin.x + barWidth * tNorm - 4.0f, barMin.y), ImVec2(barMin.x + barWidth * tNorm + 4.0f, barMax.y), fillCol, 3.0f);
+        
+        // Draw keyframes
+        const ecs::Entity* e = ctx.scene->getSelectedEntity();
+        if (e && ctx.scene->getRegistry().has<ecs::TransformAnim>(*e)) {
+            auto& anim = ctx.scene->getRegistry().get<ecs::TransformAnim>(*e);
+            for (auto& k : anim.positionKeys) {
+                float x = barMin.x + (float(k.frame) / ctx.animation->getEndFrame()) * barWidth;
+                ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
+                dl->AddCircleFilled(c, ui::widget_rounding, ImGui::ColorConvertFloat4ToU32(ui::keyframe_col));
+            }
+        }
+        
+        ImGui::SameLine();
+        
+        ImGui::PushItemWidth(40);
+        int endFrame = ctx.animation->getEndFrame();
+        if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1, 500)) {
+            ctx.animation->pause();
+            ctx.animation->setEndFrame(endFrame);
+        }
+        ImGui::PopItemWidth();
+
+        /*
+        bool paused = ctx.animation->isPaused();
+        if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {
+            ctx.animation->toggle();
+        }
+
+        ImGui::SameLine();
+        
+        
         int frame = ctx.animation->getFrame();
         int endFrame = ctx.animation->getEndFrame();
         ImGui::PushItemWidth(500);
@@ -128,10 +188,11 @@ void UiHandler::drawPreview(AppContext& ctx) {
             ctx.animation->setEndFrame(endFrame);
         }
         ImGui::PopItemWidth();
+        */
     }
     ImGui::End();
 
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::Begin(ICON_FA_CIRCLE_INFO " Information", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) {
@@ -152,40 +213,38 @@ void UiHandler::drawPreview(AppContext& ctx) {
 
         if (ImGui::BeginPopupModal(ICON_FA_LIST " Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
             LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
-            if (ImGui::Button("Empty", { 200, 0 })) {
+            if (ImGui::Button("Empty", ui::button_size)) {
                 mode = scene.loadPreset(ScenePreset::Empty);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::Button("Mesh", { 200, 0 })) {
+            if (ImGui::Button("Mesh", ui::button_size)) {
                 mode = scene.loadPreset(ScenePreset::Mesh);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::Button("Sponza", { 200, 0 })) {
+            if (ImGui::Button("Sponza", ui::button_size)) {
                 mode = scene.loadPreset(ScenePreset::Sponza);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::Button("Cornell Box", { 200, 0 })) {
+            if (ImGui::Button("Cornell Box", ui::button_size)) {
                 mode = scene.loadPreset(ScenePreset::CornellBox);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::Button("Random Spheres", { 200, 0 })) {
+            if (ImGui::Button("Random Spheres", ui::button_size)) {
                 mode = scene.loadPreset(ScenePreset::RandomSpheres);
                 restartRender = true;
                 ImGui::CloseCurrentPopup();
             }
             ctx.parameters->setEnum<LightMode>("lightMode", mode);
             
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-            if (ImGui::Button(ICON_FA_BAN " Cancel", { 200, 0 })) {
+            ui::PushCancelStyleColor();
+            if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::PopStyleColor(3);
+            ui::PopCancelStyleColor();
             
             ImGui::EndPopup();
         }
@@ -200,7 +259,7 @@ void UiHandler::drawPreview(AppContext& ctx) {
 
 void UiHandler::drawRender(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(0.8f);
+    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
     ImGui::Begin(ICON_FA_STOPWATCH " Loading",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
