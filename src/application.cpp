@@ -245,7 +245,7 @@ void Application::handleInputPreview(float dt) {
         else scene.clearSelection();
     }
 
-    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
+    if (!blockKeyboardInput && ctx.camera->isLocked() && glfwGetKey(engine.getWindow().get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
         if (!ui.wasSpaceDown()) animation.toggle();
         ui.setSpaceState(true);
     } else {

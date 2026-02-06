@@ -48,7 +48,7 @@ vec3 importanceSampleLight(in Material surfaceMat, in Hit hit, in ScatterResult 
 
     Material lightMat = getMaterial(lightObj);
     vec3 Le = lightMat.albedo * emissiveIntensity(lightMat);
-    return (surfaceMat.albedo / PI) * Le * cosSurface / max(pdfW, EPS);
+    return surfaceMat.albedo / PI * Le * cosSurface / max(pdfW, EPS);
 }
 
 #endif

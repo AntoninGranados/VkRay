@@ -93,7 +93,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     }
 
     vec3 throughput = vec3(1.0);
-    vec3 radiance = vec3(0.0);
 
     int i = 0;
     ScatterResult result;
@@ -105,32 +104,26 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
             mat = getMaterial(hit.object);
 
             if (mat.type == mat_Emissive) {
-                radiance += throughput * mat.albedo * emissiveIntensity(mat);
+                throughput *= mat.albedo * emissiveIntensity(mat);
                 break;
             }
 
-            scatter(
-                mat,
-                ray,
-                hit,
-                result,
-                seed
-            );
+            scatter(mat, ray, hit, result, seed);
             throughput *= result.attenuation;
             if (!result.isScattered) break;
 
-            vec3 direct = importanceSampleLight(mat, hit, result, seed);
-            radiance += throughput * direct;
+            // vec3 direct = importanceSampleLight(mat, hit, result, seed);
+            // radiance += throughput * direct;
 
             ray = result.scattered;
             hit = intersection(ray);
         } else {
-            radiance += throughput * skyColor(ray.dir);
+            throughput *= skyColor(ray.dir);
             break;
         }
     }
     if (i == ubo.maxBounces)
-        radiance = vec3(0.0);
+        throughput = vec3(0.0);
 
     // Debug visualisations
     if (ubo.debugView == debug_Bounces) {
@@ -140,7 +133,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
         return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
     // return radiance;
-    return clamp(radiance, vec3(0.0), vec3(1.0));
+    return clamp(throughput, vec3(0.0), vec3(1.0));
 }
 
 

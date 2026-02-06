@@ -81,8 +81,8 @@ void RenderHandler::init(AppContext& ctx) {
     {   // Pipeline creation
         buildPipeline(ctx);
         
-        Shader screenVertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT,   "./res/shader/vert.glsl");
-        Shader screenFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, "./res/shader/frag.glsl");
+        Shader screenVertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl");
+        Shader screenFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl");
         
         VertexInput<ScreenVertex> screenVertexInput;
         screenVertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
@@ -148,7 +148,7 @@ void RenderHandler::buildPipeline(AppContext& ctx) {
 
     engine.waitIdle();
 
-    std::string vertShaderPath = "./res/shader/vert.glsl";
+    std::string vertShaderPath = "./shaders/vert.glsl";
     Shader vertShader;
     try {
         vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
@@ -161,7 +161,7 @@ void RenderHandler::buildPipeline(AppContext& ctx) {
         return;
     }
     
-    std::string fragShaderPath = "./res/shader/raytracing/raytracing.glsl";
+    std::string fragShaderPath = "./shaders/raytracing/raytracing.glsl";
     Shader fragShader;
     try {
         fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);
@@ -288,7 +288,7 @@ void RenderHandler::render(AppContext& ctx) {
         *ctx.restartRender = true;
         saveScreenshotBuffer(ctx, path);
         if (toVideo) {
-            std::system("ffmpeg -framerate 24 -i anim/frame_%05d.png out.mp4");
+            std::system("ffmpeg -framerate 24 -i anim/frame_%05d.png -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p out.mp4");
         }
     }
 }

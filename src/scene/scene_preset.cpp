@@ -4,6 +4,18 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     scene.clear();
 
     lightMode = LightMode::Day;
+
+    scene.pushSphere(
+        "Sphere",
+        glm::vec3(0.0),
+        1.0
+    );
+
+    scene.pushPlane(
+        "Plane",
+        glm::vec3(0.0, -1.0, 0.0),
+        glm::vec3(0.0, 1.0, 0.0)
+    );
 }
 
 void initMesh(Scene &scene, LightMode &lightMode) {
