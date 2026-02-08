@@ -17,6 +17,7 @@ float luma(vec3 c) {
 #define mat_Emissive      Enum(1)
 #define mat_GgxMetal      Enum(2)
 #define mat_GgxPlastic    Enum(3)
+#define mat_Programmable  Enum(4)
 
 struct Material {
     Enum type;

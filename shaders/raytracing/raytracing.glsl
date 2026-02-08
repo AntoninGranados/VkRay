@@ -2,7 +2,7 @@
 
 #include "inputs.glsl"
 #include "utils.glsl"
-#include "materials.glsl"
+#include "materials/materials.glsl"
 #include "objects.glsl"
 #include "lights.glsl"
 #include "global.glsl"
@@ -138,9 +138,9 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
                 sampleLight(hit, lightResult, seed);
                 if (lightResult.pdf > EPS) {
                     float cosTheta = max(dot(hit.normal, lightResult.wi), 0.0);
-                    vec3 f = sampleF(mat, hit.normal, -ray.dir, lightResult.wi);
+                    vec3 f = sampleF(mat, hit, -ray.dir, lightResult.wi);
 
-                    float pdfB = samplePDF(mat, hit.normal, -ray.dir, lightResult.wi);
+                    float pdfB = samplePDF(mat, hit, -ray.dir, lightResult.wi);
                     float pdfL = lightResult.pdf;
 
                     float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);

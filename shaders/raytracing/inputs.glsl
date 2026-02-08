@@ -2,7 +2,7 @@
 #define INPUTS_GLSL
 
 #include "utils.glsl"
-#include "materials.glsl"
+#include "materials/materials.glsl"
 
 layout(location = 0) in vec2 fragPos;
 layout(location = 0) out vec4 outColor;

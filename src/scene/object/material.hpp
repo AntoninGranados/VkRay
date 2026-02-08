@@ -15,6 +15,7 @@ enum MaterialType {
     Emissive,
     GgxMetal,
     GgxPlastic,
+    Programmable,
 };
 
 struct GpuMaterial {
@@ -41,5 +42,6 @@ bool drawLambertianUI(Material &mat);
 bool drawEmissiveUI(Material &mat);
 bool drawGgxMetalUI(Material &mat);
 bool drawGgxPlasticUI(Material &mat);
+bool drawProgrammableUI(Material &mat);
 
 bool drawMaterialUI(Material &mat);

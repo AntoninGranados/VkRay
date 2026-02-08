@@ -18,7 +18,7 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     for (int j = 0; j <= v; j++) {
         for (int i = 0; i <= v; i++) {
             float rough = i/v * 0.7f;
-            float ior = std::pow(j/v, 2.0f);
+            float ior = std::pow(j/v, 4.0f);
             MaterialHandle temp = scene.pushMaterial(
                 Material {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
@@ -28,7 +28,7 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
                 }
             );
             scene.pushSphere(
-                "Sphere_" + std::to_string(i),
+                "Sphere_" + std::to_string(i) + std::to_string(j),
                 glm::vec3(i - v*0.5f, 0.0f, j - v*0.5f),
                 0.4,
                 temp
@@ -46,7 +46,7 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     MaterialHandle floor = scene.pushMaterial(
         Material {
             .name = "Floor",
-            .type = MaterialType::Lambertian,
+            .type = MaterialType::Programmable,
             .albedo = glm::vec3(0.59, 0.27, 0.09),
             .payload = { 0.0, 0.0 }
         }

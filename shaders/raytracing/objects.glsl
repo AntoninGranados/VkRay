@@ -2,7 +2,7 @@
 #define OBJECT_GLSL
 
 #include "utils.glsl"
-#include "materials.glsl"
+#include "materials/materials.glsl"
 #include "inputs.glsl"
 
 Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {

@@ -3,7 +3,7 @@
 
 #include "inputs.glsl"
 #include "utils.glsl"
-#include "materials.glsl"
+#include "materials/materials.glsl"
 #include "objects.glsl"
 
 Hit rayObjectIntersection(in Ray ray, in Object obj) {

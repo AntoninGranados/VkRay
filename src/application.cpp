@@ -29,6 +29,7 @@ Application::Application() {
             ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
             auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
             if (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured()) return;
+            if (app->ctx.renderState->renderMode != RenderMode::Preview) return;
             app->restartRender |= app->ctx.camera->scrollCallback(window, xoffset, yoffset);
         }
     );
