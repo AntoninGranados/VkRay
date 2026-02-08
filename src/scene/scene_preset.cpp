@@ -5,23 +5,6 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
 
     lightMode = LightMode::Night;
     
-    for (int i = 0; i <= 4; i++) {
-        MaterialHandle temp = scene.pushMaterial(
-            Material {
-                .name = "Temp_" + std::to_string(i),
-                .type = MaterialType::Glossy,
-                .albedo = glm::vec3(1.0),
-                .payload = { i/4.0f, 0.0 }
-            }
-        );
-        scene.pushSphere(
-            "Sphere_" + std::to_string(i),
-            glm::vec3(i - 2.0f, 0.0f, 0.0f),
-            0.4,
-            temp
-        );
-    }
-    
     MaterialHandle light = scene.pushMaterial(
         Material {
             .name = "Light",
@@ -30,12 +13,35 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
             .payload = { 10.0, 0.0 }
         }
     );
-    scene.pushBox(
-        "Light",
-        glm::vec3(-2.0, 2.995, -0.1),
-        glm::vec3( 2.0, 3.005, 0.1),
-        light
-    );
+    
+    float v = 4.0f;
+    for (int j = 0; j <= v; j++) {
+        for (int i = 0; i <= v; i++) {
+            float rough = i/v * 0.7f;
+            float ior = std::pow(j/v, 2.0f);
+            MaterialHandle temp = scene.pushMaterial(
+                Material {
+                    .name = "Temp_" + std::to_string(i) + std::to_string(j),
+                    .type = MaterialType::GgxPlastic,
+                    .albedo = glm::vec3(0.3, 1.0, 0.3) * 0.5f,
+                    .payload = { rough, ior }
+                }
+            );
+            scene.pushSphere(
+                "Sphere_" + std::to_string(i),
+                glm::vec3(i - v*0.5f, 0.0f, j - v*0.5f),
+                0.4,
+                temp
+            );
+        }
+        scene.pushBox(
+            "Light_" + std::to_string(j),
+            glm::vec3(-v*0.5f, 2.995f, j - v*0.5f + -0.1f),
+            glm::vec3( v*0.5f, 3.005f, j - v*0.5f +  0.1f),
+            light
+        );
+    };
+    
 
     MaterialHandle floor = scene.pushMaterial(
         Material {
@@ -71,7 +77,7 @@ void initMesh(Scene &scene, LightMode &lightMode) {
 
     const MaterialHandle lucyHandle = scene.pushMaterial(Material{
         .name = "Lucy",
-        .type = MaterialType::Glossy,
+        .type = MaterialType::GgxMetal,
         .albedo = { 1.0f, 1.0f, 1.0f },
         .payload = { 3.0f, 0.1f },
     });
@@ -122,11 +128,11 @@ void initCornellBox(Scene &scene, LightMode &lightMode) {
     /*
     scene.pushSphere(
         engine,
-        "Glossy",
+        "GgxMetal",
         glm::vec3(-2.0, 0.0, 0.0),
         1.5,
         Material {
-            .type = MaterialType::Glossy,
+            .type = MaterialType::GgxMetal,
             .albedo = { 1.0, 0.1, 0.9 },
             .payload = { 1.5, 0.0 },
         }
@@ -151,7 +157,7 @@ void initCornellBox(Scene &scene, LightMode &lightMode) {
         "Suzanne",
         "./res/model/suzanne.obj",
         Material {
-            .type = MaterialType::Glossy,
+            .type = MaterialType::GgxMetal,
             .albedo = { 1.0f, 1.0f, 1.0f },
             .payload = { 3.0f, 0.1f },
         },
@@ -161,7 +167,7 @@ void initCornellBox(Scene &scene, LightMode &lightMode) {
 
     const MaterialHandle lucyHandle = scene.pushMaterial(Material{
         .name = "Lucy",
-        .type = MaterialType::Glossy,
+        .type = MaterialType::GgxMetal,
         .albedo = { 1.0f, 1.0f, 1.0f },
         .payload = { 3.0f, 0.1f },
     });
@@ -287,6 +293,8 @@ void initRandomSpheres(Scene &scene, LightMode &lightMode) {
         lightHandle
     );
 
+    //! update with the new materials
+    /*
     Material sphereMat = {};
     int i = 0;
     for (float x = -10.0f; x <= 10.0f; x+=4.0f) {
@@ -306,9 +314,9 @@ void initRandomSpheres(Scene &scene, LightMode &lightMode) {
             sphereMat.type = MaterialType::Metal;
             metalFuzz(sphereMat) = RAND_FLOAT;
         } else if (r <= 1.0f) {
-            sphereMat.type = MaterialType::Glossy;
-            glossyIoR(sphereMat) = 1.5f;
-            glossyFuzz(sphereMat) = 0.0f;
+            sphereMat.type = MaterialType::GgxMetal;
+            GgxMetalIoR(sphereMat) = 1.5f;
+            GgxMetalFuzz(sphereMat) = 0.0f;
         }
 
         const MaterialHandle sphereHandle = scene.pushMaterial(sphereMat);
@@ -321,4 +329,5 @@ void initRandomSpheres(Scene &scene, LightMode &lightMode) {
         );
         i += 1;
     }}
+    */
 }

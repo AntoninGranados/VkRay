@@ -18,6 +18,7 @@ int getRandomLightId(inout uint seed) {
     return i-1;
 }
 
+// TODO: store the light count or find a better way to find the corresponding light from an object
 uint getLightIdFromObjectId(uint objectId) {
     uint i = 0;
     for (float a = 0; a < lightBuffer.totalArea;) {

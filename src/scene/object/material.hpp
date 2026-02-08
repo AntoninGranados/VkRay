@@ -12,11 +12,9 @@ typedef int MaterialHandle;
 
 enum MaterialType {
     Lambertian = 0,
-    Metal,
-    Dielectric,
     Emissive,
-    Glossy,
-    Checkerboard,
+    GgxMetal,
+    GgxPlastic,
 };
 
 struct GpuMaterial {
@@ -34,20 +32,14 @@ struct Material {
 
 #define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }
 
-#define metalFuzz(mat) mat.payload[0]
-#define dielectricIoR(mat) mat.payload[0]
-#define dielectricFuzz(mat) mat.payload[1]
 #define emissiveIntensity(mat) mat.payload[0]
-#define glossyIoR(mat) mat.payload[0]
-#define glossyFuzz(mat) mat.payload[1]
-#define checkerboardScale(mat) mat.payload[0]
-
+#define ggxMetalFuzz(mat) mat.payload[0]
+#define ggxPlasticRoughness(mat) mat.payload[0]
+#define ggxPlasticIoR(mat) mat.payload[1]
 
 bool drawLambertianUI(Material &mat);
-bool drawMetalUI(Material &mat);
-bool drawDielectricUI(Material &mat);
 bool drawEmissiveUI(Material &mat);
-bool drawGlossyUI(Material &mat);
-bool drawCheckerboardUI(Material &mat);
+bool drawGgxMetalUI(Material &mat);
+bool drawGgxPlasticUI(Material &mat);
 
 bool drawMaterialUI(Material &mat);

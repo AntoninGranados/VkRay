@@ -118,7 +118,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
 
                 vec3 Le = mat.albedo * emissiveIntensity(mat);
                 float w = 1.0;
-                if (ubo.importanceSampling == 1 && !prevWasDelta && i > 0) {
+                if (ubo.importanceSampling == 1 && !prevWasDelta) {
                     float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevWi, hit.p - prevHit.p);
                     float pdfB = prevPdfBSDF;
                     float denom = pdfB*pdfB + pdfL*pdfL;
@@ -174,11 +174,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
         return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
     return radiance;
-}
-
-
-float luma(vec3 c) {
-    return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
 uint varianceIndexFromCoord(ivec2 coord, ivec2 texSize) {
