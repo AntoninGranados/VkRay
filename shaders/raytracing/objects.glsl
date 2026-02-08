@@ -150,9 +150,12 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
     Hit hit = rayAabbIntersection(localRay, vec3(-1.0), vec3(1.0), true);
     if (!foundIntersection(hit)) return hit;
 
+
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
     vec3 worldNormal = normalize(normalMat * hit.normal);
-    return makeHit(ray, obj, hit.t, worldNormal);
+    vec3 worldP = (box.modelMatrix * vec4(hit.p, 1.0)).xyz;
+    float tWorld = dot(worldP - ray.origin, ray.dir);
+    return makeHit(ray, obj, tWorld, worldNormal);
 }
 
 float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
@@ -234,9 +237,19 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
         }
     }
 
+    if (!foundHit) {
+        Hit noHit = NO_HIT;   
+        noHit.hitChecks = hitChecks;
+        return noHit;
+    }
+
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
-    vec3 normal = normalize(normalMat * bestNormal);
-    Hit hit = foundHit ? makeHit(ray, obj, tClosest, normal) : NO_HIT;
+    vec3 worldNormal = normalize(normalMat * bestNormal);
+    vec3 localP = localOrigin + localDir * tClosest;
+    vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
+    float tWorld = dot(worldP - ray.origin, ray.dir);
+
+    Hit hit = makeHit(ray, obj, tWorld, worldNormal);
     hit.hitChecks = hitChecks;
     return hit;
 }

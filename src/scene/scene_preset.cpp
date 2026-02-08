@@ -3,18 +3,53 @@
 void initEmpty(Scene &scene, LightMode &lightMode) {
     scene.clear();
 
-    lightMode = LightMode::Day;
-
-    scene.pushSphere(
-        "Sphere",
-        glm::vec3(0.0),
-        1.0
+    lightMode = LightMode::Night;
+    
+    for (int i = 0; i <= 4; i++) {
+        MaterialHandle temp = scene.pushMaterial(
+            Material {
+                .name = "Temp_" + std::to_string(i),
+                .type = MaterialType::Glossy,
+                .albedo = glm::vec3(1.0),
+                .payload = { i/4.0f, 0.0 }
+            }
+        );
+        scene.pushSphere(
+            "Sphere_" + std::to_string(i),
+            glm::vec3(i - 2.0f, 0.0f, 0.0f),
+            0.4,
+            temp
+        );
+    }
+    
+    MaterialHandle light = scene.pushMaterial(
+        Material {
+            .name = "Light",
+            .type = MaterialType::Emissive,
+            .albedo = glm::vec3(1.0),
+            .payload = { 10.0, 0.0 }
+        }
+    );
+    scene.pushBox(
+        "Light",
+        glm::vec3(-2.0, 2.995, -0.1),
+        glm::vec3( 2.0, 3.005, 0.1),
+        light
     );
 
+    MaterialHandle floor = scene.pushMaterial(
+        Material {
+            .name = "Floor",
+            .type = MaterialType::Lambertian,
+            .albedo = glm::vec3(0.59, 0.27, 0.09),
+            .payload = { 0.0, 0.0 }
+        }
+    );
     scene.pushPlane(
-        "Plane",
+        "Floor",
         glm::vec3(0.0, -1.0, 0.0),
-        glm::vec3(0.0, 1.0, 0.0)
+        glm::vec3(0.0, 1.0, 0.0),
+        floor
     );
 }
 

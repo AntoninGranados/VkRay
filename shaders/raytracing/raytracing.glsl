@@ -78,7 +78,6 @@ vec3 skyColor(vec3 dir) {
     }
     
     vec3 color = mix(horizon, zenith, t);
-    color += vec3(0.05, 0.02, 0.0) * pow(1.0 - t, 3.0);
     return color;
 }
 
@@ -93,10 +92,18 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     }
 
     vec3 throughput = vec3(1.0);
+    vec3 radiance = vec3(0.0);
 
     int i = 0;
-    ScatterResult result;
+    SampleResult result;
+    LightSampleResult lightResult;
     Material mat;
+
+    bool  prevWasDelta = true;
+    float prevPdfBSDF  = 1.0;
+    Hit   prevHit;
+    vec3  prevWo;
+    vec3  prevWi;
     for (; i < ubo.maxBounces; i++) {
         if (ubo.debugView == debug_Normal) break;
         
@@ -104,26 +111,60 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
             mat = getMaterial(hit.object);
 
             if (mat.type == mat_Emissive) {
-                throughput *= mat.albedo * emissiveIntensity(mat);
+                if (i == 0) {
+                    radiance = mat.albedo;
+                    break;
+                }
+
+                vec3 Le = mat.albedo * emissiveIntensity(mat);
+                float w = 1.0;
+                if (ubo.importanceSampling == 1 && !prevWasDelta && i > 0) {
+                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevWi, hit.p - prevHit.p);
+                    float pdfB = prevPdfBSDF;
+                    float denom = pdfB*pdfB + pdfL*pdfL;
+                    w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
+                }
+
+                radiance += throughput * Le * w;
                 break;
             }
 
-            scatter(mat, ray, hit, result, seed);
-            throughput *= result.attenuation;
-            if (!result.isScattered) break;
+            sampleBSDF(mat, hit, -ray.dir, result, seed);
+            if (result.pdf < EPS) {
+                radiance = vec3(0.0);
+                break;
+            }
+            if (ubo.importanceSampling == 1 && !result.isDelta) {
+                sampleLight(hit, lightResult, seed);
+                if (lightResult.pdf > EPS) {
+                    float cosTheta = max(dot(hit.normal, lightResult.wi), 0.0);
+                    vec3 f = sampleF(mat, hit.normal, -ray.dir, lightResult.wi);
 
-            // vec3 direct = importanceSampleLight(mat, hit, result, seed);
-            // radiance += throughput * direct;
+                    float pdfB = samplePDF(mat, hit.normal, -ray.dir, lightResult.wi);
+                    float pdfL = lightResult.pdf;
 
-            ray = result.scattered;
+                    float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
+                    radiance += throughput * (f * cosTheta * lightResult.Le) * (w / max(pdfL, EPS));
+                }
+            }
+
+            float cosB = max(dot(hit.normal, result.wi), 0.0);
+            throughput *= (result.f * cosB) / max(result.pdf, EPS);
+
+            prevWasDelta = result.isDelta;
+            prevPdfBSDF  = result.pdf;
+            prevHit      = hit;
+            prevWo       = -ray.dir;
+            prevWi       = result.wi;
+
+            ray = Ray(hit.p + hit.normal * EPS, result.wi);
             hit = intersection(ray);
         } else {
-            throughput *= skyColor(ray.dir);
+            radiance += throughput * skyColor(ray.dir);
             break;
         }
     }
-    if (i == ubo.maxBounces)
-        throughput = vec3(0.0);
+    if (i == ubo.maxBounces) radiance = vec3(0.0);
 
     // Debug visualisations
     if (ubo.debugView == debug_Bounces) {
@@ -132,8 +173,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     if (ubo.debugView == debug_Normal) {
         return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
-    // return radiance;
-    return clamp(throughput, vec3(0.0), vec3(1.0));
+    return radiance;
 }
 
 

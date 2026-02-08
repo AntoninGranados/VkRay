@@ -32,7 +32,7 @@ struct Material {
     float payload[2];
 };
 
-#define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f) }
+#define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }
 
 #define metalFuzz(mat) mat.payload[0]
 #define dielectricIoR(mat) mat.payload[0]

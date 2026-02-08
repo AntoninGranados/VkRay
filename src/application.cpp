@@ -64,7 +64,7 @@ void Application::initParameters() {
     parameters.addInt("previewSamples", "Preview Samples", 1, 1, 10, 1, false, "Pathtracer");
     parameters.addInt("renderSamples", "Render Samples", 2048, 1, 4096, 1, false, "Pathtracer");
     parameters.addFloat("movingResolution", "Moving Resolution", 8.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
-    parameters.addFloat("previewResolution", "Preview Resolution", 1.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
+    parameters.addFloat("previewResolution", "Preview Resolution", 4.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
     parameters.addFloat("renderResolution", "Render Resolution", 1.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
     parameters.addBool("importanceSampling", "Importance Sampling", true, false, "Pathtracer");
     parameters.addBool("varianceSampling", "Variance Sampling", true, false, "Pathtracer");

@@ -5,8 +5,8 @@
 #include "global.glsl"
 #include "random.glsl"
 
-int getLightId(inout uint seed) {
-    if (lightBuffer.totalArea == 0) return -1;
+int getRandomLightId(inout uint seed) {
+    if (lightBuffer.totalArea <= EPS) return -1;
 
     float r = rand(seed);
     float t = 0.0;
@@ -18,37 +18,59 @@ int getLightId(inout uint seed) {
     return i-1;
 }
 
+uint getLightIdFromObjectId(uint objectId) {
+    uint i = 0;
+    for (float a = 0; a < lightBuffer.totalArea;) {
+        if (lightBuffer.lights[i].objectId == objectId) return i;
+        a += lightBuffer.lights[i].area;
+        i++;
+    }
+    return 0;
+}
+
 Hit intersection(in Ray ray); // Forward declaration
 
-vec3 importanceSampleLight(in Material surfaceMat, in Hit hit, in ScatterResult scatterResult, inout uint seed) {
-    if (ubo.importanceSampling != 1 || !scatterResult.isDiffuse) return vec3(0.0);
+struct LightSampleResult {
+    vec3 wi;
+    float pdf;
+    vec3 Le;
+};
 
-    int lightId = getLightId(seed);
-    if (lightId < 0) return vec3(0.0);
+float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in vec3 wi) {
+    uint lightId = getLightIdFromObjectId(objectId);
+    if (lightId < 0) return -1.0;
+
+    Light light = lightBuffer.lights[lightId];
+    float cosLight = max(dot(normal, wi), 0.0);
+    return light.pdfA * dist*dist / max(cosLight, EPS) * light.area / lightBuffer.totalArea;
+}
+
+void sampleLight(in Hit hit, out LightSampleResult result, inout uint seed) {
+    int lightId = getRandomLightId(seed);
+    if (lightId < 0) {
+        result.pdf = -1.0;
+        return;
+    }
 
     Object lightObj = objectBuffer.objects[lightBuffer.lights[lightId].objectId];
-
     SurfaceSample surfaceSample = sampleSurface(lightObj, lightBuffer.lights[lightId].area, seed);
 
-    vec3 toLight = surfaceSample.p - scatterResult.scattered.origin;
-    float dist2 = dot(toLight, toLight);
-    float dist = sqrt(dist2);
-    vec3 toLightDir = toLight / dist;
+    vec3 toLight = surfaceSample.p - hit.p;
+    result.wi = normalize(toLight);
 
-    float cosSurface = max(dot(hit.normal, toLightDir), 0.0);
-    float cosLight = max(dot(-toLightDir, surfaceSample.normal), 0.0);
-    if (cosSurface <= 0.0 || cosLight <= 0.0) return vec3(0.0);
-
-    Ray shadowRay = Ray(scatterResult.scattered.origin, toLightDir);
+    Ray shadowRay = Ray(hit.p + hit.normal * EPS, result.wi);
     Hit shadowHit = intersection(shadowRay);
-    bool visible = foundIntersection(shadowHit) && shadowHit.t >= dist - EPS;
-    if (!visible) return vec3(0.0);
+    bool visible = foundIntersection(shadowHit) && (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type);
+    if (!visible) {
+        result.pdf = -1.0;
+        return;
+    }
 
-    float pdfW = lightBuffer.lights[lightId].pdfA * dist2 / max(cosLight, EPS);
+    float dist = length(toLight);
+    result.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, shadowRay.dir, result.wi);
 
     Material lightMat = getMaterial(lightObj);
-    vec3 Le = lightMat.albedo * emissiveIntensity(lightMat);
-    return surfaceMat.albedo / PI * Le * cosSurface / max(pdfW, EPS);
+    result.Le = lightMat.albedo * emissiveIntensity(lightMat);
 }
 
 #endif

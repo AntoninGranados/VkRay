@@ -5,7 +5,7 @@
 namespace ecs {
 
 struct MeshRef {
-    MeshHandle handle = -1;
+    MeshHandle handle = 0;
 
     void setHandle(MeshHandle newHandle) {
         handle = newHandle;
