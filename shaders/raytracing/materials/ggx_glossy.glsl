@@ -1,5 +1,5 @@
-#ifndef GGX_PLASTIC_GLSL
-#define GGX_PLASTIC_GLSL
+#ifndef GGX_GLOSSY_GLSL
+#define GGX_GLOSSY_GLSL
 
 #include "../utils.glsl"
 #include "../random.glsl"
@@ -8,12 +8,12 @@
 #include "lambertian.glsl"
 #include "ggx_utils.glsl"
 
-vec3 ggxPlasticF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float alpha = ggxMetalRoughness(mat) * ggxMetalRoughness(mat);
+vec3 ggxGlossyF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);
     vec3 m = normalize(wo + wi);
     
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3 F  = schlickIoR(NoV, ggxPlasticIoR(mat));
+    vec3 F  = schlickIoR(NoV, ggxGlossyIoR(mat));
 
     vec3 fs = F * partialGgxF(mat, hit, wo, wi, alpha);         // specular
     vec3 fd = (vec3(1.0) - F) * lambertianF(mat, hit, wo, wi);  // diffuse
@@ -21,9 +21,9 @@ vec3 ggxPlasticF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     return fs + fd;
 }
 
-float ggxPlasticPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+float ggxGlossyPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3  Fv  = schlickIoR(NoV, ggxPlasticIoR(mat));
+    vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
     float ps  = clamp(luma(Fv), 0.05, 0.95);
     float pd  = 1.0 - ps;
 
@@ -33,12 +33,12 @@ float ggxPlasticPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     return ps * pdfS + pd * pdfD;
 }
 
-void sampleGgxPlasticBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
-    float rough = ggxPlasticRoughness(mat);
+void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
+    float rough = ggxGlossyRoughness(mat);
     bool specIsDelta = (rough < 0.05);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3  Fv  = schlickIoR(NoV, ggxPlasticIoR(mat));
+    vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
     float pSpec = clamp(luma(Fv), 0.05, 0.95);
     float pDiff = 1.0 - pSpec;
 
@@ -49,7 +49,7 @@ void sampleGgxPlasticBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
             sampleMirrorBSDF(mat, hit, wo, result);
             return;
         } else {
-            float alpha = ggxPlasticRoughness(mat) * ggxPlasticRoughness(mat);
+            float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);
             result.wi = ggxScatter(mat, hit, wo, alpha, seed);
             result.isDelta = false;
         }
@@ -58,8 +58,9 @@ void sampleGgxPlasticBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
         result.isDelta = false;
     }
 
-    result.f   = ggxPlasticF(mat, hit, wo, result.wi);
-    result.pdf = ggxPlasticPDF(mat, hit, wo, result.wi);
+    result.f   = ggxGlossyF(mat, hit, wo, result.wi);
+    result.pdf = ggxGlossyPDF(mat, hit, wo, result.wi);
+    result.isTransmission = false;
 }
 
-#endif // GGX_PLASTIC_GLSL
+#endif // GGX_GLOSSY_GLSL

@@ -37,14 +37,14 @@ bool drawGgxMetalUI(Material &material) {
         updated = true;
 
     ImGui::Text("Roughness:");
-    if (ImGui::DragFloat("##Mat Roughness", &ggxMetalFuzz(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Roughness", &ggxMetalRoughness(material), 0.01, 0.0, 1.0))
         updated = true;
         
     ImGui::PopItemWidth();
     return updated;
 }
 
-bool drawGgxPlasticUI(Material &material) {
+bool drawGgxGlossyUI(Material &material) {
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
@@ -53,19 +53,37 @@ bool drawGgxPlasticUI(Material &material) {
         updated = true;
 
     ImGui::Text("Roughness:");
-    if (ImGui::DragFloat("##Mat Roughness", &ggxPlasticRoughness(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Roughness", &ggxGlossyRoughness(material), 0.01, 0.0, 1.0))
         updated = true;
     
     ImGui::Text("IoR:");
-    if (ImGui::DragFloat("##Mat IoR", &ggxPlasticIoR(material), 0.01, 0.0, FLT_MAX))
+    if (ImGui::DragFloat("##Mat IoR", &ggxGlossyIoR(material), 0.01, 0.0, FLT_MAX))
         updated = true;
         
     ImGui::PopItemWidth();
     return updated;
 }
 
+bool drawDielectricUI(Material &material) {
+    bool updated = false;
+
+    ImGui::PushItemWidth(-FLT_MIN);
+
+    ImGui::Text("Albedo:");
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
+        updated = true;
+
+    ImGui::Text("IoR:");
+    if (ImGui::DragFloat("##Mat IoR", &dielectricIoR(material), 0.01, 0.0, FLT_MAX))
+        updated = true;
+    
+    ImGui::PopItemWidth();
+
+    return updated;
+}
+
 bool drawProgrammableUI(Material &material) {
-     bool updated = false;
+    bool updated = false;
 
     ImGui::Text("Albedo:");
     ImGui::PushItemWidth(-FLT_MIN);
@@ -82,23 +100,23 @@ bool drawMaterialUI(Material &material) {
     material.name.resize(128);
 
     ImGui::PushItemWidth(-FLT_MIN);
+    
     ImGui::Text("Name:");
-    
     ImGui::InputText("##Name", material.name.data(), 128);
-    ImGui::PopItemWidth();
     
-    const char *types[] = { "Lambertian", "Emissive", "GGX Metal", "GGX Plastic", "Programmable" };
+    const char *types[] = { "Lambertian", "Emissive", "GGX Metal", "GGX Glossy", "Dielectric", "Programmable" };
     ImGui::Text("Type:");
-    ImGui::PushItemWidth(-FLT_MIN);
     if (ImGui::Combo("##Mat Type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;
+
     ImGui::PopItemWidth();
     
     switch (material.type) {
         case MaterialType::Lambertian:   updated |= drawLambertianUI(material);   break;
         case MaterialType::Emissive:     updated |= drawEmissiveUI(material);     break;
         case MaterialType::GgxMetal:     updated |= drawGgxMetalUI(material);     break;
-        case MaterialType::GgxPlastic:   updated |= drawGgxPlasticUI(material);   break;
+        case MaterialType::GgxGlossy:    updated |= drawGgxGlossyUI(material);    break;
+        case MaterialType::Dielectric:   updated |= drawDielectricUI(material);   break;
         case MaterialType::Programmable: updated |= drawProgrammableUI(material); break;
     }
 

@@ -8,6 +8,7 @@ struct SampleResult {
     vec3 wi;
     float pdf;
     bool isDelta;
+    bool isTransmission;
 };
 
 Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
@@ -26,34 +27,34 @@ Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
 #define DEFAULT_MATERIAL                         SET_MATERIAL_0(mat_Lambertian, vec3(1,0,1)*0.7)
 #define LAMBERTIAN_MATERIAL(albedo)              SET_MATERIAL_0(mat_Lambertian, albedo)
 #define GGX_METAL_MATERIAL(albedo, rough)        SET_MATERIAL_1(mat_GgxMetal, albedo, rough)
-#define GGX_PLASTIC_MATERIAL(albedo, rough, ior) SET_MATERIAL_2(mat_GgxPlastic, albedo, rough, ior)
+#define GGX_GLOSSY_MATERIAL(albedo, rough, ior) SET_MATERIAL_2(mat_GgxGlossy, albedo, rough, ior)
 
-#define emissiveIntensity(mat) mat.payload[0]
-#define ggxMetalRoughness(mat) mat.payload[0]
-#define ggxPlasticRoughness(mat) mat.payload[0]
-#define ggxPlasticIoR(mat) mat.payload[1]
+#define emissiveIntensity(mat)  mat.payload[0]
+#define ggxMetalRoughness(mat)  mat.payload[0]
+#define ggxGlossyRoughness(mat) mat.payload[0]
+#define ggxGlossyIoR(mat)       mat.payload[1]
+#define dielectricIoR(mat)      mat.payload[0]
 
-vec3 schlickApprox(float cosine, vec3 F0) {
-    return F0 + (1-F0) * pow((1 - cosine), 5);
-}
+#define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
 
 vec3 schlickIoR(float cosine, float ri) {
     float F0 = (1 - ri) / (1 + ri);
     F0 = F0*F0;
-    return schlickApprox(cosine, vec3(F0));
+    return SCHLICK_APPROX(cosine, vec3(F0));
 }
 
 vec3 schlickAlbedo(float cosine, vec3 albedo) {
-    return schlickApprox(cosine, albedo);
+    return SCHLICK_APPROX(cosine, albedo);
 }
 
 void sampleMirrorBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result) {
     result.wi = reflect(-wo, hit.normal);
 
     float VoN = max(dot(wo, hit.normal), 0.0);
-    result.f = schlickAlbedo(VoN, mat.albedo) / VoN;
+    result.f = schlickIoR(VoN, 0.0) / VoN;
     result.pdf = 1.0;
     result.isDelta = true;
+    result.isTransmission = false;
 }
 
 #endif // MATERIAL_UTILS_GLSL

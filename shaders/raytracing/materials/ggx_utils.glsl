@@ -73,7 +73,7 @@ vec3 partialGgxF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi, in float a
     
     float cosWo = abs(dot(hit.normal, wo));
     float cosWi = abs(dot(hit.normal, wi));
-    return mat.albedo * D * G / (4 * cosWo * cosWi + EPS);
+    return vec3(D * G / (4 * cosWo * cosWi + EPS));
 }
 
 #endif // GGX_UTILS_GLSL

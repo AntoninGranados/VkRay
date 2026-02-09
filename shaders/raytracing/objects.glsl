@@ -7,12 +7,12 @@
 
 Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {
     vec3 p = ray.origin + ray.dir * t;
-    bool front_face = true;
+    bool frontFace = true;
     if (dot(ray.dir, normal) > 0.0) {
         normal = -normal;
-        front_face = false;
+        frontFace = false;
     }
-    return Hit(p, normal, t, front_face, obj, 1);
+    return Hit(p, normal, t, frontFace, obj, 1);
 }
 
 // ================ NORMALS ================
@@ -27,16 +27,10 @@ vec3 planeNormal(in Plane plane, in vec3 p) {
 vec3 boxNormal(in Box box, in vec3 p) {
     vec3 localP = (box.invModelMatrix * vec4(p, 1.0)).xyz;
     vec3 normal = vec3(0, 0, 0);
-    for (int d = 0; d < 3; d++) {
-        if (abs(localP[d] + 1.0) < EPS) {
-            normal[d] = -1.0;
-            break;
-        }
-        if (abs(localP[d] - 1.0) < EPS) {
-            normal[d] = 1.0;
-            break;
-        }
-    }
+    vec3 a = abs(localP);
+    if (a.x > a.y && a.x > a.z) normal = vec3(sign(localP.x), 0, 0);
+    else if (a.y > a.z) normal = vec3(0, sign(localP.y), 0);
+    else normal = vec3(0, 0, sign(localP.z));
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
     return normalize(normalMat * normal);
 }
@@ -132,14 +126,27 @@ Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool co
         return NO_HIT;
     }
 
-    vec3 normal = vec3(0.0);
-    if (computeNormal) {
-        if (tNear == tmin.x) normal = vec3(sign(ray.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
-        else if (tNear == tmin.y) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
-        else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? 1.0 : -1.0);
+    float tHit = tNear;
+    bool useFar = false;
+    if (tHit < EPS) {
+        tHit = tFar;
+        useFar = true;
     }
 
-    return makeHit(ray, OBJECT_AABB, tNear, normal);
+    vec3 normal = vec3(0.0);
+    if (computeNormal) {
+        if (!useFar) {
+            if (tmin.x >= tmin.y && tmin.x >= tmin.z) normal = vec3(sign(ray.dir.x) < 0.0 ? 1.0 : -1.0, 0.0, 0.0);
+            else if (tmin.y >= tmin.z) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? 1.0 : -1.0, 0.0);
+            else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? 1.0 : -1.0);
+        } else {
+            if (tmax.x <= tmax.y && tmax.x <= tmax.z) normal = vec3(sign(ray.dir.x) < 0.0 ? -1.0 : 1.0, 0.0, 0.0);
+            else if (tmax.y <= tmax.z) normal = vec3(0.0, sign(ray.dir.y) < 0.0 ? -1.0 : 1.0, 0.0);
+            else normal = vec3(0.0, 0.0, sign(ray.dir.z) < 0.0 ? -1.0 : 1.0);
+        }
+    }
+
+    return makeHit(ray, OBJECT_AABB, tHit, normal);
 }
 
 Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {

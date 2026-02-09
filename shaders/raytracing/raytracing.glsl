@@ -131,7 +131,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
 
             sampleBSDF(mat, hit, -ray.dir, result, seed);
             if (result.pdf < EPS) {
-                radiance = vec3(0.0);
+                // radiance = vec3(1.0, 0.0, 1.0);
                 break;
             }
             if (ubo.importanceSampling == 1 && !result.isDelta) {
@@ -144,12 +144,12 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
                     float pdfL = lightResult.pdf;
 
                     float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
-                    radiance += throughput * (f * cosTheta * lightResult.Le) * (w / max(pdfL, EPS));
+                    radiance += throughput * (f * cosTheta * lightResult.Le) * (w / pdfL);
                 }
             }
 
-            float cosB = max(dot(hit.normal, result.wi), 0.0);
-            throughput *= (result.f * cosB) / max(result.pdf, EPS);
+            float cosB = abs(dot(hit.normal, result.wi));
+            throughput *= (result.f * cosB) / result.pdf;
 
             prevWasDelta = result.isDelta;
             prevPdfBSDF  = result.pdf;
@@ -157,7 +157,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
             prevWo       = -ray.dir;
             prevWi       = result.wi;
 
-            ray = Ray(hit.p + hit.normal * EPS, result.wi);
+            ray = Ray(hit.p + result.wi * EPS, result.wi);
             hit = intersection(ray);
         } else {
             radiance += throughput * skyColor(ray.dir);
@@ -244,6 +244,10 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
             vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
             vec3 rayColor = traceRay(camera, ray, seed);
+            // TODO: find where the NaNs are coming from instead of just skipping them
+            if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b)) {
+                continue;
+            }
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;

@@ -14,7 +14,8 @@ enum MaterialType {
     Lambertian = 0,
     Emissive,
     GgxMetal,
-    GgxPlastic,
+    GgxGlossy,
+    Dielectric,
     Programmable,
 };
 
@@ -33,15 +34,17 @@ struct Material {
 
 #define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }
 
-#define emissiveIntensity(mat) mat.payload[0]
-#define ggxMetalFuzz(mat) mat.payload[0]
-#define ggxPlasticRoughness(mat) mat.payload[0]
-#define ggxPlasticIoR(mat) mat.payload[1]
+#define emissiveIntensity(mat)  mat.payload[0]
+#define ggxMetalRoughness(mat)  mat.payload[0]
+#define ggxGlossyRoughness(mat) mat.payload[0]
+#define ggxGlossyIoR(mat)       mat.payload[1]
+#define dielectricIoR(mat)      mat.payload[0]
 
 bool drawLambertianUI(Material &mat);
 bool drawEmissiveUI(Material &mat);
 bool drawGgxMetalUI(Material &mat);
-bool drawGgxPlasticUI(Material &mat);
+bool drawGgxGlossyUI(Material &mat);
+bool drawDielectricUI(Material &mat);
 bool drawProgrammableUI(Material &mat);
 
 bool drawMaterialUI(Material &mat);

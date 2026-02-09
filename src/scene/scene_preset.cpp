@@ -18,11 +18,11 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     for (int j = 0; j <= v; j++) {
         for (int i = 0; i <= v; i++) {
             float rough = i/v * 0.7f;
-            float ior = std::pow(j/v, 4.0f);
+            float ior = j/v;
             MaterialHandle temp = scene.pushMaterial(
                 Material {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
-                    .type = MaterialType::GgxPlastic,
+                    .type = MaterialType::GgxGlossy,
                     .albedo = glm::vec3(0.3, 1.0, 0.3) * 0.5f,
                     .payload = { rough, ior }
                 }
