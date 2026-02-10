@@ -136,15 +136,16 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
             }
             if (ubo.importanceSampling == 1 && !result.isDelta) {
                 sampleLight(hit, lightResult, seed);
-                if (lightResult.pdf > EPS) {
+                float pdfL = lightResult.pdf;
+                if (pdfL > EPS) {
                     float cosTheta = max(dot(hit.normal, lightResult.wi), 0.0);
                     vec3 f = sampleF(mat, hit, -ray.dir, lightResult.wi);
 
                     float pdfB = samplePDF(mat, hit, -ray.dir, lightResult.wi);
-                    float pdfL = lightResult.pdf;
-
-                    float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
-                    radiance += throughput * (f * cosTheta * lightResult.Le) * (w / pdfL);
+                    if (pdfB > EPS) {
+                        float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
+                        radiance += throughput * (f * cosTheta * lightResult.Le) * (w / pdfL);
+                    }
                 }
             }
 

@@ -18,16 +18,15 @@ ComponentUiRegistry& ComponentUiRegistry::get() {
     return r;
 }
 
-void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity e, ecs::TransformAnim& anim, std::function<void()> func) {
-    bool hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());
-    if (hasKeyframe) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_col);
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    }
-    if (ImGui::Button(hasKeyframe ? ICON_FA_CIRCLE : ICON_FA_CIRCLE_DOT "##KeyframePos")) {
+void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity e, ecs::TransformAnim& anim, bool hasKeyframe, std::function<void()> func) {
+    if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_on_col);
+    else ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_off_col);
+
+    ui::PushTransparentStyleColor();
+    if (ImGui::Button(ICON_FA_SQUARE "##KeyframePos")) {
         func();
     }
+    ui::PopTransparentStyleColor();
     ImGui::PopStyleColor();
     ImGui::SameLine();
 };
@@ -145,43 +144,35 @@ void ComponentUiRegistry::init() {
 
         ImGui::PushItemWidth(-FLT_MIN);
 
-        if (t.positionToggled) {
-            if (isAnimated) {
-                auto& anim = r.get<ecs::TransformAnim>(e);
-                keyframeButton(
-                    ctx, r, e, anim,
-                    [&]() { anim.insertPositionKeyframe(ctx.animation->getFrame(), t.position); }
-                );
-            }
-            ImGui::Text("Position:");
-            if (ImGui::DragFloat3("##Position", glm::value_ptr(t.position), 0.01f)) {
-                t.updated = true;
-                update = true;
-            }
-        } else {
-            ImGui::TextDisabled("Position");
+        if (isAnimated) {
+            auto& anim = r.get<ecs::TransformAnim>(e);
+            bool hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());
+            keyframeButton(
+                ctx, r, e, anim, hasKeyframe,
+                [&]() {
+                    if (!hasKeyframe) anim.insertPositionKeyframe(ctx.animation->getFrame(), t.position);
+                    else anim.removePositionKeyframe(ctx.animation->getFrame());
+                }
+            );
         }
-        
-        if (t.rotationToggled) {
-            ImGui::Text("Rotation (Euler):");
-            glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
-            if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
-                t.rotation = glm::quat(glm::radians(euler));
-                t.updated = true;
-                update = true;
-            }
-        } else {
-            ImGui::TextDisabled("Rotation");
+        ImGui::Text("Position:");
+        if (ImGui::DragFloat3("##Position", glm::value_ptr(t.position), 0.01f)) {
+            t.updated = true;
+            update = true;
         }
-        
-        if (t.scaleToggled) {
-            ImGui::Text("Scale:");
-            if (ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f)) {
-                t.updated = true;
-                update = true;
-            }
-        } else {
-            ImGui::TextDisabled("Scale");
+
+        ImGui::Text("Rotation (Euler):");
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
+        if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
+            t.rotation = glm::quat(glm::radians(euler));
+            t.updated = true;
+            update = true;
+        }
+
+        ImGui::Text("Scale:");
+        if (ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f)) {
+            t.updated = true;
+            update = true;
         }
         
         ImGui::PopItemWidth();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -16,6 +17,16 @@ struct TransformAnim {
     std::vector<KeyQuat> rotationKeys;
     std::vector<KeyVec3> scaleKeys;
 
+    template<typename KeyT>
+    bool hasKeyframe(int frame, const std::vector<KeyT>& keyframes) {
+        const auto it = std::lower_bound(
+            keyframes.begin(), keyframes.end(), frame,
+            [](const KeyT& k, int f) -> bool { return k.frame < f; }
+        );
+
+        return it != keyframes.end() && it->frame == frame;
+    }
+
     template<typename ValueT, typename KeyT>
     void insertKeyframe(int frame, const ValueT& data, std::vector<KeyT>& keyframes) {
         auto it = std::lower_bound(
@@ -30,22 +41,46 @@ struct TransformAnim {
         }
     }
 
-    void insertPositionKeyframe(int frame, const glm::vec3& pos) {
-        insertKeyframe<glm::vec3, KeyVec3>(frame, pos, positionKeys);
-    }
-    bool hasPositionKeyframe(int frame) {
-        auto it = std::find_if(
-            positionKeys.begin(), positionKeys.end(),
-            [frame](const KeyVec3& k) -> bool { return k.frame == frame; }
+    template<typename KeyT>
+    void removeKeyframe(int frame, std::vector<KeyT>& keyframes) {
+        auto it = std::lower_bound(
+            keyframes.begin(), keyframes.end(), frame,
+            [](const KeyT& k, int f) -> bool { return k.frame < f; }
         );
 
-        return it != positionKeys.end();
+        if (it != keyframes.end() && it->frame == frame) {
+            keyframes.erase(it);
+        }
     }
+
+    void insertPositionKeyframe(int frame, const glm::vec3& pos) {
+        insertKeyframe(frame, pos, positionKeys);
+    }
+    void removePositionKeyframe(int frame) {
+        removeKeyframe(frame, positionKeys);
+    }
+    bool hasPositionKeyframe(int frame) {
+        return hasKeyframe(frame, positionKeys);
+    }
+
     void insertRotationKeyframe(int frame, const glm::quat& rot) {
-        insertKeyframe<glm::quat, KeyQuat>(frame, rot, rotationKeys);
+        insertKeyframe(frame, rot, rotationKeys);
     }
+    void removeRotationKeyframe(int frame) {
+        removeKeyframe(frame, rotationKeys);
+    }
+    bool hasRotationKeyframe(int frame) {
+        return hasKeyframe(frame, rotationKeys);
+    }
+
     void insertScaleframe(int frame, const glm::vec3& scale) {
-        insertKeyframe<glm::vec3, KeyVec3>(frame, scale, scaleKeys);
+        insertKeyframe(frame, scale, scaleKeys);
+    }
+    void removeScaleframe(int frame) {
+        removeKeyframe(frame, scaleKeys);
+    }
+    bool hasScaleframe(int frame) {
+        return hasKeyframe(frame, scaleKeys);
     }
 };
 

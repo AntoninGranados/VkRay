@@ -6,13 +6,14 @@
 
 #include "material_utils.glsl"
 
-float dielectricPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    vec3 normal = hit.frontFace ? hit.normal : -hit.normal;
-    return abs(dot(normal, wi));
+// Should never be called as the material is delta
+vec3 dielectricF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    return vec3(0.0);
 }
 
-vec3 dielectricF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    return mat.albedo;
+// Should never be called as the material is delta
+float dielectricPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    return -1.0f;
 }
 
 void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
@@ -33,20 +34,19 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
     vec3 wi;
     if (tir || rand(seed) < F) {
         wi = reflect(-wo, hit.normal);
+
         float absCos = max(abs(dot(hit.normal, wi)), EPS);
 
         result.pdf = max(F, EPS);
         result.f   = (mat.albedo * result.pdf) / absCos;
-        result.isTransmission = false;
     } else {
         wi = refract(-wo, hit.normal, eta);
-        float absCos = max(abs(dot(hit.normal, wi)), EPS);
 
+        float absCos = max(abs(dot(hit.normal, wi)), EPS);
         float etaFactor = (etaI * etaI) / (etaT * etaT);
 
         result.pdf = max(1.0 - F, EPS);
-        result.f   = (mat.albedo * result.pdf * etaFactor) / absCos;
-        result.isTransmission = true;
+        result.f = (mat.albedo * result.pdf * etaFactor) / absCos;
     }
 
     result.wi = wi;

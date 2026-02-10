@@ -154,8 +154,6 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
     
     ecs::Transform transformComponent;
     transformComponent.setPosition(center);
-    transformComponent.setRotationToggle(false);
-    transformComponent.setScaleToggle(false);
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -177,7 +175,6 @@ void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Mater
     ecs::Transform transformComponent;
     transformComponent.setPosition(point);
     transformComponent.setRotation(glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal));
-    transformComponent.setScaleToggle(false);
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -275,7 +272,6 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
     ecs::Transform transformComponent;
     transformComponent.setPosition(translation);
     transformComponent.setRotation(glm::quat(rotationEuler));
-    transformComponent.setScaleToggle(false);
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -291,11 +287,7 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
     ecs::Transform& t = registry.get<ecs::Transform>(e);
     glm::mat4 model = t.local;
 
-    int opFlags = 0;
-    if (t.positionToggled) opFlags |= ImGuizmo::OPERATION::TRANSLATE;
-    if (t.rotationToggled) opFlags |= ImGuizmo::OPERATION::ROTATE;
-    if (t.scaleToggled) opFlags |= ImGuizmo::OPERATION::SCALE;
-    if (opFlags == 0) return;
+    int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE | ImGuizmo::OPERATION::SCALE;
     // Keep gizmo orientation in world space: avoid mixing scale with other ops.
     if ((opFlags & ImGuizmo::OPERATION::SCALE) && (opFlags & (ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE)))
     {
@@ -322,9 +314,9 @@ void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) {
             glm::value_ptr(rotationEuler),
             glm::value_ptr(scale));
 
-        if (t.positionToggled) t.setPosition(translation);
-        if (t.rotationToggled) t.setRotation(glm::quat(glm::radians(rotationEuler)));
-        if (t.scaleToggled) t.setScale(scale);
+        t.setPosition(translation);
+        t.setRotation(glm::quat(glm::radians(rotationEuler)));
+        t.setScale(scale);
         updated = true;
     }
     ImGuizmo::PopID();

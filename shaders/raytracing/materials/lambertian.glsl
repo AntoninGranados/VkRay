@@ -26,7 +26,6 @@ void sampleLambertianBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
     result.f = lambertianF(mat, hit, wo, result.wi);
     result.pdf = lambertianPDF(mat, hit, wo, result.wi);
     result.isDelta = false;
-    result.isTransmission = false;
 }
 
 #endif // LAMBERTIAN_GLSL

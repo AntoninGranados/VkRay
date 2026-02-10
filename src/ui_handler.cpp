@@ -148,7 +148,8 @@ void UiHandler::drawPreview(AppContext& ctx) {
             for (auto& k : anim.positionKeys) {
                 float x = barMin.x + (float(k.frame) / ctx.animation->getEndFrame()) * barWidth;
                 ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
-                dl->AddCircleFilled(c, ui::widget_rounding, ImGui::ColorConvertFloat4ToU32(ui::keyframe_col));
+                dl->AddCircleFilled(c, ui::widget_rounding*1.5f, ImGui::ColorConvertFloat4ToU32(ui::keyframe_off_col));
+                dl->AddCircleFilled(c, ui::widget_rounding, ImGui::ColorConvertFloat4ToU32(ui::keyframe_on_col));
             }
         }
         

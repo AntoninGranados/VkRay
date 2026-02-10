@@ -5,7 +5,7 @@
 namespace ui {
 
 // Window
-inline const float window_bg_alpha = 0.8f;
+inline const float window_bg_alpha = 0.2f;
 
 // Widget
 inline const float widget_rounding = 3.0f;
@@ -26,8 +26,22 @@ inline void PopCancelStyleColor() {
     ImGui::PopStyleColor(3);
 }
 
+// Transparent Button
+inline const ImVec4 transparent_col_button = ImVec4();
+inline const ImVec4 transparent_col_button_hovered = ImVec4();
+inline const ImVec4 transparent_col_button_active = ImVec4();
+inline void PushTransparentStyleColor() {
+    ImGui::PushStyleColor(ImGuiCol_Button, transparent_col_button);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, transparent_col_button_hovered);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, transparent_col_button_active);
+}
+inline void PopTransparentStyleColor() {
+    ImGui::PopStyleColor(3);
+}
+
 // Keyframe
-inline const ImVec4 keyframe_col = ImVec4(0.8f, 0.15f, 0.15f, 1.0f);
+inline const ImVec4 keyframe_on_col  = ImGui::ColorConvertU32ToFloat4(0xFF296CF2);
+inline const ImVec4 keyframe_off_col = ImGui::ColorConvertU32ToFloat4(0xFF2A150B);
 
 
 }   // namespace ui

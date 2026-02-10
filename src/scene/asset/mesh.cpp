@@ -209,8 +209,8 @@ size_t MeshAsset::buildBvhNode(std::vector<TriBounds> &triBounds, std::vector<ui
         rightCount = count - leftCount;
     }
 
-    uint32_t left = buildBvhNode(triBounds, triIndices ,start, leftCount);
-    uint32_t right = buildBvhNode(triBounds, triIndices ,mid, rightCount);
+    uint32_t left = buildBvhNode(triBounds, triIndices, start, leftCount);
+    uint32_t right = buildBvhNode(triBounds, triIndices, mid, rightCount);
 
     bvhNodes[nodeIndex] = {
         .aabbMin = nodeMin,

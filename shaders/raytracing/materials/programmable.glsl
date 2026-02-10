@@ -14,7 +14,7 @@
 #define CHECKBOARD_CHOICE(p) int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0
 
 #define PROGRAMMABLE_LAMBERT(mat) LAMBERTIAN_MATERIAL(mat.albedo)
-#define PROGRAMMABLE_GLOSSY(mat) GGX_GLOSSY_MATERIAL(mat.albedo, 0.0, 0.5)
+#define PROGRAMMABLE_GLOSSY(mat) GGX_GLOSSY_MATERIAL(mat.albedo, 0.1, 0.2)
 
 float programmablePDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     if (CHECKBOARD_CHOICE(hit.p.xz)) {

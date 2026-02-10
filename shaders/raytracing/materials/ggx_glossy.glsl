@@ -24,13 +24,14 @@ vec3 ggxGlossyF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
 float ggxGlossyPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     float NoV = max(dot(hit.normal, wo), 0.0);
     vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
-    float ps  = clamp(luma(Fv), 0.05, 0.95);
-    float pd  = 1.0 - ps;
+    // float pSpec  = clamp(luma(Fv), 0.05, 0.95);
+    float pSpec = luma(Fv);
+    float pDiff  = 1.0 - pSpec;
 
     float pdfS = ggxPDF(mat, hit, wo, wi);
     float pdfD = lambertianPDF(mat, hit, wo, wi);
 
-    return ps * pdfS + pd * pdfD;
+    return pSpec * pdfS + pDiff * pdfD;
 }
 
 void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
@@ -39,8 +40,8 @@ void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResu
 
     float NoV = max(dot(hit.normal, wo), 0.0);
     vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
-    float pSpec = clamp(luma(Fv), 0.05, 0.95);
-    float pDiff = 1.0 - pSpec;
+    // float pSpec = clamp(luma(Fv), 0.05, 0.95);
+    float pSpec = luma(Fv);
 
     float xi = rand(seed);
 
@@ -51,16 +52,14 @@ void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResu
         } else {
             float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);
             result.wi = ggxScatter(mat, hit, wo, alpha, seed);
-            result.isDelta = false;
         }
     } else {
         result.wi = cosineScatter(mat, hit.normal, wo, seed);
-        result.isDelta = false;
     }
 
     result.f   = ggxGlossyF(mat, hit, wo, result.wi);
     result.pdf = ggxGlossyPDF(mat, hit, wo, result.wi);
-    result.isTransmission = false;
+    result.isDelta = false;
 }
 
 #endif // GGX_GLOSSY_GLSL

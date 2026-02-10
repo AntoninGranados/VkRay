@@ -8,7 +8,6 @@ struct SampleResult {
     vec3 wi;
     float pdf;
     bool isDelta;
-    bool isTransmission;
 };
 
 Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
@@ -54,7 +53,6 @@ void sampleMirrorBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult 
     result.f = schlickIoR(VoN, 0.0) / VoN;
     result.pdf = 1.0;
     result.isDelta = true;
-    result.isTransmission = false;
 }
 
 #endif // MATERIAL_UTILS_GLSL

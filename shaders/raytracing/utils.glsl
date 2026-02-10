@@ -83,8 +83,8 @@ struct BvhNode {
 };
 #define BVH_STACK_SIZE 64
 
-#define BVH_childLeft(node)   (node.data0)
-#define BVH_childRight(node)  (node.data1)
+#define BVH_childLeft(node)     (node.data0)
+#define BVH_childRight(node)    (node.data1)
 #define BVH_firstTriangle(node) (node.data0)
 #define BVH_triangleCount(node) (node.data1)
 
