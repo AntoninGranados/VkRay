@@ -110,6 +110,7 @@ void Application::run() {
         startTime = currentTime;
         
         scene.runPreUpdate(ctx);
+        
         if (!animation.isPaused()) animation.step(deltaTime);
         
         onFrameStart(deltaTime);
@@ -123,7 +124,8 @@ void Application::run() {
 void Application::onFrameStart(float dt) {
     renderState.prevResolution = renderState.resolution;
 
-    handleInput(dt);
+    inputController.pollEvents();
+    inputController.handle(ctx, dt);
 
     if (notifications.isCommandRequested(Command::Exit)) {
         shouldClose = true;
@@ -171,105 +173,6 @@ void Application::onFrameStart(float dt) {
     frameCount++;
     renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 }
-
-void Application::handleInput(float dt) {
-    glfwPollEvents();
-
-    if (renderState.renderMode != RenderMode::Preview)
-        handleInputRender(dt);
-    else
-        handleInputPreview(dt);
-}
-
-void Application::handleInputRender(float dt) {
-    renderState.resolution = parameters.getFloat("renderResolution");
-
-    double dtSafe = std::max(static_cast<double>(dt), 0.0);
-    renderState.samplesPerSecAccumTime += dtSafe;
-    renderState.samplesPerSecAccumSamples += static_cast<double>(parameters.getInt("previewSamples"));
-    if (renderState.samplesPerSecAccumTime >= 1.0) {
-        double instant = renderState.samplesPerSecAccumSamples / std::max(renderState.samplesPerSecAccumTime, 1e-6);
-        double alpha = 1.0 - std::exp(-renderState.samplesPerSecAccumTime / 5.0);
-        if (!renderState.samplesPerSecInitialized) {
-            renderState.samplesPerSecEMA = instant;
-            renderState.samplesPerSecInitialized = true;
-        } else {
-            renderState.samplesPerSecEMA += alpha * (instant - renderState.samplesPerSecEMA);
-        }
-        renderState.samplesPerSecAccumTime = 0.0;
-        renderState.samplesPerSecAccumSamples = 0.0;
-    }
-
-    glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        ui.restorToggledState();
-        renderState.renderMode = RenderMode::Preview;
-        renderState.pendingExit = false;
-        renderState.samplesPerSecEMA = 0.0;
-        renderState.samplesPerSecInitialized = false;
-        renderState.samplesPerSecAccumTime = 0.0;
-        renderState.samplesPerSecAccumSamples = 0.0;
-    }
-}
-
-void Application::handleInputPreview(float dt) {
-    renderState.resolution = parameters.getFloat("previewResolution");
-    
-    const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ui.isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
-    const bool blockKeyboardInput = ui.isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
-
-    const bool middleDown = glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
-    if (!blockMouseInput && middleDown && !ui.wasMiddleClickDown()) {
-        double xpos, ypos;
-        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-        int width, height;
-        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-        float dist;
-        glm::vec3 p;
-        if (scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, false, false)) {
-            ctx.camera->setFocusDepth(dist);
-            restartRender = true;
-        }
-    }
-    ui.setMiddleClickState(middleDown);
-
-    if (!blockMouseInput && glfwGetMouseButton(engine.getWindow().get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        double xpos, ypos;
-        glfwGetCursorPos(engine.getWindow().get(), &xpos, &ypos);
-        int width, height;
-        glfwGetWindowSize(engine.getWindow().get(), &width, &height);
-        float dist;
-        glm::vec3 p;
-        scene.raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, true);
-    }
-    
-    if (glfwGetKey(engine.getWindow().get(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (!ui.isToggled()) ui.toggle();
-        else scene.clearSelection();
-    }
-
-    if (!blockKeyboardInput && ctx.camera->isLocked() && glfwGetKey(engine.getWindow().get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (!ui.wasSpaceDown()) animation.toggle();
-        ui.setSpaceState(true);
-    } else {
-        ui.setSpaceState(false);
-    }
-    
-    if (!blockKeyboardInput) {
-        restartRender |= ctx.camera->processInput(engine.getWindow().get(), dt);
-    }
-    
-    if (ctx.camera->isLocked() || blockMouseInput)
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    else
-        glfwSetInputMode(engine.getWindow().get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    
-    if (!blockKeyboardInput && glfwGetKey(engine.getWindow().get(), GLFW_KEY_R) == GLFW_PRESS)
-    restartRender = true;
-
-    if (scene.checkUpdate()) restartRender = true;
-}
-
 
 void Application::fillUBOs() {
     auto& pathtracer = *ctx.pathtracerUBO;

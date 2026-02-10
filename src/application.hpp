@@ -15,6 +15,8 @@
 #include "./animation_handler.hpp"
 #include "./render_handler.hpp"
 
+#include "./app/input_controller.hpp"
+
 enum class DebugView : int {
     None = 0,
     Bounces,
@@ -47,6 +49,7 @@ private:
     
     AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &animation, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
     
+    InputController inputController;
     RenderHandler renderer;
 
     int frameCount = 0;
@@ -56,9 +59,6 @@ private:
     void initScene();
 
     void onFrameStart(float dt);
-    void handleInput(float dt);
-    void handleInputPreview(float dt);
-    void handleInputRender(float dt);
     void fillUBOs();
     float lastTime = 0.0f;
 };

@@ -1,5 +1,7 @@
 #include "render_handler.hpp"
 
+#include <filesystem>
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -13,11 +15,16 @@
 #include "./parameter_handler.hpp"
 #include "./animation_handler.hpp"
 
+#define OUTPUT_DIR "outputs"
+#define RENDER_OUTPUT_PATH OUTPUT_DIR "/screenshots"
+#define ANIMATION_FRAMES_DIR OUTPUT_DIR "/anim"
+#define ANIMATION_VIDEO_PATH OUTPUT_DIR "/out.mp4"
+
 static std::string buildRenderOutputPath() {
     auto now = std::chrono::system_clock::now();
     auto nowMilli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
     auto value = nowMilli.time_since_epoch().count();
-    return "screenshot_" + std::to_string(value) + ".png";
+    return std::string(RENDER_OUTPUT_PATH) + "/screenshot_" + std::to_string(value) + ".png";
 }
 
 void RenderHandler::init(AppContext& ctx) {
@@ -259,7 +266,7 @@ void RenderHandler::render(AppContext& ctx) {
         bool toVideo = false;
         if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
             char buff[64];
-            std::snprintf(buff, 64, "anim/frame_%05d.png", ctx.animation->getFrame());
+            std::snprintf(buff, 64, "%s/frame_%05d.png", ANIMATION_FRAMES_DIR, ctx.animation->getFrame());
             path = std::string(buff);
 
             ctx.renderState->samplesPerSecEMA = 0.0;
@@ -288,7 +295,11 @@ void RenderHandler::render(AppContext& ctx) {
         *ctx.restartRender = true;
         saveScreenshotBuffer(ctx, path);
         if (toVideo) {
-            std::system("ffmpeg -framerate 24 -i anim/frame_%05d.png -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p out.mp4");
+            std::string path = std::string(ANIMATION_FRAMES_DIR) + "/frame_%05d.png";
+            std::string ffmpegCmd = std::string("ffmpeg -framerate 24 -i ") + path
+                + " -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p "
+                + ANIMATION_VIDEO_PATH;
+            std::system(ffmpegCmd.c_str());
         }
     }
 }
