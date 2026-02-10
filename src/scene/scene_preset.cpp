@@ -3,7 +3,13 @@
 void initEmpty(Scene &scene, LightMode &lightMode) {
     scene.clear();
 
-    lightMode = LightMode::Night;
+    lightMode = LightMode::Sunset;
+}
+
+void initMaterialZoo(Scene &scene, LightMode &lightMode) {
+    scene.clear();
+
+    lightMode = LightMode::Empty;
     
     MaterialHandle light = scene.pushMaterial(
         Material {
@@ -23,7 +29,7 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
                 Material {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
                     .type = MaterialType::GgxGlossy,
-                    .albedo = glm::vec3(0.3, 1.0, 0.3) * 0.5f,
+                    .albedo = glm::vec3(1.0, 0.1, 0.1) * 0.5f,
                     .payload = { rough, ior }
                 }
             );

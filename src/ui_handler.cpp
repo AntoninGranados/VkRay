@@ -162,34 +162,6 @@ void UiHandler::drawPreview(AppContext& ctx) {
             ctx.animation->setEndFrame(endFrame);
         }
         ImGui::PopItemWidth();
-
-        /*
-        bool paused = ctx.animation->isPaused();
-        if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {
-            ctx.animation->toggle();
-        }
-
-        ImGui::SameLine();
-        
-        
-        int frame = ctx.animation->getFrame();
-        int endFrame = ctx.animation->getEndFrame();
-        ImGui::PushItemWidth(500);
-        if (ImGui::SliderInt("##Frame", &frame, 0, endFrame-1, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            ctx.animation->pause();
-            ctx.animation->reset(frame);
-        }
-        ImGui::PopItemWidth();
-        
-        ImGui::SameLine();
-        
-        ImGui::PushItemWidth(40);
-        if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1, 500)) {
-            ctx.animation->pause();
-            ctx.animation->setEndFrame(endFrame);
-        }
-        ImGui::PopItemWidth();
-        */
     }
     ImGui::End();
 
@@ -214,30 +186,12 @@ void UiHandler::drawPreview(AppContext& ctx) {
 
         if (ImGui::BeginPopupModal(ICON_FA_LIST " Scene Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
             LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
-            if (ImGui::Button("Empty", ui::button_size)) {
-                mode = scene.loadPreset(ScenePreset::Empty);
-                restartRender = true;
-                ImGui::CloseCurrentPopup();
-            }
-            if (ImGui::Button("Mesh", ui::button_size)) {
-                mode = scene.loadPreset(ScenePreset::Mesh);
-                restartRender = true;
-                ImGui::CloseCurrentPopup();
-            }
-            if (ImGui::Button("Sponza", ui::button_size)) {
-                mode = scene.loadPreset(ScenePreset::Sponza);
-                restartRender = true;
-                ImGui::CloseCurrentPopup();
-            }
-            if (ImGui::Button("Cornell Box", ui::button_size)) {
-                mode = scene.loadPreset(ScenePreset::CornellBox);
-                restartRender = true;
-                ImGui::CloseCurrentPopup();
-            }
-            if (ImGui::Button("Random Spheres", ui::button_size)) {
-                mode = scene.loadPreset(ScenePreset::RandomSpheres);
-                restartRender = true;
-                ImGui::CloseCurrentPopup();
+            for (auto& [preset, name] : scenePresetName) {
+                if (ImGui::Button((name + "##ScenePreset").c_str(), ui::button_size)) {
+                    scenePresetInitMethod[preset](*ctx.scene, mode);
+                    restartRender = true;
+                    ImGui::CloseCurrentPopup();
+                }
             }
             ctx.parameters->setEnum<LightMode>("lightMode", mode);
             

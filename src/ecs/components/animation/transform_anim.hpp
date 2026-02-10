@@ -12,6 +12,12 @@ namespace ecs {
 struct KeyVec3 { int frame; glm::vec3 value; };
 struct KeyQuat { int frame; glm::quat value; };
 
+enum class TransformKeyframeType {
+    Position,
+    Rotation,
+    Scale
+};
+
 struct TransformAnim {
     std::vector<KeyVec3> positionKeys;
     std::vector<KeyQuat> rotationKeys;
@@ -73,13 +79,13 @@ struct TransformAnim {
         return hasKeyframe(frame, rotationKeys);
     }
 
-    void insertScaleframe(int frame, const glm::vec3& scale) {
+    void insertScaleKeyframe(int frame, const glm::vec3& scale) {
         insertKeyframe(frame, scale, scaleKeys);
     }
-    void removeScaleframe(int frame) {
+    void removeScaleKeyframe(int frame) {
         removeKeyframe(frame, scaleKeys);
     }
-    bool hasScaleframe(int frame) {
+    bool hasScaleKeyframe(int frame) {
         return hasKeyframe(frame, scaleKeys);
     }
 };

@@ -99,11 +99,9 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     LightSampleResult lightResult;
     Material mat;
 
-    bool  prevWasDelta = true;
-    float prevPdfBSDF  = 1.0;
-    Hit   prevHit;
-    vec3  prevWo;
-    vec3  prevWi;
+    SampleResult prevResult;
+    Hit prevHit;
+
     for (; i < ubo.maxBounces; i++) {
         if (ubo.debugView == debug_Normal) break;
         
@@ -118,9 +116,9 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
 
                 vec3 Le = mat.albedo * emissiveIntensity(mat);
                 float w = 1.0;
-                if (ubo.importanceSampling == 1 && !prevWasDelta) {
-                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevWi, hit.p - prevHit.p);
-                    float pdfB = prevPdfBSDF;
+                if (ubo.importanceSampling == 1 && !prevResult.isDelta) {
+                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevResult.wi, hit.p - prevHit.p);
+                    float pdfB = prevResult.pdf;
                     float denom = pdfB*pdfB + pdfL*pdfL;
                     w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
                 }
@@ -152,11 +150,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
             float cosB = abs(dot(hit.normal, result.wi));
             throughput *= (result.f * cosB) / result.pdf;
 
-            prevWasDelta = result.isDelta;
-            prevPdfBSDF  = result.pdf;
-            prevHit      = hit;
-            prevWo       = -ray.dir;
-            prevWi       = result.wi;
+            prevResult.isDelta = result.isDelta;
+            prevResult.pdf   = result.pdf;
+            prevResult.wi    = result.wi;
+            prevHit = hit;
 
             ray = Ray(hit.p + result.wi * EPS, result.wi);
             hit = intersection(ray);

@@ -92,8 +92,10 @@ void Application::initParameters() {
 void Application::initScene() {
     scene.setContext(ctx);
     scene.init();
-
-    LightMode mode = scene.loadPreset(ScenePreset::Empty);
+    
+    LightMode mode;
+    scenePresetInitMethod[ScenePreset::Empty](*ctx.scene, mode);
+    
     parameters.setEnum<LightMode>("lightMode", mode);
     ctx.camera = &scene.getCamera();
 }

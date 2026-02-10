@@ -119,18 +119,6 @@ void Scene::clear() {
     meshAssets.push_back(DEFAULT_MESH_ASSET);
 }
 
-LightMode Scene::loadPreset(ScenePreset preset) {
-    LightMode mode = LightMode::Day;
-    switch (preset) {
-        case ScenePreset::Empty:         initEmpty(*this, mode);         break;
-        case ScenePreset::Mesh:          initMesh(*this, mode);          break;
-        case ScenePreset::Sponza:        initSponza(*this, mode);        break;
-        case ScenePreset::CornellBox:    initCornellBox(*this, mode);    break;
-        case ScenePreset::RandomSpheres: initRandomSpheres(*this, mode); break;
-    }
-    return mode;
-}
-
 MaterialHandle Scene::pushMaterial(const Material &mat) {
     const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
@@ -271,7 +259,7 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
     
     ecs::Transform transformComponent;
     transformComponent.setPosition(translation);
-    transformComponent.setRotation(glm::quat(rotationEuler));
+    transformComponent.setRotation(glm::quat(glm::radians(rotationEuler)));
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);

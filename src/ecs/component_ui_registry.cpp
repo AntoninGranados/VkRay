@@ -1,6 +1,8 @@
 #include "./component_ui_registry.hpp"
 
 #include <limits>
+#include <cmath>
+#include <unordered_map>
 
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -13,20 +15,48 @@
 
 namespace ecs {
 
+struct RotationEditorState {
+    glm::quat sourceQuat { 1.0f, 0.0f, 0.0f, 0.0f };
+    glm::vec3 eulerDeg { 0.0f, 0.0f, 0.0f };
+    bool initialized = false;
+};
+
+RotationEditorState& rotationEditorState(const ecs::Entity& e) {
+    static std::unordered_map<ecs::Entity, RotationEditorState> states;
+    return states[e];
+}
+
+bool sameRotation(const glm::quat& a, const glm::quat& b) {
+    const glm::quat qa = glm::normalize(a);
+    const glm::quat qb = glm::normalize(b);
+    return std::abs(glm::dot(qa, qb)) > 1.0f - 1e-5f;
+}
+
 ComponentUiRegistry& ComponentUiRegistry::get() {
     static ComponentUiRegistry r;
     return r;
 }
 
-void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity e, ecs::TransformAnim& anim, bool hasKeyframe, std::function<void()> func) {
+
+void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity& e, ecs::TransformAnim& anim, const TransformKeyframeType& type, std::function<void(const bool&)> func) {
+    bool hasKeyframe;
+    switch (type) {
+        case TransformKeyframeType::Position:   hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());  break;
+        case TransformKeyframeType::Rotation:   hasKeyframe = anim.hasRotationKeyframe(ctx.animation->getFrame());  break;
+        case TransformKeyframeType::Scale:      hasKeyframe = anim.hasScaleKeyframe(ctx.animation->getFrame());     break;
+    }
+    
     if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_on_col);
     else ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_off_col);
-
+    
+    ImGui::PushID((long)&type + (long)&e);
     ui::PushTransparentStyleColor();
     if (ImGui::Button(ICON_FA_SQUARE "##KeyframePos")) {
-        func();
+        func(hasKeyframe);
     }
     ui::PopTransparentStyleColor();
+    ImGui::PopID();
+
     ImGui::PopStyleColor();
     ImGui::SameLine();
 };
@@ -146,10 +176,9 @@ void ComponentUiRegistry::init() {
 
         if (isAnimated) {
             auto& anim = r.get<ecs::TransformAnim>(e);
-            bool hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());
             keyframeButton(
-                ctx, r, e, anim, hasKeyframe,
-                [&]() {
+                ctx, r, e, anim, TransformKeyframeType::Position,
+                [&](const bool& hasKeyframe) -> void {
                     if (!hasKeyframe) anim.insertPositionKeyframe(ctx.animation->getFrame(), t.position);
                     else anim.removePositionKeyframe(ctx.animation->getFrame());
                 }
@@ -161,14 +190,49 @@ void ComponentUiRegistry::init() {
             update = true;
         }
 
+        if (isAnimated) {
+            auto& anim = r.get<ecs::TransformAnim>(e);
+            keyframeButton(
+                ctx, r, e, anim, TransformKeyframeType::Rotation,
+                [&](const bool& hasKeyframe) -> void {
+                    if (!hasKeyframe) anim.insertRotationKeyframe(ctx.animation->getFrame(), t.rotation);
+                    else anim.removeRotationKeyframe(ctx.animation->getFrame());
+                }
+            );
+        }
         ImGui::Text("Rotation (Euler):");
-        glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
-        if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
-            t.rotation = glm::quat(glm::radians(euler));
-            t.updated = true;
-            update = true;
+        if (isAnimated) {
+            auto& rotState = rotationEditorState(e);
+            const glm::quat currentRotation = glm::normalize(t.rotation);
+            if (!rotState.initialized || !sameRotation(rotState.sourceQuat, currentRotation)) {
+                rotState.sourceQuat = currentRotation;
+                rotState.eulerDeg = glm::degrees(glm::eulerAngles(currentRotation));
+                rotState.initialized = true;
+            }
+            if (ImGui::DragFloat3("##Rotation", glm::value_ptr(rotState.eulerDeg), 0.1f)) {
+                const glm::quat edited = glm::normalize(glm::quat(glm::radians(rotState.eulerDeg)));
+                t.setRotation(edited);
+                rotState.sourceQuat = edited;
+                update = true;
+            }
+        } else {
+            glm::vec3 euler = glm::degrees(glm::eulerAngles(t.rotation));
+            if (ImGui::DragFloat3("##Rotation", glm::value_ptr(euler), 0.1f)) {
+                t.setRotation(glm::quat(glm::radians(euler)));
+                update = true;
+            }
         }
 
+        if (isAnimated) {
+            auto& anim = r.get<ecs::TransformAnim>(e);
+            keyframeButton(
+                ctx, r, e, anim, TransformKeyframeType::Scale,
+                [&](const bool& hasKeyframe) -> void {
+                    if (!hasKeyframe) anim.insertScaleKeyframe(ctx.animation->getFrame(), t.scale);
+                    else anim.removeScaleKeyframe(ctx.animation->getFrame());
+                }
+            );
+        }
         ImGui::Text("Scale:");
         if (ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f)) {
             t.updated = true;

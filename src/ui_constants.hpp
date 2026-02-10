@@ -40,8 +40,8 @@ inline void PopTransparentStyleColor() {
 }
 
 // Keyframe
-inline const ImVec4 keyframe_on_col  = ImGui::ColorConvertU32ToFloat4(0xFF296CF2);
-inline const ImVec4 keyframe_off_col = ImGui::ColorConvertU32ToFloat4(0xFF2A150B);
+inline const ImVec4 keyframe_off_col = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+inline const ImVec4 keyframe_on_col  = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
 
 
 }   // namespace ui

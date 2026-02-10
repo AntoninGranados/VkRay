@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -23,7 +25,12 @@ struct Transform {
     }
     
     void setRotation(const glm::quat& newRotation) {
-        rotation = newRotation;
+        const float len2 = glm::dot(newRotation, newRotation);
+        if (len2 <= std::numeric_limits<float>::epsilon()) {
+            rotation = glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f };
+        } else {
+            rotation = glm::normalize(newRotation);
+        }
         updated = true;
     }
     

@@ -72,8 +72,6 @@ public:
     void runOnUi(AppContext& ctx) { onUiScheduler.run(registry, ctx); }
     void runPostUpdate(AppContext& ctx) { postUpdateScheduler.run(registry, ctx); }
     
-    LightMode loadPreset(ScenePreset preset);
-    
     const int getSelectionId() { return selectedEntity; }
     const ecs::Entity* getSelectedEntity() const;
     void clearSelection() { selectedEntity = -1; }
