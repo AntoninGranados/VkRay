@@ -21,9 +21,6 @@
 #include "../ecs/component_ui_registry.hpp"
 #include "../ecs/system_scheduler.hpp"
 
-#include "imgui/ImGuizmo.h"
-#include "imgui/imgui.h"
-
 struct AppContext;
 
 enum LightMode : int {
@@ -34,6 +31,7 @@ enum LightMode : int {
 };
 
 enum class ScenePreset : int;
+class SceneEditorUI;
 
 struct PackingMaps {
     std::unordered_map<ecs::Entity, int> sphereId;
@@ -99,6 +97,8 @@ public:
     bool checkUpdate();
     bool checkBufferUpdate();
 private:
+    friend class SceneEditorUI;
+
     ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
     ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
 
@@ -126,5 +126,14 @@ private:
     AppContext* ctx = nullptr;
 
     void initSystems();
+    void initGpuBuffers(VkSmol& engine);
+    void clearGpuBuffers(VkSmol& engine);
+    void destroyGpuBuffers(VkSmol& engine);
+
+    ecs::Entity createNamedEntity(std::string name);
+    void addMaterialRef(ecs::Entity e, MaterialHandle materialHandle);
+    ecs::Transform makeTransformFromMatrix(const glm::mat4& transform) const;
+    void resetSceneState();
+    void ensureDefaultAssets();
 
 };
