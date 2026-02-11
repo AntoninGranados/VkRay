@@ -22,31 +22,56 @@
 #define REQ_NONE {}
 #define CONFLICT_NONE {}
 
-#define REQ_TRANSFORM { ComponentId::Transform }
-#define CONFLICT_OBJECTS { ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject }
+#define REQ_TRANSFORM ComponentId::Transform
+#define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
 
-#define ECS_COMPONENTS(X)                               \
-    X(Name,         REQ_NONE, CONFLICT_NONE)            \
-    X(Transform,    REQ_NONE, CONFLICT_NONE)            \
-    X(Sphere,       REQ_TRANSFORM, CONFLICT_OBJECTS)    \
-    X(Plane,        REQ_TRANSFORM, CONFLICT_OBJECTS)    \
-    X(Box,          REQ_TRANSFORM, CONFLICT_OBJECTS)    \
-    X(MeshRef,      REQ_TRANSFORM, CONFLICT_OBJECTS)    \
-    X(CameraObject, REQ_TRANSFORM, CONFLICT_OBJECTS)    \
-    X(MaterialRef,  REQ_NONE, CONFLICT_NONE)            \
-    X(TransformAnim,REQ_TRANSFORM, CONFLICT_NONE)       \
+enum class ComponentGroup {
+    Editor,
+    Objects,
+    Movement,
+    Other
+};
 
-#define COMPONENTS_ID(Id, Req, Conflict) Id,
+#define ECS_COMPONENTS(X)                                               \
+    X(Name,          Editor,   { },               { })                  \
+    X(Transform,     Movement, { },               { })                  \
+    X(Sphere,        Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(Plane,         Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(MaterialRef,   Other,    { },               { })                  \
+    X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
+
+#define COMPONENTS_ID(Id, Group, Req, Conflict) Id,
 enum class ComponentId {
     ECS_COMPONENTS(COMPONENTS_ID)
 };
 
-#define COMPONENTS_LABEL(Id, Req, Conflict) case ComponentId::Id: return #Id;
+#define COMPONENTS_LABEL(Id, Group, Req, Conflict) case ComponentId::Id: return #Id;
 inline std::string componentLabel(const ComponentId& id) {
     switch (id) {
         ECS_COMPONENTS(COMPONENTS_LABEL)
     }
     return "Unknown";
+}
+
+#define COMPONENTS_GROUP(Id, Group, Req, Conflict) case ComponentId::Id: return ComponentGroup::Group;
+inline ComponentGroup componentGroup(const ComponentId& id) {
+    switch (id) {
+        ECS_COMPONENTS(COMPONENTS_GROUP)
+    }
+    return ComponentGroup::Other;
+}
+
+inline std::string componentGroupLabel(ComponentGroup group) {
+    switch (group) {
+        case ComponentGroup::Editor:   return "Editor";
+        case ComponentGroup::Objects:  return "Objects";
+        case ComponentGroup::Movement: return "Movement";
+        case ComponentGroup::Other:    return "Other";
+    }
+    return "Other";
 }
 
 using AddFunction = std::function<void(ecs::Registry&, ecs::Entity)>;
@@ -56,12 +81,12 @@ struct ComponentFunc {
     HasFunction has;
 };
 
-#define COMPONENTS_TYPES(Id, Req, Conflict) {                                                           \
-    ComponentId::Id,                                                                                    \
-    ComponentFunc {                                                                                     \
-        [](ecs::Registry& r, ecs::Entity e) { if (!r.has<ecs::Id>(e)) r.add<ecs::Id>(e, ecs::Id{}); },  \
-        [](ecs::Registry& r, ecs::Entity e) { return r.has<ecs::Id>(e); }                               \
-    }                                                                                                   \
+#define COMPONENTS_TYPES(Id, Group, Req, Conflict) {                                                   \
+    ComponentId::Id,                                                                                   \
+    ComponentFunc {                                                                                    \
+        [](ecs::Registry& r, ecs::Entity e) { if (!r.has<ecs::Id>(e)) r.add<ecs::Id>(e, ecs::Id{}); }, \
+        [](ecs::Registry& r, ecs::Entity e) { return r.has<ecs::Id>(e); }                              \
+    }                                                                                                  \
 },
 inline std::unordered_map<ComponentId, ComponentFunc>& componentFuncs() {
     static std::unordered_map<ComponentId, ComponentFunc> types = {
@@ -74,9 +99,9 @@ struct ComponentRestrictions {
     std::list<ComponentId> requirements;
     std::list<ComponentId> conflicts;
 };
-#define COMPONENTS_RESTRICTIONS(Id, Req, Conflict) {           \
-    ComponentId::Id,                                           \
-    ComponentRestrictions { Req, Conflict }   \
+#define COMPONENTS_RESTRICTIONS(Id, Group, Req, Conflict) { \
+    ComponentId::Id,                                 \
+    ComponentRestrictions { Req, Conflict }          \
 },
 inline std::unordered_map<ComponentId, ComponentRestrictions>& componentRestrictions() {
     static std::unordered_map<ComponentId, ComponentRestrictions> restrictions = {

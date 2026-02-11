@@ -3,9 +3,11 @@
 #include "scene.hpp"
 #include "scene_preset.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 #include "IconsFontAwesome7.h"
 
@@ -201,6 +203,8 @@ void SceneEditorUI::drawUI(Scene& scene) {
     }
 
     if (openNewMeshAssetPopup) ImGui::OpenPopup("New Mesh Asset");
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("New Mesh Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
         static char meshPath[256] = "";
         ImGui::Text("Path:");
@@ -235,6 +239,8 @@ void SceneEditorUI::drawUI(Scene& scene) {
 }
 
 void SceneEditorUI::drawNewObjectPopUp(Scene& scene) {
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
 
     char nameBuffer[64];
@@ -310,19 +316,52 @@ void SceneEditorUI::drawSelectedEntityUI(Scene& scene) {
     ImGui::End();
 
     if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-        for (auto& [id, funcs] : componentFuncs()) {
+        const auto& funcsMap = componentFuncs();
+        const auto& restrictionsMap = componentRestrictions();
+
+        std::vector<ComponentId> sortedIds;
+        sortedIds.reserve(funcsMap.size());
+        for (const auto& [id, _] : funcsMap) {
+            sortedIds.push_back(id);
+        }
+
+        std::sort(sortedIds.begin(), sortedIds.end(), [](ComponentId a, ComponentId b) {
+            const ComponentGroup groupA = componentGroup(a);
+            const ComponentGroup groupB = componentGroup(b);
+            if (groupA != groupB) {
+                return groupA < groupB;
+            }
+            return componentLabel(a) < componentLabel(b);
+        });
+
+        bool firstGroup = true;
+        ComponentGroup currentGroup = ComponentGroup::Other;
+        for (ComponentId id : sortedIds) {
+            const ComponentGroup group = componentGroup(id);
+            if (firstGroup || group != currentGroup) {
+                if (!firstGroup) {
+                    ImGui::Spacing();
+                }
+                ImGui::SeparatorText(componentGroupLabel(group).c_str());
+                currentGroup = group;
+                firstGroup = false;
+            }
+
+            const auto& funcs = funcsMap.at(id);
             if (ImGui::Button(componentLabel(id).c_str(), ui::button_size)) {
                 bool verifyRestrictions = true;
-                const auto& restrictions = componentRestrictions()[id];
+                const auto& restrictions = restrictionsMap.at(id);
                 for (auto& requirement : restrictions.requirements) {
-                    if (!componentFuncs()[requirement].has(scene.registry, e)) {
+                    if (!funcsMap.at(requirement).has(scene.registry, e)) {
                         verifyRestrictions = false;
                         scene.ctx->notifications->pushMessage(NotificationType::Warning, "Missing component " + componentLabel(requirement));
                     }
                 }
                 for (auto& conflict : restrictions.conflicts) {
-                    if (componentFuncs()[conflict].has(scene.registry, e)) {
+                    if (funcsMap.at(conflict).has(scene.registry, e)) {
                         verifyRestrictions = false;
                         scene.ctx->notifications->pushMessage(NotificationType::Warning, "Conflicting component " + componentLabel(conflict));
                     }
