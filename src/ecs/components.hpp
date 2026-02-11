@@ -10,8 +10,10 @@
 
 #include "./components/objects/sphere.hpp"
 #include "./components/objects/plane.hpp"
+#include "./components/objects/plane_collider.hpp"
 #include "./components/objects/box.hpp"
 #include "./components/objects/mesh.hpp"
+#include "./components/objects/rigid_body.hpp"
 #include "./components/objects/camera_object.hpp"
 
 #include "./components/editor/editor_only.hpp"
@@ -23,12 +25,15 @@
 #define CONFLICT_NONE {}
 
 #define REQ_TRANSFORM ComponentId::Transform
+#define REQ_TRANSFORM_MESH ComponentId::Transform, ComponentId::MeshRef
+#define REQ_TRANSFORM_PLANE ComponentId::Transform, ComponentId::Plane
 #define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
 
 enum class ComponentGroup {
     Editor,
     Objects,
     Movement,
+    Physics,
     Other
 };
 
@@ -37,8 +42,10 @@ enum class ComponentGroup {
     X(Transform,     Movement, { },               { })                  \
     X(Sphere,        Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(Plane,         Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(PlaneCollider, Physics,  { REQ_TRANSFORM_PLANE }, { })             \
     X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(RigidBody,     Physics,  { REQ_TRANSFORM_MESH }, { })             \
     X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MaterialRef,   Other,    { },               { })                  \
     X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
@@ -69,6 +76,7 @@ inline std::string componentGroupLabel(ComponentGroup group) {
         case ComponentGroup::Editor:   return "Editor";
         case ComponentGroup::Objects:  return "Objects";
         case ComponentGroup::Movement: return "Movement";
+        case ComponentGroup::Physics:  return "Physics";
         case ComponentGroup::Other:    return "Other";
     }
     return "Other";

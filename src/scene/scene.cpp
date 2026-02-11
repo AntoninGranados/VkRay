@@ -21,6 +21,7 @@
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
 #include "../ecs/systems/animation_system.hpp"
+#include "../ecs/systems/physics_solver_system.hpp"
 #include "../notification_handler.hpp"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
@@ -43,6 +44,7 @@ void Scene::init() {
 void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::transformAnimationSystem);
+    preUpdateScheduler.add(ecs::physicsSolverSystem);
     preUpdateScheduler.add(ecs::transformSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 

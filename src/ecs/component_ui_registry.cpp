@@ -100,10 +100,41 @@ void ComponentUiRegistry::init() {
         ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
+
+    ui_reg.add<ecs::PlaneCollider>([](ecs::PlaneCollider& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+        bool update = false;
+        if (!ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane Collider")) return false;
+
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::Text("Restitution:");
+        update |= ImGui::DragFloat("##PlaneColliderRestitution", &c.restitution, 0.01f, 0.0f, 1.0f);
+        ImGui::Text("Friction:");
+        update |= ImGui::DragFloat("##PlaneColliderFriction", &c.friction, 0.01f, 0.0f, 1.0f);
+        ImGui::PopItemWidth();
+
+        return update;
+    });
     
     ui_reg.add<ecs::Box>([](ecs::Box& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_BOX " Box", ImGuiTreeNodeFlags_Bullet);
         return false;
+    });
+
+    ui_reg.add<ecs::RigidBody>([](ecs::RigidBody& rb, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+        bool update = false;
+        if (!ImGui::CollapsingHeader(ICON_FA_CUBES_STACKED " Rigid Body")) return false;
+
+        ImGui::PushItemWidth(-FLT_MIN);
+        update |= ImGui::Checkbox("Use Gravity##RigidBodyGravity", &rb.useGravity);
+        ImGui::Text("Density:");
+        update |= ImGui::DragFloat("##RigidBodyDensity", &rb.density, 1.0f, 0.1f, 10000.0f);
+        ImGui::Text("Linear Velocity:");
+        update |= ImGui::DragFloat3("##RigidBodyLinearVelocity", glm::value_ptr(rb.linearVelocity), 0.01f);
+        ImGui::Text("Angular Velocity:");
+        update |= ImGui::DragFloat3("##RigidBodyAngularVelocity", glm::value_ptr(rb.angularVelocity), 0.01f);
+        ImGui::PopItemWidth();
+
+        return update;
     });
     
     ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){

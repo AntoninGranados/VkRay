@@ -18,6 +18,7 @@ public:
     int getEndFrame() { return endFrame; }
     double getTime() { return time; }
     double getDt() { return dt; }
+    double getFixedDt() { return fixedDt; }
 
     void pause() { paused = true; }
     void play() { paused = false; }
