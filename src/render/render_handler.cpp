@@ -1,7 +1,12 @@
 #include "render_handler.hpp"
 
-#include "./parameter_handler.hpp"
-#include "./animation_handler.hpp"
+#include "./../engine/engine.hpp"
+#include "./../scene/scene.hpp"
+#include "./../camera.hpp"
+#include "./../notification_handler.hpp"
+#include "./../ui_handler.hpp"
+#include "./../parameter_handler.hpp"
+#include "./../animation_handler.hpp"
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
@@ -41,7 +46,7 @@ void RenderHandler::init(AppContext& ctx) {
             samplers[i] = engine.initSampler();
         }
 
-        renderService.init(engine, extent.width, extent.height);
+        exportService.init(engine, extent.width, extent.height);
     }
 
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -115,7 +120,7 @@ void RenderHandler::destroy(AppContext& ctx) {
     engine.destroyBufferList(pathtracingUniformBuffers);
     engine.destroyBufferList(screenUniformBuffers);
     engine.destroyBufferList(pixelInfoBuffers);
-    renderService.destroy(engine);
+    exportService.destroy(engine);
     
     engine.destroyGraphicsPipeline(pipeline);
     engine.destroyGraphicsPipeline(screenPipeline);
@@ -195,7 +200,7 @@ void RenderHandler::render(AppContext& ctx) {
     if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
             // renderOutput.requested = true;
-            renderService.requestSave();
+            exportService.requestSave();
             ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle; // we don't want to exist when rendering an animation
         }
     }
@@ -231,7 +236,7 @@ void RenderHandler::render(AppContext& ctx) {
 
     engine.endFrame();
 
-    renderService.handleSave(ctx);
+    exportService.handleSave(ctx);
 }
 
 void RenderHandler::renderMain(AppContext& ctx) {
@@ -303,7 +308,7 @@ void RenderHandler::renderMain(AppContext& ctx) {
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
 
-        renderService.handleCopy(ctx, commandBuffer, images[frame]);
+        exportService.handleCopy(ctx, commandBuffer, images[frame]);
     }
 
     {   // Screen

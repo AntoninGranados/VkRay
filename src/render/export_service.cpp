@@ -1,4 +1,4 @@
-#include "render_service.hpp"
+#include "export_service.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image/stb_image_write.h>
@@ -7,7 +7,7 @@
 #include "../animation_handler.hpp"
 #include "../ui_handler.hpp"
 
-void RenderService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height) {
+void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height) {
     width = _width;
     height = _height;
 
@@ -15,11 +15,11 @@ void RenderService::init(VkSmol& engine, const uint32_t& _width, const uint32_t&
     buffer = engine.initReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
 }
 
-void RenderService::destroy(VkSmol& engine) {
+void ExportService::destroy(VkSmol& engine) {
     engine.destroyBuffer(buffer);
 }
 
-void RenderService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
+void ExportService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
     if (!renderRequested) return;
     renderRequested   = false;
     renderPendingSave = true;
@@ -27,7 +27,7 @@ void RenderService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Im
     copyImageToBuffer(ctx, commandBuffer, image);
 }
 
-void RenderService::handleSave(AppContext& ctx) {
+void ExportService::handleSave(AppContext& ctx) {
     if (!renderPendingSave) return;
     renderPendingSave = false;
 
@@ -66,7 +66,7 @@ void RenderService::handleSave(AppContext& ctx) {
 }
 
 
-std::string RenderService::buildRenderOutputPath() {
+std::string ExportService::buildRenderOutputPath() {
     auto now = std::chrono::system_clock::now();
     auto nowMilli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
     auto value = nowMilli.time_since_epoch().count();
@@ -76,14 +76,14 @@ std::string RenderService::buildRenderOutputPath() {
     return std::string(buff);
 }
 
-std::string RenderService::buildAnimationoFramePath(int frame) {
+std::string ExportService::buildAnimationoFramePath(int frame) {
     char buff[64];
     std::snprintf(buff, 64, "%s/frame_%05d.png", ANIMATION_FRAMES_DIR, frame);
     return std::string(buff);
 }
 
 
-void RenderService::copyImageToBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
+void ExportService::copyImageToBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
     VkSmol& engine = *ctx.engine;
     
     engine.barrier(
@@ -105,7 +105,7 @@ void RenderService::copyImageToBuffer(AppContext& ctx, CommandBuffer& commandBuf
     );
 }
 
-void RenderService::saveBufferToFile(AppContext& ctx, std::string path) {
+void ExportService::saveBufferToFile(AppContext& ctx, std::string path) {
     VkSmol& engine = *ctx.engine;
 
     size_t floatCount = static_cast<size_t>(width) * height * 4;
@@ -133,7 +133,7 @@ void RenderService::saveBufferToFile(AppContext& ctx, std::string path) {
     }
 }
 
-void RenderService::convertFramesToVideo() {
+void ExportService::convertFramesToVideo() {
     std::string path = std::string(ANIMATION_FRAMES_DIR) + "/frame_%05d.png";
 
     char cmd[128];

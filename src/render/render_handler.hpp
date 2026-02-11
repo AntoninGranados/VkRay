@@ -1,16 +1,11 @@
 #pragma once
 
-#include "./app_context.hpp"
-#include "./engine/engine.hpp"
-#include "./scene/scene.hpp"
-#include "./camera.hpp"
-#include "./notification_handler.hpp"
-#include "./ui_handler.hpp"
+#include "./../app_context.hpp"
+#include "./export_service.hpp"
 
 #include "./imgui/imgui.h"
 #include "./imgui/ImGuizmo.h"
 
-#include "./render/render_service.hpp"
 
 typedef uint16_t index_t;
 
@@ -50,7 +45,7 @@ private:
     bufferList_t pathtracingUniformBuffers, screenUniformBuffers;
     bufferList_t pixelInfoBuffers;
 
-    RenderService renderService;
+    ExportService exportService;
 
     size_t frame = 0;
 

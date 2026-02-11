@@ -6,14 +6,14 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
-#include "../application.hpp"
-#include "../app_context.hpp"
-#include "../camera.hpp"
-#include "../ui_handler.hpp"
-#include "../parameter_handler.hpp"
-#include "../animation_handler.hpp"
-#include "../scene/scene.hpp"
-#include "../engine/engine.hpp"
+#include "application.hpp"
+#include "app_context.hpp"
+#include "camera.hpp"
+#include "ui_handler.hpp"
+#include "parameter_handler.hpp"
+#include "animation_handler.hpp"
+#include "scene/scene.hpp"
+#include "engine/engine.hpp"
 
 
 void InputController::initCallbacks(const AppContext& ctx) {

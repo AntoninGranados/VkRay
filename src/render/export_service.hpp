@@ -12,7 +12,7 @@
 #define ANIMATION_VIDEO_PATH OUTPUT_DIR "/out.mp4"
 
 
-class RenderService {
+class ExportService {
 public:
     void init(VkSmol& engine, const uint32_t& width, const uint32_t& height);
     void destroy(VkSmol& engine);

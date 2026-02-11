@@ -5,17 +5,17 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "./engine/engine.hpp"
-#include "./notification_handler.hpp"
-#include "./parameter_handler.hpp"
-#include "./scene/scene.hpp"
+#include "engine/engine.hpp"
+#include "notification_handler.hpp"
+#include "parameter_handler.hpp"
+#include "scene/scene.hpp"
 
-#include "./app_context.hpp"
-#include "./ui_handler.hpp"
-#include "./animation_handler.hpp"
-#include "./render_handler.hpp"
+#include "app_context.hpp"
+#include "ui_handler.hpp"
+#include "animation_handler.hpp"
+#include "render/render_handler.hpp"
 
-#include "./app/input_controller.hpp"
+#include "app/input_controller.hpp"
 
 enum class DebugView : int {
     None = 0,
