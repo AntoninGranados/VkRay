@@ -127,39 +127,7 @@ void Application::onFrameStart(float dt) {
     inputController.pollEvents();
     inputController.handle(ctx, dt);
 
-    if (notifications.isCommandRequested(Command::Exit)) {
-        shouldClose = true;
-    } if (notifications.isCommandRequested(Command::Render)) {
-        if (renderState.renderMode == RenderMode::Preview) {
-            scene.clearSelection();
-            ui.saveToggledState();
-            ui.setToggle(false);
-            renderState.renderMode = RenderMode::RenderSingle;
-            renderState.pendingExit = false;
-            renderState.samplesPerSecEMA = 0.0;
-            renderState.samplesPerSecInitialized = false;
-            renderState.samplesPerSecAccumTime = 0.0;
-            renderState.samplesPerSecAccumSamples = 0.0;
-            restartRender = true;
-        }
-    } if (notifications.isCommandRequested(Command::RenderAnim)) {
-        if (renderState.renderMode == RenderMode::Preview) {
-            scene.clearSelection();
-            ui.saveToggledState();
-            ui.setToggle(false);
-            renderState.renderMode = RenderMode::RenderAnimation;
-            renderState.pendingExit = false;
-            renderState.samplesPerSecEMA = 0.0;
-            renderState.samplesPerSecInitialized = false;
-            renderState.samplesPerSecAccumTime = 0.0;
-            renderState.samplesPerSecAccumSamples = 0.0;
-            restartRender = true;
-            animation.reset(0);
-        }
-    } if (notifications.isCommandRequested(Command::Reload)) {
-        renderer.buildPipeline(ctx);
-        restartRender = true;
-    }
+    handleCommands();
 
     if (restartRender) {
         frameCount = 1;
@@ -172,6 +140,37 @@ void Application::onFrameStart(float dt) {
 
     frameCount++;
     renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
+}
+
+void Application::clearReaderingData(RenderMode newRenderMode) {
+    scene.clearSelection();
+    ui.saveToggledState();
+    ui.setToggle(false);
+    renderState.renderMode = newRenderMode;
+    renderState.pendingExit = false;
+    renderState.samplesPerSecEMA = 0.0;
+    renderState.samplesPerSecInitialized = false;
+    renderState.samplesPerSecAccumTime = 0.0;
+    renderState.samplesPerSecAccumSamples = 0.0;
+    restartRender = true;
+}
+
+void Application::handleCommands() {
+    if (notifications.isCommandRequested(Command::Exit)) {
+        shouldClose = true;
+    } if (notifications.isCommandRequested(Command::Render)) {
+        if (renderState.renderMode == RenderMode::Preview) {
+            clearReaderingData(RenderMode::RenderSingle);
+        }
+    } if (notifications.isCommandRequested(Command::RenderAnim)) {
+        if (renderState.renderMode == RenderMode::Preview) {
+            clearReaderingData(RenderMode::RenderAnimation);
+            animation.reset(0);
+        }
+    } if (notifications.isCommandRequested(Command::Reload)) {
+        renderer.buildPipeline(ctx);
+        restartRender = true;
+    }
 }
 
 void Application::fillUBOs() {

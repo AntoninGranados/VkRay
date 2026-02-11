@@ -6,6 +6,7 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
+#include "../application.hpp"
 #include "../app_context.hpp"
 #include "../camera.hpp"
 #include "../ui_handler.hpp"
@@ -13,6 +14,32 @@
 #include "../animation_handler.hpp"
 #include "../scene/scene.hpp"
 #include "../engine/engine.hpp"
+
+
+void InputController::initCallbacks(const AppContext& ctx) {
+    glfwSetCursorPosCallback(
+        ctx.engine->getWindow().get(),
+        [](GLFWwindow* window, double x, double y) {
+            ImGui_ImplGlfw_CursorPosCallback(window, x, y);
+            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            const bool cameraLocked = app->ctx.camera->isLocked();
+            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured() || ImGuizmo::IsUsing()))
+                return;
+            app->restartRender |= app->ctx.camera->cursorPosCallback(window, x, y);
+        }
+    );
+
+    glfwSetScrollCallback(
+        ctx.engine->getWindow().get(), 
+        [](GLFWwindow* window, double xoffset, double yoffset) {
+            ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured()) return;
+            if (app->ctx.renderState->renderMode != RenderMode::Preview) return;
+            app->restartRender |= app->ctx.camera->scrollCallback(window, xoffset, yoffset);
+        }
+    );
+}
 
 void InputController::pollEvents() {
     glfwPollEvents();

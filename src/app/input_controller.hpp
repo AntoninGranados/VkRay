@@ -6,6 +6,7 @@ struct AppContext;
 
 class InputController {
 public:
+    void initCallbacks(const AppContext& ctx);
     void pollEvents();
     void handle(const AppContext& ctx, float dt);
 

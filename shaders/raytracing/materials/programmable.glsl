@@ -13,30 +13,40 @@
 
 #define CHECKBOARD_CHOICE(p) int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0
 
-#define PROGRAMMABLE_LAMBERT(mat) LAMBERTIAN_MATERIAL(mat.albedo)
-#define PROGRAMMABLE_GLOSSY(mat) GGX_GLOSSY_MATERIAL(mat.albedo, 0.1, 0.2)
+#define PROGRAMMABLE_LAMBERT(albedo) LAMBERTIAN_MATERIAL(albedo)
+#define PROGRAMMABLE_GLOSSY(albedo) GGX_GLOSSY_MATERIAL(albedo, 0.1, 0.2)
+
+vec2 programmablePlaneCoords(in Hit hit) {
+    vec3 up = abs(hit.normal.z) < (1.0 - EPS) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+    vec3 t = normalize(cross(up, hit.normal));
+    vec3 b = cross(hit.normal, t);
+    return vec2(dot(hit.p, t), dot(hit.p, b));
+}
 
 float programmablePDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    if (CHECKBOARD_CHOICE(hit.p.xz)) {
-        return lambertianPDF(PROGRAMMABLE_LAMBERT(mat), hit, wo, wi);
+    vec2 planeCoords = programmablePlaneCoords(hit);
+    if (CHECKBOARD_CHOICE(planeCoords)) {
+        return lambertianPDF(PROGRAMMABLE_LAMBERT(mat.albedo), hit, wo, wi);
     } else {
-        return ggxGlossyPDF(PROGRAMMABLE_GLOSSY(mat), hit, wo, wi);
+        return ggxGlossyPDF(PROGRAMMABLE_GLOSSY(mat.albedo), hit, wo, wi);
     }
 }
 
 vec3 programmableF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    if (CHECKBOARD_CHOICE(hit.p.xz)) {
-        return lambertianF(PROGRAMMABLE_LAMBERT(mat), hit, wo, wi);
+    vec2 planeCoords = programmablePlaneCoords(hit);
+    if (CHECKBOARD_CHOICE(planeCoords)) {
+        return lambertianF(PROGRAMMABLE_LAMBERT(mat.albedo), hit, wo, wi);
     } else {
-        return ggxGlossyF(PROGRAMMABLE_GLOSSY(mat), hit, wo, wi);
+        return ggxGlossyF(PROGRAMMABLE_GLOSSY(mat.albedo), hit, wo, wi);
     }
 }
 
 void sampleProgrammableBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
-    if (CHECKBOARD_CHOICE(hit.p.xz)) {
-        sampleLambertianBSDF(PROGRAMMABLE_LAMBERT(mat), hit, wo, result, seed);
+    vec2 planeCoords = programmablePlaneCoords(hit);
+    if (CHECKBOARD_CHOICE(planeCoords)) {
+        sampleLambertianBSDF(PROGRAMMABLE_LAMBERT(mat.albedo), hit, wo, result, seed);
     } else {
-        sampleGgxGlossyBSDF(PROGRAMMABLE_GLOSSY(mat), hit, wo, result, seed);
+        sampleGgxGlossyBSDF(PROGRAMMABLE_GLOSSY(mat.albedo), hit, wo, result, seed);
     }
 }
 

@@ -10,6 +10,8 @@
 #include "./imgui/imgui.h"
 #include "./imgui/ImGuizmo.h"
 
+#include "./render/render_service.hpp"
+
 typedef uint16_t index_t;
 
 struct ScreenVertex {
@@ -25,13 +27,6 @@ const std::vector<ScreenVertex> vertices = {
 
 const std::vector<index_t> indices = {
     0, 1, 2, 2, 3, 0
-};
-
-struct RenderOutput {
-    bool requested   = false;
-    bool pendingSave = false;
-    uint32_t width   = 0;
-    uint32_t height  = 0;
 };
 
 class RenderHandler {
@@ -53,16 +48,12 @@ private:
     
     Buffer vertexBuffer, indexBuffer;
     bufferList_t pathtracingUniformBuffers, screenUniformBuffers;
-    Buffer screenshotBuffer;
     bufferList_t pixelInfoBuffers;
 
-    RenderOutput renderOutput;
+    RenderService renderService;
 
     size_t frame = 0;
 
     void renderMain(AppContext& ctx);
-    void renderUi(AppContext& ctx);
-
-    void copyImageToScreenshotBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image);
-    void saveScreenshotBuffer(AppContext& ctx, std::string path);
+    void renderUiLayer(AppContext& ctx);
 };

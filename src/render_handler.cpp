@@ -1,36 +1,10 @@
 #include "render_handler.hpp"
 
-#include <filesystem>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#include <stb_image/stb_image_write.h>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-
 #include "./parameter_handler.hpp"
 #include "./animation_handler.hpp"
 
-#define OUTPUT_DIR "outputs"
-#define RENDER_OUTPUT_PATH OUTPUT_DIR "/screenshots"
-#define ANIMATION_FRAMES_DIR OUTPUT_DIR "/anim"
-#define ANIMATION_VIDEO_PATH OUTPUT_DIR "/out.mp4"
-
-static std::string buildRenderOutputPath() {
-    auto now = std::chrono::system_clock::now();
-    auto nowMilli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-    auto value = nowMilli.time_since_epoch().count();
-    return std::string(RENDER_OUTPUT_PATH) + "/screenshot_" + std::to_string(value) + ".png";
-}
-
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-
-    glfwSetWindowAttrib(engine.getWindow().get(), GLFW_RESIZABLE, GLFW_FALSE);
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
@@ -59,17 +33,15 @@ void RenderHandler::init(AppContext& ctx) {
         for (size_t i = 0; i < 2; i++) {
             images[i] = engine.initImage(
                 extent.width, extent.height,
-                // Use float format to avoid quantizing every accumulation step
-                VK_FORMAT_R32G32B32A32_SFLOAT,
+                VK_FORMAT_R32G32B32A32_SFLOAT,  // Use 32 bit float format to avoid quantizing every accumulation step
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
             imageViews[i] = engine.initImageView(images[i]);
             samplers[i] = engine.initSampler();
         }
-        renderOutput.width  = extent.width;
-        renderOutput.height = extent.height;
-        screenshotBuffer = engine.initReadbackBuffer(static_cast<size_t>(renderOutput.width) * renderOutput.height * 4 * sizeof(float));
+
+        renderService.init(engine, extent.width, extent.height);
     }
 
     setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -143,7 +115,7 @@ void RenderHandler::destroy(AppContext& ctx) {
     engine.destroyBufferList(pathtracingUniformBuffers);
     engine.destroyBufferList(screenUniformBuffers);
     engine.destroyBufferList(pixelInfoBuffers);
-    engine.destroyBuffer(screenshotBuffer);
+    renderService.destroy(engine);
     
     engine.destroyGraphicsPipeline(pipeline);
     engine.destroyGraphicsPipeline(screenPipeline);
@@ -222,7 +194,8 @@ void RenderHandler::render(AppContext& ctx) {
     uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
     if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
-            renderOutput.requested = true;
+            // renderOutput.requested = true;
+            renderService.requestSave();
             ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle; // we don't want to exist when rendering an animation
         }
     }
@@ -254,54 +227,11 @@ void RenderHandler::render(AppContext& ctx) {
     frame = (frame + 1) % 2;
     
     renderMain(ctx);
-    renderUi(ctx);
+    renderUiLayer(ctx);
 
     engine.endFrame();
 
-    // Save render
-    if (renderOutput.pendingSave) {
-        engine.waitIdle();
-        std::string path = buildRenderOutputPath();
-        
-        bool toVideo = false;
-        if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
-            char buff[64];
-            std::snprintf(buff, 64, "%s/frame_%05d.png", ANIMATION_FRAMES_DIR, ctx.animation->getFrame());
-            path = std::string(buff);
-
-            ctx.renderState->samplesPerSecEMA = 0.0;
-            ctx.renderState->samplesPerSecInitialized = false;
-            ctx.renderState->samplesPerSecAccumTime = 0.0;
-            ctx.renderState->samplesPerSecAccumSamples = 0.0;
-
-            ctx.animation->stepFixed();
-            if (ctx.animation->getFrame() == 0) {
-                ctx.renderState->pendingExit = true;
-                toVideo = true;
-            }
-        }
-
-        if (ctx.renderState->pendingExit) {
-            ctx.ui->restorToggledState();
-            ctx.renderState->renderMode = RenderMode::Preview;
-            ctx.renderState->pendingExit = false;
-            ctx.renderState->samplesPerSecEMA = 0.0;
-            ctx.renderState->samplesPerSecInitialized = false;
-            ctx.renderState->samplesPerSecAccumTime = 0.0;
-            ctx.renderState->samplesPerSecAccumSamples = 0.0;
-        }
-
-        renderOutput.pendingSave = false;
-        *ctx.restartRender = true;
-        saveScreenshotBuffer(ctx, path);
-        if (toVideo) {
-            std::string path = std::string(ANIMATION_FRAMES_DIR) + "/frame_%05d.png";
-            std::string ffmpegCmd = std::string("ffmpeg -framerate 24 -i ") + path
-                + " -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p "
-                + ANIMATION_VIDEO_PATH;
-            std::system(ffmpegCmd.c_str());
-        }
-    }
+    renderService.handleSave(ctx);
 }
 
 void RenderHandler::renderMain(AppContext& ctx) {
@@ -365,11 +295,6 @@ void RenderHandler::renderMain(AppContext& ctx) {
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
-        if (renderOutput.requested) {
-            copyImageToScreenshotBuffer(ctx, commandBuffer, images[frame]);
-            renderOutput.requested   = false;
-            renderOutput.pendingSave = true;
-        }
         engine.barrier(
             commandBuffer,
             images[1-frame].get(),
@@ -377,6 +302,8 @@ void RenderHandler::renderMain(AppContext& ctx) {
             VK_ACCESS_NONE, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
+
+        renderService.handleCopy(ctx, commandBuffer, images[frame]);
     }
 
     {   // Screen
@@ -418,7 +345,7 @@ void RenderHandler::renderMain(AppContext& ctx) {
     engine.endRecoringRender(commandBuffer);
 }
 
-void RenderHandler::renderUi(AppContext& ctx) {
+void RenderHandler::renderUiLayer(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer commandBuffer = engine.beginRecordingUiRender();
@@ -450,53 +377,4 @@ void RenderHandler::renderUi(AppContext& ctx) {
     );
 
     engine.endRecoringUiRender(commandBuffer);
-}
-
-
-void RenderHandler::copyImageToScreenshotBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
-    VkSmol& engine = *ctx.engine;
-
-    engine.barrier(
-        commandBuffer,
-        image.get(),
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-    image.copyToBuffer(commandBuffer, screenshotBuffer);
-    engine.barrier(
-        commandBuffer,
-        image.get(),
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
-}
-
-void RenderHandler::saveScreenshotBuffer(AppContext& ctx, std::string path) {
-    VkSmol& engine = *ctx.engine;
-
-    size_t floatCount = static_cast<size_t>(renderOutput.width) * renderOutput.height * 4;
-    size_t byteCount = floatCount * sizeof(float);
-    std::vector<float> floatPixels(floatCount);
-    engine.readBuffer(screenshotBuffer, floatPixels.data(), byteCount);
-
-    std::vector<uint8_t> pixels(static_cast<size_t>(renderOutput.width) * renderOutput.height * 4);
-    auto toByte = [](float v) -> uint8_t {
-        v = std::clamp(v, 0.0f, 1.0f);
-        v = std::pow(v, 1.0f / 2.2f);
-        return static_cast<uint8_t>(v * 255.0f + 0.5f);
-    };
-    for (size_t i = 0; i < floatCount; i += 4) {
-        pixels[i + 0] = toByte(floatPixels[i + 0]);
-        pixels[i + 1] = toByte(floatPixels[i + 1]);
-        pixels[i + 2] = toByte(floatPixels[i + 2]);
-        pixels[i + 3] = 255;
-    }
-
-    if (stbi_write_png(path.c_str(), static_cast<int>(renderOutput.width), static_cast<int>(renderOutput.height), 4, pixels.data(), static_cast<int>(renderOutput.width) * 4) != 0) {
-        ctx.notifications->pushMessage(NotificationType::Info, "Saved screenshot to " + path);
-    } else {
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to write screenshot");
-    }
 }

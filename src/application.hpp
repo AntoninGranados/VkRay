@@ -33,6 +33,8 @@ public:
 
     void run();
 
+    friend void InputController::initCallbacks(const AppContext& ctx);
+
 private:
     VkSmol engine;
     Scene scene;
@@ -59,6 +61,8 @@ private:
     void initScene();
 
     void onFrameStart(float dt);
+    void clearReaderingData(RenderMode newRenderMode);
+    void handleCommands();
     void fillUBOs();
     float lastTime = 0.0f;
 };
