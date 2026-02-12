@@ -1,6 +1,8 @@
 #version 450
 
 struct PixelInfo {
+    vec4 normal;
+    vec4 position;
     float mean;
     float m2;
     int count;
@@ -27,8 +29,9 @@ const float feather = 0.4;
 #define debug_None          0
 #define debug_Bounces       1
 #define debug_Normal        2
-#define debug_SelectionMask 3
-#define debug_Variance      4
+#define debug_Position      3
+#define debug_SelectionMask 4
+#define debug_Variance      5
 
 float luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -50,12 +53,20 @@ vec3 visualizeVariance(vec2 uv, vec2 texSize) {
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[index];
     
     return vec3(pixelInfo.varianceProba);
-
-    // return vec3(pixelInfo.count / ubo.frameCount);
 }
 
 vec3 visualizeSelectionMask(int mask) {
     return vec3(mask != 0 ? 1.0 : 0.0);
+}
+
+vec3 visualizeNormal(PixelInfo pixelInfo) {
+    if (pixelInfo.normal.w <= 0.0) return vec3(0.0);
+    return normalize(pixelInfo.normal.xyz) * 0.5 + 0.5;
+}
+
+vec3 visualizePosition(PixelInfo pixelInfo) {
+    if (pixelInfo.position.w <= 0.0) return vec3(0.0);
+    return clamp(pixelInfo.position.xyz, 0.0, 1.0);
 }
 
 const vec3 edgeColor = vec3(1.0, 0.5, 0.062);
@@ -71,12 +82,14 @@ void main() {
     ivec2 blockCoord = ivec2(floor(screenCoord / ubo.resolution) * ubo.resolution);
     blockCoord = clamp(blockCoord, ivec2(0), ivec2(texSize) - ivec2(1));
     vec3 color = texelFetch(tex, blockCoord, 0).rgb;
+    uint blockIndex = uint(blockCoord.y * int(texSize.x) + blockCoord.x);
 
     float targetMin = 0.5;
     float targetMax = 1.5;
 
     uint centerIndex = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
-    int centerMask = pixelInfoBuffer.pixels[centerIndex].selectionMask;
+    PixelInfo centerPixelInfo = pixelInfoBuffer.pixels[centerIndex];
+    int centerMask = centerPixelInfo.selectionMask;
     int stepPx = int(outlineWidth);
 
     float neighborMask = 0.0;
@@ -103,6 +116,16 @@ void main() {
 
     if (ubo.debugView == debug_Variance) {
         outColor = vec4(visualizeVariance(uv, texSize), 1.0);
+        return;
+    }
+
+    if (ubo.debugView == debug_Normal) {
+        outColor = vec4(visualizeNormal(pixelInfoBuffer.pixels[blockIndex]), 1.0);
+        return;
+    }
+
+    if (ubo.debugView == debug_Position) {
+        outColor = vec4(visualizePosition(pixelInfoBuffer.pixels[blockIndex]), 1.0);
         return;
     }
 

@@ -103,8 +103,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     Hit prevHit;
 
     for (; i < ubo.maxBounces; i++) {
-        if (ubo.debugView == debug_Normal) break;
-        
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
@@ -167,9 +165,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
     // Debug visualisations
     if (ubo.debugView == debug_Bounces) {
         return vec3(i / float(ubo.maxBounces));
-    }
-    if (ubo.debugView == debug_Normal) {
-        return foundIntersection(hit) ? (hit.normal * 0.5 + 0.5) : vec3(0.0);
     }
     return radiance;
 }
@@ -237,10 +232,14 @@ float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
+    vec3 normalSum = vec3(0.0);
+    vec3 positionSum = vec3(0.0);
+    float hitCount = 0.0;
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
             vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
+            Hit primaryHit = intersection(ray);
             vec3 rayColor = traceRay(camera, ray, seed);
             // TODO: find where the NaNs are coming from instead of just skipping them
             if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b)) {
@@ -250,8 +249,20 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
 
             takenSamples += 1.0;
             updateVariance(luma(rayColor.rgb), pixelInfo);
+
+            if (foundIntersection(primaryHit)) {
+                normalSum += normalize(primaryHit.normal);
+                positionSum += primaryHit.p;
+                hitCount += 1.0;
+            }
         }
     }
+
+    if (hitCount > 0.0) {
+        pixelInfo.normal = vec4(normalize(normalSum / hitCount), 1.0);
+        pixelInfo.position = vec4(positionSum / hitCount, 1.0);
+    }
+
     return colorSum;
 }
 
@@ -275,7 +286,15 @@ void main() {
         prevColor = vec3(0);
         
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
-        pixelInfoBuffer.pixels[varianceIndex] = PixelInfo(0.0, 0.0, 0, 0.0, 0);
+        PixelInfo initInfo = pixelInfoBuffer.pixels[varianceIndex];
+        initInfo.normal = vec4(0.0);
+        initInfo.position = vec4(0.0);
+        initInfo.mean = 0.0;
+        initInfo.m2 = 0.0;
+        initInfo.count = 0;
+        initInfo.varianceProba = 0.0;
+        initInfo.selectionMask = 0;
+        pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
     Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
@@ -297,7 +316,14 @@ void main() {
     vec3 colorSum = vec3(0);
     if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
-        pixelInfoBuffer.pixels[blockVarianceIndex] = PixelInfo(pixelInfo.mean, pixelInfo.m2, pixelInfo.count, pixelInfo.varianceProba, pixelInfo.selectionMask);
+        PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
+        updatedInfo.normal = pixelInfo.normal;
+        updatedInfo.position = pixelInfo.position;
+        updatedInfo.mean = pixelInfo.mean;
+        updatedInfo.m2 = pixelInfo.m2;
+        updatedInfo.count = pixelInfo.count;
+        updatedInfo.varianceProba = pixelInfo.varianceProba;
+        pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
     }
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);

@@ -74,7 +74,7 @@ void Application::initParameters() {
         "debugView",
         "Debug View",
         static_cast<int>(DebugView::None),
-        { "None", "Bounces", "Normal", "Selection Mask", "Variance", "Hit Checks" },
+        { "None", "Bounces", "Normal", "Position", "Selection Mask", "Variance", "Hit Checks" },
         true,
         "Pathtracer"
     );

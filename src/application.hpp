@@ -19,11 +19,12 @@
 
 enum class DebugView : int {
     None = 0,
-    Bounces,
-    Normal,
-    SelectionMask,
-    Variance,
-    HitChecks
+    Bounces = 1,
+    Normal = 2,
+    Position = 3,
+    SelectionMask = 4,
+    Variance = 5,
+    HitChecks = 6
 };
 
 class Application {

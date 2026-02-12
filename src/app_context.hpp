@@ -54,6 +54,8 @@ struct ScreenUBO {
 };
 
 struct PixelInfo {
+    alignas(16) glm::vec4 normal;
+    alignas(16) glm::vec4 position;
     float mean;
     float m2;
     int count;
