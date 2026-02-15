@@ -114,13 +114,11 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
     auto& transforms = registry.storage<ecs::Transform>();
     auto& meshRefs = registry.storage<ecs::MeshRef>();
     auto& boxes = registry.storage<ecs::Box>();
+    auto& spheres = registry.storage<ecs::Sphere>();
     auto& meshAssets = ctx.scene->getMeshAssets();
 
-    auto& planes = registry.storage<ecs::Plane>();
-    auto& planeColliders = registry.storage<ecs::PlaneCollider>();
-
     for (auto it = gStates.begin(); it != gStates.end();) {
-        if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshRefs.has(it->first) && !boxes.has(it->first))) {
+        if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshRefs.has(it->first) && !boxes.has(it->first) && !spheres.has(it->first))) {
             it = gStates.erase(it);
         } else {
             ++it;
@@ -141,7 +139,8 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
         ecs::Transform& t = transforms.get(e);
         const bool hasMesh = meshRefs.has(e);
         const bool hasBox = boxes.has(e);
-        if (!hasMesh && !hasBox) continue;
+        const bool hasSphere = spheres.has(e);
+        if (!hasMesh && !hasBox && !hasSphere) continue;
 
         MeshHandle meshHandle = -1;
         if (hasMesh) {
@@ -164,9 +163,12 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
                 computeMeshBounds(asset, boundsMin, boundsMax);
                 localCenter = 0.5f * (boundsMin + boundsMax);
                 localHalfExtents = 0.5f * (boundsMax - boundsMin);
-            } else {
+            } else if (hasBox) {
                 localCenter = glm::vec3(0.0f);
                 localHalfExtents = glm::vec3(1.0f);
+            } else {
+                localCenter = glm::vec3(0.0f);
+                localHalfExtents = glm::vec3(spheres.get(e).radius);
             }
 
             const auto& safeExtent = [](float v) { return std::max(std::abs(v), 1e-3f); };
@@ -178,14 +180,25 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
 
             SolverState state;
             state.localCenterScaled = localCenter * t.scale;
-            state.body = std::make_unique<RigidBox>(
-                scaledHalfExtents.x * 2.0f,
-                scaledHalfExtents.y * 2.0f,
-                scaledHalfExtents.z * 2.0f,
-                rb.density,
-                glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z),
-                glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z)
-            );
+            if (hasSphere) {
+                const float maxScale = std::max(std::max(std::abs(t.scale.x), std::abs(t.scale.y)), std::abs(t.scale.z));
+                const float radius = std::max(1e-4f, spheres.get(e).radius * maxScale);
+                state.body = std::make_unique<RigidSphere>(
+                    radius,
+                    rb.density,
+                    glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z),
+                    glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z)
+                );
+            } else {
+                state.body = std::make_unique<RigidBox>(
+                    scaledHalfExtents.x * 2.0f,
+                    scaledHalfExtents.y * 2.0f,
+                    scaledHalfExtents.z * 2.0f,
+                    rb.density,
+                    glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z),
+                    glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z)
+                );
+            }
 
             const glm::vec3 worldCenter = t.position + (t.rotation * state.localCenterScaled);
             state.body->X = glm::vec3(worldCenter.x, worldCenter.y, worldCenter.z);
@@ -250,7 +263,7 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
                 applyFrameSnapshot(*state.body, already->second, t, rb);
                 continue;
             }
-            state.solver.step(dt, planeColliders, planes, transforms);
+            state.solver.step(dt, registry);
             syncFromBody(*state.body, state.localCenterScaled, t, rb);
             state.snapshots.insert_or_assign(f, captureFrameSnapshot(*state.body, t, rb));
         }
@@ -270,6 +283,9 @@ void bakePhysicsSimulation(Registry& registry, AppContext& ctx) {
     const bool wasPaused = ctx.animation->isPaused();
     const int endFrame = ctx.animation->getEndFrame();
 
+    ctx.animation->reset(0);
+    physicsSystem(registry, ctx);
+
     physics_detail::gStates.clear();
     physics_detail::gPrevSolverFrame = -1;
     physics_detail::gPrevSystemFrame = -1;
@@ -277,10 +293,10 @@ void bakePhysicsSimulation(Registry& registry, AppContext& ctx) {
 
     ctx.animation->pause();
     for (int f = 0; f < endFrame; ++f) {
-        ctx.animation->reset(f);
         transformAnimationSystem(registry, ctx);
         transformSystem(registry, ctx);
         physicsSolver(registry, ctx);
+        ctx.animation->stepFixed();
     }
     physics_detail::gIsBaking = false;
 
@@ -293,16 +309,23 @@ void bakePhysicsSimulation(Registry& registry, AppContext& ctx) {
 void physicsSystem(Registry& registry, AppContext& ctx) {
     using namespace ecs::physics_detail;
 
+    static int prevFrame = 0;
+    if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame() && !*ctx.restartRender) return;
+    prevFrame = ctx.animation->getFrame();
+
     if (!ctx.animation) return;
 
     auto& rigidBodies = registry.storage<ecs::RigidBody>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& meshRefs = registry.storage<ecs::MeshRef>();
     auto& boxes = registry.storage<ecs::Box>();
+    auto& spheres = registry.storage<ecs::Sphere>();
 
     // Remove states that no longer points to proper rigid bodies
     for (auto it = gStates.begin(); it != gStates.end();) {
-        if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshRefs.has(it->first) && !boxes.has(it->first))) {
+        if (!rigidBodies.has(it->first) || !transforms.has(it->first)) {
+            it = gStates.erase(it);
+        } else if (!meshRefs.has(it->first) && !boxes.has(it->first) && !spheres.has(it->first)) {
             it = gStates.erase(it);
         } else {
             ++it;
@@ -316,7 +339,7 @@ void physicsSystem(Registry& registry, AppContext& ctx) {
     // Apply the physics transform
     bool changed = false;
     for (const ecs::Entity& e : rigidBodies.entities()) {
-        if (!transforms.has(e) || (!meshRefs.has(e) && !boxes.has(e))) continue;
+        if (!transforms.has(e) || (!meshRefs.has(e) && !boxes.has(e) && !spheres.has(e))) continue;
         auto it = gStates.find(e);
         if (it == gStates.end()) continue;
 

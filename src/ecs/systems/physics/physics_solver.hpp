@@ -10,7 +10,8 @@
 
 #include "../../registry.hpp"
 #include "../../components/objects/plane.hpp"
-#include "../../components/objects/plane_collider.hpp"
+#include "../../components/objects/collider.hpp"
+#include "../../components/objects/sphere.hpp"
 #include "../../components/transform.hpp"
 #include "../../../app_context.hpp"
 #include "../../../scene/asset/mesh.hpp"
@@ -70,32 +71,36 @@ public:
     float width, height, depth;
 };
 
+class RigidSphere : public BodyAttributes {
+public:
+    explicit RigidSphere(
+        float r = 1.0f, float dens = 50.0f,
+        glm::vec3 v0 = glm::vec3(0, 0, 0), glm::vec3 omega0 = glm::vec3(0, 0, 0));
+
+    float radius;
+};
+
 class RigidSolver {
 public:
     explicit RigidSolver(BodyAttributes* body0 = nullptr, glm::vec3 g = glm::vec3(0, 0, 0));
 
     void init(BodyAttributes* body0);
     void setGravity(const glm::vec3& g);
-    void step(
-        float dt,
-        const ComponentStorage<PlaneCollider>& planeColliders,
-        const ComponentStorage<Plane>& planes,
-        const ComponentStorage<Transform>& transforms
-    );
+    void step(float dt, Registry& registry);
 
     BodyAttributes* body = nullptr;
 
 private:
     void integrate(float dt);
     void computeForceAndTorque();
-    void resolvePlaneCollision(const glm::vec3& p0, const glm::vec3& n, float eps, float mu);
+    void resolvePlaneCollision(const Entity& planeEntity, Registry& registry);
 
     glm::vec3 gravity;
     std::size_t stepCount;
     float simTime;
     float appTime;
 
-    float simDt = 0.0001f;
+    float simDt = 0.00005f;
 };
 
 struct SolverState {

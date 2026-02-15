@@ -2,7 +2,7 @@
 
 namespace ecs {
 
-struct PlaneCollider {
+struct Collider {
     float restitution = 0.4f;
     float friction = 0.4f;
 };

@@ -41,6 +41,34 @@ RigidBox::RigidBox(
     vdata0.push_back(glm::vec3(-0.5f * w,  0.5f * h,  0.5f * d));
 }
 
+RigidSphere::RigidSphere(
+    const float r, const float dens,
+    const glm::vec3 v0, const glm::vec3 omega0) : radius(r)
+{
+    V = v0;
+    omega = omega0;
+
+    const float rSafe = std::max(radius, 1e-4f);
+    M = dens * (4.0f / 3.0f) * glm::pi<float>() * rSafe * rSafe * rSafe;
+    const float i = (2.0f / 5.0f) * M * rSafe * rSafe;
+    I0 = glm::mat3(i, 0, 0, 0, i, 0, 0, 0, i);
+    I0inv = glm::inverse(I0);
+    Iinv = R * I0inv * glm::transpose(R);
+
+    // Sampled support points for contacts (Fibonacci sphere)
+    const int kSphereSamples = 256;
+    const float kGoldenAngle = glm::pi<float>() * (3.0f - std::sqrt(5.0f));
+    vdata0.reserve(kSphereSamples);
+    for (int i = 0; i < kSphereSamples; ++i) {
+        const float y = 1.0f - 2.0f * (static_cast<float>(i) + 0.5f) / static_cast<float>(kSphereSamples);
+        const float r = std::sqrt(std::max(0.0f, 1.0f - y * y));
+        const float theta = kGoldenAngle * static_cast<float>(i);
+        const float x = std::cos(theta) * r;
+        const float z = std::sin(theta) * r;
+        vdata0.emplace_back(x * rSafe, y * rSafe, z * rSafe);
+    }
+}
+
 RigidSolver::RigidSolver(BodyAttributes* body0, const glm::vec3 g) :
     body(body0), gravity(g), stepCount(0), simTime(0), appTime(0) {}
 
@@ -55,24 +83,17 @@ void RigidSolver::setGravity(const glm::vec3& g) {
     gravity = g;
 }
 
-void RigidSolver::step(
-    const float dt,
-    const ComponentStorage<PlaneCollider>& planeColliders,
-    const ComponentStorage<Plane>& planes,
-    const ComponentStorage<Transform>& transforms
-) {
+void RigidSolver::step(const float dt, Registry& registry) {
     if (!body || dt <= 0.0f) return;
     appTime += dt;
+
+    auto& colliders = registry.storage<Collider>();
 
     while (appTime > simTime) {
         computeForceAndTorque();
         integrate(simDt * 0.5f);
-        for (const Entity& e : planeColliders.entities()) {
-            if (!planes.has(e) || !transforms.has(e)) continue;
-            const PlaneCollider& collider = planeColliders.get(e);
-            const Transform& planeTransform = transforms.get(e);
-            const glm::vec3 normal = planeTransform.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
-            resolvePlaneCollision(planeTransform.position, normal, collider.restitution, collider.friction);
+        for (const Entity& e : colliders.entities()) {
+            if (registry.storage<Plane>().has(e)) resolvePlaneCollision(e, registry);
         }
         integrate(simDt * 0.5f);
         ++stepCount;
@@ -110,7 +131,19 @@ void RigidSolver::computeForceAndTorque() {
     }
 }
 
-void RigidSolver::resolvePlaneCollision(const glm::vec3& p0, const glm::vec3& n, float eps, float mu) {
+void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry) {
+    auto& planes = registry.storage<Plane>();
+    auto& colliders = registry.storage<Collider>();
+    auto& transforms = registry.storage<Transform>();
+    if (!planes.has(e) || !colliders.has(e) || !transforms.has(e)) return;
+
+    const Collider& collider = colliders.get(e);
+    const Transform& planeTransform = transforms.get(e);
+    const glm::vec3 p0 = planeTransform.position;
+    const glm::vec3 n = planeTransform.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const float eps = collider.restitution;
+    const float mu = collider.friction;
+
     for (size_t i = 0; i < body->vdata0.size(); i++) {
         const glm::vec3 rRel = body->R * body->vdata0[i];
         const glm::vec3 r = rRel + body->X;

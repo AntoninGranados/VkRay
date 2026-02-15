@@ -17,7 +17,7 @@ namespace ecs {
 
 void transformAnimationSystem(Registry& registry, AppContext& ctx) {
     static int prevFrame = 0;
-    if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame()) return;
+    if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame() && !*ctx.restartRender) return;
     prevFrame = ctx.animation->getFrame();
 
     auto& transformAnims = registry.storage<ecs::TransformAnim>();

@@ -10,7 +10,7 @@
 
 #include "./components/objects/sphere.hpp"
 #include "./components/objects/plane.hpp"
-#include "./components/objects/plane_collider.hpp"
+#include "./components/objects/collider.hpp"
 #include "./components/objects/box.hpp"
 #include "./components/objects/mesh.hpp"
 #include "./components/objects/rigid_body.hpp"
@@ -25,7 +25,6 @@
 #define CONFLICT_NONE {}
 
 #define REQ_TRANSFORM ComponentId::Transform
-#define REQ_TRANSFORM_PLANE ComponentId::Transform, ComponentId::Plane
 #define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
 
 enum class ComponentGroup {
@@ -41,7 +40,7 @@ enum class ComponentGroup {
     X(Transform,     Movement, { },               { })                  \
     X(Sphere,        Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(Plane,         Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(PlaneCollider, Physics,  { REQ_TRANSFORM_PLANE }, { })             \
+    X(Collider,      Physics,  { REQ_TRANSFORM }, { })                  \
     X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(RigidBody,     Physics,  { REQ_TRANSFORM }, { })                  \

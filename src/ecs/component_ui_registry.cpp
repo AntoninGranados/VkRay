@@ -101,15 +101,15 @@ void ComponentUiRegistry::init() {
         return false;
     });
 
-    ui_reg.add<ecs::PlaneCollider>([](ecs::PlaneCollider& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Collider>([](ecs::Collider& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         bool update = false;
-        if (!ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane Collider")) return false;
+        if (!ImGui::CollapsingHeader(ICON_FA_SQUARE " Collider")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::Text("Restitution:");
-        update |= ImGui::DragFloat("##PlaneColliderRestitution", &c.restitution, 0.01f, 0.0f, 1.0f);
+        update |= ImGui::DragFloat("##ColliderRestitution", &c.restitution, 0.01f, 0.0f, 1.0f);
         ImGui::Text("Friction:");
-        update |= ImGui::DragFloat("##PlaneColliderFriction", &c.friction, 0.01f, 0.0f, 1.0f);
+        update |= ImGui::DragFloat("##ColliderFriction", &c.friction, 0.01f, 0.0f, 1.0f);
         ImGui::PopItemWidth();
 
         return update;
