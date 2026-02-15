@@ -16,10 +16,18 @@ namespace ecs {
 
 namespace physics_detail {
 
-static std::unordered_map<ecs::Entity, SolverState> gStates;
+static std::unordered_map<ecs::Entity, BodyState> gStates;
+static std::unordered_map<ecs::Entity, ecs::Transform> gPrevColliderTransforms;
 static int gPrevSolverFrame = -1;
 static int gPrevSystemFrame = -1;
 static bool gIsBaking = false;
+
+bool getPrevColliderTransform(const Entity& entity, Transform& outTransform) {
+    auto it = gPrevColliderTransforms.find(entity);
+    if (it == gPrevColliderTransforms.end()) return false;
+    outTransform = it->second;
+    return true;
+}
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax) {
     const auto& vertices = mesh.getVertices();
@@ -115,6 +123,7 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
     auto& meshRefs = registry.storage<ecs::MeshRef>();
     auto& boxes = registry.storage<ecs::Box>();
     auto& spheres = registry.storage<ecs::Sphere>();
+    auto& colliders = registry.storage<ecs::Collider>();
     auto& meshAssets = ctx.scene->getMeshAssets();
 
     for (auto it = gStates.begin(); it != gStates.end();) {
@@ -178,7 +187,7 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
             scaledHalfExtents.y = safeExtent(scaledHalfExtents.y);
             scaledHalfExtents.z = safeExtent(scaledHalfExtents.z);
 
-            SolverState state;
+            BodyState state;
             state.localCenterScaled = localCenter * t.scale;
             if (hasSphere) {
                 const float maxScale = std::max(std::max(std::abs(t.scale.x), std::abs(t.scale.y)), std::abs(t.scale.z));
@@ -220,9 +229,10 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
             it = gStates.insert_or_assign(e, std::move(state)).first;
         }
 
-        SolverState& state = it->second;
+        BodyState& state = it->second;
         if (!state.body) continue;
 
+        // TODO: manually set the gravity so it is not an hardcoded value
         state.solver.setGravity(
             rb.useGravity ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f)
         );
@@ -234,6 +244,7 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
             continue;
         }
 
+        // Should only be applied by the baking function
         if (!gIsBaking) continue;
 
         int startFrame = state.initializedFrame;
@@ -263,7 +274,7 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
                 applyFrameSnapshot(*state.body, already->second, t, rb);
                 continue;
             }
-            state.solver.step(dt, registry);
+            state.solver.step(e, dt, registry);
             syncFromBody(*state.body, state.localCenterScaled, t, rb);
             state.snapshots.insert_or_assign(f, captureFrameSnapshot(*state.body, t, rb));
         }
@@ -273,6 +284,13 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
 
     if (changed) {
         *ctx.restartRender = true;
+    }
+
+    if (gIsBaking) {
+        for (const ecs::Entity& e : colliders.entities()) {
+            if (!transforms.has(e)) continue;
+            gPrevColliderTransforms.insert_or_assign(e, transforms.get(e));
+        }
     }
 }
 
@@ -287,6 +305,7 @@ void bakePhysicsSimulation(Registry& registry, AppContext& ctx) {
     physicsSystem(registry, ctx);
 
     physics_detail::gStates.clear();
+    physics_detail::gPrevColliderTransforms.clear();
     physics_detail::gPrevSolverFrame = -1;
     physics_detail::gPrevSystemFrame = -1;
     physics_detail::gIsBaking = true;
@@ -345,7 +364,7 @@ void physicsSystem(Registry& registry, AppContext& ctx) {
 
         ecs::Transform& t = transforms.get(e);
         ecs::RigidBody& rb = rigidBodies.get(e);
-        SolverState& state = it->second;
+        BodyState& state = it->second;
         auto snap = state.snapshots.find(currFrame);
         if (snap == state.snapshots.end()) continue;
 

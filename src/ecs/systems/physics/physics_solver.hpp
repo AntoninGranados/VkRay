@@ -86,14 +86,15 @@ public:
 
     void init(BodyAttributes* body0);
     void setGravity(const glm::vec3& g);
-    void step(float dt, Registry& registry);
+    void step(Entity bodyEntity, float dt, Registry& registry);
 
     BodyAttributes* body = nullptr;
 
 private:
     void integrate(float dt);
     void computeForceAndTorque();
-    void resolvePlaneCollision(const Entity& planeEntity, Registry& registry);
+    void resolvePlaneCollision(const Entity& planeEntity, Registry& registry, float colliderDt);
+    void resolveSphereCollision(const Entity& sphereEntity, Registry& registry, float colliderDt);
 
     glm::vec3 gravity;
     std::size_t stepCount;
@@ -103,13 +104,15 @@ private:
     float simDt = 0.00005f;
 };
 
-struct SolverState {
+struct BodyState {
     glm::vec3 localCenterScaled { 0.0f, 0.0f, 0.0f };
     std::unique_ptr<BodyAttributes> body;
     RigidSolver solver;
     int initializedFrame = 0;
     std::unordered_map<int, FrameSnapshot> snapshots;
 };
+
+bool getPrevColliderTransform(const Entity& entity, Transform& outTransform);
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax);
 

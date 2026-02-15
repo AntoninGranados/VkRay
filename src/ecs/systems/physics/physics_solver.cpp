@@ -83,9 +83,10 @@ void RigidSolver::setGravity(const glm::vec3& g) {
     gravity = g;
 }
 
-void RigidSolver::step(const float dt, Registry& registry) {
+void RigidSolver::step(const Entity bodyEntity, const float dt, Registry& registry) {
     if (!body || dt <= 0.0f) return;
     appTime += dt;
+    const float colliderDt = std::max(dt, 1e-8f);
 
     auto& colliders = registry.storage<Collider>();
 
@@ -93,7 +94,9 @@ void RigidSolver::step(const float dt, Registry& registry) {
         computeForceAndTorque();
         integrate(simDt * 0.5f);
         for (const Entity& e : colliders.entities()) {
-            if (registry.storage<Plane>().has(e)) resolvePlaneCollision(e, registry);
+            if (e == bodyEntity) continue;
+            if (registry.storage<Plane>().has(e)) resolvePlaneCollision(e, registry, colliderDt);
+            if (registry.storage<Sphere>().has(e)) resolveSphereCollision(e, registry, colliderDt);
         }
         integrate(simDt * 0.5f);
         ++stepCount;
@@ -131,18 +134,21 @@ void RigidSolver::computeForceAndTorque() {
     }
 }
 
-void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry) {
+// TODO: create a single function for collision resolution using SDFs
+void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry, const float colliderDt) {
     auto& planes = registry.storage<Plane>();
     auto& colliders = registry.storage<Collider>();
     auto& transforms = registry.storage<Transform>();
     if (!planes.has(e) || !colliders.has(e) || !transforms.has(e)) return;
 
     const Collider& collider = colliders.get(e);
-    const Transform& planeTransform = transforms.get(e);
-    const glm::vec3 p0 = planeTransform.position;
-    const glm::vec3 n = planeTransform.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const Transform& t = transforms.get(e);
+    const glm::vec3 p0 = t.position;
+    const glm::vec3 n = t.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
     const float eps = collider.restitution;
     const float mu = collider.friction;
+    Transform prevTransform {};
+    const bool hasPrev = getPrevColliderTransform(e, prevTransform);
 
     for (size_t i = 0; i < body->vdata0.size(); i++) {
         const glm::vec3 rRel = body->R * body->vdata0[i];
@@ -151,7 +157,25 @@ void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry) {
         const float dist = std::abs(d);
         const glm::vec3 normal = (d >= 0.0f) ? n : -n;
 
-        const glm::vec3 v = body->V + glm::cross(body->omega, rRel);
+        glm::vec3 colliderVelocity(0.0f);
+        if (hasPrev) {
+            const glm::vec3 linearVelocity = (t.position - prevTransform.position) / colliderDt;
+            const glm::quat qPrev = glm::normalize(prevTransform.rotation);
+            const glm::quat qCurr = glm::normalize(t.rotation);
+            glm::quat dq = qCurr * glm::inverse(qPrev);
+            if (dq.w < 0.0f) dq = -dq;
+            const float w = std::clamp(dq.w, -1.0f, 1.0f);
+            const float angle = 2.0f * std::acos(w);
+            const float sinHalf = std::sqrt(std::max(0.0f, 1.0f - w * w));
+            glm::vec3 angularVelocity(0.0f);
+            if (sinHalf > 1e-6f && std::isfinite(angle)) {
+                const glm::vec3 axis = glm::vec3(dq.x, dq.y, dq.z) / sinHalf;
+                angularVelocity = axis * (angle / colliderDt);
+            }
+            colliderVelocity = linearVelocity + glm::cross(angularVelocity, r - t.position);
+        }
+
+        const glm::vec3 v = body->V + glm::cross(body->omega, rRel) - colliderVelocity;
         const float vRel = glm::dot(normal, v);
         if (vRel >= 1e-1f) continue; // moving away from plane
 
@@ -177,6 +201,85 @@ void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry) {
             jT = std::clamp(jT, -maxFriction, maxFriction);
             if (!std::isfinite(jT)) continue;
             J += jT * t;
+        }
+
+        body->P += J;
+        body->L += glm::cross(rRel, J);
+    }
+}
+
+// TODO: create a single function for collision resolution using SDFs
+void RigidSolver::resolveSphereCollision(const Entity& e, Registry& registry, const float colliderDt) {
+    auto& spheres = registry.storage<Sphere>();
+    auto& colliders = registry.storage<Collider>();
+    auto& transforms = registry.storage<Transform>();
+    if (!spheres.has(e) || !colliders.has(e) || !transforms.has(e)) return;
+
+    const Sphere& sphere = spheres.get(e);
+    const Collider& collider = colliders.get(e);
+    const Transform& t = transforms.get(e);
+    const glm::vec3 center = t.position;
+    const float maxScale = std::max(std::max(std::abs(t.scale.x), std::abs(t.scale.y)), std::abs(t.scale.z));
+    const float radius = std::max(1e-4f, sphere.radius * maxScale);
+    const float eps = collider.restitution;
+    const float mu = collider.friction;
+    Transform prevTransform {};
+    const bool hasPrev = getPrevColliderTransform(e, prevTransform);
+
+    for (size_t i = 0; i < body->vdata0.size(); i++) {
+        const glm::vec3 rRel = body->R * body->vdata0[i];
+        const glm::vec3 r = rRel + body->X;
+        const glm::vec3 delta = r - center;
+        const float deltaLen = glm::length(delta);
+        if (!std::isfinite(deltaLen) || deltaLen <= 1e-8f) continue;
+
+        const glm::vec3 normal = delta / deltaLen;
+        const float dist = deltaLen - radius;
+
+        glm::vec3 colliderVelocity(0.0f);
+        if (hasPrev) {
+            const glm::vec3 linearVelocity = (t.position - prevTransform.position) / colliderDt;
+            const glm::quat qPrev = glm::normalize(prevTransform.rotation);
+            const glm::quat qCurr = glm::normalize(t.rotation);
+            glm::quat dq = qCurr * glm::inverse(qPrev);
+            if (dq.w < 0.0f) dq = -dq;
+            const float w = std::clamp(dq.w, -1.0f, 1.0f);
+            const float angle = 2.0f * std::acos(w);
+            const float sinHalf = std::sqrt(std::max(0.0f, 1.0f - w * w));
+            glm::vec3 angularVelocity(0.0f);
+            if (sinHalf > 1e-6f && std::isfinite(angle)) {
+                const glm::vec3 axis = glm::vec3(dq.x, dq.y, dq.z) / sinHalf;
+                angularVelocity = axis * (angle / colliderDt);
+            }
+            colliderVelocity = linearVelocity + glm::cross(angularVelocity, r - t.position);
+        }
+
+        const glm::vec3 v = body->V + glm::cross(body->omega, rRel) - colliderVelocity;
+        const float vRel = glm::dot(normal, v);
+        if (vRel >= 1e-1f) continue; // moving away from sphere
+
+        const float approach = -vRel * simDt;
+        if (dist > approach + 1e-3f) continue;
+
+        const glm::vec3 rCrossN = glm::cross(rRel, normal);
+        const float denom = 1.0f / body->M + glm::dot(rCrossN, body->Iinv * rCrossN);
+        if (!std::isfinite(denom) || denom <= 1e-8f) continue;
+        const float j = -(1.0f + eps) * vRel / denom;
+        if (!std::isfinite(j) || j <= 0.0f) continue;
+
+        glm::vec3 J = j * normal;
+        const glm::vec3 vT = v - glm::dot(v, normal) * normal;
+        const float vTlen = glm::length(vT);
+        if (vTlen >= 1e-8f) {
+            const glm::vec3 tDir = vT / vTlen;
+            const glm::vec3 rCrossT = glm::cross(rRel, tDir);
+            const float denomT = 1.0f / body->M + glm::dot(rCrossT, body->Iinv * rCrossT);
+            if (!std::isfinite(denomT) || denomT <= 1e-8f) continue;
+            float jT = -glm::dot(tDir, v) / denomT;
+            const float maxFriction = mu * j;
+            jT = std::clamp(jT, -maxFriction, maxFriction);
+            if (!std::isfinite(jT)) continue;
+            J += jT * tDir;
         }
 
         body->P += J;
