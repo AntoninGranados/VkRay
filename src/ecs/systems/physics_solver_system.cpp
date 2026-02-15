@@ -122,26 +122,34 @@ void RigidSolver::resolvePlaneCollision(const glm::vec3& p0, const glm::vec3& n,
         const glm::vec3 rRel = body->R * body->vdata0[i];
         const glm::vec3 r = rRel + body->X;
         const float d = glm::dot(n, r - p0);
-        if (d > 0.0f) continue;
+        const float dist = std::abs(d);
+        const glm::vec3 normal = (d >= 0.0f) ? n : -n;
 
         const glm::vec3 v = body->V + glm::cross(body->omega, rRel);
-        const float vRel = glm::dot(n, v);
-        if (vRel >= 0.0f) continue;
+        const float vRel = glm::dot(normal, v);
+        if (vRel >= 1e-1f) continue; // moving away from plane
 
-        const glm::vec3 rCrossN = glm::cross(rRel, n);
+        const float approach = -vRel * simDt;
+        if (dist > approach + 1e-3f) continue;
+
+        const glm::vec3 rCrossN = glm::cross(rRel, normal);
         const float denom = 1.0f / body->M + glm::dot(rCrossN, body->Iinv * rCrossN);
+        if (!std::isfinite(denom) || denom <= 1e-8f) continue;
         const float j = -(1.0f + eps) * vRel / denom;
+        if (!std::isfinite(j) || j <= 0.0f) continue;
 
-        glm::vec3 J = j * n;
-        const glm::vec3 vT = v - glm::dot(v, n) * n;
+        glm::vec3 J = j * normal;
+        const glm::vec3 vT = v - glm::dot(v, normal) * normal;
         const float vTlen = glm::length(vT);
         if (vTlen >= 1e-8f) {
             const glm::vec3 t = vT / vTlen;
             const glm::vec3 rCrossT = glm::cross(rRel, t);
             const float denomT = 1.0f / body->M + glm::dot(rCrossT, body->Iinv * rCrossT);
+            if (!std::isfinite(denomT) || denomT <= 1e-8f) continue;
             float jT = -glm::dot(t, v) / denomT;
             const float maxFriction = mu * j;
             jT = std::clamp(jT, -maxFriction, maxFriction);
+            if (!std::isfinite(jT)) continue;
             J += jT * t;
         }
 
