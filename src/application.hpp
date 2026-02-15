@@ -22,9 +22,10 @@ enum class DebugView : int {
     Bounces = 1,
     Normal = 2,
     Position = 3,
-    SelectionMask = 4,
-    Variance = 5,
-    HitChecks = 6
+    Diffuse = 4,
+    SelectionMask = 5,
+    Variance = 6,
+    HitChecks = 7
 };
 
 class Application {

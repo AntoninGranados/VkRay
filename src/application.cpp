@@ -69,12 +69,13 @@ void Application::initParameters() {
     parameters.addFloat("renderResolution", "Render Resolution", 1.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
     parameters.addBool("importanceSampling", "Importance Sampling", true, false, "Pathtracer");
     parameters.addBool("varianceSampling", "Variance Sampling", true, false, "Pathtracer");
+    parameters.addBool("denoising", "Denoising", false, false, "Pathtracer");
     parameters.addInt("varianceWarmup", "Variance Warmup Samples", 64, 0, 2048, 1, false, "Pathtracer");
     parameters.addEnum(
         "debugView",
         "Debug View",
         static_cast<int>(DebugView::None),
-        { "None", "Bounces", "Normal", "Position", "Selection Mask", "Variance", "Hit Checks" },
+        { "None", "Bounces", "Normal", "Position", "Diffuse", "Selection Mask", "Variance", "Hit Checks" },
         true,
         "Pathtracer"
     );
@@ -209,4 +210,5 @@ void Application::fillUBOs() {
     screen.resolution = renderState.resolution;
     screen.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
     screen.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
+    screen.denoisingEnabled = static_cast<int>(parameters.getBool("denoising"));
 }

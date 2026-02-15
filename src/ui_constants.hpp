@@ -5,7 +5,7 @@
 namespace ui {
 
 // Window
-inline const float window_bg_alpha = 0.2f;
+inline const float window_bg_alpha = 0.8f;
 
 // Widget
 inline const float widget_rounding = 3.0f;

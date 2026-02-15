@@ -51,11 +51,13 @@ struct ScreenUBO {
     float resolution;
     int debugView;
     int previewBorderEnabled;
+    int denoisingEnabled;
 };
 
 struct PixelInfo {
     alignas(16) glm::vec4 normal;
     alignas(16) glm::vec4 position;
+    alignas(16) glm::vec4 diffuse;
     float mean;
     float m2;
     int count;

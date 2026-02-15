@@ -84,8 +84,8 @@ void initMesh(Scene &scene, LightMode &lightMode) {
     const MaterialHandle lucyHandle = scene.pushMaterial(Material{
         .name = "Lucy",
         .type = MaterialType::GgxMetal,
-        .albedo = { 1.0f, 1.0f, 1.0f },
-        .payload = { 3.0f, 0.1f },
+        .albedo = { 0.8f, 0.2f, 0.2f },
+        .payload = { 0.4f, 0.0f },
     });
     scene.pushMesh(
         "Lucy",
@@ -102,7 +102,7 @@ void initMesh(Scene &scene, LightMode &lightMode) {
     const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
     scene.pushPlane(
         "Floor",
-        glm::vec3(0.0, -1.0, 0.0),
+        glm::vec3(0.0, -2.0, 0.0),
         glm::vec3(0.0,  1.0 , 0.0),
         floorHandle
     );

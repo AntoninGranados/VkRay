@@ -41,9 +41,10 @@ struct Material {
 #define debug_Bounces       Enum(1)
 #define debug_Normal        Enum(2)
 #define debug_Position      Enum(3)
-#define debug_SelectionMask Enum(4)
-#define debug_Variance      Enum(5)
-#define debug_HitChecks     Enum(6)
+#define debug_Diffuse       Enum(4)
+#define debug_SelectionMask Enum(5)
+#define debug_Variance      Enum(6)
+#define debug_HitChecks     Enum(7)
 
 struct Object {
     Enum type;
@@ -103,6 +104,7 @@ struct Mesh {
 struct PixelInfo {
     vec4 normal;
     vec4 position;
+    vec4 diffuse;
     float mean;
     float m2;
     int count;

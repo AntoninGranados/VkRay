@@ -232,14 +232,10 @@ float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
-    vec3 normalSum = vec3(0.0);
-    vec3 positionSum = vec3(0.0);
-    float hitCount = 0.0;
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
             vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
-            Hit primaryHit = intersection(ray);
             vec3 rayColor = traceRay(camera, ray, seed);
             // TODO: find where the NaNs are coming from instead of just skipping them
             if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b)) {
@@ -249,18 +245,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
 
             takenSamples += 1.0;
             updateVariance(luma(rayColor.rgb), pixelInfo);
-
-            if (foundIntersection(primaryHit)) {
-                normalSum += normalize(primaryHit.normal);
-                positionSum += primaryHit.p;
-                hitCount += 1.0;
-            }
         }
-    }
-
-    if (hitCount > 0.0) {
-        pixelInfo.normal = vec4(normalize(normalSum / hitCount), 1.0);
-        pixelInfo.position = vec4(positionSum / hitCount, 1.0);
     }
 
     return colorSum;
@@ -289,6 +274,7 @@ void main() {
         PixelInfo initInfo = pixelInfoBuffer.pixels[varianceIndex];
         initInfo.normal = vec4(0.0);
         initInfo.position = vec4(0.0);
+        initInfo.diffuse = vec4(0.0);
         initInfo.mean = 0.0;
         initInfo.m2 = 0.0;
         initInfo.count = 0;
@@ -319,6 +305,7 @@ void main() {
         PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
         updatedInfo.normal = pixelInfo.normal;
         updatedInfo.position = pixelInfo.position;
+        updatedInfo.diffuse = pixelInfo.diffuse;
         updatedInfo.mean = pixelInfo.mean;
         updatedInfo.m2 = pixelInfo.m2;
         updatedInfo.count = pixelInfo.count;
@@ -328,14 +315,26 @@ void main() {
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
+    // compute selection mask and debug info
+    Ray primaryRay = getRay(camera, fragPos, false, seed);
+    Hit primaryHit = intersection(primaryRay);
+    Hit selectedHit = NO_HIT;
     int intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
-        Hit hit = rayObjectIntersection(getRay(camera, fragPos, false, seed), objectBuffer.objects[objectBuffer.selectedObjectId]);
-        if (foundIntersection(hit)) intersection = 1;
+        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[objectBuffer.selectedObjectId]);
+        if (foundIntersection(selectedHit)) {
+            intersection = 1;
+        }
     }
     uint selectionIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo selectionInfo = pixelInfoBuffer.pixels[selectionIndex];
     selectionInfo.selectionMask = intersection;
+    if (foundIntersection(primaryHit)) {
+        selectionInfo.normal = vec4(normalize(primaryHit.normal), 1.0);
+        selectionInfo.position = vec4(primaryHit.p, 1.0);
+        Material diffuseMat = resolveMaterial(getMaterial(primaryHit.object), primaryHit);
+        selectionInfo.diffuse = vec4(diffuseMat.albedo, 1.0);
+    }
     pixelInfoBuffer.pixels[selectionIndex] = selectionInfo;
 
     float totalCount = prevCount + takenSamples;
