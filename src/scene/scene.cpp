@@ -21,7 +21,7 @@
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
 #include "../ecs/systems/animation_system.hpp"
-#include "../ecs/systems/physics_solver_system.hpp"
+#include "../ecs/systems/physics/physics_system.hpp"
 #include "../notification_handler.hpp"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
@@ -44,7 +44,7 @@ void Scene::init() {
 void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::transformAnimationSystem);
-    preUpdateScheduler.add(ecs::physicsSolverSystem);
+    preUpdateScheduler.add(ecs::physicsSystem);
     preUpdateScheduler.add(ecs::transformSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
@@ -186,6 +186,10 @@ void Scene::drawSelectedEntityUI() { SceneEditorUI::drawSelectedEntityUI(*this);
 void Scene::drawSelectedMaterialUI() { SceneEditorUI::drawSelectedMaterialUI(*this); }
 
 void Scene::drawSelectedMeshAssetUI() { SceneEditorUI::drawSelectedMeshAssetUI(*this); }
+
+void Scene::bakePhysics() {
+    ecs::bakePhysicsSimulation(registry, *ctx);
+}
 
 
 bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select, bool includeCameras) {

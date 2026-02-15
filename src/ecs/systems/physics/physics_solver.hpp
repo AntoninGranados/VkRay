@@ -8,12 +8,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../registry.hpp"
-#include "../components/objects/plane.hpp"
-#include "../components/objects/plane_collider.hpp"
-#include "../components/transform.hpp"
-#include "../../app_context.hpp"
-#include "../../scene/asset/mesh.hpp"
+#include "../../registry.hpp"
+#include "../../components/objects/plane.hpp"
+#include "../../components/objects/plane_collider.hpp"
+#include "../../components/transform.hpp"
+#include "../../../app_context.hpp"
+#include "../../../scene/asset/mesh.hpp"
 
 namespace ecs {
 
@@ -21,6 +21,7 @@ namespace physics_detail {
 
 struct BodyAttributes {
     BodyAttributes();
+    virtual ~BodyAttributes() = default;
 
     float M;
     glm::mat3 I0, I0inv;
@@ -98,19 +99,15 @@ private:
 };
 
 struct SolverState {
-    MeshHandle meshHandle = -1;
     glm::vec3 localCenterScaled { 0.0f, 0.0f, 0.0f };
-    std::unique_ptr<RigidBox> body;
+    std::unique_ptr<BodyAttributes> body;
     RigidSolver solver;
     int initializedFrame = 0;
     std::unordered_map<int, FrameSnapshot> snapshots;
 };
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax);
-float safeExtent(float v);
 
 } // namespace physics_detail
-
-void physicsSolverSystem(Registry& registry, AppContext& ctx);
 
 } // namespace ecs

@@ -112,6 +112,11 @@ void UiHandler::drawPreview(AppContext& ctx) {
             ctx.animation->toggle();
         }
         ImGui::SameLine();
+        if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
+            scene.bakePhysics();
+            restartRender = true;
+        }
+        ImGui::SameLine();
 
         const float barWidth = 400.0f;
         const float barHeight = 16.0f;

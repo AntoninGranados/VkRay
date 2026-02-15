@@ -25,7 +25,6 @@
 #define CONFLICT_NONE {}
 
 #define REQ_TRANSFORM ComponentId::Transform
-#define REQ_TRANSFORM_MESH ComponentId::Transform, ComponentId::MeshRef
 #define REQ_TRANSFORM_PLANE ComponentId::Transform, ComponentId::Plane
 #define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
 
@@ -45,7 +44,7 @@ enum class ComponentGroup {
     X(PlaneCollider, Physics,  { REQ_TRANSFORM_PLANE }, { })             \
     X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(RigidBody,     Physics,  { REQ_TRANSFORM_MESH }, { })             \
+    X(RigidBody,     Physics,  { REQ_TRANSFORM }, { })                  \
     X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MaterialRef,   Other,    { },               { })                  \
     X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
