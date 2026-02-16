@@ -1,4 +1,4 @@
-#include "input_controller.hpp"
+#include "input_handler.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,7 +16,7 @@
 #include "engine/engine.hpp"
 
 
-void InputController::initCallbacks(const AppContext& ctx) {
+void InputHandler::initCallbacks(const AppContext& ctx) {
     glfwSetCursorPosCallback(
         ctx.engine->getWindow().get(),
         [](GLFWwindow* window, double x, double y) {
@@ -41,11 +41,11 @@ void InputController::initCallbacks(const AppContext& ctx) {
     );
 }
 
-void InputController::pollEvents() {
+void InputHandler::pollEvents() {
     glfwPollEvents();
 }
 
-void InputController::handle(const AppContext& ctx, float dt) {
+void InputHandler::handle(const AppContext& ctx, float dt) {
     switch (ctx.renderState->renderMode) {
         case RenderMode::Preview:           handlePreview(ctx, dt); break;
         case RenderMode::RenderSingle:
@@ -53,7 +53,7 @@ void InputController::handle(const AppContext& ctx, float dt) {
     }
 }
 
-void InputController::handlePreview(const AppContext& ctx, float dt) {
+void InputHandler::handlePreview(const AppContext& ctx, float dt) {
     GLFWwindow* window = ctx.engine->getWindow().get();
     ctx.renderState->resolution = ctx.parameters->getFloat("previewResolution");
 
@@ -123,7 +123,7 @@ void InputController::handlePreview(const AppContext& ctx, float dt) {
     }
 }
 
-void InputController::handleRender(const AppContext& ctx, float dt) {
+void InputHandler::handleRender(const AppContext& ctx, float dt) {
     GLFWwindow* window = ctx.engine->getWindow().get();
     ctx.renderState->resolution = ctx.parameters->getFloat("renderResolution");
     updateRenderSamplesPerSecond(ctx, dt);
@@ -134,7 +134,7 @@ void InputController::handleRender(const AppContext& ctx, float dt) {
     }
 }
 
-void InputController::updateRenderSamplesPerSecond(const AppContext& ctx, float dt) {
+void InputHandler::updateRenderSamplesPerSecond(const AppContext& ctx, float dt) {
     const double dtSafe = std::max(static_cast<double>(dt), 0.0);
     ctx.renderState->samplesPerSecAccumTime += dtSafe;
     ctx.renderState->samplesPerSecAccumSamples += static_cast<double>(ctx.parameters->getInt("previewSamples"));
@@ -154,7 +154,7 @@ void InputController::updateRenderSamplesPerSecond(const AppContext& ctx, float 
     }
 }
 
-void InputController::returnToPreview(const AppContext& ctx) {
+void InputHandler::returnToPreview(const AppContext& ctx) {
     ctx.ui->restorToggledState();
     ctx.renderState->renderMode = RenderMode::Preview;
     ctx.renderState->pendingExit = false;

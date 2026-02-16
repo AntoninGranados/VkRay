@@ -33,22 +33,25 @@ public:
     void render(AppContext& ctx);
 
 private:
-    Image images[2];
-    ImageView imageViews[2];
-    Sampler samplers[2];
+    Image pathtracingImages[2];
+    ImageView pathtracingImageViews[2];
+    Sampler pathtracingSamplers[2];
+    Image outputImage;
+    ImageView outputImageView;
+    Sampler outputSampler;
     
-    DescriptorSetLayout setLayout, screenSetLayout;
-    descriptorSetList_t descriptorSets[2], screenDescriptorSets[2];
-    GraphicsPipeline pathtracingPipeline, uiPipeline;
+    DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
+    descriptorSetList_t pathtracingDescriptorSets[2], compositingDescriptorSets[2], displayDescriptorSets[2];
+    GraphicsPipeline pathtracingPipeline, compositingPipeline, displayPipeline;
     
     Buffer vertexBuffer, indexBuffer;
-    bufferList_t pathtracingUniformBuffers, screenUniformBuffers;
+    bufferList_t pathtracingUniformBuffers, displayUniformBuffers;
     bufferList_t pixelInfoBuffers;
 
     ExportService exportService;
 
     size_t frame = 0;
 
-    void renderMain(AppContext& ctx);
-    void renderUiLayer(AppContext& ctx);
+    void pathtracingPass(AppContext& ctx);
+    void uiPass(AppContext& ctx);
 };

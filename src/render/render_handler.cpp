@@ -26,7 +26,7 @@ void RenderHandler::init(AppContext& ctx) {
         );
     
         pathtracingUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(PathtracerUBO));
-        screenUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
+        displayUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
 
         VkExtent2D extent = engine.getExtent();
         size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo);
@@ -36,54 +36,72 @@ void RenderHandler::init(AppContext& ctx) {
     {   // Image (image + view + sampler) creation
         VkExtent2D extent = engine.getExtent();
         for (size_t i = 0; i < 2; i++) {
-            images[i] = engine.initImage(
+            pathtracingImages[i] = engine.initImage(
                 extent.width, extent.height,
                 VK_FORMAT_R32G32B32A32_SFLOAT,  // Use 32 bit float format to avoid quantizing every accumulation step
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
-            imageViews[i] = engine.initImageView(images[i]);
-            samplers[i] = engine.initSampler();
+            pathtracingImageViews[i] = engine.initImageView(pathtracingImages[i]);
+            pathtracingSamplers[i] = engine.initSampler();
         }
+        outputImage = engine.initImage(
+            extent.width, extent.height,
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        outputImageView = engine.initImageView(outputImage);
+        outputSampler = engine.initSampler();
 
         exportService.init(engine, extent.width, extent.height);
     }
 
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     for (size_t i = 0; i < ctx.scene->getBufferLists().size(); i++) {
-        setLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     }
-    engine.initDescriptorSetLayout(setLayout);
+    engine.initDescriptorSetLayout(pathtracingSetLayout);
     
-    screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    screenSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    engine.initDescriptorSetLayout(screenSetLayout);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    engine.initDescriptorSetLayout(compositingSetLayout);
+
+    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    engine.initDescriptorSetLayout(displaySetLayout);
     
-    {   // Pipeline creation
-        buildPipelines(ctx);
-    }
+    buildPipelines(ctx);
 
     {   // Descriptor sets creation
-        std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
-            { imageViews[0], samplers[0] },
-            { imageViews[1], samplers[1] }
+        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
+            { pathtracingImageViews[0], pathtracingSamplers[0] },
+            { pathtracingImageViews[1], pathtracingSamplers[1] }
+        };
+        std::vector<std::pair<ImageView, Sampler> > outputCombinedImageSampler = {
+            { outputImageView, outputSampler },
+            { outputImageView, outputSampler }
         };
         
         std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &combinedImageSampler[1-i], &pixelInfoBuffers };
+            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
             for (bufferList_t &buffers : storageBuffers) {
                 descriptors.push_back(&buffers);
             }
 
-            descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
+            pathtracingDescriptorSets[i] = engine.initDescriptorSetList(pathtracingSetLayout, descriptors);
 
-            screenDescriptorSets[i] = engine.initDescriptorSetList(
-                screenSetLayout,
-                { &combinedImageSampler[i], &screenUniformBuffers, &pixelInfoBuffers }
+            compositingDescriptorSets[i] = engine.initDescriptorSetList(
+                compositingSetLayout,
+                { &pathtracingCombinedImageSampler[i] }
+            );
+
+            displayDescriptorSets[i] = engine.initDescriptorSetList(
+                displaySetLayout,
+                { &outputCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
             );
         }
     }
@@ -92,24 +110,29 @@ void RenderHandler::init(AppContext& ctx) {
 void RenderHandler::destroy(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    engine.destroyDescriptorSetLayout(setLayout);
-    engine.destroyDescriptorSetLayout(screenSetLayout);
+    engine.destroyDescriptorSetLayout(pathtracingSetLayout);
+    engine.destroyDescriptorSetLayout(compositingSetLayout);
+    engine.destroyDescriptorSetLayout(displaySetLayout);
 
     for (size_t i = 0; i < 2; i++) {
-        engine.destroySampler(samplers[i]);
-        engine.destroyImage(images[i]);
-        engine.destroyImageView(imageViews[i]);
+        engine.destroySampler(pathtracingSamplers[i]);
+        engine.destroyImage(pathtracingImages[i]);
+        engine.destroyImageView(pathtracingImageViews[i]);
     }
+    engine.destroySampler(outputSampler);
+    engine.destroyImage(outputImage);
+    engine.destroyImageView(outputImageView);
 
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
     engine.destroyBufferList(pathtracingUniformBuffers);
-    engine.destroyBufferList(screenUniformBuffers);
+    engine.destroyBufferList(displayUniformBuffers);
     engine.destroyBufferList(pixelInfoBuffers);
     exportService.destroy(engine);
     
     engine.destroyGraphicsPipeline(pathtracingPipeline);
-    engine.destroyGraphicsPipeline(uiPipeline);
+    engine.destroyGraphicsPipeline(compositingPipeline);
+    engine.destroyGraphicsPipeline(displayPipeline);
 }
 
 void RenderHandler::buildPipelines(AppContext& ctx) {
@@ -120,10 +143,11 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
 
     std::string vertShaderPath = "./shaders/vert.glsl";
     std::string pathtracingFragShaderPath = "./shaders/pathtracing/pathtracing.glsl";
-    std::string uiFragShaderPath = "./shaders/frag.glsl";
+    std::string compositingFragShaderPath = "./shaders/compositing.glsl";
+    std::string displayFragShaderPath = "./shaders/frag.glsl";
     
     Shader vertShader;
-    Shader pathtracingFragShader, uiFragShader;
+    Shader pathtracingFragShader, compositingFragShader, displayFragShader;
     
     // Compile the vertex shader
     try {
@@ -158,7 +182,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
             GraphicsPipeline newPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
                 { vertShader, pathtracingFragShader },
-                { setLayout },
+                { pathtracingSetLayout },
                 pathtracingPipeline,
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
@@ -168,51 +192,89 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
             pathtracingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
                 { vertShader, pathtracingFragShader },
-                { setLayout },
+                { pathtracingSetLayout },
                 GraphicsPipeline(),
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
         }
     }
 
-    // Build the UI pipeline
+    // Build the compositing pipeline
     {
         try {
-            uiFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, uiFragShaderPath);
+            compositingFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, compositingFragShaderPath);
         } catch (...) {
             engine.destroyShader(vertShader);
             engine.destroyShader(pathtracingFragShader);
-            std::cerr << "[ERROR] Failed to compile shader [" << uiFragShaderPath << "]: UI pipeline not built" << std::endl;
+            std::cerr << "[ERROR] Failed to compile shader [" << compositingFragShaderPath << "]: compositing pipeline not built" << std::endl;
             notifications.pushMessage(
                 NotificationType::Error,
-                "Failed to compile shader [" + uiFragShaderPath + "]: UI pipeline not built"
+                "Failed to compile shader [" + compositingFragShaderPath + "]: compositing pipeline not built"
             );
             return;
         }
     
-        if (uiPipeline.get() != VK_NULL_HANDLE) {
-            GraphicsPipeline newUiPipeline = engine.initGraphicsPipeline(
+        if (compositingPipeline.get() != VK_NULL_HANDLE) {
+            GraphicsPipeline newCompositingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, uiFragShader },
-                { screenSetLayout },
-                uiPipeline
+                { vertShader, compositingFragShader },
+                { compositingSetLayout },
+                compositingPipeline,
+                VK_FORMAT_R32G32B32A32_SFLOAT
             );
-            engine.destroyGraphicsPipeline(uiPipeline);
-            uiPipeline = newUiPipeline;
+            engine.destroyGraphicsPipeline(compositingPipeline);
+            compositingPipeline = newCompositingPipeline;
         } else {
-            uiPipeline = engine.initGraphicsPipeline(
+            compositingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, uiFragShader },
-                { screenSetLayout }
+                { vertShader, compositingFragShader },
+                { compositingSetLayout },
+                GraphicsPipeline(),
+                VK_FORMAT_R32G32B32A32_SFLOAT
+            );
+        }
+    }
+
+    // Build the display pipeline
+    {
+        try {
+            displayFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, displayFragShaderPath);
+        } catch (...) {
+            engine.destroyShader(vertShader);
+            engine.destroyShader(pathtracingFragShader);
+            engine.destroyShader(compositingFragShader);
+            std::cerr << "[ERROR] Failed to compile shader [" << displayFragShaderPath << "]: display pipeline not built" << std::endl;
+            notifications.pushMessage(
+                NotificationType::Error,
+                "Failed to compile shader [" + displayFragShaderPath + "]: display pipeline not built"
+            );
+            return;
+        }
+    
+        if (displayPipeline.get() != VK_NULL_HANDLE) {
+            GraphicsPipeline newDisplayPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, displayFragShader },
+                { displaySetLayout },
+                displayPipeline
+            );
+            engine.destroyGraphicsPipeline(displayPipeline);
+            displayPipeline = newDisplayPipeline;
+        } else {
+            displayPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, displayFragShader },
+                { displaySetLayout }
             );
         }
     }
 
     engine.destroyShader(vertShader);
     engine.destroyShader(pathtracingFragShader);
-    engine.destroyShader(uiFragShader);
+    engine.destroyShader(compositingFragShader);
+    engine.destroyShader(displayFragShader);
 
-    std::cout << "[INFO] Built pipelines by recompiling [" << vertShaderPath << "], [" << pathtracingFragShaderPath << "], and [" << uiFragShaderPath << "]" << std::endl;
+    std::cout << "[INFO] Built pipelines by recompiling [" << vertShaderPath << "], [" << pathtracingFragShaderPath << "], [" << compositingFragShaderPath << "], and [" << displayFragShaderPath << "]" << std::endl;
     notifications.pushMessage(
         NotificationType::Info,
         "(Re)Built the pipelines"
@@ -226,7 +288,6 @@ void RenderHandler::render(AppContext& ctx) {
     uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
     if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
-            // renderOutput.requested = true;
             exportService.requestSave();
             ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle; // we don't want to exist when rendering an animation
         }
@@ -238,35 +299,35 @@ void RenderHandler::render(AppContext& ctx) {
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
-        std::vector<std::pair<ImageView, Sampler> > combinedImageSampler = {
-            { imageViews[0], samplers[0] },
-            { imageViews[1], samplers[1] }
+        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
+            { pathtracingImageViews[0], pathtracingSamplers[0] },
+            { pathtracingImageViews[1], pathtracingSamplers[1] }
         };
 
         std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &combinedImageSampler[1-i], &pixelInfoBuffers };
+            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
             for (bufferList_t &buffers : storageBuffers) {
                 descriptors.push_back(&buffers);
             }
             
-            descriptorSets[i] = engine.initDescriptorSetList(setLayout, descriptors);
+            pathtracingDescriptorSets[i] = engine.initDescriptorSetList(pathtracingSetLayout, descriptors);
         }
     }
     
     engine.fillBuffer(engine.getBuffer(pathtracingUniformBuffers), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(screenUniformBuffers), ctx.screenUBO);
+    engine.fillBuffer(engine.getBuffer(displayUniformBuffers), ctx.screenUBO);
     frame = (frame + 1) % 2;
     
-    renderMain(ctx);
-    renderUiLayer(ctx);
+    pathtracingPass(ctx);
+    uiPass(ctx);
 
     engine.endFrame();
 
     exportService.handleSave(ctx);
 }
 
-void RenderHandler::renderMain(AppContext& ctx) {
+void RenderHandler::pathtracingPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer commandBuffer = engine.beginRecordingRender();
@@ -288,27 +349,27 @@ void RenderHandler::renderMain(AppContext& ctx) {
     {   // Rendering
         engine.barrier(
             commandBuffer,
-            images[1-frame].get(),
+            pathtracingImages[1-frame].get(),
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_ACCESS_NONE, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
         engine.barrier(
             commandBuffer,
-            images[frame].get(),
+            pathtracingImages[frame].get(),
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
         engine.beginDynamicRenderer(
             commandBuffer,
-            imageViews[frame].get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            pathtracingImageViews[frame].get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
         
         // Bind current descriptor set
-        engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pathtracingPipeline.getLayout());
+        engine.getDescriptorSet(pathtracingDescriptorSets[frame]).bind(commandBuffer, pathtracingPipeline.getLayout());
         
         pathtracingPipeline.bind(commandBuffer);
 
@@ -322,23 +383,59 @@ void RenderHandler::renderMain(AppContext& ctx) {
         engine.endDynamicRenderer(commandBuffer);
         engine.barrier(
             commandBuffer,
-            images[frame].get(),
+            pathtracingImages[frame].get(),
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
         engine.barrier(
             commandBuffer,
-            images[1-frame].get(),
+            pathtracingImages[1-frame].get(),
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_ACCESS_NONE, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
 
-        exportService.handleCopy(ctx, commandBuffer, images[frame]);
     }
 
-    {   // Screen
+    {   // Compositing
+        engine.barrier(
+            commandBuffer,
+            outputImage.get(),
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        );
+        engine.beginDynamicRenderer(
+            commandBuffer,
+            outputImageView.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
+        );
+
+        engine.getDescriptorSet(compositingDescriptorSets[frame]).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingPipeline.bind(commandBuffer);
+
+        vertexBuffer.bindVertex(commandBuffer);
+        indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
+
+        compositingPipeline.setViewport(commandBuffer, viewport);
+        compositingPipeline.setScissor(commandBuffer, scissor);
+        compositingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+
+        engine.endDynamicRenderer(commandBuffer);
+        engine.barrier(
+            commandBuffer,
+            outputImage.get(),
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        );
+    }
+
+    exportService.handleCopy(ctx, commandBuffer, outputImage);
+
+    {   // Display
         engine.barrier(
             commandBuffer,
             nullptr,
@@ -353,16 +450,16 @@ void RenderHandler::renderMain(AppContext& ctx) {
             {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
-        engine.getDescriptorSet(screenDescriptorSets[frame]).bind(commandBuffer, uiPipeline.getLayout());
+        engine.getDescriptorSet(displayDescriptorSets[frame]).bind(commandBuffer, displayPipeline.getLayout());
 
-        uiPipeline.bind(commandBuffer);
+        displayPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
         indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
         
-        uiPipeline.setViewport(commandBuffer, viewport);
-        uiPipeline.setScissor(commandBuffer, scissor);
-        uiPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+        displayPipeline.setViewport(commandBuffer, viewport);
+        displayPipeline.setScissor(commandBuffer, scissor);
+        displayPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
         engine.barrier(
@@ -377,7 +474,7 @@ void RenderHandler::renderMain(AppContext& ctx) {
     engine.endRecoringRender(commandBuffer);
 }
 
-void RenderHandler::renderUiLayer(AppContext& ctx) {
+void RenderHandler::uiPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer commandBuffer = engine.beginRecordingUiRender();

@@ -125,8 +125,8 @@ void Application::run() {
 void Application::onFrameStart(float dt) {
     renderState.prevResolution = renderState.resolution;
 
-    inputController.pollEvents();
-    inputController.handle(ctx, dt);
+    inputHandler.pollEvents();
+    inputHandler.handle(ctx, dt);
 
     handleCommands();
 

@@ -15,7 +15,7 @@
 #include "app/animation_handler.hpp"
 #include "render/render_handler.hpp"
 
-#include "app/input_controller.hpp"
+#include "app/input_handler.hpp"
 
 enum class DebugView : int {
     None = 0,
@@ -35,7 +35,7 @@ public:
 
     void run();
 
-    friend void InputController::initCallbacks(const AppContext& ctx);
+    friend void InputHandler::initCallbacks(const AppContext& ctx);
 
 private:
     VkSmol engine;
@@ -53,7 +53,7 @@ private:
     
     AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &animation, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
     
-    InputController inputController;
+    InputHandler inputHandler;
     RenderHandler renderer;
 
     int frameCount = 0;

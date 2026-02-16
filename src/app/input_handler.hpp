@@ -4,7 +4,7 @@
 
 struct AppContext;
 
-class InputController {
+class InputHandler {
 public:
     void initCallbacks(const AppContext& ctx);
     void pollEvents();
