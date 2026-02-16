@@ -3,10 +3,10 @@
 #include "./../engine/engine.hpp"
 #include "./../scene/scene.hpp"
 #include "./../camera.hpp"
-#include "./../notification_handler.hpp"
+#include "app/notification_handler.hpp"
 #include "./../ui_handler.hpp"
-#include "./../parameter_handler.hpp"
-#include "./../animation_handler.hpp"
+#include "app/parameter_handler.hpp"
+#include "app/animation_handler.hpp"
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
@@ -63,21 +63,7 @@ void RenderHandler::init(AppContext& ctx) {
     engine.initDescriptorSetLayout(screenSetLayout);
     
     {   // Pipeline creation
-        buildPipeline(ctx);
-        
-        Shader screenVertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl");
-        Shader screenFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl");
-        
-        VertexInput<ScreenVertex> screenVertexInput;
-        screenVertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
-        screenPipeline = engine.initGraphicsPipeline(
-            screenVertexInput.get(),
-            { screenVertShader, screenFragShader },
-            { screenSetLayout }
-        );
-        
-        engine.destroyShader(screenVertShader);
-        engine.destroyShader(screenFragShader);
+        buildPipelines(ctx);
     }
 
     {   // Descriptor sets creation
@@ -122,18 +108,24 @@ void RenderHandler::destroy(AppContext& ctx) {
     engine.destroyBufferList(pixelInfoBuffers);
     exportService.destroy(engine);
     
-    engine.destroyGraphicsPipeline(pipeline);
-    engine.destroyGraphicsPipeline(screenPipeline);
+    engine.destroyGraphicsPipeline(pathtracingPipeline);
+    engine.destroyGraphicsPipeline(uiPipeline);
 }
 
-void RenderHandler::buildPipeline(AppContext& ctx) {
+void RenderHandler::buildPipelines(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
     NotificationHandler& notifications = *ctx.notifications;
 
     engine.waitIdle();
 
     std::string vertShaderPath = "./shaders/vert.glsl";
+    std::string pathtracingFragShaderPath = "./shaders/pathtracing/pathtracing.glsl";
+    std::string uiFragShaderPath = "./shaders/frag.glsl";
+    
     Shader vertShader;
+    Shader pathtracingFragShader, uiFragShader;
+    
+    // Compile the vertex shader
     try {
         vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
@@ -144,51 +136,86 @@ void RenderHandler::buildPipeline(AppContext& ctx) {
         );
         return;
     }
-    
-    std::string fragShaderPath = "./shaders/raytracing/raytracing.glsl";
-    Shader fragShader;
-    try {
-        fragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderPath);
-    } catch (...) {
-        engine.destroyShader(vertShader);
-        std::cerr << "[ERROR] Failed to compile shader [" << fragShaderPath << "]: pipeline not built" << std::endl;
-        notifications.pushMessage(
-            NotificationType::Error,
-            "Failed to compile shader [" + fragShaderPath + "]: pipeline not built"
-        );
-        return;
-    }
 
     VertexInput<ScreenVertex> vertexInput;
     vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
+    
+    // Build the pathtracing pipeline
+    {
+        try {
+            pathtracingFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, pathtracingFragShaderPath);
+        } catch (...) {
+            engine.destroyShader(vertShader);
+            std::cerr << "[ERROR] Failed to compile shader [" << pathtracingFragShaderPath << "]: pipeline not built" << std::endl;
+            notifications.pushMessage(
+                NotificationType::Error,
+                "Failed to compile shader [" + pathtracingFragShaderPath + "]: pipeline not built"
+            );
+            return;
+        }
+        
+        if (pathtracingPipeline.get() != VK_NULL_HANDLE) {
+            GraphicsPipeline newPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, pathtracingFragShader },
+                { setLayout },
+                pathtracingPipeline,
+                VK_FORMAT_R32G32B32A32_SFLOAT
+            );
+            engine.destroyGraphicsPipeline(pathtracingPipeline);
+            pathtracingPipeline = newPipeline;
+        } else {
+            pathtracingPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, pathtracingFragShader },
+                { setLayout },
+                GraphicsPipeline(),
+                VK_FORMAT_R32G32B32A32_SFLOAT
+            );
+        }
+    }
 
-    if (pipeline.get() != VK_NULL_HANDLE) {
-        GraphicsPipeline newPipeline = engine.initGraphicsPipeline(
-            vertexInput.get(),
-            { vertShader, fragShader },
-            { setLayout },
-            pipeline,
-            VK_FORMAT_R32G32B32A32_SFLOAT
-        );
-        engine.destroyGraphicsPipeline(pipeline);
-        pipeline = newPipeline;
-    } else {
-        pipeline = engine.initGraphicsPipeline(
-            vertexInput.get(),
-            { vertShader, fragShader },
-            { setLayout },
-            GraphicsPipeline(),
-            VK_FORMAT_R32G32B32A32_SFLOAT
-        );
+    // Build the UI pipeline
+    {
+        try {
+            uiFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, uiFragShaderPath);
+        } catch (...) {
+            engine.destroyShader(vertShader);
+            engine.destroyShader(pathtracingFragShader);
+            std::cerr << "[ERROR] Failed to compile shader [" << uiFragShaderPath << "]: UI pipeline not built" << std::endl;
+            notifications.pushMessage(
+                NotificationType::Error,
+                "Failed to compile shader [" + uiFragShaderPath + "]: UI pipeline not built"
+            );
+            return;
+        }
+    
+        if (uiPipeline.get() != VK_NULL_HANDLE) {
+            GraphicsPipeline newUiPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, uiFragShader },
+                { screenSetLayout },
+                uiPipeline
+            );
+            engine.destroyGraphicsPipeline(uiPipeline);
+            uiPipeline = newUiPipeline;
+        } else {
+            uiPipeline = engine.initGraphicsPipeline(
+                vertexInput.get(),
+                { vertShader, uiFragShader },
+                { screenSetLayout }
+            );
+        }
     }
 
     engine.destroyShader(vertShader);
-    engine.destroyShader(fragShader);
+    engine.destroyShader(pathtracingFragShader);
+    engine.destroyShader(uiFragShader);
 
-    std::cout << "[INFO] Built the main pipeline by recompiling [" << vertShaderPath << "] and [" << fragShaderPath << "]" << std::endl;
+    std::cout << "[INFO] Built pipelines by recompiling [" << vertShaderPath << "], [" << pathtracingFragShaderPath << "], and [" << uiFragShaderPath << "]" << std::endl;
     notifications.pushMessage(
         NotificationType::Info,
-        "(Re)Built the main pipeline"
+        "(Re)Built the pipelines"
     );
 }
 
@@ -281,16 +308,16 @@ void RenderHandler::renderMain(AppContext& ctx) {
         );
         
         // Bind current descriptor set
-        engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pipeline.getLayout());
+        engine.getDescriptorSet(descriptorSets[frame]).bind(commandBuffer, pathtracingPipeline.getLayout());
         
-        pipeline.bind(commandBuffer);
+        pathtracingPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
         indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
         
-        pipeline.setViewport(commandBuffer, viewport);
-        pipeline.setScissor(commandBuffer, scissor);
-        pipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+        pathtracingPipeline.setViewport(commandBuffer, viewport);
+        pathtracingPipeline.setScissor(commandBuffer, scissor);
+        pathtracingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
         engine.barrier(
@@ -326,16 +353,16 @@ void RenderHandler::renderMain(AppContext& ctx) {
             {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
-        engine.getDescriptorSet(screenDescriptorSets[frame]).bind(commandBuffer, screenPipeline.getLayout());
+        engine.getDescriptorSet(screenDescriptorSets[frame]).bind(commandBuffer, uiPipeline.getLayout());
 
-        screenPipeline.bind(commandBuffer);
+        uiPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
         indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
         
-        screenPipeline.setViewport(commandBuffer, viewport);
-        screenPipeline.setScissor(commandBuffer, scissor);
-        screenPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+        uiPipeline.setViewport(commandBuffer, viewport);
+        uiPipeline.setScissor(commandBuffer, scissor);
+        uiPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
         engine.barrier(

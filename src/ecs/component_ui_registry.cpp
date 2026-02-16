@@ -10,7 +10,7 @@
 #include "IconsFontAwesome7.h"
 
 #include "../scene/asset/mesh.hpp"
-#include "../animation_handler.hpp"
+#include "app/animation_handler.hpp"
 #include "../ui_constants.hpp"
 
 namespace ecs {

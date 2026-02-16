@@ -4,7 +4,7 @@
 #include <string>
 
 #include "../engine/engine.hpp"
-#include "../app_context.hpp"
+#include "app/app_context.hpp"
 
 #define OUTPUT_DIR "outputs"
 #define RENDER_OUTPUT_PATH OUTPUT_DIR "/screenshots"

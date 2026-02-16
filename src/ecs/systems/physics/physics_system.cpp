@@ -10,7 +10,7 @@
 #include "../animation_system.hpp"
 #include "../transform_system.hpp"
 #include "../../../scene/scene.hpp"
-#include "../../../animation_handler.hpp"
+#include "app/animation_handler.hpp"
 
 namespace ecs {
 

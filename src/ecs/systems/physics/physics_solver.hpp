@@ -14,7 +14,7 @@
 #include "../../components/objects/collider.hpp"
 #include "../../components/objects/sphere.hpp"
 #include "../../components/transform.hpp"
-#include "../../../app_context.hpp"
+#include "app/app_context.hpp"
 #include "../../../scene/asset/mesh.hpp"
 
 namespace ecs {

@@ -22,7 +22,7 @@
 #include "../ecs/systems/camera_system.hpp"
 #include "../ecs/systems/animation_system.hpp"
 #include "../ecs/systems/physics/physics_system.hpp"
-#include "../notification_handler.hpp"
+#include "app/notification_handler.hpp"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);

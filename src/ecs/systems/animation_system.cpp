@@ -9,7 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../../animation_handler.hpp"
+#include "app/animation_handler.hpp"
 
 #include "../components.hpp"
 

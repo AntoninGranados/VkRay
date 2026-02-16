@@ -1,4 +1,4 @@
-#include "notification_handler.hpp"
+#include "app/notification_handler.hpp"
 
 constexpr int MAX_NOTIFICATION_COUNT = 32;
 

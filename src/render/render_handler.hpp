@@ -1,6 +1,6 @@
 #pragma once
 
-#include "./../app_context.hpp"
+#include "app/app_context.hpp"
 #include "./export_service.hpp"
 
 #include "./imgui/imgui.h"
@@ -28,7 +28,7 @@ class RenderHandler {
 public:
     void init(AppContext& ctx);
     void destroy(AppContext& ctx);
-    void buildPipeline(AppContext& ctx);
+    void buildPipelines(AppContext& ctx);
 
     void render(AppContext& ctx);
 
@@ -39,7 +39,7 @@ private:
     
     DescriptorSetLayout setLayout, screenSetLayout;
     descriptorSetList_t descriptorSets[2], screenDescriptorSets[2];
-    GraphicsPipeline pipeline, screenPipeline;
+    GraphicsPipeline pathtracingPipeline, uiPipeline;
     
     Buffer vertexBuffer, indexBuffer;
     bufferList_t pathtracingUniformBuffers, screenUniformBuffers;

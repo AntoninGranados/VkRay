@@ -11,7 +11,7 @@
 
 #include "IconsFontAwesome7.h"
 
-#include "../notification_handler.hpp"
+#include "app/notification_handler.hpp"
 #include "../ui_constants.hpp"
 
 void SceneEditorUI::drawGuizmo(Scene& scene, const glm::mat4& view, const glm::mat4& proj) {

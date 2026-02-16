@@ -7,7 +7,7 @@
 #include <string>
 
 #include "../object/object.hpp"
-#include "../../app_context.hpp"
+#include "app/app_context.hpp"
 
 typedef int MeshHandle;
 

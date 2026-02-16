@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../registry.hpp"
-#include "../../../app_context.hpp"
+#include "app/app_context.hpp"
 
 namespace ecs {
 

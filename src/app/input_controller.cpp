@@ -7,11 +7,11 @@
 #include "imgui/ImGuizmo.h"
 
 #include "application.hpp"
-#include "app_context.hpp"
+#include "app/app_context.hpp"
 #include "camera.hpp"
 #include "ui_handler.hpp"
-#include "parameter_handler.hpp"
-#include "animation_handler.hpp"
+#include "app/parameter_handler.hpp"
+#include "app/animation_handler.hpp"
 #include "scene/scene.hpp"
 #include "engine/engine.hpp"
 

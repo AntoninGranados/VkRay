@@ -169,7 +169,7 @@ void Application::handleCommands() {
             animation.reset(0);
         }
     } if (notifications.isCommandRequested(Command::Reload)) {
-        renderer.buildPipeline(ctx);
+        renderer.buildPipelines(ctx);
         restartRender = true;
     }
 }

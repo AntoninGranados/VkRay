@@ -7,7 +7,7 @@
 
 #include "./registry.hpp"
 #include "./components.hpp"
-#include "../app_context.hpp"
+#include "app/app_context.hpp"
 
 #include "./imgui/imgui.h"
 

@@ -2,10 +2,10 @@
 
 #include "IconsFontAwesome7.h"
 
-#include "./parameter_handler.hpp"
+#include "app/parameter_handler.hpp"
 #include "./scene/scene_preset.hpp"
-#include "./notification_handler.hpp"
-#include "./animation_handler.hpp"
+#include "app/notification_handler.hpp"
+#include "app/animation_handler.hpp"
 
 #include "./ui_constants.hpp"
 

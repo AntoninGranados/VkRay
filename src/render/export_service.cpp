@@ -3,8 +3,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image/stb_image_write.h>
 
-#include "../notification_handler.hpp"
-#include "../animation_handler.hpp"
+#include "app/notification_handler.hpp"
+#include "app/animation_handler.hpp"
 #include "../ui_handler.hpp"
 
 void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height) {
