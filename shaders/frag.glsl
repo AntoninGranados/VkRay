@@ -93,7 +93,6 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
     const float c_phi = 0.15;
     const float n_phi = 0.2;
     const float p_phi = 1.0;
-    const float d_phi = 1.0;
     const float kernel[25] = float[](
         1.0/256.0, 1.0/64.0, 3.0/128.0, 1.0/64.0, 1.0/256.0,
         1.0/64.0,  1.0/16.0, 3.0/32.0,  1.0/16.0, 1.0/64.0,
@@ -142,15 +141,7 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
             pW = min(exp(-pDist2 / max(p_phi, 1e-6)), 1.0);
         }
 
-        float dW = 1.0;
-        bool dValid = centerInfo.diffuse.w > 0.0 && sampleInfo.diffuse.w > 0.0;
-        if (dValid) {
-            vec3 dDelta = centerInfo.diffuse.xyz - sampleInfo.diffuse.xyz;
-            float dDist2 = dot(dDelta, dDelta);
-            dW = min(exp(-dDist2 / max(d_phi, 1e-6)), 1.0);
-        }
-
-        float w = kernel[i] * cW * nW * pW * dW;
+        float w = kernel[i] * cW * nW * pW;
         sum += cTmp * w;
         cumW += w;
     }

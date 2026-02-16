@@ -63,9 +63,10 @@ Material createProgrammableMaterial(in Material mat, in Hit hit) {
     float r = clamp(cubicCatmullRom(cx0, cx1, cx2, cx3, f.y), 0.0, 1.0);
 
     if (r < 0.5) {
-        return LAMBERTIAN_MATERIAL(mat.albedo * 0.4);
+        return LAMBERTIAN_MATERIAL(mat.albedo * 0.6);
     } else {
-        return GGX_GLOSSY_MATERIAL(mat.albedo, 0.1, 0.6);
+        return LAMBERTIAN_MATERIAL(mat.albedo);
+        // return GGX_GLOSSY_MATERIAL(mat.albedo, 0.1, 0.6);
     }
 
     // if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {

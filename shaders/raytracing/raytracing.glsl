@@ -300,7 +300,9 @@ void main() {
     // Compute sample color
     float takenSamples = 0.0;
     vec3 colorSum = vec3(0);
-    if (ubo.resolution == 1.0f || pixelCoord == blockCoord) {
+    bool isCenterPixel = ubo.resolution == 1.0f || pixelCoord == blockCoord;
+    bool isInDebugView = (ubo.debugView == debug_Normal || ubo.debugView == debug_Position || ubo.debugView == debug_Diffuse);
+    if (isCenterPixel && !isInDebugView) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
         PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
         updatedInfo.normal = pixelInfo.normal;
@@ -315,7 +317,7 @@ void main() {
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
-    // compute selection mask and debug info
+    // Compute selection mask and debug info
     Ray primaryRay = getRay(camera, fragPos, false, seed);
     Hit primaryHit = intersection(primaryRay);
     Hit selectedHit = NO_HIT;
