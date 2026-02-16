@@ -157,6 +157,15 @@ void UiHandler::drawPreview(AppContext& ctx) {
                 dl->AddCircleFilled(c, ui::widget_rounding, ImGui::ColorConvertFloat4ToU32(ui::keyframe_on_col));
             }
         }
+
+        // Draw current frame
+        std::string frameLabel = std::to_string(ctx.animation->getFrame());
+        ImVec2 frameLabelSize = ImGui::CalcTextSize(frameLabel.c_str());
+        ImVec2 frameLabelPos(
+            (barMin.x + barMax.x - frameLabelSize.x) * 0.5f,
+            (barMin.y + barMax.y - frameLabelSize.y) * 0.5f
+        );
+        dl->AddText(frameLabelPos, ImGui::GetColorU32(ImGuiCol_Text), frameLabel.c_str());
         
         ImGui::SameLine();
         

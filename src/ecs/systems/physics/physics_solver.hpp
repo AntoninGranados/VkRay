@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -62,6 +63,12 @@ struct FrameSnapshot {
     glm::vec3 angularVelocity;
 };
 
+struct SdfContactSample {
+    float distance = 0.0f;
+    glm::vec3 normal { 0.0f, 1.0f, 0.0f };
+    glm::vec3 center { 0.0f, 0.0f, 0.0f };
+};
+
 class RigidBox : public BodyAttributes {
 public:
     explicit RigidBox(
@@ -91,8 +98,11 @@ public:
     BodyAttributes* body = nullptr;
 
 private:
+    using SdfSampler = std::function<bool(const glm::vec3&, SdfContactSample&)>;
+
     void integrate(float dt);
     void computeForceAndTorque();
+    void resolveSdfCollision(const Entity& colliderEntity, Registry& registry, float colliderDt, const SdfSampler& sdfSampler);
     void resolvePlaneCollision(const Entity& planeEntity, Registry& registry, float colliderDt);
     void resolveSphereCollision(const Entity& sphereEntity, Registry& registry, float colliderDt);
 
