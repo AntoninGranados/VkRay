@@ -66,6 +66,8 @@ void RenderHandler::init(AppContext& ctx) {
     engine.initDescriptorSetLayout(pathtracingSetLayout);
     
     compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     engine.initDescriptorSetLayout(compositingSetLayout);
 
     displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -96,7 +98,7 @@ void RenderHandler::init(AppContext& ctx) {
 
             compositingDescriptorSets[i] = engine.initDescriptorSetList(
                 compositingSetLayout,
-                { &pathtracingCombinedImageSampler[i] }
+                { &pathtracingCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
             );
 
             displayDescriptorSets[i] = engine.initDescriptorSetList(
