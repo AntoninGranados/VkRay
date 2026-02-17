@@ -21,10 +21,14 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
     float etaT = dielectricIoR(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
+    vec3 normal = hit.normal; // + randomInSphere(seed) * 0.1f;
+    if (length(normal) < EPS) normal = hit.normal;
+    normal = normalize(normal);
+
     float eta = etaI / etaT;
     float ri  = etaT / etaI;
 
-    float cosTheta = clamp(dot(wo, hit.normal), 0.0, 1.0);
+    float cosTheta = clamp(dot(wo, normal), 0.0, 1.0);
     float sin2Theta = max(0.0, 1.0 - cosTheta*cosTheta);
 
     bool tir = (eta * eta) * sin2Theta > 1.0;
@@ -33,16 +37,16 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
 
     vec3 wi;
     if (tir || rand(seed) < F) {
-        wi = reflect(-wo, hit.normal);
+        wi = reflect(-wo, normal);
 
-        float absCos = max(abs(dot(hit.normal, wi)), EPS);
+        float absCos = max(abs(dot(normal, wi)), EPS);
 
         result.pdf = max(F, EPS);
         result.f   = (mat.albedo * result.pdf) / absCos;
     } else {
-        wi = refract(-wo, hit.normal, eta);
+        wi = refract(-wo, normal, eta);
 
-        float absCos = max(abs(dot(hit.normal, wi)), EPS);
+        float absCos = max(abs(dot(normal, wi)), EPS);
         float etaFactor = (etaI * etaI) / (etaT * etaT);
 
         result.pdf = max(1.0 - F, EPS);

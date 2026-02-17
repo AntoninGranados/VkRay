@@ -81,9 +81,38 @@ vec3 skyColor(vec3 dir) {
     return color;
 }
 
-vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
-    Ray primaryRay = ray;
+vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
     Hit hit = intersection(ray);
+
+    // Accumulate first-hit features for denoising guides.
+    if (foundIntersection(hit)) {
+        Material diffuseMat = resolveMaterial(getMaterial(hit.object), hit);
+
+        vec3 currNormal = normalize(hit.normal);
+        vec3 currPosition = hit.p;
+        vec3 currDiffuse = diffuseMat.albedo;
+
+        float guideMix = 1.0 / float(pixelInfo.count);
+
+        if (pixelInfo.normal.w > 0.0) {
+            vec3 avgNormal = mix(pixelInfo.normal.xyz, currNormal, guideMix);
+            pixelInfo.normal = vec4(normalize(avgNormal), 1.0);
+        } else {
+            pixelInfo.normal = vec4(currNormal, 1.0);
+        }
+
+        if (pixelInfo.position.w > 0.0) {
+            pixelInfo.position = vec4(mix(pixelInfo.position.xyz, currPosition, guideMix), 1.0);
+        } else {
+            pixelInfo.position = vec4(currPosition, 1.0);
+        }
+
+        if (pixelInfo.diffuse.w > 0.0) {
+            pixelInfo.diffuse = vec4(mix(pixelInfo.diffuse.xyz, currDiffuse, guideMix), 1.0);
+        } else {
+            pixelInfo.diffuse = vec4(currDiffuse, 1.0);
+        }
+    }
 
     if (ubo.debugView == debug_HitChecks) {
         float v = hit.hitChecks / 64.0;
@@ -121,7 +150,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
                     w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
                 }
 
-                radiance += throughput * Le * w;
+                radiance += clamp(throughput * w, 0.0, 1.5) * Le;
                 break;
             }
 
@@ -140,7 +169,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed) {
                     float pdfB = samplePDF(mat, hit, -ray.dir, lightResult.wi);
                     if (pdfB > EPS) {
                         float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
-                        radiance += throughput * (f * cosTheta * lightResult.Le) * (w / pdfL);
+                        radiance += clamp(throughput* (w / pdfL) * f * cosTheta, 0.0, 1.5) * lightResult.Le;
                     }
                 }
             }
@@ -182,7 +211,6 @@ ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize
 }
 
 void updateVariance(in float value, inout PixelInfo pixelInfo) {
-    pixelInfo.count += 1;
     float delta = value - pixelInfo.mean;
     pixelInfo.mean += delta / pixelInfo.count;
     float delta2 = value - pixelInfo.mean;
@@ -234,11 +262,13 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
     takenSamples = 0.0;
     for (int i = 0; i < ubo.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
+            pixelInfo.count += 1;
             vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
-            vec3 rayColor = traceRay(camera, ray, seed);
+            vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
             // TODO: find where the NaNs are coming from instead of just skipping them
             if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b)) {
+                pixelInfo.count -= 1;
                 continue;
             }
             colorSum.rgb += rayColor.rgb;
@@ -272,9 +302,9 @@ void main() {
         
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
         PixelInfo initInfo = pixelInfoBuffer.pixels[varianceIndex];
-        initInfo.normal = vec4(0.0);
-        initInfo.position = vec4(0.0);
-        initInfo.diffuse = vec4(0.0);
+        initInfo.normal.w = 0.0;
+        initInfo.position.w = 0.0;
+        initInfo.diffuse.w = 0.0;
         initInfo.mean = 0.0;
         initInfo.m2 = 0.0;
         initInfo.count = 0;
@@ -301,8 +331,7 @@ void main() {
     float takenSamples = 0.0;
     vec3 colorSum = vec3(0);
     bool isCenterPixel = ubo.resolution == 1.0f || pixelCoord == blockCoord;
-    bool isInDebugView = (ubo.debugView == debug_Normal || ubo.debugView == debug_Position || ubo.debugView == debug_Diffuse);
-    if (isCenterPixel && !isInDebugView) {
+    if (isCenterPixel) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
         PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
         updatedInfo.normal = pixelInfo.normal;
@@ -317,9 +346,8 @@ void main() {
     
     if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
-    // Compute selection mask and debug info
+    // Compute selection mask
     Ray primaryRay = getRay(camera, fragPos, false, seed);
-    Hit primaryHit = intersection(primaryRay);
     Hit selectedHit = NO_HIT;
     int intersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
@@ -331,12 +359,6 @@ void main() {
     uint selectionIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo selectionInfo = pixelInfoBuffer.pixels[selectionIndex];
     selectionInfo.selectionMask = intersection;
-    if (foundIntersection(primaryHit)) {
-        selectionInfo.normal = vec4(normalize(primaryHit.normal), 1.0);
-        selectionInfo.position = vec4(primaryHit.p, 1.0);
-        Material diffuseMat = resolveMaterial(getMaterial(primaryHit.object), primaryHit);
-        selectionInfo.diffuse = vec4(diffuseMat.albedo, 1.0);
-    }
     pixelInfoBuffer.pixels[selectionIndex] = selectionInfo;
 
     float totalCount = prevCount + takenSamples;

@@ -87,10 +87,14 @@ void main() {
 
     vec2 screenCoord = uv * texSize;
     ivec2 pixelCoord = ivec2(screenCoord);
+    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, ivec2(texSize), ubo.resolution);
     vec3 color = texelFetch(tex, pixelCoord, 0).rgb;
 
     float targetMin = 0.5;
     float targetMax = 1.5;
+
+    uint blockIndex = uint(blockCoord.y * int(texSize.x) + blockCoord.x);
+    PixelInfo blockPixelInfo = pixelInfoBuffer.pixels[blockIndex];
 
     uint centerIndex = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
     PixelInfo centerPixelInfo = pixelInfoBuffer.pixels[centerIndex];
@@ -124,17 +128,17 @@ void main() {
     }
 
     if (ubo.debugView == debug_Normal) {
-        outColor = vec4(visualizeNormal(centerPixelInfo), 1.0);
+        outColor = vec4(visualizeNormal(blockPixelInfo), 1.0);
         return;
     }
 
     if (ubo.debugView == debug_Position) {
-        outColor = vec4(visualizePosition(centerPixelInfo), 1.0);
+        outColor = vec4(visualizePosition(blockPixelInfo), 1.0);
         return;
     }
 
     if (ubo.debugView == debug_Diffuse) {
-        outColor = vec4(visualizeDiffuse(centerPixelInfo), 1.0);
+        outColor = vec4(visualizeDiffuse(blockPixelInfo), 1.0);
         return;
     }
 

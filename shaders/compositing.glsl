@@ -26,6 +26,9 @@ layout(set = 0, binding = 2) buffer PixelInfoBuffer {
 layout(location = 0) in vec2 fragPos;
 layout(location = 0) out vec4 outColor;
 
+float luma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
 
 ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
     ivec2 blockCoord = pixelCoord;
@@ -121,6 +124,17 @@ void main() {
     if (ubo.denoisingEnabled != 0) {
         color = applyATrousDenoise(blockCoord, ivec2(texSize));
     }
+
+    // Toon shading
+    // PixelInfo pixelInfo = fetchPixelInfoAt(blockCoord, ivec2(texSize));
+    // vec3 diffuse = pixelInfo.diffuse.rgb;
+    // float lit = clamp(luma(color) / max(luma(diffuse), 1e-4), 0.0, 1.0);
+    // const float bands = 4.0;
+    // float q = min(floor(lit * bands), bands - 1.0);
+    // float toon = q * (1.0 / (bands - 1.0));
+    // const float ambiant = 0.01;
+    // float targetLuma = luma(diffuse) * (ambiant + (1.0 - ambiant) * toon);
+    // color *= targetLuma / max(luma(color), 1e-4);
 
     outColor = vec4(color, 1.0);
 }
