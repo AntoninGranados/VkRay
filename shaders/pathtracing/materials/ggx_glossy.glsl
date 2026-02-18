@@ -47,7 +47,7 @@ void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResu
 
     if (xi < pSpec) {
         if (specIsDelta) {
-            sampleMirrorBSDF(mat, hit, wo, result);
+            sampleMirrorBSDF(vec3(1.0), hit, wo, result);
             return;
         } else {
             float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);

@@ -20,7 +20,7 @@ vec3 ggxMetalF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
 
 void sampleGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
     if (ggxMetalRoughness(mat) < 0.05) {
-        sampleMirrorBSDF(mat, hit, wo, result);
+        sampleMirrorBSDF(mat.albedo, hit, wo, result);
     } else {
         float alpha = ggxMetalRoughness(mat) * ggxMetalRoughness(mat);
         result.wi = ggxScatter(mat, hit, wo, alpha, seed);

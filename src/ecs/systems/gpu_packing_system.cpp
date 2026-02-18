@@ -150,7 +150,7 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
             uint32_t data0, data1;
             if (node.isLeaf != 0) {
                 data0 = static_cast<uint32_t>(node.data0 + (indexOffset / 3));
-                data1 = LEAF_SIZE;
+                data1 = node.data1;
             } else {
                 data0 = static_cast<uint32_t>(node.data0 + bvhOffset);
                 data1 = static_cast<uint32_t>(node.data1 + bvhOffset);

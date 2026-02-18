@@ -129,8 +129,12 @@ Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool co
     float tHit = tNear;
     bool useFar = false;
     if (tHit < EPS) {
-        tHit = tFar;
-        useFar = true;
+        if (computeNormal) {
+            tHit = tFar;
+            useFar = true;
+        } else {
+            tHit = 0.0;
+        }
     }
 
     vec3 normal = vec3(0.0);

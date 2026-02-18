@@ -76,6 +76,10 @@ bool drawDielectricUI(Material &material) {
     ImGui::Text("IoR:");
     if (ImGui::DragFloat("##Mat IoR", &dielectricIoR(material), 0.01, 0.0, FLT_MAX))
         updated = true;
+
+    ImGui::Text("Roughness:");
+    if (ImGui::DragFloat("##Mat Roughness", &dielectricRoughness(material), 0.01f, 0.0f, 1.0f))
+        updated = true;
     
     ImGui::PopItemWidth();
 
@@ -96,6 +100,7 @@ bool drawProgrammableUI(Material &material) {
 
 bool drawMaterialUI(Material &material) {
     bool updated = false;
+    MaterialType prevType = material.type;
 
     material.name.resize(128);
 
@@ -110,6 +115,26 @@ bool drawMaterialUI(Material &material) {
         updated = true;
 
     ImGui::PopItemWidth();
+
+    if (material.type != prevType) {
+        switch (material.type) {
+            case MaterialType::Emissive:
+                emissiveIntensity(material) = 1.0f;
+                break;
+            case MaterialType::GgxMetal:
+                ggxMetalRoughness(material) = 0.2f;
+                break;
+            case MaterialType::GgxGlossy:
+                ggxGlossyRoughness(material) = 0.2f;
+                ggxGlossyIoR(material) = 1.5f;
+                break;
+            case MaterialType::Dielectric:
+                dielectricRoughness(material) = 0.0f;
+                break;
+            default:
+                break;
+        }
+    }
     
     switch (material.type) {
         case MaterialType::Lambertian:   updated |= drawLambertianUI(material);   break;

@@ -33,6 +33,7 @@ Material makeMaterial(Enum type, vec3 albedo, float f0, float f1) {
 #define ggxGlossyRoughness(mat) mat.payload[0]
 #define ggxGlossyIoR(mat)       mat.payload[1]
 #define dielectricIoR(mat)      mat.payload[0]
+#define dielectricRoughness(mat) mat.payload[1]
 
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
 
@@ -46,11 +47,11 @@ vec3 schlickAlbedo(float cosine, vec3 albedo) {
     return SCHLICK_APPROX(cosine, albedo);
 }
 
-void sampleMirrorBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result) {
+void sampleMirrorBSDF(in vec3 albedo, in Hit hit, in vec3 wo, out SampleResult result) {
     result.wi = reflect(-wo, hit.normal);
 
     float VoN = max(dot(wo, hit.normal), 0.0);
-    result.f = schlickIoR(VoN, 0.0) / VoN;
+    result.f = albedo * schlickIoR(VoN, 0.0) / VoN;
     result.pdf = 1.0;
     result.isDelta = true;
 }

@@ -21,9 +21,9 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
     float etaT = dielectricIoR(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
-    vec3 normal = hit.normal; // + randomInSphere(seed) * 0.1f;
+    vec3 normal = hit.normal + randomInSphere(seed) * dielectricRoughness(mat);
     if (length(normal) < EPS) normal = hit.normal;
-    normal = normalize(normal);
+    else normal = normalize(normal);
 
     float eta = etaI / etaT;
     float ri  = etaT / etaI;

@@ -136,5 +136,75 @@ void main() {
     // float targetLuma = luma(diffuse) * (ambiant + (1.0 - ambiant) * toon);
     // color *= targetLuma / max(luma(color), 1e-4);
 
+    // Bloom
+    // const float bloomThreshold = 0.7;
+    // const float bloomSoftKnee = 0.25;
+    // const float bloomStrength = 0.5;
+    // const float bloomRadius = 4.0;
+    // vec3 bloom = vec3(0.0);
+    // float bloomWeight = 0.0;
+    // for (int y = -8; y <= 8; y++) {
+    //     for (int x = -8; x <= 8; x++) {
+    //         vec2 sampleUv = uv + vec2(float(x), float(y)) * texelSize * bloomRadius;
+    //         vec3 sampleColor = texture(tex, sampleUv).rgb;
+    //         float sampleLuma = luma(sampleColor);
+    // 
+    //         float xk = sampleLuma - bloomThreshold + bloomSoftKnee;
+    //         float soft = clamp(xk, 0.0, 2.0 * bloomSoftKnee);
+    //         soft = (soft * soft) / max(4.0 * bloomSoftKnee + 1e-6, 1e-6);
+    //         float contrib = max(sampleLuma - bloomThreshold, soft);
+    //         vec3 bright = sampleColor * (contrib / max(sampleLuma, 1e-6));
+    // 
+    //         float dist2 = float(x * x + y * y);
+    //         float w = exp(-dist2 / 18.0);
+    //         bloom += bright * w;
+    //         bloomWeight += w;
+    //     }
+    // }
+    // bloom /= max(bloomWeight, 1e-6);
+    // color += bloom * bloomStrength;
+
+    // Outline
+    // PixelInfo centerInfo = fetchPixelInfoAt(blockCoord, ivec2(texSize));
+    // if (centerInfo.normal.w > 0.0 && centerInfo.position.w > 0.0 && centerInfo.diffuse.w > 0.0) {
+    //     int stride = max(int(round(max(ubo.resolution, 1.0))), 1);
+    //     ivec2 edgeOffsets[8] = ivec2[](
+    //         ivec2(stride, 0),
+    //         ivec2(-stride, 0),
+    //         ivec2(0, stride),
+    //         ivec2(0, -stride),
+    //         ivec2(stride * 2, 0),
+    //         ivec2(-stride * 2, 0),
+    //         ivec2(0, stride * 2),
+    //         ivec2(0, -stride * 2)
+    //     );
+    // 
+    //     float normalEdge = 0.0;
+    //     float positionEdge = 0.0;
+    //     float diffuseEdge = 0.0;
+    //     float edgeSampleCount = 0.0;
+    //     for (int i = 0; i < 8; i++) {
+    //         ivec2 sampleCoord = snapToBlockGrid(blockCoord + edgeOffsets[i], ivec2(texSize));
+    //         PixelInfo sampleInfo = fetchPixelInfoAt(sampleCoord, ivec2(texSize));
+    //         if (sampleInfo.normal.w <= 0.0 || sampleInfo.position.w <= 0.0 || sampleInfo.diffuse.w <= 0.0) continue;
+    // 
+    //         normalEdge += length(centerInfo.normal.xyz - sampleInfo.normal.xyz);
+    //         positionEdge += length(centerInfo.position.xyz - sampleInfo.position.xyz);
+    //         diffuseEdge += length(centerInfo.diffuse.xyz - sampleInfo.diffuse.xyz);
+    //         edgeSampleCount += 1.0;
+    //     }
+    // 
+    //     if (edgeSampleCount > 0.0) {
+    //         normalEdge /= edgeSampleCount;
+    //         positionEdge /= edgeSampleCount;
+    //         diffuseEdge /= edgeSampleCount;
+    //         float nFactor = smoothstep(0.08, 0.30, normalEdge);
+    //         float pFactor = smoothstep(0.01, 0.10, positionEdge);
+    //         float dFactor = smoothstep(0.08, 0.35, diffuseEdge);
+    //         float edge = max(max(nFactor, pFactor), dFactor);
+    //         color *= (1.0 - edge * 0.92);
+    //     }
+    // }
+
     outColor = vec4(color, 1.0);
 }

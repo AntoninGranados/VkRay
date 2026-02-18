@@ -39,6 +39,7 @@ struct Material {
 #define ggxGlossyRoughness(mat) mat.payload[0]
 #define ggxGlossyIoR(mat)       mat.payload[1]
 #define dielectricIoR(mat)      mat.payload[0]
+#define dielectricRoughness(mat) mat.payload[1]
 
 bool drawLambertianUI(Material &mat);
 bool drawEmissiveUI(Material &mat);
