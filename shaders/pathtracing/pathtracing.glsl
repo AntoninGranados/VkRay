@@ -78,6 +78,9 @@ vec3 skyColor(vec3 dir) {
     }
     
     vec3 color = mix(horizon, zenith, t);
+    // if (dot(dir, normalize(vec3(0.0, 1.0, 1.0))) > 0.99f) {
+    //     color *= 100;
+    // }
     return color;
 }
 

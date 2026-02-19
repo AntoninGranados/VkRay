@@ -12,6 +12,7 @@
 #include "../../registry.hpp"
 #include "../../components/objects/plane.hpp"
 #include "../../components/objects/collider.hpp"
+#include "../../components/objects/box.hpp"
 #include "../../components/objects/sphere.hpp"
 #include "../../components/transform.hpp"
 #include "app/app_context.hpp"
@@ -104,6 +105,7 @@ private:
     void computeForceAndTorque();
     void resolveSdfCollision(const Entity& colliderEntity, Registry& registry, float colliderDt, const SdfSampler& sdfSampler);
     void resolvePlaneCollision(const Entity& planeEntity, Registry& registry, float colliderDt);
+    void resolveBoxCollision(const Entity& boxEntity, Registry& registry, float colliderDt);
     void resolveSphereCollision(const Entity& sphereEntity, Registry& registry, float colliderDt);
 
     glm::vec3 gravity;
@@ -111,7 +113,7 @@ private:
     float simTime;
     float appTime;
 
-    float simDt = 0.00005f;
+    float simDt = 1e-4f;
 };
 
 struct BodyState {

@@ -4,6 +4,62 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     scene.clear();
 
     lightMode = LightMode::Sunset;
+
+    const MaterialHandle floorHandle = scene.pushMaterial(Material{
+        .name = "Floor",
+        .type = MaterialType::Lambertian,
+        .albedo = glm::vec3(0.75f, 0.75f, 0.78f),
+    });
+    scene.pushPlane(
+        "Floor",
+        glm::vec3(0.0f, -1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        floorHandle
+    );
+
+    const MaterialHandle boxHandle = scene.pushMaterial(Material{
+        .name = "PyramidBox",
+        .type = MaterialType::Lambertian,
+        .albedo = glm::vec3(0.75f, 0.35f, 0.25f),
+    });
+
+    const int baseCount = 5;
+    const float halfExtent = 0.5f;
+    const float spacing = halfExtent * 2.0f + 0.02f;
+    const float yBase = -1.0f + halfExtent;
+    for (int level = 0; level < baseCount; ++level) {
+        const int count = baseCount - level;
+        const float y = yBase + static_cast<float>(level) * spacing;
+        const float xOffset = -0.5f * static_cast<float>(count - 1) * spacing;
+        for (int i = 0; i < count; ++i) {
+            const float x = xOffset + static_cast<float>(i) * spacing;
+            const glm::vec3 center(x, y, 0.0f);
+            scene.pushBox(
+                "PyramidBox_" + std::to_string(level) + "_" + std::to_string(i),
+                center - glm::vec3(halfExtent),
+                center + glm::vec3(halfExtent),
+                boxHandle
+            );
+        }
+    }
+
+    ecs::Registry& registry = scene.getRegistry();
+    auto& boxes = registry.storage<ecs::Box>();
+    auto& planes = registry.storage<ecs::Plane>();
+
+    for (const ecs::Entity& e : boxes.entities()) {
+        if (!registry.has<ecs::Collider>(e)) registry.add<ecs::Collider>(e, ecs::Collider{});
+        if (!registry.has<ecs::RigidBody>(e)) registry.add<ecs::RigidBody>(e, ecs::RigidBody{});
+    }
+
+    for (const ecs::Entity& e : planes.entities()) {
+        if (!registry.has<ecs::Collider>(e)) {
+            ecs::Collider collider {};
+            collider.restitution = 0.2f;
+            collider.friction = 0.8f;
+            registry.add<ecs::Collider>(e, collider);
+        }
+    }
 }
 
 void initMaterialZoo(Scene &scene, LightMode &lightMode) {
@@ -29,7 +85,7 @@ void initMaterialZoo(Scene &scene, LightMode &lightMode) {
                 Material {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
                     .type = MaterialType::GgxGlossy,
-                    .albedo = glm::vec3(1.0, 0.1, 0.1) * 0.5f,
+                    .albedo = glm::vec3(0.0, 1.0, 0.0) * 0.8f,
                     .payload = { rough, ior }
                 }
             );

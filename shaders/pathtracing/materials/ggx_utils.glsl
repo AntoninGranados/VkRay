@@ -65,7 +65,7 @@ float ggxPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
 }
 
 vec3 partialGgxF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi, in float alpha) {
-    // GGX f without the F (Fresnel) component
+    // Partial Cook-Torrance f without the F (Fresnel) component
     vec3 m = normalize(wo + wi);
     
     float D = D_ggx(alpha, hit.normal, m);

@@ -31,14 +31,23 @@ RigidBox::RigidBox(
     I0inv = glm::inverse(I0);
     Iinv = R * I0inv * glm::transpose(R);
 
-    vdata0.push_back(glm::vec3(-0.5f * w, -0.5f * h, -0.5f * d));
-    vdata0.push_back(glm::vec3( 0.5f * w, -0.5f * h, -0.5f * d));
-    vdata0.push_back(glm::vec3( 0.5f * w,  0.5f * h, -0.5f * d));
-    vdata0.push_back(glm::vec3(-0.5f * w,  0.5f * h, -0.5f * d));
-    vdata0.push_back(glm::vec3(-0.5f * w, -0.5f * h,  0.5f * d));
-    vdata0.push_back(glm::vec3( 0.5f * w, -0.5f * h,  0.5f * d));
-    vdata0.push_back(glm::vec3( 0.5f * w,  0.5f * h,  0.5f * d));
-    vdata0.push_back(glm::vec3(-0.5f * w,  0.5f * h,  0.5f * d));
+    // Dense surface lattice points on the box shell.
+    const int latticeRes = 5;
+    for (int ix = -latticeRes; ix <= latticeRes; ++ix) {
+        for (int iy = -latticeRes; iy <= latticeRes; ++iy) {
+            for (int iz = -latticeRes; iz <= latticeRes; ++iz) {
+                if (std::abs(ix) != latticeRes && std::abs(iy) != latticeRes && std::abs(iz) != latticeRes) continue;
+                const float nx = static_cast<float>(ix) / static_cast<float>(latticeRes);
+                const float ny = static_cast<float>(iy) / static_cast<float>(latticeRes);
+                const float nz = static_cast<float>(iz) / static_cast<float>(latticeRes);
+                vdata0.emplace_back(
+                    0.5f * w * nx,
+                    0.5f * h * ny,
+                    0.5f * d * nz
+                );
+            }
+        }
+    }
 }
 
 RigidSphere::RigidSphere(
@@ -96,6 +105,7 @@ void RigidSolver::step(const Entity bodyEntity, const float dt, Registry& regist
         for (const Entity& e : colliders.entities()) {
             if (e == bodyEntity) continue;
             if (registry.storage<Plane>().has(e)) resolvePlaneCollision(e, registry, colliderDt);
+            if (registry.storage<Box>().has(e)) resolveBoxCollision(e, registry, colliderDt);
             if (registry.storage<Sphere>().has(e)) resolveSphereCollision(e, registry, colliderDt);
         }
         integrate(simDt * 0.5f);
@@ -164,6 +174,13 @@ void RigidSolver::resolveSdfCollision(
     const float colliderDt,
     const SdfSampler& sdfSampler
 ) {
+    struct ContactCandidate {
+        glm::vec3 rRel;
+        glm::vec3 normal;
+        glm::vec3 colliderVelocity;
+        float dist;
+    };
+
     auto& colliders = registry.storage<Collider>();
     auto& transforms = registry.storage<Transform>();
     if (!colliders.has(e) || !transforms.has(e)) return;
@@ -174,6 +191,8 @@ void RigidSolver::resolveSdfCollision(
     const float mu = collider.friction;
     Transform prevTransform {};
     const bool hasPrev = getPrevColliderTransform(e, prevTransform);
+    std::vector<ContactCandidate> contacts;
+    contacts.reserve(body->vdata0.size());
 
     for (size_t i = 0; i < body->vdata0.size(); i++) {
         const glm::vec3 rRel = body->R * body->vdata0[i];
@@ -181,8 +200,10 @@ void RigidSolver::resolveSdfCollision(
 
         SdfContactSample sample {};
         if (!sdfSampler(r, sample)) continue;
-        const float dist = std::abs(sample.distance);
-        const glm::vec3 normal = (sample.distance >= 0.0f) ? sample.normal : -sample.normal;
+        const float dist = sample.distance;
+        const float normalLen = glm::length(sample.normal);
+        if (!std::isfinite(normalLen) || normalLen <= 1e-8f) continue;
+        const glm::vec3 normal = sample.normal / normalLen;
 
         glm::vec3 colliderVelocity(0.0f);
         if (hasPrev) {
@@ -196,18 +217,43 @@ void RigidSolver::resolveSdfCollision(
         const float approach = -vRel * simDt;
         if (dist > approach + 1e-3f) continue;
 
-        const glm::vec3 rCrossN = glm::cross(rRel, normal);
+        contacts.push_back(ContactCandidate{
+            .rRel = rRel,
+            .normal = normal,
+            .colliderVelocity = colliderVelocity,
+            .dist = dist,
+        });
+    }
+
+    std::sort(
+        contacts.begin(),
+        contacts.end(),
+        [](const ContactCandidate& a, const ContactCandidate& b) {
+            return a.dist < b.dist;
+        }
+    );
+
+    constexpr size_t maxContactsPerCollider = 8;
+    const size_t contactCount = std::min(maxContactsPerCollider, contacts.size());
+    for (size_t i = 0; i < contactCount; ++i) {
+        const ContactCandidate& c = contacts[i];
+
+        const glm::vec3 v = body->V + glm::cross(body->omega, c.rRel) - c.colliderVelocity;
+        const float vRel = glm::dot(c.normal, v);
+        if (vRel >= 1e-1f) continue;
+
+        const glm::vec3 rCrossN = glm::cross(c.rRel, c.normal);
         const float denom = 1.0f / body->M + glm::dot(rCrossN, body->Iinv * rCrossN);
         if (!std::isfinite(denom) || denom <= 1e-8f) continue;
         const float j = -(1.0f + eps) * vRel / denom;
         if (!std::isfinite(j) || j <= 0.0f) continue;
 
-        glm::vec3 J = j * normal;
-        const glm::vec3 vT = v - glm::dot(v, normal) * normal;
+        glm::vec3 J = j * c.normal;
+        const glm::vec3 vT = v - glm::dot(v, c.normal) * c.normal;
         const float vTlen = glm::length(vT);
         if (vTlen >= 1e-8f) {
             const glm::vec3 tDir = vT / vTlen;
-            const glm::vec3 rCrossT = glm::cross(rRel, tDir);
+            const glm::vec3 rCrossT = glm::cross(c.rRel, tDir);
             const float denomT = 1.0f / body->M + glm::dot(rCrossT, body->Iinv * rCrossT);
             if (!std::isfinite(denomT) || denomT <= 1e-8f) continue;
             float jT = -glm::dot(tDir, v) / denomT;
@@ -218,7 +264,9 @@ void RigidSolver::resolveSdfCollision(
         }
 
         body->P += J;
-        body->L += glm::cross(rRel, J);
+        body->L += glm::cross(c.rRel, J);
+        body->V = body->P / body->M;
+        body->omega = body->Iinv * body->L;
     }
 }
 
@@ -231,9 +279,53 @@ void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry, con
     const glm::vec3 p0 = t.position;
     const glm::vec3 n = t.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
     const SdfSampler sdfSampler = [p0, n](const glm::vec3& p, SdfContactSample& sample) -> bool {
-        sample.distance = glm::dot(n, p - p0);
-        sample.normal = n;
+        const float d = glm::dot(n, p - p0);
+        sample.distance = std::abs(d);
+        sample.normal = (d >= 0.0f) ? n : -n;
         sample.center = p0;
+        return true;
+    };
+    resolveSdfCollision(e, registry, colliderDt, sdfSampler);
+}
+
+void RigidSolver::resolveBoxCollision(const Entity& e, Registry& registry, const float colliderDt) {
+    auto& boxes = registry.storage<Box>();
+    auto& transforms = registry.storage<Transform>();
+    if (!boxes.has(e) || !transforms.has(e)) return;
+
+    const Transform& t = transforms.get(e);
+    const glm::vec3 center = t.position;
+    const glm::vec3 halfExtents = glm::max(glm::abs(t.scale), glm::vec3(1e-4f));
+    const glm::quat invRot = glm::inverse(glm::normalize(t.rotation));
+
+    const SdfSampler sdfSampler = [center, halfExtents, invRot, rot = t.rotation](const glm::vec3& p, SdfContactSample& sample) -> bool {
+        const glm::vec3 local = invRot * (p - center);
+        const glm::vec3 q = glm::abs(local) - halfExtents;
+
+        const glm::vec3 qPos = glm::max(q, glm::vec3(0.0f));
+        const float outsideDist = glm::length(qPos);
+        const float insideDist = std::min(std::max(q.x, std::max(q.y, q.z)), 0.0f);
+        sample.distance = outsideDist + insideDist;
+
+        glm::vec3 nLocal(0.0f, 1.0f, 0.0f);
+        if (outsideDist > 1e-8f) {
+            glm::vec3 grad = glm::sign(local) * qPos;
+            const float gradLen = glm::length(grad);
+            if (gradLen > 1e-8f) nLocal = grad / gradLen;
+        } else {
+            int axis = 0;
+            float qMax = q.x;
+            if (q.y > qMax) { axis = 1; qMax = q.y; }
+            if (q.z > qMax) { axis = 2; }
+            nLocal = glm::vec3(0.0f);
+            nLocal[axis] = (local[axis] >= 0.0f) ? 1.0f : -1.0f;
+        }
+
+        const glm::vec3 nWorld = rot * nLocal;
+        const float nLen = glm::length(nWorld);
+        if (!std::isfinite(nLen) || nLen <= 1e-8f) return false;
+        sample.normal = nWorld / nLen;
+        sample.center = center;
         return true;
     };
     resolveSdfCollision(e, registry, colliderDt, sdfSampler);
