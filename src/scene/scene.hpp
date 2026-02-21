@@ -63,6 +63,9 @@ public:
     void drawSelectedMaterialUI();
     void drawSelectedMeshAssetUI();
     void bakePhysics();
+    bool isPhysicsBakeInProgress() const;
+    int getPhysicsBakeCurrentFrame() const;
+    int getPhysicsBakeTotalFrames() const;
     
     bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
     

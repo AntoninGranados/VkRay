@@ -21,6 +21,14 @@ static std::unordered_map<ecs::Entity, ecs::Transform> gPrevColliderTransforms;
 static int gPrevSolverFrame = -1;
 static int gPrevSystemFrame = -1;
 static bool gIsBaking = false;
+struct BakeState {
+    bool inProgress = false;
+    int nextFrame = 0;
+    int totalFrames = 0;
+    int savedFrame = 0;
+    bool wasPaused = true;
+};
+static BakeState gBakeState;
 
 bool getPrevColliderTransform(const Entity& entity, Transform& outTransform) {
     auto it = gPrevColliderTransforms.find(entity);
@@ -296,37 +304,58 @@ void physicsSolver(Registry& registry, AppContext& ctx) {
 
 void bakePhysicsSimulation(Registry& registry, AppContext& ctx) {
     if (!ctx.animation) return;
+    if (physics_detail::gBakeState.inProgress) return;
 
-    const int savedFrame = ctx.animation->getFrame();
-    const bool wasPaused = ctx.animation->isPaused();
-    const int endFrame = ctx.animation->getEndFrame();
-
-    ctx.animation->reset(0);
-    physicsSystem(registry, ctx);
+    const int endFrame = std::max(1, ctx.animation->getEndFrame());
 
     physics_detail::gStates.clear();
     physics_detail::gPrevColliderTransforms.clear();
     physics_detail::gPrevSolverFrame = -1;
     physics_detail::gPrevSystemFrame = -1;
     physics_detail::gIsBaking = true;
+    physics_detail::gBakeState.inProgress = true;
+    physics_detail::gBakeState.nextFrame = 0;
+    physics_detail::gBakeState.totalFrames = endFrame;
+    physics_detail::gBakeState.savedFrame = ctx.animation->getFrame();
+    physics_detail::gBakeState.wasPaused = ctx.animation->isPaused();
 
     ctx.animation->pause();
-    for (int f = 0; f < endFrame; ++f) {
-        transformAnimationSystem(registry, ctx);
-        transformSystem(registry, ctx);
-        physicsSolver(registry, ctx);
-        ctx.animation->stepFixed();
-    }
-    physics_detail::gIsBaking = false;
-
-    ctx.animation->reset(savedFrame);
-    if (!wasPaused) ctx.animation->play();
-
     *ctx.restartRender = true;
+}
+
+bool isPhysicsBakeInProgress() {
+    return physics_detail::gBakeState.inProgress;
+}
+
+int getPhysicsBakeCurrentFrame() {
+    return physics_detail::gBakeState.nextFrame;
+}
+
+int getPhysicsBakeTotalFrames() {
+    return physics_detail::gBakeState.totalFrames;
 }
 
 void physicsSystem(Registry& registry, AppContext& ctx) {
     using namespace ecs::physics_detail;
+
+    if (gBakeState.inProgress) {
+        ctx.animation->reset(gBakeState.nextFrame);
+        transformAnimationSystem(registry, ctx);
+        transformSystem(registry, ctx);
+        physicsSolver(registry, ctx);
+        *ctx.restartRender = true;
+
+        gBakeState.nextFrame++;
+        if (gBakeState.nextFrame >= gBakeState.totalFrames) {
+            gIsBaking = false;
+            gBakeState.inProgress = false;
+            ctx.animation->reset(gBakeState.savedFrame);
+            if (!gBakeState.wasPaused) ctx.animation->play();
+        } else {
+            ctx.animation->reset(gBakeState.savedFrame);
+        }
+        return;
+    }
 
     static int prevFrame = 0;
     if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame() && !*ctx.restartRender) return;

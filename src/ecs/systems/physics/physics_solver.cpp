@@ -179,6 +179,7 @@ void RigidSolver::resolveSdfCollision(
         glm::vec3 normal;
         glm::vec3 colliderVelocity;
         float dist;
+        bool penetrating;
     };
 
     auto& colliders = registry.storage<Collider>();
@@ -212,16 +213,18 @@ void RigidSolver::resolveSdfCollision(
 
         const glm::vec3 v = body->V + glm::cross(body->omega, rRel) - colliderVelocity;
         const float vRel = glm::dot(normal, v);
-        if (vRel >= 1e-1f) continue;
+        const bool penetrating = dist <= 1e-4f;
+        if (!penetrating && vRel >= 1e-1f) continue;
 
         const float approach = -vRel * simDt;
-        if (dist > approach + 1e-3f) continue;
+        if (!penetrating && dist > approach + 1e-3f) continue;
 
         contacts.push_back(ContactCandidate{
             .rRel = rRel,
             .normal = normal,
             .colliderVelocity = colliderVelocity,
             .dist = dist,
+            .penetrating = penetrating,
         });
     }
 
@@ -240,12 +243,18 @@ void RigidSolver::resolveSdfCollision(
 
         const glm::vec3 v = body->V + glm::cross(body->omega, c.rRel) - c.colliderVelocity;
         const float vRel = glm::dot(c.normal, v);
-        if (vRel >= 1e-1f) continue;
+        if (!c.penetrating && vRel >= 1e-1f) continue;
 
         const glm::vec3 rCrossN = glm::cross(c.rRel, c.normal);
         const float denom = 1.0f / body->M + glm::dot(rCrossN, body->Iinv * rCrossN);
         if (!std::isfinite(denom) || denom <= 1e-8f) continue;
-        const float j = -(1.0f + eps) * vRel / denom;
+        const float penetration = std::max(-c.dist, 0.0f);
+        const float contactSlop = 1e-4f;
+        const float baumgarte = 0.2f;
+        const float bias = (penetration > contactSlop)
+            ? (baumgarte * (penetration - contactSlop) / std::max(simDt, 1e-8f))
+            : 0.0f;
+        const float j = (-(1.0f + eps) * vRel + bias) / denom;
         if (!std::isfinite(j) || j <= 0.0f) continue;
 
         glm::vec3 J = j * c.normal;
@@ -277,11 +286,14 @@ void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry, con
 
     const Transform& t = transforms.get(e);
     const glm::vec3 p0 = t.position;
-    const glm::vec3 n = t.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 nRaw = t.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const float nLen = glm::length(nRaw);
+    if (!std::isfinite(nLen) || nLen <= 1e-8f) return;
+    const glm::vec3 n = nRaw / nLen;
     const SdfSampler sdfSampler = [p0, n](const glm::vec3& p, SdfContactSample& sample) -> bool {
         const float d = glm::dot(n, p - p0);
-        sample.distance = std::abs(d);
-        sample.normal = (d >= 0.0f) ? n : -n;
+        sample.distance = d;
+        sample.normal = n;
         sample.center = p0;
         return true;
     };

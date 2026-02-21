@@ -191,6 +191,18 @@ void Scene::bakePhysics() {
     ecs::bakePhysicsSimulation(registry, *ctx);
 }
 
+bool Scene::isPhysicsBakeInProgress() const {
+    return ecs::isPhysicsBakeInProgress();
+}
+
+int Scene::getPhysicsBakeCurrentFrame() const {
+    return ecs::getPhysicsBakeCurrentFrame();
+}
+
+int Scene::getPhysicsBakeTotalFrames() const {
+    return ecs::getPhysicsBakeTotalFrames();
+}
+
 
 bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
     const Ray ray = getRay(screenPos, screenSize, camera);
