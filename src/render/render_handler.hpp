@@ -3,7 +3,8 @@
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
-#include "engine/descriptor/descriptor_set_allocation.hpp"
+#include "engine/engine.hpp"
+#include "engine/memory/per_frame_buffer.hpp"
 
 struct FrameContext;
 
@@ -45,7 +46,8 @@ private:
     GraphicsPipeline pathtracingPipeline, compositingPipeline, displayPipeline;
     
     Buffer vertexBuffer, indexBuffer;
-    bufferList_t pathtracingUniformBuffers, displayUniformBuffers;
+    PerFrameBuffer<PathtracerUBO> pathtracingUniformBuffers;
+    PerFrameBuffer<ScreenUBO> displayUniformBuffers;
     bufferList_t pixelInfoBuffers;
 
     ExportService exportService;

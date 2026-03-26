@@ -31,8 +31,8 @@ void RenderHandler::init(AppContext& ctx) {
             sizeof(index_t) * indices.size(), (void*)indices.data()
         );
     
-        pathtracingUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(PathtracerUBO));
-        displayUniformBuffers = engine.initBufferList(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ScreenUBO));
+        pathtracingUniformBuffers = engine.createPerFrameBuffer<PathtracerUBO>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        displayUniformBuffers = engine.createPerFrameBuffer<ScreenUBO>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
         VkExtent2D extent = engine.getExtent();
         size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo);
@@ -137,8 +137,8 @@ void RenderHandler::destroy(AppContext& ctx) {
 
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
-    engine.destroyBufferList(pathtracingUniformBuffers);
-    engine.destroyBufferList(displayUniformBuffers);
+    engine.destroyPerFrameBuffer(pathtracingUniformBuffers);
+    engine.destroyPerFrameBuffer(displayUniformBuffers);
     engine.destroyBufferList(pixelInfoBuffers);
     exportService.destroy(engine);
     
@@ -340,8 +340,8 @@ void RenderHandler::render(AppContext& ctx) {
         }
     }
     
-    engine.fillBuffer(engine.getBuffer(pathtracingUniformBuffers), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(displayUniformBuffers), ctx.screenUBO);
+    engine.fillBuffer(pathtracingUniformBuffers.current(frameContext.value()), ctx.pathtracerUBO);
+    engine.fillBuffer(displayUniformBuffers.current(frameContext.value()), ctx.screenUBO);
     frame = (frame + 1) % 2;
     
     pathtracingPass(ctx);
@@ -475,7 +475,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
         );
         
         // Bind current descriptor set
-        pathtracingDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, pathtracingPipeline.getLayout());
+        pathtracingDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, pathtracingPipeline.getLayout());
         
         pathtracingPipeline.bind(commandBuffer);
 
@@ -519,7 +519,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
 
-        compositingDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, compositingPipeline.getLayout());
         compositingPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
@@ -556,7 +556,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
-        displayDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, displayPipeline.getLayout());
+        displayDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, displayPipeline.getLayout());
 
         displayPipeline.bind(commandBuffer);
 
