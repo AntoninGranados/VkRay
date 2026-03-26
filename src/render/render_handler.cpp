@@ -7,6 +7,7 @@
 #include "engine/descriptor/descriptor_set_allocation.hpp"
 #include "engine/engine.hpp"
 #include "engine/pipeline/vertex_input.hpp"
+#include "engine/frame_context.hpp"
 
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
@@ -304,7 +305,11 @@ void RenderHandler::render(AppContext& ctx) {
         }
     }
     
-    engine.beginFrame();
+    auto frameContext = engine.beginFrame();
+    if (!frameContext) {
+        return;
+        std::cout << "Hello" << std::endl;
+    }
     
     ctx.scene->runOnRender(ctx);
 

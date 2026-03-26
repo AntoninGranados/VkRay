@@ -1,9 +1,6 @@
 #include "application.hpp"
 
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-// #include "imgui/imgui_impl_vulkan.h"
-
 
 #include <IconsFontAwesome7.h>
 
@@ -11,30 +8,9 @@
 #include "scene/object/object.hpp"
 
 Application::Application() {
+    inputHandler.initCallbacks(ctx);
+
     engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0));
-
-    glfwSetCursorPosCallback(
-        engine.getWindow().get(),
-        [](GLFWwindow* window, double x, double y) {
-            ImGui_ImplGlfw_CursorPosCallback(window, x, y);
-            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            const bool cameraLocked = app->ctx.camera->isLocked();
-            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured() || ImGuizmo::IsUsing()))
-                return;
-            app->restartRender |= app->ctx.camera->cursorPosCallback(window, x, y);
-        }
-    );
-
-    glfwSetScrollCallback(
-        engine.getWindow().get(), 
-        [](GLFWwindow* window, double xoffset, double yoffset) {
-            ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
-            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            if (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured()) return;
-            if (app->ctx.renderState->renderMode != RenderMode::Preview) return;
-            app->restartRender |= app->ctx.camera->scrollCallback(window, xoffset, yoffset);
-        }
-    );
 
     initParameters();
     initScene();

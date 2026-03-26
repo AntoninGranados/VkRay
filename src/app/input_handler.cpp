@@ -19,28 +19,22 @@
 
 
 void InputHandler::initCallbacks(const AppContext& ctx) {
-    glfwSetCursorPosCallback(
-        ctx.engine->getWindow().get(),
-        [](GLFWwindow* window, double x, double y) {
-            ImGui_ImplGlfw_CursorPosCallback(window, x, y);
-            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            const bool cameraLocked = app->ctx.camera->isLocked();
-            if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured() || ImGuizmo::IsUsing()))
-                return;
-            app->restartRender |= app->ctx.camera->cursorPosCallback(window, x, y);
-        }
-    );
+    ctx.engine->getWindow().setCursorPosCallback([&ctx](double x, double y){
+        GLFWwindow* window = ctx.engine->getWindow().get();
+        ImGui_ImplGlfw_CursorPosCallback(window, x, y);
+        const bool cameraLocked = ctx.camera->isLocked();
+        if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured() || ImGuizmo::IsUsing()))
+            return;
+        *ctx.restartRender |= ctx.camera->cursorPosCallback(window, x, y);
+    });
 
-    glfwSetScrollCallback(
-        ctx.engine->getWindow().get(), 
-        [](GLFWwindow* window, double xoffset, double yoffset) {
-            ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
-            auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            if (ImGui::GetIO().WantCaptureMouse || app->ui.isMouseCaptured()) return;
-            if (app->ctx.renderState->renderMode != RenderMode::Preview) return;
-            app->restartRender |= app->ctx.camera->scrollCallback(window, xoffset, yoffset);
-        }
-    );
+    ctx.engine->getWindow().setScrollCallback([&ctx](double xoffset, double yoffset){
+        GLFWwindow* window = ctx.engine->getWindow().get();
+        ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+        if (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured()) return;
+        if (ctx.renderState->renderMode != RenderMode::Preview) return;
+        *ctx.restartRender |= ctx.camera->scrollCallback(window, xoffset, yoffset);
+    });
 }
 
 void InputHandler::pollEvents() {
