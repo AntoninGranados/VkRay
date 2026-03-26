@@ -21,7 +21,6 @@
 void InputHandler::initCallbacks(const AppContext& ctx) {
     ctx.engine->getWindow().setCursorPosCallback([&ctx](double x, double y){
         GLFWwindow* window = ctx.engine->getWindow().get();
-        ImGui_ImplGlfw_CursorPosCallback(window, x, y);
         const bool cameraLocked = ctx.camera->isLocked();
         if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured() || ImGuizmo::IsUsing()))
             return;
@@ -30,7 +29,6 @@ void InputHandler::initCallbacks(const AppContext& ctx) {
 
     ctx.engine->getWindow().setScrollCallback([&ctx](double xoffset, double yoffset){
         GLFWwindow* window = ctx.engine->getWindow().get();
-        ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
         if (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured()) return;
         if (ctx.renderState->renderMode != RenderMode::Preview) return;
         *ctx.restartRender |= ctx.camera->scrollCallback(window, xoffset, yoffset);
