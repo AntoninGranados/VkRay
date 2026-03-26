@@ -7,6 +7,8 @@
 
 #include "imgui/imgui.h"
 
+#include "editor/panels/camera_panel.hpp"
+
 class Camera {
 public:
     Camera(glm::vec3 position = glm::vec3(0.0f));
@@ -41,7 +43,7 @@ public:
 
     void resetMouse() { firstMouse = true; }
 
-    bool drawPreviewUI(bool &restartRequested);
+    friend CameraPanel;
 
 private:
     enum class DragMode {

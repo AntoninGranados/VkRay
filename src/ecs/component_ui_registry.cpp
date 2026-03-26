@@ -11,7 +11,7 @@
 
 #include "../scene/asset/mesh.hpp"
 #include "app/animation_handler.hpp"
-#include "../ui_constants.hpp"
+#include "../editor/ui_constants.hpp"
 
 namespace ecs {
 
@@ -46,8 +46,8 @@ void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity& e, ecs::Tran
         case TransformKeyframeType::Scale:      hasKeyframe = anim.hasScaleKeyframe(ctx.animation->getFrame());     break;
     }
     
-    if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_on_col);
-    else ImGui::PushStyleColor(ImGuiCol_Text, ui::keyframe_off_col);
+    if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOnColor);
+    else ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOffColor);
     
     ImGui::PushID((long)&type + (long)&e);
     ui::PushTransparentStyleColor();

@@ -2,6 +2,8 @@
 
 #include "imgui/imgui.h"
 
+#include "editor/panels/notification_panel.hpp"
+
 #include <vector>
 
 enum NotificationType : int{
@@ -32,12 +34,12 @@ enum Command : int {
 
 class NotificationHandler {
 public:
-    void drawNotifications();
-    
     void pushMessage(NotificationType type, std::string content);
     void pushNotification(Notification notification);
 
     bool isCommandRequested(enum Command command);
+
+    friend NotificationPanel;
 
 private:
     void parseInput(char *buff);

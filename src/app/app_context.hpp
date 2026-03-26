@@ -70,7 +70,7 @@ class Scene;
 class Camera;
 class ParameterHandler;
 class NotificationHandler;
-class UiHandler;
+class EditorUi;
 class AnimationHandler;
 
 struct AppContext {
@@ -79,7 +79,7 @@ struct AppContext {
     Camera* camera;
     ParameterHandler* parameters;
     NotificationHandler* notifications;
-    UiHandler* ui;
+    EditorUi* ui;
     AnimationHandler* animation;
 
     RenderState* renderState;

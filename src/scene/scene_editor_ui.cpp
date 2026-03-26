@@ -12,7 +12,7 @@
 #include "IconsFontAwesome7.h"
 
 #include "app/notification_handler.hpp"
-#include "../ui_constants.hpp"
+#include "../editor/ui_constants.hpp"
 
 void SceneEditorUI::drawGuizmo(Scene& scene, const glm::mat4& view, const glm::mat4& proj) {
     if (scene.selectedEntity < 0) return;
@@ -214,7 +214,7 @@ void SceneEditorUI::drawUI(Scene& scene) {
 
         bool hasPath = std::strlen(meshPath) > 0;
         ImGui::BeginDisabled(!hasPath);
-        if (ImGui::Button(ICON_FA_UPLOAD " Load", ui::button_size)) {
+        if (ImGui::Button(ICON_FA_UPLOAD " Load", ui::kButtonSize)) {
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*scene.ctx, meshPath)) {
                 scene.meshAssets.push_back(std::move(asset));
@@ -227,7 +227,7 @@ void SceneEditorUI::drawUI(Scene& scene) {
         ImGui::EndDisabled();
         ImGui::SameLine();
         ui::PushCancelStyleColor();
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
             ImGui::CloseCurrentPopup();
         }
         ui::PopCancelStyleColor();
@@ -247,43 +247,43 @@ void SceneEditorUI::drawNewObjectPopUp(Scene& scene) {
     std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", scene.entityN);
     std::string name(nameBuffer);
 
-    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::kButtonSize)) {
         scene.entities.push_back(scene.registry.createEntity());
         scene.updated = true;
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
-    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::kButtonSize)) {
         scene.pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
         scene.updated = true;
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
-    if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::kButtonSize)) {
         scene.pushPlane(name, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
         scene.updated = true;
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
-    if (ImGui::Button(ICON_FA_BOX " Box", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_BOX " Box", ui::kButtonSize)) {
         scene.pushBox(name, glm::vec3(-1.0, -1.0, -1.0), glm::vec3(1.0, 1.0, 1.0));
         scene.updated = true;
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
-    if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::kButtonSize)) {
         scene.pushMesh(name, 0, glm::mat3(1.0));
         scene.updated = true;
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
-    if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::kButtonSize)) {
         scene.pushCamera(name, glm::mat3(1.0));
         ImGui::CloseCurrentPopup();
         scene.entityN++;
     }
     ui::PushCancelStyleColor();
-    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
+    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
         ImGui::CloseCurrentPopup();
     }
     ui::PopCancelStyleColor();
@@ -297,7 +297,7 @@ void SceneEditorUI::drawSelectedEntityUI(Scene& scene) {
     bool openNewComponentPopup = false;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
+    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin(
         "Entity",
@@ -351,7 +351,7 @@ void SceneEditorUI::drawSelectedEntityUI(Scene& scene) {
             }
 
             const auto& funcs = funcsMap.at(id);
-            if (ImGui::Button(componentLabel(id).c_str(), ui::button_size)) {
+            if (ImGui::Button(componentLabel(id).c_str(), ui::kButtonSize)) {
                 bool verifyRestrictions = true;
                 const auto& restrictions = restrictionsMap.at(id);
                 for (auto& requirement : restrictions.requirements) {
@@ -378,7 +378,7 @@ void SceneEditorUI::drawSelectedEntityUI(Scene& scene) {
         }
 
         ui::PushCancelStyleColor();
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::button_size)) {
+        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
             ImGui::CloseCurrentPopup();
         }
         ui::PopCancelStyleColor();
@@ -392,7 +392,7 @@ void SceneEditorUI::drawSelectedMaterialUI(Scene& scene) {
     if (scene.selectedMaterial < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
+    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
@@ -408,7 +408,7 @@ void SceneEditorUI::drawSelectedMeshAssetUI(Scene& scene) {
     if (scene.selectedMeshAsset < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::window_bg_alpha);
+    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {

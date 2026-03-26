@@ -9,7 +9,7 @@
 #include "application.hpp"
 #include "app/app_context.hpp"
 #include "camera.hpp"
-#include "ui_handler.hpp"
+#include "editor/editor_ui.hpp"
 #include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
 #include "scene/scene.hpp"

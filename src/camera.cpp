@@ -175,34 +175,3 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
 
     return change;
 }
-
-bool Camera::drawPreviewUI(bool &restartRequested) {
-    bool updated = false;
-
-    glm::vec3 dir = getDirection();
-    ImGui::Text("Camera Position :\n (%4.1f, %4.1f, %4.1f)", position.x, position.y, position.z);
-    ImGui::Text("Camera Direction:\n (%4.1f, %4.1f, %4.1f)", dir.x, dir.y, dir.z);
-    ImGui::Text("Camera Target   :\n (%4.1f, %4.1f, %4.1f)", target.x, target.y, target.z);
-    ImGui::Text("Camera Fov:\n %4.1f°", getFov());
-    
-    ImGui::Text("Camera Aperture:");
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    float newAperture = getAperture();
-    if (ImGui::DragFloat("##Camera Aperture", &newAperture, 0.01, 0.0, 5.0)) {
-        setAperture(newAperture);
-        updated = true;
-    }
-
-    ImGui::Text("Camera Focus Depth:");
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    float newFocusDepth = getFocusDepth();
-    if (ImGui::DragFloat("##Camera Focus Depth", &newFocusDepth, 0.1, 0.0, 100.0)) {
-        setFocusDepth(newFocusDepth);
-        updated = true;
-    }
-
-    // This is redundant (same value as the one returned) but it makes it consistent with the parameters update
-    if (updated)
-        restartRequested = true;
-    return updated;
-}

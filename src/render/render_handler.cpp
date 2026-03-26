@@ -4,7 +4,7 @@
 #include "./../scene/scene.hpp"
 #include "./../camera.hpp"
 #include "app/notification_handler.hpp"
-#include "./../ui_handler.hpp"
+#include "./../editor/editor_ui.hpp"
 #include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
 

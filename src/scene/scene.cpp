@@ -12,7 +12,7 @@
 #include "IconsFontAwesome7.h"
 #include "imgui/ImGuizmo.h"
 #include "imgui/imgui.h"
-#include "../ui_constants.hpp"
+#include "../editor/ui_constants.hpp"
 
 #include "scene_editor_ui.hpp"
 #include "scene_preset.hpp"

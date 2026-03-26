@@ -11,7 +11,7 @@
 #include "scene/scene.hpp"
 
 #include "app/app_context.hpp"
-#include "ui_handler.hpp"
+#include "editor/editor_ui.hpp"
 #include "app/animation_handler.hpp"
 #include "render/render_handler.hpp"
 
@@ -42,7 +42,7 @@ private:
     Scene scene;
     ParameterHandler parameters;
     NotificationHandler notifications;
-    UiHandler ui;
+    EditorUi ui;
     AnimationHandler animation = AnimationHandler(24.0f * 5, 24.0f);
 
     RenderState renderState;
