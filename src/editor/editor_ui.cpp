@@ -1,12 +1,11 @@
 #include "editor_ui.hpp"
 
-#include "IconsFontAwesome7.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_vulkan.h"
+#include "imgui/ImGuizmo.h"
 
-#include "app/parameter_handler.hpp"
-#include "./scene/scene_preset.hpp"
-#include "app/notification_handler.hpp"
-#include "app/animation_handler.hpp"
-
+#include "scene/scene.hpp"
 #include "./ui_constants.hpp"
 
 

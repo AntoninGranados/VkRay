@@ -1,12 +1,17 @@
 #include "render_handler.hpp"
 
-#include "./../engine/engine.hpp"
-#include "./../scene/scene.hpp"
-#include "./../camera.hpp"
+#include <iostream>
+
+#include "./imgui/imgui.h"
+
+#include "engine/descriptor/descriptor_set_allocation.hpp"
+#include "engine/engine.hpp"
+#include "engine/pipeline/vertex_input.hpp"
+
 #include "app/notification_handler.hpp"
-#include "./../editor/editor_ui.hpp"
 #include "app/parameter_handler.hpp"
-#include "app/animation_handler.hpp"
+#include "scene/scene.hpp"
+#include "editor/editor_ui.hpp"
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
@@ -94,14 +99,14 @@ void RenderHandler::init(AppContext& ctx) {
                 descriptors.push_back(&buffers);
             }
 
-            pathtracingDescriptorSets[i] = engine.initDescriptorSetList(pathtracingSetLayout, descriptors);
+            pathtracingDescriptorSets[i] = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
 
-            compositingDescriptorSets[i] = engine.initDescriptorSetList(
+            compositingDescriptorSets[i] = engine.createDescriptorSetAllocation(
                 compositingSetLayout,
                 { &pathtracingCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
             );
 
-            displayDescriptorSets[i] = engine.initDescriptorSetList(
+            displayDescriptorSets[i] = engine.createDescriptorSetAllocation(
                 displaySetLayout,
                 { &outputCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
             );
@@ -120,6 +125,10 @@ void RenderHandler::destroy(AppContext& ctx) {
         engine.destroySampler(pathtracingSamplers[i]);
         engine.destroyImage(pathtracingImages[i]);
         engine.destroyImageView(pathtracingImageViews[i]);
+
+        engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
+        engine.destroyDescriptorSetAllocation(compositingDescriptorSets[i]);
+        engine.destroyDescriptorSetAllocation(displayDescriptorSets[i]);
     }
     engine.destroySampler(outputSampler);
     engine.destroyImage(outputImage);
@@ -313,7 +322,11 @@ void RenderHandler::render(AppContext& ctx) {
                 descriptors.push_back(&buffers);
             }
             
-            pathtracingDescriptorSets[i] = engine.initDescriptorSetList(pathtracingSetLayout, descriptors);
+            DescriptorSetAllocation newAllocation = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
+            if (newAllocation.isValide()) {
+                engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
+                pathtracingDescriptorSets[i] = std::move(newAllocation);
+            }
         }
     }
     
@@ -371,7 +384,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
         );
         
         // Bind current descriptor set
-        engine.getDescriptorSet(pathtracingDescriptorSets[frame]).bind(commandBuffer, pathtracingPipeline.getLayout());
+        pathtracingDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, pathtracingPipeline.getLayout());
         
         pathtracingPipeline.bind(commandBuffer);
 
@@ -415,7 +428,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
 
-        engine.getDescriptorSet(compositingDescriptorSets[frame]).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, compositingPipeline.getLayout());
         compositingPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
@@ -452,7 +465,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
-        engine.getDescriptorSet(displayDescriptorSets[frame]).bind(commandBuffer, displayPipeline.getLayout());
+        displayDescriptorSets[frame].get(engine.getFrame()).bind(commandBuffer, displayPipeline.getLayout());
 
         displayPipeline.bind(commandBuffer);
 

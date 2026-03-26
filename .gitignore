@@ -1,9 +1,12 @@
 .vscode/
 .idea/
 .DS_Store
+.clangd
 
 bin/
 build/
+#! Temporary removal
+docs/
 
 imgui.ini
 outputs/

@@ -3,8 +3,7 @@
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
-#include "./imgui/imgui.h"
-#include "./imgui/ImGuizmo.h"
+#include "engine/descriptor/descriptor_set_allocation.hpp"
 
 
 typedef uint16_t index_t;
@@ -41,7 +40,7 @@ private:
     Sampler outputSampler;
     
     DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
-    descriptorSetList_t pathtracingDescriptorSets[2], compositingDescriptorSets[2], displayDescriptorSets[2];
+    DescriptorSetAllocation pathtracingDescriptorSets[2], compositingDescriptorSets[2], displayDescriptorSets[2];
     GraphicsPipeline pathtracingPipeline, compositingPipeline, displayPipeline;
     
     Buffer vertexBuffer, indexBuffer;
