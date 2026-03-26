@@ -5,6 +5,7 @@
 
 #include "engine/descriptor/descriptor_set_allocation.hpp"
 
+struct FrameContext;
 
 typedef uint16_t index_t;
 
@@ -50,6 +51,9 @@ private:
     ExportService exportService;
 
     size_t frame = 0;
+    uint64_t lastSwapchainGeneration = 0;
+
+    void handleResize(AppContext& ctx, const VkExtent2D& extent);
 
     void pathtracingPass(AppContext& ctx);
     void uiPass(AppContext& ctx);

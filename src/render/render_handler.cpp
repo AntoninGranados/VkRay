@@ -308,7 +308,12 @@ void RenderHandler::render(AppContext& ctx) {
     auto frameContext = engine.beginFrame();
     if (!frameContext) {
         return;
-        std::cout << "Hello" << std::endl;
+    }
+    if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
+        handleResize(ctx, frameContext->extent);
+        lastSwapchainGeneration = frameContext->swapchainGeneration;
+        *ctx.restartRender = true;
+        frame = 0;
     }
     
     ctx.scene->runOnRender(ctx);
@@ -345,6 +350,87 @@ void RenderHandler::render(AppContext& ctx) {
     engine.endFrame();
 
     exportService.handleSave(ctx);
+}
+
+void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
+    VkSmol& engine = *ctx.engine;
+
+    engine.waitIdle();
+
+    // Destroy old ressources
+    for (size_t i = 0; i < 2; i++) {
+        engine.destroySampler(pathtracingSamplers[i]);
+        engine.destroyImage(pathtracingImages[i]);
+        engine.destroyImageView(pathtracingImageViews[i]);
+
+        engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
+        engine.destroyDescriptorSetAllocation(compositingDescriptorSets[i]);
+        engine.destroyDescriptorSetAllocation(displayDescriptorSets[i]);
+    }
+    engine.destroySampler(outputSampler);
+    engine.destroyImage(outputImage);
+    engine.destroyImageView(outputImageView);
+
+    engine.destroyBufferList(pixelInfoBuffers);
+    exportService.destroy(engine);
+
+    // Recreate them based on the new extent
+    size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo);
+    pixelInfoBuffers = engine.initSharedBufferList(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoBytes);
+
+    {   // Image (image + view + sampler) creation
+        for (size_t i = 0; i < 2; i++) {
+            pathtracingImages[i] = engine.initImage(
+                extent.width, extent.height,
+                VK_FORMAT_R32G32B32A32_SFLOAT,  // Use 32 bit float format to avoid quantizing every accumulation step
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            );
+            pathtracingImageViews[i] = engine.initImageView(pathtracingImages[i]);
+            pathtracingSamplers[i] = engine.initSampler();
+        }
+        outputImage = engine.initImage(
+            extent.width, extent.height,
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        outputImageView = engine.initImageView(outputImage);
+        outputSampler = engine.initSampler();
+
+        exportService.init(engine, extent.width, extent.height);
+    }
+
+    {   // Descriptor sets creation
+        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
+            { pathtracingImageViews[0], pathtracingSamplers[0] },
+            { pathtracingImageViews[1], pathtracingSamplers[1] }
+        };
+        std::vector<std::pair<ImageView, Sampler> > outputCombinedImageSampler = {
+            { outputImageView, outputSampler },
+            { outputImageView, outputSampler }
+        };
+        
+        std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
+        for (size_t i = 0; i < 2; i++) {
+            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
+            for (bufferList_t &buffers : storageBuffers) {
+                descriptors.push_back(&buffers);
+            }
+
+            pathtracingDescriptorSets[i] = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
+
+            compositingDescriptorSets[i] = engine.createDescriptorSetAllocation(
+                compositingSetLayout,
+                { &pathtracingCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
+            );
+
+            displayDescriptorSets[i] = engine.createDescriptorSetAllocation(
+                displaySetLayout,
+                { &outputCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
+            );
+        }
+    }
 }
 
 void RenderHandler::pathtracingPass(AppContext& ctx) {
