@@ -1,7 +1,6 @@
 #include "scene.hpp"
 
 #include <utility>
-#include <iostream>
 #include <cstring>
 #include <cstdio>
 #include <cassert>
@@ -9,20 +8,15 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "IconsFontAwesome7.h"
 #include "imgui/ImGuizmo.h"
-#include "imgui/imgui.h"
-#include "../editor/ui_constants.hpp"
 
 #include "scene_editor_ui.hpp"
-#include "scene_preset.hpp"
 
 #include "../ecs/systems/transform_system.hpp"
 #include "../ecs/systems/gpu_packing_system.hpp"
 #include "../ecs/systems/camera_system.hpp"
 #include "../ecs/systems/animation_system.hpp"
 #include "../ecs/systems/physics/physics_system.hpp"
-#include "app/notification_handler.hpp"
 
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);

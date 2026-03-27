@@ -42,7 +42,7 @@ private:
     Sampler outputSampler;
     
     DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
-    DescriptorSetAllocation pathtracingDescriptorSets[2], compositingDescriptorSets[2], displayDescriptorSets[2];
+    DescriptorSetGroup pathtracingDescriptorSets[2], compositingDescriptorSets[2], displayDescriptorSets[2];
     GraphicsPipeline pathtracingPipeline, compositingPipeline, displayPipeline;
     
     Buffer vertexBuffer, indexBuffer;

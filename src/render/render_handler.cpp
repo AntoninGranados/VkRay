@@ -4,7 +4,7 @@
 
 #include "./imgui/imgui.h"
 
-#include "engine/descriptor/descriptor_set_allocation.hpp"
+#include "engine/descriptor/descriptor_set_group.hpp"
 #include "engine/engine.hpp"
 #include "engine/pipeline/vertex_input.hpp"
 #include "engine/frame_context.hpp"
@@ -80,39 +80,42 @@ void RenderHandler::init(AppContext& ctx) {
     displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
     engine.initDescriptorSetLayout(displaySetLayout);
-    
-    buildPipelines(ctx);
 
     {   // Descriptor sets creation
-        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
-            { pathtracingImageViews[0], pathtracingSamplers[0] },
-            { pathtracingImageViews[1], pathtracingSamplers[1] }
-        };
-        std::vector<std::pair<ImageView, Sampler> > outputCombinedImageSampler = {
-            { outputImageView, outputSampler },
-            { outputImageView, outputSampler }
-        };
-        
         std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
-            for (bufferList_t &buffers : storageBuffers) {
-                descriptors.push_back(&buffers);
+            pathtracingDescriptorSets[i] = engine.createDescriptorSetGroup(pathtracingSetLayout);
+            compositingDescriptorSets[i] = engine.createDescriptorSetGroup(compositingSetLayout);
+            displayDescriptorSets[i] = engine.createDescriptorSetGroup(displaySetLayout);
+
+            for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+                DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+                pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+                    .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                uint32_t binding = 3;
+                for (bufferList_t &buffers : storageBuffers) {
+                    pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
+                    binding++;
+                }
+                engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
+                
+                DescriptorWriter compositingWriter(compositingSetLayout);
+                compositingWriter.sampler(0, pathtracingImageViews[i], pathtracingSamplers[i])
+                    .uniform(1, displayUniformBuffers.at(frameIndex))
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                engine.updateDescriptorSetGroup(compositingDescriptorSets[i], frameIndex, compositingWriter);
+                
+                DescriptorWriter displayWriter(displaySetLayout);
+                displayWriter.sampler(0, outputImageView, outputSampler)
+                    .uniform(1, displayUniformBuffers.at(frameIndex))
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                engine.updateDescriptorSetGroup(displayDescriptorSets[i], frameIndex, displayWriter);
             }
-
-            pathtracingDescriptorSets[i] = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
-
-            compositingDescriptorSets[i] = engine.createDescriptorSetAllocation(
-                compositingSetLayout,
-                { &pathtracingCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
-            );
-
-            displayDescriptorSets[i] = engine.createDescriptorSetAllocation(
-                displaySetLayout,
-                { &outputCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
-            );
         }
     }
+
+    buildPipelines(ctx);
 }
 
 void RenderHandler::destroy(AppContext& ctx) {
@@ -127,9 +130,9 @@ void RenderHandler::destroy(AppContext& ctx) {
         engine.destroyImage(pathtracingImages[i]);
         engine.destroyImageView(pathtracingImageViews[i]);
 
-        engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
-        engine.destroyDescriptorSetAllocation(compositingDescriptorSets[i]);
-        engine.destroyDescriptorSetAllocation(displayDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
     }
     engine.destroySampler(outputSampler);
     engine.destroyImage(outputImage);
@@ -320,22 +323,26 @@ void RenderHandler::render(AppContext& ctx) {
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
-        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
-            { pathtracingImageViews[0], pathtracingSamplers[0] },
-            { pathtracingImageViews[1], pathtracingSamplers[1] }
-        };
-
         std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
-            for (bufferList_t &buffers : storageBuffers) {
-                descriptors.push_back(&buffers);
-            }
+            DescriptorSetGroup newGroup = engine.createDescriptorSetGroup(pathtracingSetLayout);
             
-            DescriptorSetAllocation newAllocation = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
-            if (newAllocation.isValide()) {
-                engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
-                pathtracingDescriptorSets[i] = std::move(newAllocation);
+            if (newGroup.isValide()) {
+                engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
+                pathtracingDescriptorSets[i] = std::move(newGroup);
+
+                for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+                    DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+                    pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+                        .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
+                        .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                    uint32_t binding = 3;
+                    for (bufferList_t &buffers : storageBuffers) {
+                        pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
+                        binding++;
+                    }
+                    engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
+                }
             }
         }
     }
@@ -363,9 +370,9 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
         engine.destroyImage(pathtracingImages[i]);
         engine.destroyImageView(pathtracingImageViews[i]);
 
-        engine.destroyDescriptorSetAllocation(pathtracingDescriptorSets[i]);
-        engine.destroyDescriptorSetAllocation(compositingDescriptorSets[i]);
-        engine.destroyDescriptorSetAllocation(displayDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
     }
     engine.destroySampler(outputSampler);
     engine.destroyImage(outputImage);
@@ -402,33 +409,36 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
     }
 
     {   // Descriptor sets creation
-        std::vector<std::pair<ImageView, Sampler> > pathtracingCombinedImageSampler = {
-            { pathtracingImageViews[0], pathtracingSamplers[0] },
-            { pathtracingImageViews[1], pathtracingSamplers[1] }
-        };
-        std::vector<std::pair<ImageView, Sampler> > outputCombinedImageSampler = {
-            { outputImageView, outputSampler },
-            { outputImageView, outputSampler }
-        };
-        
         std::vector<bufferList_t> storageBuffers = ctx.scene->getBufferLists();
         for (size_t i = 0; i < 2; i++) {
-            std::vector<void*> descriptors = { &pathtracingUniformBuffers, &pathtracingCombinedImageSampler[1-i], &pixelInfoBuffers };
-            for (bufferList_t &buffers : storageBuffers) {
-                descriptors.push_back(&buffers);
+            pathtracingDescriptorSets[i] = engine.createDescriptorSetGroup(pathtracingSetLayout);
+            compositingDescriptorSets[i] = engine.createDescriptorSetGroup(compositingSetLayout);
+            displayDescriptorSets[i] = engine.createDescriptorSetGroup(displaySetLayout);
+
+            for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+                DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+                pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+                    .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                uint32_t binding = 3;
+                for (bufferList_t &buffers : storageBuffers) {
+                    pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
+                    binding++;
+                }
+                engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
+                
+                DescriptorWriter compositingWriter(compositingSetLayout);
+                compositingWriter.sampler(0, pathtracingImageViews[i], pathtracingSamplers[i])
+                    .uniform(1, displayUniformBuffers.at(frameIndex))
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                engine.updateDescriptorSetGroup(compositingDescriptorSets[i], frameIndex, compositingWriter);
+                
+                DescriptorWriter displayWriter(displaySetLayout);
+                displayWriter.sampler(0, outputImageView, outputSampler)
+                    .uniform(1, displayUniformBuffers.at(frameIndex))
+                    .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
+                engine.updateDescriptorSetGroup(displayDescriptorSets[i], frameIndex, displayWriter);
             }
-
-            pathtracingDescriptorSets[i] = engine.createDescriptorSetAllocation(pathtracingSetLayout, descriptors);
-
-            compositingDescriptorSets[i] = engine.createDescriptorSetAllocation(
-                compositingSetLayout,
-                { &pathtracingCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
-            );
-
-            displayDescriptorSets[i] = engine.createDescriptorSetAllocation(
-                displaySetLayout,
-                { &outputCombinedImageSampler[i], &displayUniformBuffers, &pixelInfoBuffers }
-            );
         }
     }
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <vector>
 #include <unordered_map>
 
@@ -17,7 +16,6 @@
 
 #include "../ecs/registry.hpp"
 #include "../ecs/entity.hpp"
-#include "../ecs/components.hpp"
 #include "../ecs/component_ui_registry.hpp"
 #include "../ecs/system_scheduler.hpp"
 
