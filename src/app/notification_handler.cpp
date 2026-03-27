@@ -25,7 +25,7 @@ bool NotificationHandler::isCommandRequested(enum Command command) {
     return false;
 }
 
-void NotificationHandler::parseInput(char *buff) {
+void NotificationHandler::parseInput(char* buff) {
     if (strcmp(buff, "clear") == 0) {
         requestedCommands[Command::Clear] = true;
         notifications.clear();
@@ -51,7 +51,7 @@ void NotificationHandler::parseInput(char *buff) {
 void NotificationHandler::pushHelp() {
     notifications.push_back({ NotificationType::Info, "Available commands:" });
     char buff[128];
-    for (auto &command : commands) {
+    for (auto& command : commands) {
         snprintf(buff, 128, "- %s: %s", command.first.c_str(), command.second.c_str());
         notifications.push_back({ NotificationType::Other, buff });
     }
@@ -60,7 +60,7 @@ void NotificationHandler::pushHelp() {
 void NotificationHandler::pushKeymaps() {
     notifications.push_back({ NotificationType::Info, "Keymaps:" });
     char buff[128];
-    for (auto &keymap : keymaps) {
+    for (auto& keymap : keymaps) {
         snprintf(buff, 128, "- [%s]: %s", keymap.first.c_str(), keymap.second.c_str());
         notifications.push_back({ NotificationType::Other, buff });
     }

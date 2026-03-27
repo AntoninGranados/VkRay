@@ -17,12 +17,12 @@ enum class ScenePreset : int {
 
 using PresetInit = std::function<void(Scene&, LightMode&)>;
 
-void initEmpty(Scene &scene, LightMode &lightMode);
-void initMaterialZoo(Scene &scene, LightMode &lightMode);
-void initMesh(Scene &scene, LightMode &lightMode);
-void initSponza(Scene &scene, LightMode &lightMode);
-void initCornellBox(Scene &scene, LightMode &lightMode);
-void initRandomSpheres(Scene &scene, LightMode &lightMode);
+void initEmpty(Scene& scene, LightMode& lightMode);
+void initMaterialZoo(Scene& scene, LightMode& lightMode);
+void initMesh(Scene& scene, LightMode& lightMode);
+void initSponza(Scene& scene, LightMode& lightMode);
+void initCornellBox(Scene& scene, LightMode& lightMode);
+void initRandomSpheres(Scene& scene, LightMode& lightMode);
 
 static std::map<ScenePreset, std::string> scenePresetName = {
     { ScenePreset::Empty,         "Empty" },

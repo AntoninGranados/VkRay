@@ -3,7 +3,7 @@
 #include "asset/mesh.hpp"
 #include "../camera.hpp"
 
-Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera &camera) {
+Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const Camera& camera) {
     const float invWidth = 1.0f / screenSize.x;
     const float invHeight = 1.0f / screenSize.y;
 
@@ -24,7 +24,7 @@ Ray getRay(const glm::vec2 &mousePos, const glm::vec2 &screenSize, const Camera 
     return Ray{ camera.getPosition(), dir };
 }
 
-float raySphereIntersection(const Ray &ray, const glm::vec3& center, const float& radius) {
+float raySphereIntersection(const Ray& ray, const glm::vec3& center, const float& radius) {
     const glm::vec3 p = center - ray.origin;
     const float dp = glm::dot(ray.dir, p);
     const float c = glm::dot(p, p) - radius * radius;
@@ -40,7 +40,7 @@ float raySphereIntersection(const Ray &ray, const glm::vec3& center, const float
     return t >= 0.0f ? t : -1.0f;
 }
 
-float rayPlaneIntersection(const Ray &ray, const glm::vec3& point, const glm::vec3& normal) {
+float rayPlaneIntersection(const Ray& ray, const glm::vec3& point, const glm::vec3& normal) {
     const float denom = glm::dot(normal, ray.dir);
     if (std::abs(denom) <= 1e-12f) return -1.0f;
 
@@ -48,7 +48,7 @@ float rayPlaneIntersection(const Ray &ray, const glm::vec3& point, const glm::ve
     return t >= 0.0f ? t : -1.0f;
 }
 
-float rayBoxIntersection(const Ray &ray, const glm::mat4& transform) {
+float rayBoxIntersection(const Ray& ray, const glm::mat4& transform) {
     glm::mat4 invTransform = glm::inverse(transform);
     glm::vec3 localOrigin = glm::vec3(invTransform * glm::vec4(ray.origin, 1.0f));
     glm::vec3 localDir = glm::vec3(invTransform * glm::vec4(ray.dir, 0.0f));
@@ -80,7 +80,7 @@ float rayBoxIntersection(const Ray &ray, const glm::mat4& transform) {
 
 static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& dir,
                                     const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
-                                    float &tOut) {
+                                    float& tOut) {
     const float epsilon = 1e-6f;
     const glm::vec3 edge1 = v1 - v0;
     const glm::vec3 edge2 = v2 - v0;
@@ -100,7 +100,7 @@ static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& di
     return true;
 }
 
-float rayMeshIntersection(const Ray &ray, const glm::mat4& transform,
+float rayMeshIntersection(const Ray& ray, const glm::mat4& transform,
                           const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) {
     if (indices.empty() || vertices.empty())
         return -1.0f;

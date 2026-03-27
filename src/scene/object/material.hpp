@@ -41,11 +41,11 @@ struct Material {
 #define dielectricIoR(mat)      mat.payload[0]
 #define dielectricRoughness(mat) mat.payload[1]
 
-bool drawLambertianUI(Material &mat);
-bool drawEmissiveUI(Material &mat);
-bool drawGgxMetalUI(Material &mat);
-bool drawGgxGlossyUI(Material &mat);
-bool drawDielectricUI(Material &mat);
-bool drawProgrammableUI(Material &mat);
+bool drawLambertianUI(Material& mat);
+bool drawEmissiveUI(Material& mat);
+bool drawGgxMetalUI(Material& mat);
+bool drawGgxGlossyUI(Material& mat);
+bool drawDielectricUI(Material& mat);
+bool drawProgrammableUI(Material& mat);
 
-bool drawMaterialUI(Material &mat);
+bool drawMaterialUI(Material& mat);

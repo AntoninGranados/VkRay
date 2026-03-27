@@ -21,9 +21,10 @@
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(unsigned int) + sizeof(int);
 constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
 
+// Public
 void Scene::init() {
     assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
+    VkSmol& engine = *ctx->engine;
     initGpuBuffers(engine);
 
     auto& uiReg = ecs::ComponentUiRegistry::get();
@@ -35,39 +36,15 @@ void Scene::init() {
     ensureDefaultAssets();
 }
 
-void Scene::initSystems() {
-    preUpdateScheduler.clear();
-    preUpdateScheduler.add(ecs::transformAnimationSystem);
-    preUpdateScheduler.add(ecs::physicsSystem);
-    preUpdateScheduler.add(ecs::transformSystem);
-    preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
-
-    onRenderScheduler.clear();
-    onRenderScheduler.add(ecs::spherePackingSystem);
-    onRenderScheduler.add(ecs::planePackingSystem);
-    onRenderScheduler.add(ecs::boxPackingSystem);
-    onRenderScheduler.add(ecs::meshPackingSystem);
-    onRenderScheduler.add(ecs::materialPackingSystem);
-    onRenderScheduler.add(ecs::objectPackingSystem);
-    onRenderScheduler.add(ecs::lightPackingSystem);
-
-    
-    onUiScheduler.clear();
-    onUiScheduler.add(ecs::cameraDrawingSystem);
-    
-    postUpdateScheduler.clear();
-    postUpdateScheduler.add(ecs::cameraPostUpdateSystem);
-}
-
 void Scene::destroy() {
     assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
+    VkSmol& engine = *ctx->engine;
     destroyGpuBuffers(engine);
 }
 
 void Scene::clear() {
     assert(ctx && ctx->engine);
-    VkSmol &engine = *ctx->engine;
+    VkSmol& engine = *ctx->engine;
     engine.waitIdle();
 
     clearGpuBuffers(engine);
@@ -76,7 +53,7 @@ void Scene::clear() {
     bufferUpdated = true;
 }
 
-MaterialHandle Scene::pushMaterial(const Material &mat) {
+MaterialHandle Scene::pushMaterial(const Material& mat) {
     const MaterialHandle materialHandle = static_cast<int>(materials.size());
     materials.push_back(mat);
     return materialHandle;
@@ -90,7 +67,7 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
     registry.add<ecs::Sphere>(e, sphereComponent);
 
     addMaterialRef(e, materialHandle);
-    
+
     ecs::Transform transformComponent;
     transformComponent.setPosition(center);
     registry.add<ecs::Transform>(e, transformComponent);
@@ -130,7 +107,7 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     entities.push_back(e);
 }
 
-void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle) {
+void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle) {
     MeshHandle handle = static_cast<MeshHandle>(meshAssets.size());
     meshAssets.emplace_back(MeshAsset(name));
     if (!meshAssets.back().loadFromObj(*ctx, path)) {
@@ -141,7 +118,7 @@ void Scene::pushMesh(std::string name, const std::string &path, const glm::mat4 
     pushMesh(name, handle, transform, materialHandle);
 }
 
-void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle) {
+void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
     ecs::MeshRef meshRef;
@@ -154,7 +131,7 @@ void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &t
     entities.push_back(e);
 }
 
-void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
+void Scene::pushCamera(std::string name, const glm::mat4& transform) {
     ecs::Entity e = createNamedEntity(std::move(name));
     
     ecs::CameraObject cameraComponent;
@@ -169,7 +146,7 @@ void Scene::pushCamera(std::string name, const glm::mat4 &transform) {
 }
 
 
-void Scene::drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) { SceneEditorUI::drawGuizmo(*this, view, proj); }
+void Scene::drawGuizmo(const glm::mat4& view, const glm::mat4& proj) { SceneEditorUI::drawGuizmo(*this, view, proj); }
 
 void Scene::drawUI() { SceneEditorUI::drawUI(*this); }
 
@@ -198,7 +175,7 @@ int Scene::getPhysicsBakeTotalFrames() const {
 }
 
 
-bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select, bool includeCameras) {
+bool Scene::raycast(const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist, glm::vec3& p, bool select, bool includeCameras) {
     const Ray ray = getRay(screenPos, screenSize, camera);
     float tClosest = std::numeric_limits<float>::infinity();
     int idClosest = -1;
@@ -251,6 +228,22 @@ bool Scene::raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, flo
     return idClosest >= 0;
 }
 
+const ecs::Entity* Scene::getSelectedEntity() const {
+    if (selectedEntity < 0 || static_cast<size_t>(selectedEntity) >= entities.size())
+        return nullptr;
+    return &entities[static_cast<size_t>(selectedEntity)];
+}
+
+bool Scene::isPreviewingCamera() {
+    if (ctx->renderState->renderMode != RenderMode::Preview) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
+
+    auto& cameras = registry.storage<ecs::CameraObject>();
+    for (const auto& e : cameras.entities()) {
+        if (cameras.get(e).isPreview)
+            return true;
+    }
+    return false;
+}
 
 std::vector<bufferList_t> Scene::getBufferLists() {
     std::vector<bufferList_t> bufferLists = {
@@ -286,21 +279,28 @@ bool Scene::checkBufferUpdate() {
     return false;
 }
 
-const ecs::Entity* Scene::getSelectedEntity() const {
-    if (selectedEntity < 0 || static_cast<size_t>(selectedEntity) >= entities.size())
-        return nullptr;
-    return &entities[static_cast<size_t>(selectedEntity)];
-}
+// Private helpers
+void Scene::initSystems() {
+    preUpdateScheduler.clear();
+    preUpdateScheduler.add(ecs::transformAnimationSystem);
+    preUpdateScheduler.add(ecs::physicsSystem);
+    preUpdateScheduler.add(ecs::transformSystem);
+    preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
-bool Scene::isPreviewingCamera() {
-    if (ctx->renderState->renderMode != RenderMode::Preview) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
+    onRenderScheduler.clear();
+    onRenderScheduler.add(ecs::spherePackingSystem);
+    onRenderScheduler.add(ecs::planePackingSystem);
+    onRenderScheduler.add(ecs::boxPackingSystem);
+    onRenderScheduler.add(ecs::meshPackingSystem);
+    onRenderScheduler.add(ecs::materialPackingSystem);
+    onRenderScheduler.add(ecs::objectPackingSystem);
+    onRenderScheduler.add(ecs::lightPackingSystem);
 
-    auto& cameras = registry.storage<ecs::CameraObject>();
-    for (const auto& e : cameras.entities()) {
-        if (cameras.get(e).isPreview)
-            return true;
-    }
-    return false;
+    onUiScheduler.clear();
+    onUiScheduler.add(ecs::cameraDrawingSystem);
+
+    postUpdateScheduler.clear();
+    postUpdateScheduler.add(ecs::cameraPostUpdateSystem);
 }
 
 void Scene::initGpuBuffers(VkSmol& engine) {

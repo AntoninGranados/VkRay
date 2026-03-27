@@ -7,6 +7,7 @@
 #include "scene/scene_preset.hpp"
 #include "scene/object/object.hpp"
 
+// Public
 Application::Application() {
     inputHandler.initCallbacks(ctx);
 
@@ -38,6 +39,26 @@ Application::~Application() {
     engine.terminate();
 }
 
+void Application::run() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    while(!engine.shouldTerminate() && !shouldClose) {
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
+
+        scene.runPreUpdate(ctx);
+
+        if (!animation.isPaused()) animation.step(deltaTime);
+
+        onFrameStart(deltaTime);
+        renderer.render(ctx);
+
+        scene.runPostUpdate(ctx);
+    }
+}
+
+// Private
 void Application::initParameters() {
     parameters.addInt("maxBounces", "Max Bounces", 8, 1, 20, 1, false, "Pathtracer");
     parameters.addInt("previewSamples", "Preview Samples", 1, 1, 10, 1, false, "Pathtracer");
@@ -78,27 +99,6 @@ void Application::initScene() {
     parameters.setEnum<LightMode>("lightMode", mode);
     ctx.camera = &scene.getCamera();
 }
-
-
-void Application::run() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-
-    while(!engine.shouldTerminate() && !shouldClose) {
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        startTime = currentTime;
-        
-        scene.runPreUpdate(ctx);
-        
-        if (!animation.isPaused()) animation.step(deltaTime);
-        
-        onFrameStart(deltaTime);
-        renderer.render(ctx);
-
-        scene.runPostUpdate(ctx);
-    }
-}
-
 
 void Application::onFrameStart(float dt) {
     renderState.prevResolution = renderState.resolution;

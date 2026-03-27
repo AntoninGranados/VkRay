@@ -55,6 +55,9 @@ private:
     size_t frame = 0;
     uint64_t lastSwapchainGeneration = 0;
 
+    void destroyDescriptors(AppContext& ctx);
+    void destroyRessources(AppContext& ctx);
+
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
 
     void pathtracingPass(AppContext& ctx);

@@ -82,7 +82,7 @@ private:
         glm::vec3 centroid;
     };
 
-    size_t buildBvhNode(std::vector<TriBounds> &triBounds, std::vector<uint32_t> &triIndices, uint32_t start, uint32_t count);
+    size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start, uint32_t count);
 };
 
-bool drawMeshAssetUI(MeshAsset &mesh);
+bool drawMeshAssetUI(MeshAsset& mesh);

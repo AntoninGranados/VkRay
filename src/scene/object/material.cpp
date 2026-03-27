@@ -1,6 +1,6 @@
 #include "material.hpp"
 
-bool drawLambertianUI(Material &material) {
+bool drawLambertianUI(Material& material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
@@ -12,7 +12,7 @@ bool drawLambertianUI(Material &material) {
     return updated;
 }
 
-bool drawEmissiveUI(Material &material) {
+bool drawEmissiveUI(Material& material) {
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
@@ -28,7 +28,7 @@ bool drawEmissiveUI(Material &material) {
     return updated;
 }
 
-bool drawGgxMetalUI(Material &material) {
+bool drawGgxMetalUI(Material& material) {
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
@@ -44,7 +44,7 @@ bool drawGgxMetalUI(Material &material) {
     return updated;
 }
 
-bool drawGgxGlossyUI(Material &material) {
+bool drawGgxGlossyUI(Material& material) {
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
@@ -64,7 +64,7 @@ bool drawGgxGlossyUI(Material &material) {
     return updated;
 }
 
-bool drawDielectricUI(Material &material) {
+bool drawDielectricUI(Material& material) {
     bool updated = false;
 
     ImGui::PushItemWidth(-FLT_MIN);
@@ -86,7 +86,7 @@ bool drawDielectricUI(Material &material) {
     return updated;
 }
 
-bool drawProgrammableUI(Material &material) {
+bool drawProgrammableUI(Material& material) {
     bool updated = false;
 
     ImGui::Text("Albedo:");
@@ -98,7 +98,7 @@ bool drawProgrammableUI(Material &material) {
     return updated;
 }
 
-bool drawMaterialUI(Material &material) {
+bool drawMaterialUI(Material& material) {
     bool updated = false;
     MaterialType prevType = material.type;
 
@@ -109,7 +109,7 @@ bool drawMaterialUI(Material &material) {
     ImGui::Text("Name:");
     ImGui::InputText("##Name", material.name.data(), 128);
     
-    const char *types[] = { "Lambertian", "Emissive", "GGX Metal", "GGX Glossy", "Dielectric", "Programmable" };
+    const char* types[] = { "Lambertian", "Emissive", "GGX Metal", "GGX Glossy", "Dielectric", "Programmable" };
     ImGui::Text("Type:");
     if (ImGui::Combo("##Mat Type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;

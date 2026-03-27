@@ -1,6 +1,6 @@
 #include "scene_preset.hpp"
 
-void initEmpty(Scene &scene, LightMode &lightMode) {
+void initEmpty(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Sunset;
@@ -62,7 +62,7 @@ void initEmpty(Scene &scene, LightMode &lightMode) {
     }
 }
 
-void initMaterialZoo(Scene &scene, LightMode &lightMode) {
+void initMaterialZoo(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Empty;
@@ -121,7 +121,7 @@ void initMaterialZoo(Scene &scene, LightMode &lightMode) {
     );
 }
 
-void initMesh(Scene &scene, LightMode &lightMode) {
+void initMesh(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Day;
@@ -164,7 +164,7 @@ void initMesh(Scene &scene, LightMode &lightMode) {
     );
 }
 
-void initSponza(Scene &scene, LightMode &lightMode) {
+void initSponza(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Day;
@@ -182,7 +182,7 @@ void initSponza(Scene &scene, LightMode &lightMode) {
     );
 }
 
-void initCornellBox(Scene &scene, LightMode &lightMode) {
+void initCornellBox(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Empty;
@@ -321,7 +321,7 @@ void initCornellBox(Scene &scene, LightMode &lightMode) {
 }
 
 #define RAND_FLOAT static_cast<float>(rand() % 100000) / 100000.0f
-void initRandomSpheres(Scene &scene, LightMode &lightMode) {
+void initRandomSpheres(Scene& scene, LightMode& lightMode) {
     srand(time(nullptr));
 
     scene.clear();

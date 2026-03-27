@@ -86,7 +86,7 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
             viewProj * glm::vec4(farCorners[3], 1.0f),
         };
     
-        auto clipLineToPlane = [](glm::vec4 &a, glm::vec4 &b, float da, float db) -> bool {
+        auto clipLineToPlane = [](glm::vec4& a, glm::vec4& b, float da, float db) -> bool {
             if (da >= 0.0f && db >= 0.0f) return true;
             if (da < 0.0f && db < 0.0f) return false;
             float t = da / (da - db);
@@ -95,7 +95,7 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
             return true;
         };
     
-        auto clipLine = [&](glm::vec4 &a, glm::vec4 &b) -> bool {
+        auto clipLine = [&](glm::vec4& a, glm::vec4& b) -> bool {
             if (!clipLineToPlane(a, b,  a.x + a.w,  b.x + b.w)) return false;
             if (!clipLineToPlane(a, b, -a.x + a.w, -b.x + b.w)) return false;
             if (!clipLineToPlane(a, b,  a.y + a.w,  b.y + b.w)) return false;
@@ -105,14 +105,14 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
             return true;
         };
     
-        auto toScreen = [&](const glm::vec4 &p) -> ImVec2 {
+        auto toScreen = [&](const glm::vec4& p) -> ImVec2 {
             const glm::vec3 ndc = glm::vec3(p) / p.w;
             const float x = windowPos.x + (ndc.x * 0.5f + 0.5f) * windowSize.x;
             const float y = windowPos.y + (1.0f - (ndc.y * 0.5f + 0.5f)) * windowSize.y;
             return ImVec2(x, y);
         };
     
-        ImDrawList *drawList = ImGui::GetWindowDrawList();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
         const ImU32 lineColor = (ctx.scene->getSelectedEntity() && e == *ctx.scene->getSelectedEntity()) ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
         const float distToCamera = glm::length(activeCamera.getPosition() - camPos);
         const float thickness = std::clamp(4.0f / (0.15f * distToCamera + 1.0f), 0.75f, 4.0f);
@@ -123,7 +123,7 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
         };
     
         const int edges[4][2] = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
-        for (const auto &edge : edges) {
+        for (const auto& edge : edges) {
             drawClipped(clipNear[edge[0]], clipNear[edge[1]]);
             drawClipped(clipFar[edge[0]], clipFar[edge[1]]);
         }

@@ -5,14 +5,14 @@
 #include <stdexcept>
 
 IntParam::IntParam(
-    const std::string &id_,
-    const std::string &label_,
+    const std::string& id_,
+    const std::string& label_,
     int value_,
     int minValue_,
     int maxValue_,
     int step_,
     bool restart_,
-    const std::string &group_
+    const std::string& group_
 ) : value(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
     id = id_;
     label = label_;
@@ -30,14 +30,14 @@ bool IntParam::draw() {
 }
 
 FloatParam::FloatParam(
-    const std::string &id_,
-    const std::string &label_,
+    const std::string& id_,
+    const std::string& label_,
     float value_,
     float minValue_,
     float maxValue_,
     float step_,
     bool restart_,
-    const std::string &group_
+    const std::string& group_
 ) : value(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
     id = id_;
     label = label_;
@@ -55,11 +55,11 @@ bool FloatParam::draw() {
 }
 
 BoolParam::BoolParam(
-    const std::string &id_,
-    const std::string &label_,
+    const std::string& id_,
+    const std::string& label_,
     bool value_,
     bool restart_,
-    const std::string &group_
+    const std::string& group_
 ) : value(value_) {
     id = id_;
     label = label_;
@@ -76,12 +76,12 @@ bool BoolParam::draw() {
 }
 
 EnumParam::EnumParam(
-    const std::string &id_,
-    const std::string &label_,
+    const std::string& id_,
+    const std::string& label_,
     int value_,
     std::vector<std::string> items_,
     bool restart_,
-    const std::string &group_
+    const std::string& group_
 ) : value(value_), items(std::move(items_)) {
     id = id_;
     label = label_;
@@ -92,7 +92,7 @@ EnumParam::EnumParam(
 bool EnumParam::draw() {
     itemsName.clear();
     itemsName.reserve(items.size());
-    for (const std::string &item : items)
+    for (const std::string& item : items)
         itemsName.push_back(item.c_str());
     ImGui::PushID(id.c_str());
     ImGui::Text("%s", label.c_str());
@@ -102,15 +102,15 @@ bool EnumParam::draw() {
     return changed;
 }
 
-IntParam &ParameterHandler::addInt(
-    const std::string &id,
-    const std::string &label,
+IntParam& ParameterHandler::addInt(
+    const std::string& id,
+    const std::string& label,
     int value,
     int minValue,
     int maxValue,
     int step,
     bool restart,
-    const std::string &group
+    const std::string& group
 ) {
     auto param = std::make_unique<IntParam>(id, label, value, minValue, maxValue, step, restart, group);
     params.push_back(std::move(param));
@@ -118,15 +118,15 @@ IntParam &ParameterHandler::addInt(
     return static_cast<IntParam&>(*params.back());
 }
 
-FloatParam &ParameterHandler::addFloat(
-    const std::string &id,
-    const std::string &label,
+FloatParam& ParameterHandler::addFloat(
+    const std::string& id,
+    const std::string& label,
     float value,
     float minValue,
     float maxValue,
     float step,
     bool restart,
-    const std::string &group
+    const std::string& group
 ) {
     auto param = std::make_unique<FloatParam>(id, label, value, minValue, maxValue, step, restart, group);
     params.push_back(std::move(param));
@@ -134,12 +134,12 @@ FloatParam &ParameterHandler::addFloat(
     return static_cast<FloatParam&>(*params.back());
 }
 
-BoolParam &ParameterHandler::addBool(
-    const std::string &id,
-    const std::string &label,
+BoolParam& ParameterHandler::addBool(
+    const std::string& id,
+    const std::string& label,
     bool value,
     bool restart,
-    const std::string &group
+    const std::string& group
 ) {
     auto param = std::make_unique<BoolParam>(id, label, value, restart, group);
     params.push_back(std::move(param));
@@ -147,13 +147,13 @@ BoolParam &ParameterHandler::addBool(
     return static_cast<BoolParam&>(*params.back());
 }
 
-EnumParam &ParameterHandler::addEnum(
-    const std::string &id,
-    const std::string &label,
+EnumParam& ParameterHandler::addEnum(
+    const std::string& id,
+    const std::string& label,
     int value,
     std::vector<std::string> items,
     bool restart,
-    const std::string &group
+    const std::string& group
 ) {
     auto param = std::make_unique<EnumParam>(id, label, value, std::move(items), restart, group);
     params.push_back(std::move(param));
@@ -161,9 +161,9 @@ EnumParam &ParameterHandler::addEnum(
     return static_cast<EnumParam&>(*params.back());
 }
 
-bool ParameterHandler::drawGroup(const std::string &group, bool &restartRequested) {
+bool ParameterHandler::drawGroup(const std::string& group, bool& restartRequested) {
     bool changed = false;
-    for (const auto &param : params) {
+    for (const auto& param : params) {
         if (param->group != group) continue;
         if (param->draw()) {
             changed = true;
@@ -174,26 +174,26 @@ bool ParameterHandler::drawGroup(const std::string &group, bool &restartRequeste
     return changed;
 }
 
-int &ParameterHandler::getInt(const std::string &id) {
+int& ParameterHandler::getInt(const std::string& id) {
     return getParam<IntParam>(id).get();
 }
 
-float &ParameterHandler::getFloat(const std::string &id) {
+float& ParameterHandler::getFloat(const std::string& id) {
     return getParam<FloatParam>(id).get();
 }
 
-bool &ParameterHandler::getBool(const std::string &id) {
+bool& ParameterHandler::getBool(const std::string& id) {
     return getParam<BoolParam>(id).get();
 }
 
-void ParameterHandler::setInt(const std::string &id, int value) {
+void ParameterHandler::setInt(const std::string& id, int value) {
     getParam<IntParam>(id).get() = value;
 }
 
-void ParameterHandler::setFloat(const std::string &id, float value) {
+void ParameterHandler::setFloat(const std::string& id, float value) {
     getParam<FloatParam>(id).get() = value;
 }
 
-void ParameterHandler::setBool(const std::string &id, bool value) {
+void ParameterHandler::setBool(const std::string& id, bool value) {
     getParam<BoolParam>(id).get() = value;
 }

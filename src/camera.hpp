@@ -13,9 +13,9 @@ class Camera {
 public:
     Camera(glm::vec3 position = glm::vec3(0.0f));
 
-    bool cursorPosCallback(GLFWwindow *window, double x, double y);
-    bool scrollCallback(GLFWwindow *window, double xoffset, double yoffset);
-    bool processInput(GLFWwindow *window, float deltaTime);
+    bool cursorPosCallback(GLFWwindow* window, double x, double y);
+    bool scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+    bool processInput(GLFWwindow* window, float deltaTime);
     
     float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
     glm::vec3 getDirection() const { return glm::normalize(target - position); };

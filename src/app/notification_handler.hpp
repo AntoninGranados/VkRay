@@ -42,7 +42,7 @@ public:
     friend NotificationPanel;
 
 private:
-    void parseInput(char *buff);
+    void parseInput(char* buff);
     void pushHelp();
     void pushKeymaps();
 

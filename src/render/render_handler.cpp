@@ -94,7 +94,7 @@ void RenderHandler::init(AppContext& ctx) {
                     .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
                     .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
                 uint32_t binding = 3;
-                for (bufferList_t &buffers : storageBuffers) {
+                for (bufferList_t& buffers : storageBuffers) {
                     pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
                     binding++;
                 }
@@ -125,24 +125,11 @@ void RenderHandler::destroy(AppContext& ctx) {
     engine.destroyDescriptorSetLayout(compositingSetLayout);
     engine.destroyDescriptorSetLayout(displaySetLayout);
 
-    for (size_t i = 0; i < 2; i++) {
-        engine.destroySampler(pathtracingSamplers[i]);
-        engine.destroyImage(pathtracingImages[i]);
-        engine.destroyImageView(pathtracingImageViews[i]);
-
-        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
-    }
-    engine.destroySampler(outputSampler);
-    engine.destroyImage(outputImage);
-    engine.destroyImageView(outputImageView);
+    destroyDescriptors(ctx);
+    destroyRessources(ctx);
 
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
-    engine.destroyPerFrameBuffer(pathtracingUniformBuffers);
-    engine.destroyPerFrameBuffer(displayUniformBuffers);
-    engine.destroyBufferList(pixelInfoBuffers);
     exportService.destroy(engine);
     
     engine.destroyGraphicsPipeline(pathtracingPipeline);
@@ -337,7 +324,7 @@ void RenderHandler::render(AppContext& ctx) {
                         .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
                         .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
                     uint32_t binding = 3;
-                    for (bufferList_t &buffers : storageBuffers) {
+                    for (bufferList_t& buffers : storageBuffers) {
                         pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
                         binding++;
                     }
@@ -359,27 +346,41 @@ void RenderHandler::render(AppContext& ctx) {
     exportService.handleSave(ctx);
 }
 
-void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
+void RenderHandler::destroyDescriptors(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    engine.waitIdle();
+    for (size_t i = 0; i < 2; i++) {
+        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
+        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
+    }
+}
 
-    // Destroy old ressources
+void RenderHandler::destroyRessources(AppContext& ctx) {
+    VkSmol& engine = *ctx.engine;
+
     for (size_t i = 0; i < 2; i++) {
         engine.destroySampler(pathtracingSamplers[i]);
         engine.destroyImage(pathtracingImages[i]);
         engine.destroyImageView(pathtracingImageViews[i]);
-
-        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
     }
     engine.destroySampler(outputSampler);
     engine.destroyImage(outputImage);
     engine.destroyImageView(outputImageView);
 
     engine.destroyBufferList(pixelInfoBuffers);
-    exportService.destroy(engine);
+}
+
+void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
+    VkSmol& engine = *ctx.engine;
+
+    engine.waitIdle();
+
+    {   // Destroy old ressources
+        destroyDescriptors(ctx);
+        destroyRessources(ctx);
+        exportService.destroy(engine);
+    }
 
     // Recreate them based on the new extent
     size_t pixelInfoBytes = static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo);
@@ -421,7 +422,7 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
                     .sampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
                     .storage(2, engine.getBuffer(pixelInfoBuffers, frameIndex));
                 uint32_t binding = 3;
-                for (bufferList_t &buffers : storageBuffers) {
+                for (bufferList_t& buffers : storageBuffers) {
                     pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
                     binding++;
                 }

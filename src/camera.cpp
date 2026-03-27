@@ -2,12 +2,17 @@
 
 #include <cmath>
 
-void updateYawPitchFromDirection(const glm::vec3 &dir, float &yaw, float &pitch) {
-    glm::vec3 n = glm::normalize(dir);
+namespace {
+
+void updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch) {
+    const glm::vec3 n = glm::normalize(dir);
     yaw = glm::degrees(atan2(n.z, n.x));
     pitch = glm::degrees(asin(n.y));
 }
 
+} // namespace
+
+// Public
 Camera::Camera(glm::vec3 position)
     : position(position),
       target(glm::vec3(0.0f)) {
@@ -16,17 +21,7 @@ Camera::Camera(glm::vec3 position)
     updateYawPitchFromDirection(getDirection(), yaw, pitch);
 }
 
-glm::mat4 Camera::getProjection(GLFWwindow* window) const {
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    float aspect = static_cast<float>(width) / static_cast<float>(height);
-    float fovY = glm::radians(fov);
-
-    glm::mat4 proj = glm::perspective(fovY, aspect, 1e-4f, 1e4f);
-    return proj;
-}
-
-bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
+bool Camera::cursorPosCallback(GLFWwindow* window, double x, double y) {
     if (locked || dragMode == DragMode::None) return false;
 
     bool change = false;
@@ -93,7 +88,7 @@ bool Camera::cursorPosCallback(GLFWwindow *window, double x, double y) {
     return change;
 }
 
-bool Camera::scrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
+bool Camera::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     float newFov = getFov() - static_cast<float>(yoffset);
     if (newFov < 1.0f) newFov = 1.0f;
     if (newFov > 160.0f) newFov = 160.0f;
@@ -101,7 +96,7 @@ bool Camera::scrollCallback(GLFWwindow *window, double xoffset, double yoffset) 
     return yoffset != 0;
 }
 
-bool Camera::processInput(GLFWwindow *window, float deltaTime) {
+bool Camera::processInput(GLFWwindow* window, float deltaTime) {
     float velocity = speed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
         velocity /= 8.0f;
@@ -174,4 +169,13 @@ bool Camera::processInput(GLFWwindow *window, float deltaTime) {
         setTarget(target);
 
     return change;
+}
+
+glm::mat4 Camera::getProjection(GLFWwindow* window) const {
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    const float aspect = static_cast<float>(width) / static_cast<float>(height);
+    const float fovY = glm::radians(fov);
+
+    return glm::perspective(fovY, aspect, 1e-4f, 1e4f);
 }

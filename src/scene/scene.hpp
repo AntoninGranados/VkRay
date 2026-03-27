@@ -46,15 +46,15 @@ public:
 
     void setContext(AppContext& context) { ctx = &context; }
 
-    MaterialHandle pushMaterial(const Material &mat);
+    MaterialHandle pushMaterial(const Material& mat);
     void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
     void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle = 0);
     void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle = 0);
-    void pushMesh(std::string name, const std::string &path, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
-    void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4 &transform, MaterialHandle materialHandle = 0);
-    void pushCamera(std::string name, const glm::mat4 &transform);
+    void pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle = 0);
+    void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle = 0);
+    void pushCamera(std::string name, const glm::mat4& transform);
     
-    void drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj);
+    void drawGuizmo(const glm::mat4& view, const glm::mat4& proj);
     void drawUI();
     void drawNewObjectPopUp();
     void drawSelectedEntityUI();
@@ -65,7 +65,7 @@ public:
     int getPhysicsBakeCurrentFrame() const;
     int getPhysicsBakeTotalFrames() const;
     
-    bool raycast(const glm::vec2 &screenPos, const glm::vec2 &screenSize, float &dist, glm::vec3 &p, bool select = false, bool includeCameras = true);
+    bool raycast(const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist, glm::vec3& p, bool select = false, bool includeCameras = true);
     
     void runPreUpdate(AppContext& ctx) { preUpdateScheduler.run(registry, ctx); }
     void runOnRender(AppContext& ctx) { onRenderScheduler.run(registry, ctx); }

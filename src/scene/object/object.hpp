@@ -65,14 +65,14 @@ inline float maxStepPerFrame(float speed) {
     return speed > 0.0f && dt > 0.0f ? speed * dt : 0.0f;
 }
 
-inline glm::vec3 clampVecDelta(const glm::vec3 &delta, float maxLength) {
+inline glm::vec3 clampVecDelta(const glm::vec3& delta, float maxLength) {
     if (maxLength <= 0.0f) return glm::vec3(0.0f);
     const float len = glm::length(delta);
     if (len <= maxLength) return delta;
     return delta * (maxLength / len);
 }
 
-inline glm::vec3 clampVecDeltaPerAxis(const glm::vec3 &delta, float maxDelta) {
+inline glm::vec3 clampVecDeltaPerAxis(const glm::vec3& delta, float maxDelta) {
     if (maxDelta <= 0.0f) return glm::vec3(0.0f);
     return glm::clamp(delta, glm::vec3(-maxDelta), glm::vec3(maxDelta));
 }
@@ -107,9 +107,9 @@ struct GpuLight {
 class Object {
 public:
     Object(std::string name): name(name) {};
-    virtual float rayIntersection(const Ray &ray) = 0;
-    virtual bool drawGuizmo(const glm::mat4 &view, const glm::mat4 &proj) = 0;
-    virtual bool drawUI(std::vector<Material> &materials) = 0;
+    virtual float rayIntersection(const Ray& ray) = 0;
+    virtual bool drawGuizmo(const glm::mat4& view, const glm::mat4& proj) = 0;
+    virtual bool drawUI(std::vector<Material>& materials) = 0;
     
     virtual float getArea() = 0;
     void getStruct(void) {};
