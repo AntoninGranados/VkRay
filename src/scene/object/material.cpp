@@ -1,5 +1,7 @@
 #include "material.hpp"
 
+#include "imgui/imgui.h"
+
 bool drawLambertianUI(Material& material) {
     bool updated = false;
 

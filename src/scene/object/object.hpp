@@ -8,7 +8,6 @@
 #include "material.hpp"
 #include "../raycast.hpp"
 #include "imgui/imgui.h"
-#include "imgui/ImGuizmo.h"
 
 class Camera;
 

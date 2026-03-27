@@ -1,6 +1,5 @@
 #include "object_buffers.hpp"
 
-
 void ObjectBuffers::init(VkSmol& engine, size_t _objectSize, size_t _baseSize) {
     count = 0;
     capacity = 2;
@@ -55,5 +54,5 @@ void ObjectBuffers::resize(VkSmol& engine, size_t newCapacity) {
 }
 
 void ObjectBuffers::fill(VkSmol& engine, void* data) {
-    engine.fillBuffer(engine.getBuffer(bufferList), data);
+    engine.fillBuffer(engine.getCurrentBuffer(bufferList), data);
 }

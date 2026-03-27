@@ -151,9 +151,9 @@ void initMesh(Scene& scene, LightMode& lightMode) {
     );
 
     Material floorMat = {
+        .name = "Floor",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0, 1.0, 1.0 },
-        .name = "Floor",
     };
     const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
     scene.pushPlane(
@@ -170,9 +170,9 @@ void initSponza(Scene& scene, LightMode& lightMode) {
     lightMode = LightMode::Day;
 
     const MaterialHandle sponzaHandle = scene.pushMaterial(Material{
+        .name = "Sponza",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0f, 1.0f, 1.0f },
-        .name = "Sponza",
     });
     scene.pushMesh(
         "Sponza",
@@ -241,9 +241,9 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material leftMat {
+        .name = "Left",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0, 0.1, 0.1 },
-        .name = "Left",
     };
     const MaterialHandle leftHandle = scene.pushMaterial(leftMat);
     scene.pushBox(
@@ -254,9 +254,9 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material rightMat {
+        .name = "Right",
         .type = MaterialType::Lambertian,
         .albedo = { 0.1, 1.0, 0.1 },
-        .name = "Right",
     };
     const MaterialHandle rightHandle = scene.pushMaterial(rightMat);
     scene.pushBox(
@@ -267,9 +267,9 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material topMat {
+        .name = "Top",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0, 1.0, 1.0 },
-        .name = "Top",
     };
     const MaterialHandle topHandle = scene.pushMaterial(topMat);
     scene.pushBox(
@@ -280,9 +280,9 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material bottomMat {
+        .name = "Bottom",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0, 1.0, 1.0 },
-        .name = "Bottom",
     };
     const MaterialHandle bottomHandle = scene.pushMaterial(bottomMat);
     scene.pushBox(
@@ -293,9 +293,9 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material backMat {
+        .name = "Back",
         .type = MaterialType::Lambertian,
         .albedo = { 0.2, 0.2, 0.6 },
-        .name = "Back",
     };
     const MaterialHandle backHandle = scene.pushMaterial(backMat);
     scene.pushBox(
@@ -306,10 +306,10 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     
     Material lightBoxMat {
+        .name = "Light",
         .type = MaterialType::Emissive,
         .albedo = { 1.0, 0.7, 0.5 },
         .payload = { 30.0, 0.0 },
-        .name = "Light",
     };
     const MaterialHandle lightHandle = scene.pushMaterial(lightBoxMat);
     scene.pushBox(
@@ -329,9 +329,9 @@ void initRandomSpheres(Scene& scene, LightMode& lightMode) {
     lightMode = LightMode::Empty;
 
     Material floorMat = {
+        .name = "Floor",
         .type = MaterialType::Lambertian,
         .albedo = { 1.0, 1.0, 1.0 },
-        .name = "Floor",
     };
     const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
     scene.pushPlane(
@@ -342,9 +342,9 @@ void initRandomSpheres(Scene& scene, LightMode& lightMode) {
     );
     
     Material lightMat = {
+        .name = "Light",
         .type = MaterialType::Emissive,
         .albedo = { 1.0, 1.0, 1.0 },
-        .name = "Light",
     };
     emissiveIntensity(lightMat) = 15.0f;
     const MaterialHandle lightHandle = scene.pushMaterial(lightMat);

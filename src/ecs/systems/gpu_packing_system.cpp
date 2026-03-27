@@ -1,14 +1,11 @@
 #include "gpu_packing_system.hpp"
 
 #include <vector>
-#include <algorithm>
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../components.hpp"
-
-#include "../../scene/scene.hpp"
-#include "../../scene/object/object.hpp"
+#include "scene/scene.hpp"
+#include "scene/object/object.hpp"
 
 namespace ecs {
 constexpr size_t OBJECT_HEADER_SIZE = sizeof(uint32_t) + sizeof(int32_t);
@@ -133,8 +130,8 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
         uint32_t indexOffset = static_cast<uint32_t>(indices.size());
         uint32_t bvhOffset = static_cast<uint32_t>(bvhNodes.size());
         meshTemplates.push_back(GpuMesh{
-            .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
             .indexOffset = indexOffset,
+            .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
             .bvhOffset = bvhOffset,
             .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
         });
@@ -156,11 +153,11 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
                 data1 = static_cast<uint32_t>(node.data1 + bvhOffset);
             }
             bvhNodes.push_back(GpuBvhNode{
-                .aabbMax = node.aabbMax,
                 .aabbMin = node.aabbMin,
-                .isLeaf = node.isLeaf,
+                .aabbMax = node.aabbMax,
                 .data0 = data0,
-                .data1 = data1
+                .data1 = data1,
+                .isLeaf = node.isLeaf,
             });
         }
     }
@@ -296,9 +293,9 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
         const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).radius, 2.0f);
         totalArea += area;
         lights.push_back(GpuLight{
+            .objectId = objectId-1,
             .area = area,
             .pdfA = 1.0f / area,
-            .objectId = objectId-1,
         });
     }
     // Planes can't be used for importance sampling (infinite area)
@@ -318,9 +315,9 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
         const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
         totalArea += area;
         lights.push_back(GpuLight{
+            .objectId = objectId-1,
             .area = area,
             .pdfA = 1.0f / area,
-            .objectId = objectId-1,
         });
     }
     // Meshes
@@ -332,9 +329,9 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
         const float area = meshAssets[meshRefs.get(e).handle].computeArea(t);
         totalArea += area;
         lights.push_back(GpuLight{
+            .objectId = objectId-1,
             .area = area,
             .pdfA = 1.0f / area,
-            .objectId = objectId-1,
         });
     }
 

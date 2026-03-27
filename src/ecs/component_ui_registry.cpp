@@ -1,6 +1,5 @@
-#include "./component_ui_registry.hpp"
+#include "component_ui_registry.hpp"
 
-#include <limits>
 #include <cmath>
 #include <unordered_map>
 
@@ -9,9 +8,9 @@
 
 #include "IconsFontAwesome7.h"
 
-#include "../scene/asset/mesh.hpp"
+#include "scene/asset/mesh.hpp"
 #include "app/animation_handler.hpp"
-#include "../editor/ui_constants.hpp"
+#include "editor/ui_constants.hpp"
 
 namespace ecs {
 

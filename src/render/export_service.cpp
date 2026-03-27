@@ -5,7 +5,7 @@
 
 #include "app/notification_handler.hpp"
 #include "app/animation_handler.hpp"
-#include "../editor/editor_ui.hpp"
+#include "editor/editor_ui.hpp"
 
 void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height) {
     width = _width;

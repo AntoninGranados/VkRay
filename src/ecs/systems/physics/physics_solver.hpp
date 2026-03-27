@@ -10,13 +10,8 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "../../registry.hpp"
-#include "../../components/objects/plane.hpp"
-#include "../../components/objects/collider.hpp"
-#include "../../components/objects/box.hpp"
-#include "../../components/objects/sphere.hpp"
 #include "../../components/transform.hpp"
-#include "app/app_context.hpp"
-#include "../../../scene/asset/mesh.hpp"
+#include "scene/asset/mesh.hpp"
 
 namespace ecs {
 

@@ -56,7 +56,10 @@ private:
     uint64_t lastSwapchainGeneration = 0;
 
     void destroyDescriptors(AppContext& ctx);
-    void destroyRessources(AppContext& ctx);
+    void destroyImages(AppContext& ctx);
+
+    void rebuildImages(AppContext& ctx, const VkExtent2D& extent);
+    void rebuildDescriptors(AppContext& ctx);
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
 

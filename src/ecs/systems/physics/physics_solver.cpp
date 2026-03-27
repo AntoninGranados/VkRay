@@ -3,6 +3,11 @@
 #include <algorithm>
 #include <cmath>
 
+#include "../../components/objects/plane.hpp"
+#include "../../components/objects/collider.hpp"
+#include "../../components/objects/box.hpp"
+#include "../../components/objects/sphere.hpp"
+
 namespace ecs {
 
 namespace physics_detail {

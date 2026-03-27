@@ -1,5 +1,4 @@
 #include "mesh.hpp"
-#include "mesh_simplify.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -9,6 +8,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include "mesh_simplify.hpp"
 #include "app/notification_handler.hpp"
 
 // Public

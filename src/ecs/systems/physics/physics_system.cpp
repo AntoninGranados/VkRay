@@ -6,10 +6,9 @@
 
 #include "physics_solver.hpp"
 
-#include "../../components.hpp"
 #include "../animation_system.hpp"
 #include "../transform_system.hpp"
-#include "../../../scene/scene.hpp"
+#include "scene/scene.hpp"
 #include "app/animation_handler.hpp"
 
 namespace ecs {

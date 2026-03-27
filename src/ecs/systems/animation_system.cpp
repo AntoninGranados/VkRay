@@ -1,9 +1,8 @@
-#include "camera_system.hpp"
+#include "animation_system.hpp"
 
 #include <GLFW/glfw3.h>
 
 #include <vector>
-#include <algorithm>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

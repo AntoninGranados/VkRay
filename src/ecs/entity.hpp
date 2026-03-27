@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <functional>
+
 namespace ecs {
 
 class Entity {

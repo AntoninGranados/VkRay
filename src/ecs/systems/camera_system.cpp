@@ -2,17 +2,14 @@
 
 #include <GLFW/glfw3.h>
 
-#include <vector>
 #include <algorithm>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../components.hpp"
-
-#include "../../camera.hpp"
-#include "../../scene/scene.hpp"
-#include "../../engine/engine.hpp"
+#include "camera.hpp"
+#include "scene/scene.hpp"
+#include "engine/engine.hpp"
 
 namespace ecs {
 

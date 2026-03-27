@@ -1,7 +1,5 @@
 #pragma once
 
-#include "imgui/imgui.h"
-
 #include "editor/panels/notification_panel.hpp"
 
 #include <vector>

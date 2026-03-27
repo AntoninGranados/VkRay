@@ -2,8 +2,6 @@
 
 #include "imgui/imgui.h"
 
-#include <stdexcept>
-
 IntParam::IntParam(
     const std::string& id_,
     const std::string& label_,

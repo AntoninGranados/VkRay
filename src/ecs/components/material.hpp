@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../scene/object/material.hpp"
+#include "scene/object/material.hpp"
 
 namespace ecs {
 

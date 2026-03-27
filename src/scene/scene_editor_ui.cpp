@@ -1,7 +1,5 @@
 #include "scene_editor_ui.hpp"
 
-#include "scene.hpp"
-#include "scene_preset.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -11,8 +9,12 @@
 
 #include "IconsFontAwesome7.h"
 
+#include "imgui/imgui.h"
+#include "imgui/ImGuizmo.h"
+
 #include "app/notification_handler.hpp"
-#include "../editor/ui_constants.hpp"
+#include "editor/ui_constants.hpp"
+#include "./scene.hpp"
 
 void SceneEditorUI::drawGuizmo(Scene& scene, const glm::mat4& view, const glm::mat4& proj) {
     if (scene.selectedEntity < 0) return;

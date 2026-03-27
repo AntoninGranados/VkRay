@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../engine/engine.hpp"
+#include "engine/engine.hpp"
 
 class ObjectBuffers {
 public:

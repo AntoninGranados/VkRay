@@ -1,10 +1,10 @@
 #pragma once
 
-#include "./entity.hpp"
-
 #include <cassert>
 #include <utility>
 #include <vector>
+
+#include "./entity.hpp"
 
 namespace ecs {
 
