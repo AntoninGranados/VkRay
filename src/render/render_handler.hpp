@@ -4,7 +4,6 @@
 #include "./export_service.hpp"
 
 #include "engine/engine.hpp"
-#include "engine/memory/per_frame_buffer.hpp"
 
 struct FrameContext;
 
@@ -48,7 +47,7 @@ private:
     Buffer vertexBuffer, indexBuffer;
     PerFrameBuffer<PathtracerUBO> pathtracingUniformBuffers;
     PerFrameBuffer<ScreenUBO> displayUniformBuffers;
-    bufferList_t pixelInfoBuffers;
+    SharedBuffer<PixelInfo> pixelInfoBuffer;
 
     ExportService exportService;
 

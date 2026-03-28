@@ -97,10 +97,19 @@ struct ObjectHandle {
     int id;
 };
 
+struct GpuObjectHeader {
+    uint32_t objectCount;
+    int selectedObject;
+};
+
 struct GpuLight {
     int objectId;
     float area;
     float pdfA;
+};
+
+struct GpuLightHeader {
+    float totalArea;
 };
 
 class Object {

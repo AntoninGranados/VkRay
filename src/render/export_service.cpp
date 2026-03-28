@@ -12,7 +12,7 @@ void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t&
     height = _height;
 
     // Assumes that the image is using the format `VK_FORMAT_R32G32B32A32_SFLOAT`
-    buffer = engine.initReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
 }
 
 void ExportService::destroy(VkSmol& engine) {

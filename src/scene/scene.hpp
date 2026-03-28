@@ -6,18 +6,20 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../engine/engine.hpp"
-#include "../camera.hpp"
+#include "engine/engine.hpp"
+#include "camera.hpp"
 
-#include "object/object_buffers.hpp"
+// #include "object/object_buffers.hpp"
+#include "engine/memory/per_frame_buffer.hpp"
 #include "object/object.hpp"
 #include "asset/mesh.hpp"
 #include "raycast.hpp"
 
-#include "../ecs/registry.hpp"
-#include "../ecs/entity.hpp"
-#include "../ecs/component_ui_registry.hpp"
-#include "../ecs/system_scheduler.hpp"
+#include "ecs/registry.hpp"
+#include "ecs/entity.hpp"
+#include "ecs/component_ui_registry.hpp"
+#include "ecs/system_scheduler.hpp"
+#include "scene/object/material.hpp"
 
 struct AppContext;
 
@@ -31,11 +33,25 @@ enum LightMode : int {
 enum class ScenePreset : int;
 class SceneEditorUI;
 
-struct PackingMaps {
+struct ScenePackingMaps {
     std::unordered_map<ecs::Entity, int> sphereId;
     std::unordered_map<ecs::Entity, int> planeId;
     std::unordered_map<ecs::Entity, int> boxId;
     std::unordered_map<ecs::Entity, int> meshId;
+};
+
+struct SceneGpuBuffers {
+    DynamicPerFrameBuffer<GpuSphere> sphere;
+    DynamicPerFrameBuffer<GpuPlane> plane;
+    DynamicPerFrameBuffer<GpuBox> box;
+    DynamicPerFrameBuffer<Vertex> vertex;
+    DynamicPerFrameBuffer<uint32_t> index;
+    DynamicPerFrameBuffer<GpuBvhNode> bvh;
+    DynamicPerFrameBuffer<GpuMesh> mesh;
+
+    DynamicPerFrameBuffer<GpuMaterial> material;
+    DynamicPerFrameBuffer<ObjectHandle, GpuObjectHeader> object;
+    DynamicPerFrameBuffer<GpuLight, GpuLightHeader> light;
 };
 
 class Scene {
@@ -80,20 +96,24 @@ public:
     Camera& getCamera() { return camera; }
     bool isPreviewingCamera();
     
-    std::vector<bufferList_t> getBufferLists();
-    ObjectBuffers& getSphereBuffers() { return sphereBuffers; };
-    ObjectBuffers& getPlaneBuffers() { return planeBuffers; };
-    ObjectBuffers& getBoxBuffers() { return boxBuffers; };
-    ObjectBuffers& getVertexBuffers() { return vertexBuffers; };
-    ObjectBuffers& getIndexBuffers() { return indexBuffers; };
-    ObjectBuffers& getBvhBuffers() { return bvhBuffers; };
-    ObjectBuffers& getMeshBuffers() { return meshBuffers; };
-    ObjectBuffers& getMaterialBuffers() { return materialBuffers; };
-    ObjectBuffers& getObjectBuffers() { return objectBuffers; };
-    ObjectBuffers& getLightBuffers() { return lightBuffers; };
+    SceneGpuBuffers& getBuffers() { return gpuBuffers; }
+    const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }
+
+    DynamicPerFrameBuffer<GpuSphere>& getSphereBuffers() { return gpuBuffers.sphere; }
+    DynamicPerFrameBuffer<GpuPlane>& getPlaneBuffers()   { return gpuBuffers.plane; }
+    DynamicPerFrameBuffer<GpuBox>& getBoxBuffers()       { return gpuBuffers.box; }
+    DynamicPerFrameBuffer<Vertex>& getVertexBuffers()    { return gpuBuffers.vertex; }
+    DynamicPerFrameBuffer<uint32_t>& getIndexBuffers()   { return gpuBuffers.index; }
+    DynamicPerFrameBuffer<GpuBvhNode>& getBvhBuffers()   { return gpuBuffers.bvh; }
+    DynamicPerFrameBuffer<GpuMesh>& getMeshBuffers()     { return gpuBuffers.mesh; }
+
+    DynamicPerFrameBuffer<GpuMaterial>& getMaterialBuffers()                 { return gpuBuffers.material; }
+    DynamicPerFrameBuffer<ObjectHandle, GpuObjectHeader>& getObjectBuffers() { return gpuBuffers.object; }
+    DynamicPerFrameBuffer<GpuLight, GpuLightHeader>& getLightBuffers()       { return gpuBuffers.light; }
+
     std::vector<Material>& getMaterials() { return materials; };
     std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
-    PackingMaps& getPackingMaps() { return packingMaps; }
+    ScenePackingMaps& getPackingMaps() { return packingMaps; }
     void markBufferUpdated() { bufferUpdated = true; }
 
     // Returns true if the scene have been updated since the last call of this function
@@ -102,10 +122,9 @@ public:
 private:
     friend class SceneEditorUI;
 
-    ObjectBuffers sphereBuffers, planeBuffers, boxBuffers, vertexBuffers, indexBuffers, bvhBuffers, meshBuffers;
-    ObjectBuffers materialBuffers, objectBuffers, lightBuffers;
+    SceneGpuBuffers gpuBuffers;
 
-    PackingMaps packingMaps;
+    ScenePackingMaps packingMaps;
     
     ecs::Registry registry;
     ecs::SystemScheduler preUpdateScheduler, onRenderScheduler, onUiScheduler, postUpdateScheduler;

@@ -4,21 +4,23 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "engine/engine.hpp"
 #include "scene/scene.hpp"
 #include "scene/object/object.hpp"
+#include "app/app_context.hpp"
 
 namespace ecs {
-constexpr size_t OBJECT_HEADER_SIZE = sizeof(uint32_t) + sizeof(int32_t);
-constexpr size_t LIGHT_HEADER_SIZE = sizeof(float);
 
-template <typename T>
-inline void fillBufferWithPadding(AppContext& ctx, ObjectBuffers& buffer, std::vector<T>& data) {
-    if (buffer.setElementCount(*ctx.engine, data.size())) {
+// TODO: should pass FrameContext here
+template <typename T, typename Header = std::monostate>
+inline void fillBufferWithPadding(AppContext& ctx, DynamicPerFrameBuffer<T, Header>& buffer, std::vector<T>& data) {
+    if (ctx.engine->setDynamicPerFrameBufferCount(buffer, data.size())) {
         ctx.scene->markBufferUpdated();
     }
 
-    data.resize(buffer.getCapacity());
-    buffer.fill(*ctx.engine, data.data());
+    std::vector<T> padded = data;
+    padded.resize(buffer.getCapacity());
+    ctx.engine->fillBuffer(buffer.at(ctx.engine->getFrame()), padded.data());
 }
 
 void spherePackingSystem(Registry& registry, AppContext& ctx) {
@@ -51,7 +53,6 @@ void spherePackingSystem(Registry& registry, AppContext& ctx) {
 }
 
 void planePackingSystem(Registry& registry, AppContext& ctx) {
-
     auto& planes = registry.storage<ecs::Plane>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -81,7 +82,6 @@ void planePackingSystem(Registry& registry, AppContext& ctx) {
 }
 
 void boxPackingSystem(Registry& registry, AppContext& ctx) {
-
     auto& boxes = registry.storage<ecs::Box>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -225,6 +225,7 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
         if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
         objectId++;
     }
+
     // Planes
     for (const auto& [e, id] : packingMaps.planeId) {
         objectHandles.push_back(ObjectHandle{
@@ -254,14 +255,14 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
     }
 
     auto& objectBuffers = ctx.scene->getObjectBuffers();
-    if (objectBuffers.setElementCount(*ctx.engine, objectHandles.size())) {
+    if (ctx.engine->setDynamicPerFrameBufferCount(objectBuffers, objectHandles.size())) {
         ctx.scene->markBufferUpdated();
     }
+    uint32_t objectCount = static_cast<uint32_t>(objectHandles.size());
     objectHandles.resize(objectBuffers.getCapacity());
 
-    std::vector<char> objectData(OBJECT_HEADER_SIZE + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
+    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
     size_t offset = 0;
-    uint32_t objectCount = objectHandles.size();
     // Compute the object buffers data (including the header)
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
@@ -269,7 +270,7 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
     offset += sizeof(objectSelected);
     memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
 
-    objectBuffers.fill(*ctx.engine, objectData.data());
+    ctx.engine->fillBuffer(objectBuffers.at(ctx.engine->getFrame()), objectData.data());
 }
 
 void lightPackingSystem(Registry& registry, AppContext& ctx) {
@@ -336,19 +337,19 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
     }
 
     auto& lightBuffers = ctx.scene->getLightBuffers();
-    if (lightBuffers.setElementCount(*ctx.engine, lights.size())) {
+    if (ctx.engine->setDynamicPerFrameBufferCount(lightBuffers, lights.size())) {
         ctx.scene->markBufferUpdated();
     }
     lights.resize(lightBuffers.getCapacity());
 
-    std::vector<char> lightData(LIGHT_HEADER_SIZE + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
+    std::vector<char> lightData(sizeof(GpuLightHeader) + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
     // Compute the light buffers data (including the header)
     size_t offset = 0;
     memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
     offset += sizeof(totalArea);
     memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
-        
-    lightBuffers.fill(*ctx.engine, lightData.data());
+    
+    ctx.engine->fillBuffer(lightBuffers.at(ctx.engine->getFrame()), lightData.data());
 }
 
 } // namespace ecs
