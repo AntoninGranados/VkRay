@@ -1,10 +1,8 @@
 #pragma once
 
-#include "imgui/imgui.h"
-
 #include "app/app_context.hpp"
-#include "engine/engine.hpp"
 
+#include "engine/command/command_buffer.hpp"
 #include "panels/stats_panel.hpp"
 #include "panels/animation_panel.hpp"
 #include "panels/render_panel.hpp"
@@ -14,9 +12,11 @@
 #include "panels/render_parameter_panel.hpp"
 #include "panels/scene_panel.hpp"
 
+class CommandBuffer;
+
 class EditorUi {
 public:
-    void draw(CommandBuffer commandBuffer, AppContext& ctx);
+    void draw(const CommandBuffer& commandBuffer, AppContext& ctx);
 
     bool isToggled() { return toggled; }
     void toggle() { toggled = !toggled; }

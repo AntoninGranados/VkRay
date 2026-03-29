@@ -8,8 +8,10 @@
 #include "scene/scene.hpp"
 #include "./ui_constants.hpp"
 
+#include "engine/engine.hpp"
 
-void EditorUi::draw(CommandBuffer commandBuffer, AppContext& ctx) {
+
+void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
     if (!toggled && ctx.renderState->renderMode == RenderMode::Preview) return;
 
     ImGui_ImplVulkan_NewFrame();

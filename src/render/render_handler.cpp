@@ -197,8 +197,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         if (pathtracingPipeline.get() != VK_NULL_HANDLE) {
             GraphicsPipeline newPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, pathtracingFragShader },
-                { pathtracingSetLayout },
+                { &vertShader, &pathtracingFragShader },
+                { &pathtracingSetLayout },
                 pathtracingPipeline,
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
@@ -207,8 +207,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         } else {
             pathtracingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, pathtracingFragShader },
-                { pathtracingSetLayout },
+                { &vertShader, &pathtracingFragShader },
+                { &pathtracingSetLayout },
                 GraphicsPipeline(),
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
@@ -233,8 +233,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         if (compositingPipeline.get() != VK_NULL_HANDLE) {
             GraphicsPipeline newCompositingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, compositingFragShader },
-                { compositingSetLayout },
+                { &vertShader, &compositingFragShader },
+                { &compositingSetLayout },
                 compositingPipeline,
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
@@ -243,8 +243,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         } else {
             compositingPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, compositingFragShader },
-                { compositingSetLayout },
+                { &vertShader, &compositingFragShader },
+                { &compositingSetLayout },
                 GraphicsPipeline(),
                 VK_FORMAT_R32G32B32A32_SFLOAT
             );
@@ -270,8 +270,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         if (displayPipeline.get() != VK_NULL_HANDLE) {
             GraphicsPipeline newDisplayPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, displayFragShader },
-                { displaySetLayout },
+                { &vertShader, &displayFragShader },
+                { &displaySetLayout },
                 displayPipeline
             );
             engine.destroyGraphicsPipeline(displayPipeline);
@@ -279,8 +279,8 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
         } else {
             displayPipeline = engine.initGraphicsPipeline(
                 vertexInput.get(),
-                { vertShader, displayFragShader },
-                { displaySetLayout }
+                { &vertShader, &displayFragShader },
+                { &displaySetLayout }
             );
         }
     }
@@ -483,7 +483,7 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
 void RenderHandler::pathtracingPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    CommandBuffer commandBuffer = engine.beginRecordingRender();
+    CommandBuffer& commandBuffer = engine.beginRecordingRender();
 
     VkExtent2D extent = engine.getExtent();
 
@@ -630,7 +630,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
 void RenderHandler::uiPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    CommandBuffer commandBuffer = engine.beginRecordingUiRender();
+    CommandBuffer& commandBuffer = engine.beginRecordingUiRender();
     
     // TODO: might set default barrier and dyamic rendering context (at least for the UI)
     engine.barrier(
