@@ -4,13 +4,9 @@
 
 #include "./imgui/imgui.h"
 
-#include "app/app_context.hpp"
-#include "engine/descriptor/descriptor_set_group.hpp"
 #include "engine/engine.hpp"
-#include "engine/memory/per_frame_buffer.hpp"
-#include "engine/pipeline/vertex_input.hpp"
-#include "engine/frame_context.hpp"
 
+#include "app/app_context.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
@@ -53,15 +49,17 @@ void RenderHandler::init(AppContext& ctx) {
             pathtracingImageViews[i] = engine.createImageView(pathtracingImages[i]);
             pathtracingSamplers[i] = engine.createSampler();
         }
+
         outputImage = engine.createImage(
             extent.width, extent.height,
             VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
+
         outputImageView = engine.createImageView(outputImage);
         outputSampler = engine.createSampler();
-
+        
         exportService.init(engine, extent.width, extent.height);
     }
 
@@ -143,6 +141,9 @@ void RenderHandler::destroy(AppContext& ctx) {
     destroyDescriptors(ctx);
     destroyImages(ctx);
 
+    engine.destroyPerFrameBuffer(pathtracingUniformBuffers);
+    engine.destroyPerFrameBuffer(displayUniformBuffers);
+
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
     
@@ -167,7 +168,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     
     // Compile the vertex shader
     try {
-        vertShader = engine.initShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
+        vertShader = engine.createShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
     } catch (...) {
         std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
         notifications.pushMessage(
@@ -183,7 +184,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     // Build the pathtracing pipeline
     {
         try {
-            pathtracingFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, pathtracingFragShaderPath);
+            pathtracingFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, pathtracingFragShaderPath);
         } catch (...) {
             engine.destroyShader(vertShader);
             std::cerr << "[ERROR] Failed to compile shader [" << pathtracingFragShaderPath << "]: pipeline not built" << std::endl;
@@ -218,7 +219,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     // Build the compositing pipeline
     {
         try {
-            compositingFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, compositingFragShaderPath);
+            compositingFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, compositingFragShaderPath);
         } catch (...) {
             engine.destroyShader(vertShader);
             engine.destroyShader(pathtracingFragShader);
@@ -254,7 +255,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     // Build the display pipeline
     {
         try {
-            displayFragShader = engine.initShader(VK_SHADER_STAGE_FRAGMENT_BIT, displayFragShaderPath);
+            displayFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, displayFragShaderPath);
         } catch (...) {
             engine.destroyShader(vertShader);
             engine.destroyShader(pathtracingFragShader);
@@ -297,7 +298,6 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     );
 }
 
-
 void RenderHandler::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
@@ -320,7 +320,7 @@ void RenderHandler::render(AppContext& ctx) {
         frame = 0;
     }
     
-    ctx.scene->runOnRender(ctx);
+    ctx.scene->runOnRender(ctx, *frameContext);
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
@@ -357,7 +357,7 @@ void RenderHandler::render(AppContext& ctx) {
     engine.fillBuffer(displayUniformBuffers.current(frameContext.value()), ctx.screenUBO);
     frame = (frame + 1) % 2;
     
-    pathtracingPass(ctx);
+    pathtracingPass(ctx, *frameContext);
     uiPass(ctx);
 
     engine.endFrame();
@@ -480,12 +480,12 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
     rebuildDescriptors(ctx);
 }
 
-void RenderHandler::pathtracingPass(AppContext& ctx) {
+void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameContext) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer& commandBuffer = engine.beginRecordingRender();
 
-    VkExtent2D extent = engine.getExtent();
+    VkExtent2D extent = frameContext.extent;
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -522,7 +522,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
         );
         
         // Bind current descriptor set
-        pathtracingDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, pathtracingPipeline.getLayout());
+        pathtracingDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, pathtracingPipeline.getLayout());
         
         pathtracingPipeline.bind(commandBuffer);
 
@@ -566,7 +566,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
 
-        compositingDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, compositingPipeline.getLayout());
         compositingPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
@@ -603,7 +603,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx) {
             {{ 1.0f, 0.0f, 1.0f, 1.0f }}
         );
         
-        displayDescriptorSets[frame].current(engine.getFrame()).bind(commandBuffer, displayPipeline.getLayout());
+        displayDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, displayPipeline.getLayout());
 
         displayPipeline.bind(commandBuffer);
 

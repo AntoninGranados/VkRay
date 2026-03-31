@@ -3,8 +3,6 @@
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
-#include "engine/engine.hpp"
-
 struct FrameContext;
 
 typedef uint16_t index_t;
@@ -62,6 +60,6 @@ private:
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
 
-    void pathtracingPass(AppContext& ctx);
+    void pathtracingPass(AppContext& ctx, const FrameContext& frameContext);
     void uiPass(AppContext& ctx);
 };

@@ -84,7 +84,7 @@ public:
     bool raycast(const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist, glm::vec3& p, bool select = false, bool includeCameras = true);
     
     void runPreUpdate(AppContext& ctx) { preUpdateScheduler.run(registry, ctx); }
-    void runOnRender(AppContext& ctx) { onRenderScheduler.run(registry, ctx); }
+    void runOnRender(AppContext& ctx, const FrameContext& frame) { onRenderScheduler.run(registry, ctx, frame); }
     void runOnUi(AppContext& ctx) { onUiScheduler.run(registry, ctx); }
     void runPostUpdate(AppContext& ctx) { postUpdateScheduler.run(registry, ctx); }
     
@@ -127,7 +127,8 @@ private:
     ScenePackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler preUpdateScheduler, onRenderScheduler, onUiScheduler, postUpdateScheduler;
+    ecs::SystemScheduler<> preUpdateScheduler, onUiScheduler, postUpdateScheduler;
+    ecs::SystemScheduler<const FrameContext&> onRenderScheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;

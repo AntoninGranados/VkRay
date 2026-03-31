@@ -5,25 +5,25 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "engine/engine.hpp"
+#include "engine/frame_context.hpp"
 #include "scene/scene.hpp"
 #include "scene/object/object.hpp"
 #include "app/app_context.hpp"
 
 namespace ecs {
 
-// TODO: should pass FrameContext here
 template <typename T, typename Header = std::monostate>
-inline void fillBufferWithPadding(AppContext& ctx, DynamicPerFrameBuffer<T, Header>& buffer, std::vector<T>& data) {
+inline void fillBufferWithPadding(AppContext& ctx, const FrameContext& frame, DynamicPerFrameBuffer<T, Header>& buffer, std::vector<T>& data) {
     if (ctx.engine->setDynamicPerFrameBufferCount(buffer, data.size())) {
         ctx.scene->markBufferUpdated();
     }
 
     std::vector<T> padded = data;
     padded.resize(buffer.getCapacity());
-    ctx.engine->fillBuffer(buffer.at(ctx.engine->getFrame()), padded.data());
+    ctx.engine->fillBuffer(buffer.current(frame), padded.data());
 }
 
-void spherePackingSystem(Registry& registry, AppContext& ctx) {
+void spherePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     auto& spheres = registry.storage<ecs::Sphere>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -49,10 +49,10 @@ void spherePackingSystem(Registry& registry, AppContext& ctx) {
         packingMaps.sphereId[e] = sphereId++;
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getSphereBuffers(), gpuSpheres);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getSphereBuffers(), gpuSpheres);
 }
 
-void planePackingSystem(Registry& registry, AppContext& ctx) {
+void planePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     auto& planes = registry.storage<ecs::Plane>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -78,10 +78,10 @@ void planePackingSystem(Registry& registry, AppContext& ctx) {
         packingMaps.planeId[e] = planeId++;
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getPlaneBuffers(), gpuPlanes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getPlaneBuffers(), gpuPlanes);
 }
 
-void boxPackingSystem(Registry& registry, AppContext& ctx) {
+void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     auto& boxes = registry.storage<ecs::Box>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -107,10 +107,10 @@ void boxPackingSystem(Registry& registry, AppContext& ctx) {
         packingMaps.boxId[e] = boxId++;
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getBoxBuffers(), gpuBoxes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBoxBuffers(), gpuBoxes);
 }
 
-void meshPackingSystem(Registry& registry, AppContext& ctx) {
+void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     auto& meshRefs = registry.storage<ecs::MeshRef>();
     auto& transforms = registry.storage<ecs::Transform>();
     auto& materialRefs = registry.storage<ecs::MaterialRef>();
@@ -162,9 +162,9 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
         }
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getVertexBuffers(), vertices);
-    fillBufferWithPadding(ctx, ctx.scene->getIndexBuffers(), indices);
-    fillBufferWithPadding(ctx, ctx.scene->getBvhBuffers(), bvhNodes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getVertexBuffers(), vertices);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getIndexBuffers(), indices);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBvhBuffers(), bvhNodes);
 
     std::vector<GpuMesh> meshes;
     packingMaps.meshId.clear();
@@ -191,10 +191,10 @@ void meshPackingSystem(Registry& registry, AppContext& ctx) {
         packingMaps.meshId[e] = meshId++;
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getMeshBuffers(), meshes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getMeshBuffers(), meshes);
 }
 
-void materialPackingSystem(Registry& registry, AppContext& ctx) {
+void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame) {
     std::vector<GpuMaterial> materials;
 
     for (const auto& mat : ctx.scene->getMaterials()) {
@@ -205,10 +205,10 @@ void materialPackingSystem(Registry& registry, AppContext& ctx) {
         });
     }
 
-    fillBufferWithPadding(ctx, ctx.scene->getMaterialBuffers(), materials);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getMaterialBuffers(), materials);
 }
 
-void objectPackingSystem(Registry& registry, AppContext& ctx) {
+void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     const auto& packingMaps = ctx.scene->getPackingMaps();
 
     std::vector<ObjectHandle> objectHandles;
@@ -270,10 +270,10 @@ void objectPackingSystem(Registry& registry, AppContext& ctx) {
     offset += sizeof(objectSelected);
     memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
 
-    ctx.engine->fillBuffer(objectBuffers.at(ctx.engine->getFrame()), objectData.data());
+    ctx.engine->fillBuffer(objectBuffers.current(frame), objectData.data());
 }
 
-void lightPackingSystem(Registry& registry, AppContext& ctx) {
+void lightPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     const auto& spheres = registry.storage<ecs::Sphere>();
     const auto& meshRefs = registry.storage<ecs::MeshRef>();
     const auto& transforms = registry.storage<ecs::Transform>();
@@ -349,7 +349,7 @@ void lightPackingSystem(Registry& registry, AppContext& ctx) {
     offset += sizeof(totalArea);
     memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
     
-    ctx.engine->fillBuffer(lightBuffers.at(ctx.engine->getFrame()), lightData.data());
+    ctx.engine->fillBuffer(lightBuffers.current(frame), lightData.data());
 }
 
 } // namespace ecs
