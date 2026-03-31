@@ -18,6 +18,7 @@ enum class ScenePreset : int {
 using PresetInit = std::function<void(Scene&, LightMode&)>;
 
 void initEmpty(Scene& scene, LightMode& lightMode);
+void initPyramid(Scene& scene, LightMode& lightMode);
 void initMaterialZoo(Scene& scene, LightMode& lightMode);
 void initMesh(Scene& scene, LightMode& lightMode);
 void initSponza(Scene& scene, LightMode& lightMode);

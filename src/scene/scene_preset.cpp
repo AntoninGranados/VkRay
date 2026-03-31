@@ -1,6 +1,41 @@
 #include "scene_preset.hpp"
+#include "scene/object/material.hpp"
 
 void initEmpty(Scene& scene, LightMode& lightMode) {
+    scene.clear();
+
+    lightMode = LightMode::Day;
+
+    const MaterialHandle floorHandle = scene.pushMaterial(Material{
+        .name = "Floor",
+        .type = MaterialType::Programmable,
+        .albedo = glm::vec3(0.75f, 0.75f, 0.78f),
+    });
+    scene.pushPlane(
+        "Floor",
+        glm::vec3(0.0f, -1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        floorHandle
+    );
+
+    Material cubeMaterial = Material{
+        .name = "Cube",
+        .type = MaterialType::GgxGlossy,
+        .albedo = glm::vec3(1.0f, 0.05f, 0.10f),
+    };
+    ggxGlossyRoughness(cubeMaterial) = 0.02;
+    ggxGlossyIoR(cubeMaterial) = 0.7;
+
+    const MaterialHandle cubeHandle = scene.pushMaterial(cubeMaterial);
+    scene.pushBox(
+        "Cube",
+        glm::vec3(-1.0f),
+        glm::vec3( 1.0f),
+        cubeHandle
+    );
+};
+
+void initPyramid(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Sunset;
