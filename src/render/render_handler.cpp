@@ -6,6 +6,7 @@
 
 #include "engine/engine.hpp"
 #include "engine/graph/graph_utils.hpp"
+#include "engine/graph/compute_pass_builder.hpp"
 #include "engine/graph/graphics_pass_builder.hpp"
 #include "engine/graph/present_pass_builder.hpp"
 #include "engine/graph/transfer_pass_builder.hpp"
@@ -50,25 +51,15 @@ void RenderHandler::init(AppContext& ctx) {
             engine.getExtent().width, engine.getExtent().height
         );
 
-        GraphicsPassBuilder pathtrace = builder.addGraphicsPass("PathtracingPass");
+        ComputePassBuilder pathtrace = builder.addComputePass("PathtracingPass");
         pathtracePassHandle = pathtrace.getHandle();
         pathtrace.readImage(previousPathtracingImageHandle, ImageUsageType::Sampled);
-        pathtrace.writeImage(
-            currentPathtracingImageHandle,
-            ImageUsageType::ColorAttachment,
-            WriteMode::Overwrite,
-            AttachmentLoad::Clear
-        );
+        pathtrace.writeImage(currentPathtracingImageHandle, ImageUsageType::StorageImage);
 
-        GraphicsPassBuilder composite = builder.addGraphicsPass("CompositionPass");
+        ComputePassBuilder composite = builder.addComputePass("CompositionPass");
         compositePassHandle = composite.getHandle();
         composite.readImage(currentPathtracingImageHandle, ImageUsageType::Sampled);
-        composite.writeImage(
-            outputImageHandle,
-            ImageUsageType::ColorAttachment,
-            WriteMode::Overwrite,
-            AttachmentLoad::DontCare
-        );
+        composite.writeImage(outputImageHandle, ImageUsageType::StorageImage);
 
         TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
         exportPassHandle = exportPass.getHandle();
@@ -132,7 +123,7 @@ void RenderHandler::init(AppContext& ctx) {
             pathtracingImages[i] = engine.createImage(
                 extent.width, extent.height,
                 VK_FORMAT_R32G32B32A32_SFLOAT,  // Use 32 bit float format to avoid quantizing every accumulation step
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 "PathtracingImage[" + std::to_string(i) + "]"
             );
@@ -140,11 +131,11 @@ void RenderHandler::init(AppContext& ctx) {
             pathtracingSamplers[i] = engine.createSampler("PathtracingSampler[" + std::to_string(i) + "]");
         }
 
-        
+
         outputImage = engine.createImage(
             extent.width, extent.height,
             VK_FORMAT_R32G32B32A32_SFLOAT,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             "OutputImage"
         );
@@ -156,24 +147,26 @@ void RenderHandler::init(AppContext& ctx) {
         exportService.init(engine, extent.width, extent.height);
     }
 
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     engine.initDescriptorSetLayout(pathtracingSetLayout);
-    
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     engine.initDescriptorSetLayout(compositingSetLayout);
 
     displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -201,15 +194,17 @@ void RenderHandler::init(AppContext& ctx) {
                 .storage(9, buffers.mesh.at(frameIndex))
                 .storage(10, buffers.material.at(frameIndex))
                 .storage(11, buffers.object.at(frameIndex))
-                .storage(12, buffers.light.at(frameIndex));
-            
+                .storage(12, buffers.light.at(frameIndex))
+                .storageImage(13, pathtracingImageViews[frame]);
+
             pathtracingWriter.validate();
             engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
-            
+
             DescriptorWriter compositingWriter(compositingSetLayout);
             compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
                 .uniform(1, displayUniformBuffers.at(frameIndex))
-                .storage(2, pixelInfoBuffer.get());
+                .storage(2, pixelInfoBuffer.get())
+                .storageImage(3, outputImageView);
             engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
             
             DescriptorWriter displayWriter(displaySetLayout);
@@ -239,8 +234,8 @@ void RenderHandler::destroy(AppContext& ctx) {
     engine.destroyBuffer(vertexBuffer);
     engine.destroyBuffer(indexBuffer);
     
-    engine.destroyGraphicsPipeline(pathtracingPipeline);
-    engine.destroyGraphicsPipeline(compositingPipeline);
+    engine.destroyComputePipeline(pathtracingPipeline);
+    engine.destroyComputePipeline(compositingPipeline);
     engine.destroyGraphicsPipeline(displayPipeline);
 }
 
@@ -250,144 +245,94 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
 
     engine.waitIdle();
 
+    std::string pathtracingCompShaderPath = "./shaders/pathtracing/pathtracing.spv";
+    std::string compositingCompShaderPath = "./shaders/compositing.spv";
     std::string vertShaderPath = "./shaders/vert.glsl";
-    std::string pathtracingFragShaderPath = "./shaders/pathtracing/pathtracing.glsl";
-    std::string compositingFragShaderPath = "./shaders/compositing.glsl";
     std::string displayFragShaderPath = "./shaders/frag.glsl";
-    
-    Shader vertShader;
-    Shader pathtracingFragShader, compositingFragShader, displayFragShader;
-    
-    // Compile the vertex shader
-    try {
-        vertShader = engine.createShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
-    } catch (...) {
-        std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: pipeline not built" << std::endl;
-        notifications.pushMessage(
-            NotificationType::Error,
-            "Failed to compile shader [" + vertShaderPath + "]: pipeline not built"
-        );
-        return;
-    }
 
-    VertexInput<ScreenVertex> vertexInput;
-    vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
-    
-    // Build the pathtracing pipeline
+    Shader pathtracingCompShader, compositingCompShader;
+    Shader vertShader, displayFragShader;
+
+    // Build the pathtracing compute pipeline
     {
         try {
-            pathtracingFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, pathtracingFragShaderPath);
+            pathtracingCompShader = engine.createShader(VK_SHADER_STAGE_COMPUTE_BIT, pathtracingCompShaderPath);
         } catch (...) {
-            engine.destroyShader(vertShader);
-            std::cerr << "[ERROR] Failed to compile shader [" << pathtracingFragShaderPath << "]: pipeline not built" << std::endl;
-            notifications.pushMessage(
-                NotificationType::Error,
-                "Failed to compile shader [" + pathtracingFragShaderPath + "]: pipeline not built"
-            );
+            std::cerr << "[ERROR] Failed to load shader [" << pathtracingCompShaderPath << "]: pipeline not built" << std::endl;
+            notifications.pushMessage(NotificationType::Error, "Failed to load shader [" + pathtracingCompShaderPath + "]: pipeline not built");
             return;
         }
-        
+
         if (pathtracingPipeline.get() != VK_NULL_HANDLE) {
-            GraphicsPipeline newPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &pathtracingFragShader },
-                { &pathtracingSetLayout },
-                pathtracingPipeline,
-                VK_FORMAT_R32G32B32A32_SFLOAT
-            );
-            engine.destroyGraphicsPipeline(pathtracingPipeline);
+            ComputePipeline newPipeline = engine.initComputePipeline(pathtracingCompShader, { &pathtracingSetLayout }, pathtracingPipeline);
+            engine.destroyComputePipeline(pathtracingPipeline);
             pathtracingPipeline = newPipeline;
         } else {
-            pathtracingPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &pathtracingFragShader },
-                { &pathtracingSetLayout },
-                GraphicsPipeline(),
-                VK_FORMAT_R32G32B32A32_SFLOAT
-            );
+            pathtracingPipeline = engine.initComputePipeline(pathtracingCompShader, { &pathtracingSetLayout });
         }
+        engine.destroyShader(pathtracingCompShader);
     }
 
-    // Build the compositing pipeline
+    // Build the compositing compute pipeline
     {
         try {
-            compositingFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, compositingFragShaderPath);
+            compositingCompShader = engine.createShader(VK_SHADER_STAGE_COMPUTE_BIT, compositingCompShaderPath);
         } catch (...) {
-            engine.destroyShader(vertShader);
-            engine.destroyShader(pathtracingFragShader);
-            std::cerr << "[ERROR] Failed to compile shader [" << compositingFragShaderPath << "]: compositing pipeline not built" << std::endl;
-            notifications.pushMessage(
-                NotificationType::Error,
-                "Failed to compile shader [" + compositingFragShaderPath + "]: compositing pipeline not built"
-            );
+            std::cerr << "[ERROR] Failed to load shader [" << compositingCompShaderPath << "]: pipeline not built" << std::endl;
+            notifications.pushMessage(NotificationType::Error, "Failed to load shader [" + compositingCompShaderPath + "]: pipeline not built");
             return;
         }
-    
+
         if (compositingPipeline.get() != VK_NULL_HANDLE) {
-            GraphicsPipeline newCompositingPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &compositingFragShader },
-                { &compositingSetLayout },
-                compositingPipeline,
-                VK_FORMAT_R32G32B32A32_SFLOAT
-            );
-            engine.destroyGraphicsPipeline(compositingPipeline);
-            compositingPipeline = newCompositingPipeline;
+            ComputePipeline newPipeline = engine.initComputePipeline(compositingCompShader, { &compositingSetLayout }, compositingPipeline);
+            engine.destroyComputePipeline(compositingPipeline);
+            compositingPipeline = newPipeline;
         } else {
-            compositingPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &compositingFragShader },
-                { &compositingSetLayout },
-                GraphicsPipeline(),
-                VK_FORMAT_R32G32B32A32_SFLOAT
-            );
+            compositingPipeline = engine.initComputePipeline(compositingCompShader, { &compositingSetLayout });
         }
+        engine.destroyShader(compositingCompShader);
     }
 
-    // Build the display pipeline
+    // Build the display graphics pipeline
     {
+        try {
+            vertShader = engine.createShader(VK_SHADER_STAGE_VERTEX_BIT, vertShaderPath);
+        } catch (...) {
+            std::cerr << "[ERROR] Failed to compile shader [" << vertShaderPath << "]: display pipeline not built" << std::endl;
+            notifications.pushMessage(NotificationType::Error, "Failed to compile shader [" + vertShaderPath + "]: display pipeline not built");
+            return;
+        }
+
         try {
             displayFragShader = engine.createShader(VK_SHADER_STAGE_FRAGMENT_BIT, displayFragShaderPath);
         } catch (...) {
             engine.destroyShader(vertShader);
-            engine.destroyShader(pathtracingFragShader);
-            engine.destroyShader(compositingFragShader);
             std::cerr << "[ERROR] Failed to compile shader [" << displayFragShaderPath << "]: display pipeline not built" << std::endl;
-            notifications.pushMessage(
-                NotificationType::Error,
-                "Failed to compile shader [" + displayFragShaderPath + "]: display pipeline not built"
-            );
+            notifications.pushMessage(NotificationType::Error, "Failed to compile shader [" + displayFragShaderPath + "]: display pipeline not built");
             return;
         }
-    
+
+        VertexInput<ScreenVertex> vertexInput;
+        vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
+
         if (displayPipeline.get() != VK_NULL_HANDLE) {
             GraphicsPipeline newDisplayPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &displayFragShader },
-                { &displaySetLayout },
-                displayPipeline
+                vertexInput.get(), { &vertShader, &displayFragShader }, { &displaySetLayout }, displayPipeline
             );
             engine.destroyGraphicsPipeline(displayPipeline);
             displayPipeline = newDisplayPipeline;
         } else {
             displayPipeline = engine.initGraphicsPipeline(
-                vertexInput.get(),
-                { &vertShader, &displayFragShader },
-                { &displaySetLayout }
+                vertexInput.get(), { &vertShader, &displayFragShader }, { &displaySetLayout }
             );
         }
+
+        engine.destroyShader(vertShader);
+        engine.destroyShader(displayFragShader);
     }
 
-    engine.destroyShader(vertShader);
-    engine.destroyShader(pathtracingFragShader);
-    engine.destroyShader(compositingFragShader);
-    engine.destroyShader(displayFragShader);
-
-    std::cout << "[INFO] Built pipelines by recompiling [" << vertShaderPath << "], [" << pathtracingFragShaderPath << "], [" << compositingFragShaderPath << "], and [" << displayFragShaderPath << "]" << std::endl;
-    notifications.pushMessage(
-        NotificationType::Info,
-        "(Re)Built the pipelines"
-    );
+    std::cout << "[INFO] Built pipelines" << std::endl;
+    notifications.pushMessage(NotificationType::Info, "(Re)Built the pipelines");
 }
 
 void RenderHandler::render(AppContext& ctx) {
@@ -438,25 +383,29 @@ void RenderHandler::render(AppContext& ctx) {
                     .storage(9, buffers.mesh.at(frameIndex))
                     .storage(10, buffers.material.at(frameIndex))
                     .storage(11, buffers.object.at(frameIndex))
-                    .storage(12, buffers.light.at(frameIndex));
+                    .storage(12, buffers.light.at(frameIndex))
+                    .storageImage(13, pathtracingImageViews[frame]);
                 engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
 
                 DescriptorWriter compositingWriter(compositingSetLayout);
-            compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
-                .uniform(1, displayUniformBuffers.at(frameIndex))
-                .storage(2, pixelInfoBuffer.get());
-            engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
+                compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
+                    .uniform(1, displayUniformBuffers.at(frameIndex))
+                    .storage(2, pixelInfoBuffer.get())
+                    .storageImage(3, outputImageView);
+                engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
             }
         }
     } else {
         DescriptorWriter pathtracingWriter(pathtracingSetLayout);
         pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameContext->currentFrame))
-            .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame]);
+            .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame])
+            .storageImage(13, pathtracingImageViews[frame]);
         engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameContext->currentFrame, pathtracingWriter);
 
         DescriptorWriter compositingWriter(compositingSetLayout);
         compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
-            .uniform(1, displayUniformBuffers.at(frameContext->currentFrame));
+            .uniform(1, displayUniformBuffers.at(frameContext->currentFrame))
+            .storageImage(3, outputImageView);
         engine.updateDescriptorSetGroup(compositingDescriptorSet, frameContext->currentFrame, compositingWriter);
     }
     
@@ -474,8 +423,8 @@ void RenderHandler::render(AppContext& ctx) {
         pathtracingImageViews[frame].get());
     executor.bindImage(
         swapchainImageHandle,
-        engine.getSwapchainImage(frameContext->imageIndex),
-        engine.getSwapchainImageView(frameContext->imageIndex));
+        engine.getSwapchainImage(frameContext->imageIndex).get(),
+        engine.getSwapchainImageView(frameContext->imageIndex).get());
     
     pathtracingPass(ctx, *frameContext);
     uiPass(ctx);
@@ -516,7 +465,7 @@ void RenderHandler::rebuildImages(AppContext& ctx, const VkExtent2D& extent) {
         pathtracingImages[i] = engine.createImage(
             extent.width, extent.height,
             VK_FORMAT_R32G32B32A32_SFLOAT,  // Use 32 bit float format to avoid quantizing every accumulation step
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             "PathtracingImage[" + std::to_string(i) + "]"
         );
@@ -526,7 +475,7 @@ void RenderHandler::rebuildImages(AppContext& ctx, const VkExtent2D& extent) {
     outputImage = engine.createImage(
         extent.width, extent.height,
         VK_FORMAT_R32G32B32A32_SFLOAT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "OutputImage"
     );
@@ -563,20 +512,15 @@ void RenderHandler::rebuildDescriptors(AppContext& ctx) {
             .storage(9, buffers.mesh.at(frameIndex))
             .storage(10, buffers.material.at(frameIndex))
             .storage(11, buffers.object.at(frameIndex))
-            .storage(12, buffers.light.at(frameIndex));
-        // uint32_t binding = 3;
-        // for (PerFrameBufferBase* buffers : storageBuffers) {
-        // // for (bufferList_t& buffers : storageBuffers) {
-        //     pathtracingWriter.storage(binding, buffers->at(frameIndex));
-        //     // pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
-        //     binding++;
-        // }
+            .storage(12, buffers.light.at(frameIndex))
+            .storageImage(13, pathtracingImageViews[frame]);
         engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
-        
+
         DescriptorWriter compositingWriter(compositingSetLayout);
         compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
             .uniform(1, displayUniformBuffers.at(frameIndex))
-            .storage(2, pixelInfoBuffer.get());
+            .storage(2, pixelInfoBuffer.get())
+            .storageImage(3, outputImageView);
         engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
         
         DescriptorWriter displayWriter(displaySetLayout);
@@ -618,55 +562,20 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
     scissor.offset = {0, 0};
     scissor.extent = extent;
     
-    {   // Pathtrace
+    {   // Pathtrace (compute)
         executor.emitBarriers(commandBuffer, pathtracePassHandle);
-        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(pathtracePassHandle);
-        assert(attachments.size() == 1);
-        engine.beginDynamicRenderer(
-            commandBuffer,
-            attachments[0].view, attachments[0].layout,
-            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
-            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
-        );
-        
-        // Bind current descriptor set
-        pathtracingDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, pathtracingPipeline.getLayout());
-        
+        pathtracingDescriptorSet.at(frameContext.currentFrame).bind(
+            commandBuffer, pathtracingPipeline.getLayout(), VK_PIPELINE_BIND_POINT_COMPUTE);
         pathtracingPipeline.bind(commandBuffer);
-
-        vertexBuffer.bindVertex(commandBuffer);
-        indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
-        
-        pathtracingPipeline.setViewport(commandBuffer, viewport);
-        pathtracingPipeline.setScissor(commandBuffer, scissor);
-        pathtracingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
-
-        engine.endDynamicRenderer(commandBuffer);
-
+        pathtracingPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
-    {   // Compositing
+    {   // Compositing (compute)
         executor.emitBarriers(commandBuffer, compositePassHandle);
-        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(compositePassHandle);
-        assert(attachments.size() == 1);
-        engine.beginDynamicRenderer(
-            commandBuffer,
-            attachments[0].view, attachments[0].layout,
-            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
-            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
-        );
-
-        compositingDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingDescriptorSet.at(frameContext.currentFrame).bind(
+            commandBuffer, compositingPipeline.getLayout(), VK_PIPELINE_BIND_POINT_COMPUTE);
         compositingPipeline.bind(commandBuffer);
-
-        vertexBuffer.bindVertex(commandBuffer);
-        indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
-
-        compositingPipeline.setViewport(commandBuffer, viewport);
-        compositingPipeline.setScissor(commandBuffer, scissor);
-        compositingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
-
-        engine.endDynamicRenderer(commandBuffer);
+        compositingPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
     executor.emitBarriers(commandBuffer, exportPassHandle);

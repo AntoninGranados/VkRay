@@ -58,7 +58,8 @@ private:
     
     DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
     DescriptorSetGroup pathtracingDescriptorSet, compositingDescriptorSet, displayDescriptorSet;
-    GraphicsPipeline pathtracingPipeline, compositingPipeline, displayPipeline;
+    ComputePipeline pathtracingPipeline, compositingPipeline;
+    GraphicsPipeline displayPipeline;
     
     Buffer vertexBuffer, indexBuffer;
     PerFrameBuffer<PathtracerUBO> pathtracingUniformBuffers;
