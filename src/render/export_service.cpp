@@ -26,7 +26,7 @@ void ExportService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Im
     renderRequested   = false;
     renderPendingSave = true;
 
-    copyImageToBuffer(ctx, commandBuffer, image);
+    copyImageToBuffer(commandBuffer, image);
 }
 
 void ExportService::handleSave(AppContext& ctx) {
@@ -85,26 +85,8 @@ std::string ExportService::buildAnimationoFramePath(int frame) {
 }
 
 
-void ExportService::copyImageToBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
-    VkSmol& engine = *ctx.engine;
-    
-    engine.barrier(
-        commandBuffer,
-        image.get(),
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-
+void ExportService::copyImageToBuffer(CommandBuffer& commandBuffer, Image& image) {
     image.copyToBuffer(commandBuffer, buffer);
-
-    engine.barrier(
-        commandBuffer,
-        image.get(),
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
 }
 
 void ExportService::saveBufferToFile(AppContext& ctx, std::string path) {

@@ -5,15 +5,102 @@
 #include "./imgui/imgui.h"
 
 #include "engine/engine.hpp"
+#include "engine/graph/graph_utils.hpp"
+#include "engine/graph/graphics_pass_builder.hpp"
+#include "engine/graph/present_pass_builder.hpp"
+#include "engine/graph/transfer_pass_builder.hpp"
+#include "engine/graph/render_graph_builder.hpp"
+#include "engine/graph/builder_resource.hpp"
 
 #include "app/app_context.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
+#include "engine/graph/render_graph_executor.hpp"
+#include "engine/image/image.hpp"
 #include "scene/scene.hpp"
 #include "editor/editor_ui.hpp"
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
+
+    {
+        RenderGraphBuilder builder;
+        swapchainImageHandle = builder.importImage(
+            "SwapchainImage",
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            engine.getExtent().width, engine.getExtent().height, 1,
+            { .usage = ImageUsageType::Undefined, .access = AccessType::None },
+            { .usage = ImageUsageType::Present, .access = AccessType::Read }
+        );
+        previousPathtracingImageHandle = builder.importImage(
+            "PreviousPathtracingImage",
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            engine.getExtent().width, engine.getExtent().height, 1,
+            { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+            { .usage = ImageUsageType::Sampled, .access = AccessType::Read }
+        );
+        currentPathtracingImageHandle = builder.createImage(
+            "CurrentPathtracingImage",
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            engine.getExtent().width, engine.getExtent().height
+        );
+        outputImageHandle = builder.createImage(
+            "OutputImage",
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            engine.getExtent().width, engine.getExtent().height
+        );
+
+        GraphicsPassBuilder pathtrace = builder.addGraphicsPass("PathtracingPass");
+        pathtracePassHandle = pathtrace.getHandle();
+        pathtrace.readImage(previousPathtracingImageHandle, ImageUsageType::Sampled);
+        pathtrace.writeImage(
+            currentPathtracingImageHandle,
+            ImageUsageType::ColorAttachment,
+            WriteMode::Overwrite,
+            AttachmentLoad::Clear
+        );
+
+        GraphicsPassBuilder composite = builder.addGraphicsPass("CompositionPass");
+        compositePassHandle = composite.getHandle();
+        composite.readImage(currentPathtracingImageHandle, ImageUsageType::Sampled);
+        composite.writeImage(
+            outputImageHandle,
+            ImageUsageType::ColorAttachment,
+            WriteMode::Overwrite,
+            AttachmentLoad::DontCare
+        );
+
+        TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
+        exportPassHandle = exportPass.getHandle();
+        exportPass.copyFrom(outputImageHandle);
+
+        GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
+        displayPassHandle = display.getHandle();
+        display.readImage(outputImageHandle, ImageUsageType::Sampled);
+        display.writeImage(
+            swapchainImageHandle,
+            ImageUsageType::ColorAttachment,
+            WriteMode::Overwrite,
+            AttachmentLoad::Clear
+        );
+
+        GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
+        uiPassHandle = ui.getHandle();
+        ui.writeImage(
+            swapchainImageHandle,
+            ImageUsageType::ColorAttachment,
+            WriteMode::Preserve,
+            AttachmentLoad::Load
+        );
+
+        PresentPassBuilder present = builder.addPresentPass("PresentPass");
+        presentPassHandle = present.getHandle();
+        present.setPresentationImage(swapchainImageHandle);
+
+        executor.setCompiledGraph(builder.compile());
+    }
+
+    // =============================================================
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
@@ -53,16 +140,18 @@ void RenderHandler::init(AppContext& ctx) {
             pathtracingSamplers[i] = engine.createSampler("PathtracingSampler[" + std::to_string(i) + "]");
         }
 
+        
         outputImage = engine.createImage(
             extent.width, extent.height,
             VK_FORMAT_R32G32B32A32_SFLOAT,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             "OutputImage"
         );
-
+        
         outputImageView = engine.createImageView(outputImage, "OutputImageView");
         outputSampler = engine.createSampler("OutputSampler");
+        executor.bindImage(outputImageHandle, outputImage.get(),outputImageView.get());
         
         exportService.init(engine, extent.width, extent.height);
     }
@@ -94,41 +183,40 @@ void RenderHandler::init(AppContext& ctx) {
 
     {   // Descriptor sets creation
         SceneGpuBuffers& buffers = ctx.scene->getBuffers();
-        for (size_t i = 0; i < 2; i++) {
-            pathtracingDescriptorSets[i] = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet[" + std::to_string(i) + "]");
-            compositingDescriptorSets[i] = engine.createDescriptorSetGroup(compositingSetLayout, "CompositingDescriptorSet[" + std::to_string(i) + "]");
-            displayDescriptorSets[i] = engine.createDescriptorSetGroup(displaySetLayout, "DisplayDescriptorSet[" + std::to_string(i) + "]");
+        pathtracingDescriptorSet = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet");
+        compositingDescriptorSet = engine.createDescriptorSetGroup(compositingSetLayout, "CompositingDescriptorSet");
+        displayDescriptorSet = engine.createDescriptorSetGroup(displaySetLayout, "DisplayDescriptorSet");
 
-            for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
-                DescriptorWriter pathtracingWriter(pathtracingSetLayout);
-                pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
-                    .combinedImageSampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
-                    .storage(2, pixelInfoBuffer.get())
-                    .storage(3, buffers.sphere.at(frameIndex))
-                    .storage(4, buffers.plane.at(frameIndex))
-                    .storage(5, buffers.box.at(frameIndex))
-                    .storage(6, buffers.vertex.at(frameIndex))
-                    .storage(7, buffers.index.at(frameIndex))
-                    .storage(8, buffers.bvh.at(frameIndex))
-                    .storage(9, buffers.mesh.at(frameIndex))
-                    .storage(10, buffers.material.at(frameIndex))
-                    .storage(11, buffers.object.at(frameIndex))
-                    .storage(12, buffers.light.at(frameIndex));
-
-                engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
-                
-                DescriptorWriter compositingWriter(compositingSetLayout);
-                compositingWriter.combinedImageSampler(0, pathtracingImageViews[i], pathtracingSamplers[i])
-                    .uniform(1, displayUniformBuffers.at(frameIndex))
-                    .storage(2, pixelInfoBuffer.get());
-                engine.updateDescriptorSetGroup(compositingDescriptorSets[i], frameIndex, compositingWriter);
-                
-                DescriptorWriter displayWriter(displaySetLayout);
-                displayWriter.combinedImageSampler(0, outputImageView, outputSampler)
-                    .uniform(1, displayUniformBuffers.at(frameIndex))
-                    .storage(2, pixelInfoBuffer.get());
-                engine.updateDescriptorSetGroup(displayDescriptorSets[i], frameIndex, displayWriter);
-            }
+        for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+            DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+            pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+                .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame])
+                .storage(2, pixelInfoBuffer.get())
+                .storage(3, buffers.sphere.at(frameIndex))
+                .storage(4, buffers.plane.at(frameIndex))
+                .storage(5, buffers.box.at(frameIndex))
+                .storage(6, buffers.vertex.at(frameIndex))
+                .storage(7, buffers.index.at(frameIndex))
+                .storage(8, buffers.bvh.at(frameIndex))
+                .storage(9, buffers.mesh.at(frameIndex))
+                .storage(10, buffers.material.at(frameIndex))
+                .storage(11, buffers.object.at(frameIndex))
+                .storage(12, buffers.light.at(frameIndex));
+            
+            pathtracingWriter.validate();
+            engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
+            
+            DescriptorWriter compositingWriter(compositingSetLayout);
+            compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
+                .uniform(1, displayUniformBuffers.at(frameIndex))
+                .storage(2, pixelInfoBuffer.get());
+            engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
+            
+            DescriptorWriter displayWriter(displaySetLayout);
+            displayWriter.combinedImageSampler(0, outputImageView, outputSampler)
+                .uniform(1, displayUniformBuffers.at(frameIndex))
+                .storage(2, pixelInfoBuffer.get());
+            engine.updateDescriptorSetGroup(displayDescriptorSet, frameIndex, displayWriter);
         }
     }
 
@@ -325,41 +413,69 @@ void RenderHandler::render(AppContext& ctx) {
     }
     
     ctx.scene->runOnRender(ctx, *frameContext);
+    frame = (frame + 1) % 2;
 
     // Rebuild descriptor set
     if (ctx.scene->checkBufferUpdate()) {
         SceneGpuBuffers& buffers = ctx.scene->getBuffers();
-        for (size_t i = 0; i < 2; i++) {
-            DescriptorSetGroup newGroup = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet[" + std::to_string(i) + "]");
-            
-            if (newGroup.isValide()) {
-                engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
-                pathtracingDescriptorSets[i] = std::move(newGroup);
+        DescriptorSetGroup newGroup = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet");
+        
+        if (newGroup.isValide()) {
+            engine.destroyDescriptorSetGroup(pathtracingDescriptorSet);
+            pathtracingDescriptorSet = std::move(newGroup);
 
-                for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
-                    DescriptorWriter pathtracingWriter(pathtracingSetLayout);
-                    pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
-                        .combinedImageSampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
-                        .storage(2, pixelInfoBuffer.get())
-                        .storage(3, buffers.sphere.at(frameIndex))
-                        .storage(4, buffers.plane.at(frameIndex))
-                        .storage(5, buffers.box.at(frameIndex))
-                        .storage(6, buffers.vertex.at(frameIndex))
-                        .storage(7, buffers.index.at(frameIndex))
-                        .storage(8, buffers.bvh.at(frameIndex))
-                        .storage(9, buffers.mesh.at(frameIndex))
-                        .storage(10, buffers.material.at(frameIndex))
-                        .storage(11, buffers.object.at(frameIndex))
-                        .storage(12, buffers.light.at(frameIndex));
-                    engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
-                }
+            for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+                DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+                pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+                    .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame])
+                    .storage(2, pixelInfoBuffer.get())
+                    .storage(3, buffers.sphere.at(frameIndex))
+                    .storage(4, buffers.plane.at(frameIndex))
+                    .storage(5, buffers.box.at(frameIndex))
+                    .storage(6, buffers.vertex.at(frameIndex))
+                    .storage(7, buffers.index.at(frameIndex))
+                    .storage(8, buffers.bvh.at(frameIndex))
+                    .storage(9, buffers.mesh.at(frameIndex))
+                    .storage(10, buffers.material.at(frameIndex))
+                    .storage(11, buffers.object.at(frameIndex))
+                    .storage(12, buffers.light.at(frameIndex));
+                engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
+
+                DescriptorWriter compositingWriter(compositingSetLayout);
+            compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
+                .uniform(1, displayUniformBuffers.at(frameIndex))
+                .storage(2, pixelInfoBuffer.get());
+            engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
             }
         }
+    } else {
+        DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+        pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameContext->currentFrame))
+            .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame]);
+        engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameContext->currentFrame, pathtracingWriter);
+
+        DescriptorWriter compositingWriter(compositingSetLayout);
+        compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
+            .uniform(1, displayUniformBuffers.at(frameContext->currentFrame));
+        engine.updateDescriptorSetGroup(compositingDescriptorSet, frameContext->currentFrame, compositingWriter);
     }
+    
     
     engine.fillBuffer(pathtracingUniformBuffers.current(frameContext.value()), ctx.pathtracerUBO);
     engine.fillBuffer(displayUniformBuffers.current(frameContext.value()), ctx.screenUBO);
-    frame = (frame + 1) % 2;
+
+    executor.bindImage(
+        previousPathtracingImageHandle,
+        pathtracingImages[1-frame].get(),
+        pathtracingImageViews[1-frame].get());
+    executor.bindImage(
+        currentPathtracingImageHandle, 
+        pathtracingImages[frame].get(), 
+        pathtracingImageViews[frame].get());
+    executor.bindImage(
+        swapchainImageHandle,
+        engine.getSwapchainImage(frameContext->imageIndex),
+        engine.getSwapchainImageView(frameContext->imageIndex));
     
     pathtracingPass(ctx, *frameContext);
     uiPass(ctx);
@@ -372,11 +488,9 @@ void RenderHandler::render(AppContext& ctx) {
 void RenderHandler::destroyDescriptors(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    for (size_t i = 0; i < 2; i++) {
-        engine.destroyDescriptorSetGroup(pathtracingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(compositingDescriptorSets[i]);
-        engine.destroyDescriptorSetGroup(displayDescriptorSets[i]);
-    }
+    engine.destroyDescriptorSetGroup(pathtracingDescriptorSet);
+    engine.destroyDescriptorSetGroup(compositingDescriptorSet);
+    engine.destroyDescriptorSetGroup(displayDescriptorSet);
 }
 
 void RenderHandler::destroyImages(AppContext& ctx) {
@@ -418,6 +532,7 @@ void RenderHandler::rebuildImages(AppContext& ctx, const VkExtent2D& extent) {
     );
     outputImageView = engine.createImageView(outputImage, "OutputImageView");
     outputSampler = engine.createSampler("OutputSampler");
+    executor.bindImage(outputImageHandle, outputImage.get(),outputImageView.get());
 
     // These are not strictly speaking images, but they hold per pixel information
     size_t pixelInfoCount = static_cast<size_t>(extent.width) * extent.height;
@@ -430,47 +545,45 @@ void RenderHandler::rebuildDescriptors(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     SceneGpuBuffers& buffers = ctx.scene->getBuffers();
-    for (size_t i = 0; i < 2; i++) {
-        pathtracingDescriptorSets[i] = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet[" + std::to_string(i) + "]");
-        compositingDescriptorSets[i] = engine.createDescriptorSetGroup(compositingSetLayout, "CompositingDescriptorSet[" + std::to_string(i) + "]");
-        displayDescriptorSets[i] = engine.createDescriptorSetGroup(displaySetLayout, "DisplayDescriptorSet[" + std::to_string(i) + "]");
+    pathtracingDescriptorSet = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet");
+    compositingDescriptorSet = engine.createDescriptorSetGroup(compositingSetLayout, "CompositingDescriptorSet");
+    displayDescriptorSet = engine.createDescriptorSetGroup(displaySetLayout, "DisplayDescriptorSet");
 
-        for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
-            DescriptorWriter pathtracingWriter(pathtracingSetLayout);
-            pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
-                .combinedImageSampler(1, pathtracingImageViews[1 - i], pathtracingSamplers[1 - i])
-                .storage(2, pixelInfoBuffer.get())
-                .storage(3, buffers.sphere.at(frameIndex))
-                .storage(4, buffers.plane.at(frameIndex))
-                .storage(5, buffers.box.at(frameIndex))
-                .storage(6, buffers.vertex.at(frameIndex))
-                .storage(7, buffers.index.at(frameIndex))
-                .storage(8, buffers.bvh.at(frameIndex))
-                .storage(9, buffers.mesh.at(frameIndex))
-                .storage(10, buffers.material.at(frameIndex))
-                .storage(11, buffers.object.at(frameIndex))
-                .storage(12, buffers.light.at(frameIndex));
-            // uint32_t binding = 3;
-            // for (PerFrameBufferBase* buffers : storageBuffers) {
-            // // for (bufferList_t& buffers : storageBuffers) {
-            //     pathtracingWriter.storage(binding, buffers->at(frameIndex));
-            //     // pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
-            //     binding++;
-            // }
-            engine.updateDescriptorSetGroup(pathtracingDescriptorSets[i], frameIndex, pathtracingWriter);
-            
-            DescriptorWriter compositingWriter(compositingSetLayout);
-            compositingWriter.combinedImageSampler(0, pathtracingImageViews[i], pathtracingSamplers[i])
-                .uniform(1, displayUniformBuffers.at(frameIndex))
-                .storage(2, pixelInfoBuffer.get());
-            engine.updateDescriptorSetGroup(compositingDescriptorSets[i], frameIndex, compositingWriter);
-            
-            DescriptorWriter displayWriter(displaySetLayout);
-            displayWriter.combinedImageSampler(0, outputImageView, outputSampler)
-                .uniform(1, displayUniformBuffers.at(frameIndex))
-                .storage(2, pixelInfoBuffer.get());
-            engine.updateDescriptorSetGroup(displayDescriptorSets[i], frameIndex, displayWriter);
-        }
+    for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
+        DescriptorWriter pathtracingWriter(pathtracingSetLayout);
+        pathtracingWriter.uniform(0, pathtracingUniformBuffers.at(frameIndex))
+            .combinedImageSampler(1, pathtracingImageViews[1 - frame], pathtracingSamplers[1 - frame])
+            .storage(2, pixelInfoBuffer.get())
+            .storage(3, buffers.sphere.at(frameIndex))
+            .storage(4, buffers.plane.at(frameIndex))
+            .storage(5, buffers.box.at(frameIndex))
+            .storage(6, buffers.vertex.at(frameIndex))
+            .storage(7, buffers.index.at(frameIndex))
+            .storage(8, buffers.bvh.at(frameIndex))
+            .storage(9, buffers.mesh.at(frameIndex))
+            .storage(10, buffers.material.at(frameIndex))
+            .storage(11, buffers.object.at(frameIndex))
+            .storage(12, buffers.light.at(frameIndex));
+        // uint32_t binding = 3;
+        // for (PerFrameBufferBase* buffers : storageBuffers) {
+        // // for (bufferList_t& buffers : storageBuffers) {
+        //     pathtracingWriter.storage(binding, buffers->at(frameIndex));
+        //     // pathtracingWriter.storage(binding, engine.getBuffer(buffers, frameIndex));
+        //     binding++;
+        // }
+        engine.updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, pathtracingWriter);
+        
+        DescriptorWriter compositingWriter(compositingSetLayout);
+        compositingWriter.combinedImageSampler(0, pathtracingImageViews[frame], pathtracingSamplers[frame])
+            .uniform(1, displayUniformBuffers.at(frameIndex))
+            .storage(2, pixelInfoBuffer.get());
+        engine.updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, compositingWriter);
+        
+        DescriptorWriter displayWriter(displaySetLayout);
+        displayWriter.combinedImageSampler(0, outputImageView, outputSampler)
+            .uniform(1, displayUniformBuffers.at(frameIndex))
+            .storage(2, pixelInfoBuffer.get());
+        engine.updateDescriptorSetGroup(displayDescriptorSet, frameIndex, displayWriter);
     }
 }
 
@@ -505,30 +618,19 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
     scissor.offset = {0, 0};
     scissor.extent = extent;
     
-    {   // Rendering
-        engine.barrier(
-            commandBuffer,
-            pathtracingImages[1-frame].get(),
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_ACCESS_NONE, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        );
-        engine.barrier(
-            commandBuffer,
-            pathtracingImages[frame].get(),
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-        );
+    {   // Pathtrace
+        executor.emitBarriers(commandBuffer, pathtracePassHandle);
+        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(pathtracePassHandle);
+        assert(attachments.size() == 1);
         engine.beginDynamicRenderer(
             commandBuffer,
-            pathtracingImageViews[frame].get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+            attachments[0].view, attachments[0].layout,
+            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
         
         // Bind current descriptor set
-        pathtracingDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, pathtracingPipeline.getLayout());
+        pathtracingDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, pathtracingPipeline.getLayout());
         
         pathtracingPipeline.bind(commandBuffer);
 
@@ -540,39 +642,21 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
         pathtracingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
-        engine.barrier(
-            commandBuffer,
-            pathtracingImages[frame].get(),
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        );
-        engine.barrier(
-            commandBuffer,
-            pathtracingImages[1-frame].get(),
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_ACCESS_NONE, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        );
 
     }
 
     {   // Compositing
-        engine.barrier(
-            commandBuffer,
-            outputImage.get(),
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-        );
+        executor.emitBarriers(commandBuffer, compositePassHandle);
+        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(compositePassHandle);
+        assert(attachments.size() == 1);
         engine.beginDynamicRenderer(
             commandBuffer,
-            outputImageView.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+            attachments[0].view, attachments[0].layout,
+            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
             {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
 
-        compositingDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, compositingPipeline.getLayout());
+        compositingDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, compositingPipeline.getLayout());
         compositingPipeline.bind(commandBuffer);
 
         vertexBuffer.bindVertex(commandBuffer);
@@ -583,33 +667,23 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
         compositingPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
-        engine.barrier(
-            commandBuffer,
-            outputImage.get(),
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        );
     }
 
+    executor.emitBarriers(commandBuffer, exportPassHandle);
     exportService.handleCopy(ctx, commandBuffer, outputImage);
 
     {   // Display
-        engine.barrier(
-            commandBuffer,
-            nullptr,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-        );
+        executor.emitBarriers(commandBuffer, displayPassHandle);
+        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(displayPassHandle);
+        assert(attachments.size() == 1);
         engine.beginDynamicRenderer(
             commandBuffer,
-            nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-            {{ 1.0f, 0.0f, 1.0f, 1.0f }}
+            attachments[0].view, attachments[0].layout,
+            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
+            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
         );
         
-        displayDescriptorSets[frame].at(frameContext.currentFrame).bind(commandBuffer, displayPipeline.getLayout());
+        displayDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, displayPipeline.getLayout());
 
         displayPipeline.bind(commandBuffer);
 
@@ -621,13 +695,6 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
         displayPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
-        engine.barrier(
-            commandBuffer,
-            nullptr,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
-        );
     }
 
     engine.endRecoringRender(commandBuffer);
@@ -637,32 +704,25 @@ void RenderHandler::uiPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer& commandBuffer = engine.beginRecordingUiRender();
-    
-    // TODO: might set default barrier and dyamic rendering context (at least for the UI)
-    engine.barrier(
-        commandBuffer,
-        nullptr,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-    );
+
+    executor.emitBarriers(commandBuffer, uiPassHandle);
+    std::vector<AttachmentInfo> attachments = executor.getColorAttachment(uiPassHandle);
+    assert(attachments.size() == 1);
     engine.beginDynamicRenderer(
         commandBuffer,
-        nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
-        {{ 1.0f, 0.0f, 1.0f, 1.0f }}
+        attachments[0].view, attachments[0].layout,
+        attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
+        {{ 0.0f, 0.0f, 0.0f, 1.0f }}
     );
     
     ctx.ui->draw(commandBuffer, ctx);
-
+    
     engine.endDynamicRenderer(commandBuffer);
-    engine.barrier(
-        commandBuffer,
-        nullptr,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
-    );
+    
+    executor.emitBarriers(commandBuffer, presentPassHandle);
+
+    // @warning this is out of place, but I need a command buffer
+    executor.emitOutputBarriers(commandBuffer);
 
     engine.endRecoringUiRender(commandBuffer);
 }

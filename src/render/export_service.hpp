@@ -24,7 +24,7 @@ private:
     std::string buildRenderOutputPath();
     std::string buildAnimationoFramePath(int frame);
     
-    void copyImageToBuffer(AppContext& ctx, CommandBuffer& commandBuffer, Image& image);
+    void copyImageToBuffer(CommandBuffer& commandBuffer, Image& image);
     void saveBufferToFile(AppContext& ctx, std::string path);
     void convertFramesToVideo();
 
