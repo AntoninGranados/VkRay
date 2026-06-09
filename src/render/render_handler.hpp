@@ -49,18 +49,11 @@ private:
 
     // =============================================================
 
-    Image pathtracingImages[2];
-    ImageView pathtracingImageViews[2];
-    Sampler pathtracingSamplers[2];
-    Image outputImage;
-    ImageView outputImageView;
-    Sampler outputSampler;
-    
     DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
     DescriptorSetGroup pathtracingDescriptorSet, compositingDescriptorSet, displayDescriptorSet;
     ComputePipeline pathtracingPipeline, compositingPipeline;
     GraphicsPipeline displayPipeline;
-    
+
     Buffer vertexBuffer, indexBuffer;
     PerFrameBuffer<PathtracerUBO> pathtracingUniformBuffers;
     PerFrameBuffer<ScreenUBO> displayUniformBuffers;
@@ -68,14 +61,14 @@ private:
 
     ExportService exportService;
 
-    size_t frame = 0;
     uint64_t lastSwapchainGeneration = 0;
 
     void destroyDescriptors(AppContext& ctx);
-    void destroyImages(AppContext& ctx);
-
-    void rebuildImages(AppContext& ctx, const VkExtent2D& extent);
     void rebuildDescriptors(AppContext& ctx);
+
+    void writePathtracingDescriptors(AppContext& ctx, uint32_t frameIndex);
+    void writeCompositingDescriptors(AppContext& ctx, uint32_t frameIndex);
+    void writeDisplayDescriptors(AppContext& ctx, uint32_t frameIndex);
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
 
