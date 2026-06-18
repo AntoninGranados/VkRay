@@ -32,7 +32,6 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
 
     float NoV = max(dot(hit.normal, wo), 0.0);
     vec3  Fv  = schlickIoR(NoV, mat.ior);
-    // float pSpec = clamp(luma(Fv), 0.05, 0.95);
     float pSpec = luma(Fv);
 
     float xi = rand(seed);

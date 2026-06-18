@@ -184,6 +184,12 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
             throughput *= bsdf.weight;
 
+            // Russian Roulette
+            if (i >= 2) {
+                float p = clamp(luma(throughput), 0.1, 1.0);
+                if (rand(seed) > p) break;
+                throughput /= p;
+            }
             prevBsdf = bsdf;
             prevHit = hit;
 
