@@ -31,7 +31,7 @@ uint getLightIdFromObjectId(uint objectId) {
 
 Hit intersection(in Ray ray); // Forward declaration
 
-struct LightSampleResult {
+struct LightSample {
     vec3 wi;
     float pdf;
     vec3 Le;
@@ -46,32 +46,34 @@ float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in v
     return light.pdfA * dist*dist / max(cosLight, EPS) * light.area / lightBuffer.totalArea;
 }
 
-void sampleLight(in Hit hit, out LightSampleResult result, inout uint seed) {
+LightSample sampleLight(in Hit hit, inout uint seed) {
+    LightSample light;
     int lightId = getRandomLightId(seed);
     if (lightId < 0) {
-        result.pdf = -1.0;
-        return;
+        light.pdf = -1.0;
+        return light;
     }
 
     Object lightObj = objectBuffer.objects[lightBuffer.lights[lightId].objectId];
     SurfaceSample surfaceSample = sampleSurface(lightObj, lightBuffer.lights[lightId].area, seed);
 
     vec3 toLight = surfaceSample.p - hit.p;
-    result.wi = normalize(toLight);
+    light.wi = normalize(toLight);
 
-    Ray shadowRay = Ray(hit.p + hit.normal * EPS, result.wi);
+    Ray shadowRay = Ray(hit.p + hit.normal * EPS, light.wi);
     Hit shadowHit = intersection(shadowRay);
     bool visible = foundIntersection(shadowHit) && (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type);
     if (!visible) {
-        result.pdf = -1.0;
-        return;
+        light.pdf = -1.0;
+        return light;
     }
 
     float dist = length(toLight);
-    result.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, shadowRay.dir, result.wi);
+    light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, shadowRay.dir, light.wi);
 
     Material lightMat = getMaterial(lightObj);
-    result.Le = lightMat.albedo * emissiveIntensity(lightMat);
+    light.Le = lightMat.albedo * lightMat.emissionStrength;
+    return light;
 }
 
 #endif

@@ -6,7 +6,7 @@
 
 #include "material_utils.glsl"
 
-vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, inout uint seed) {
+vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, out vec3 halfVector, inout uint seed) {
     float s1 = rand(seed);
     float s2 = rand(seed);
 
@@ -28,8 +28,8 @@ vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, inout u
     }
     vec3 b = cross(hit.normal, t);
 
-    vec3 m = normalize(local.x * t + local.y * b + local.z * hit.normal);
-    return reflect(-wo, m);
+    halfVector = normalize(local.x * t + local.y * b + local.z * hit.normal);
+    return reflect(-wo, halfVector);
 }
 
 #define Xp(x) ((x) > 0.0 ? 1.0 : 0.0)
@@ -52,28 +52,33 @@ float G1_ggx(in float alpha, in vec3 normal, in vec3 v) {
     return 2.0 / (1.0 + sqrt(1.0 + a_sq * tan_sq));
 }
 
-float ggxPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    vec3 m = normalize(wi + wo);
-    float NoM = max(dot(hit.normal, m), 0.0);
-    float VoM = max(dot(wo, m), 0.0);
-    if (NoM <= 0.0 || VoM <= 0.0) return 0.0;
+struct GgxTerms {
+    float D;
+    float G;
+    float NoM;
+    float VoM;
+    float cosWo;
+    float cosWi;
+};
 
-    float alpha = ggxMetalRoughness(mat) * ggxMetalRoughness(mat);
-    float D = D_ggx(alpha, hit.normal, m);
-
-    return (D * NoM) / (4.0 * VoM);
+GgxTerms computeGgxTerms(float alpha, in Hit hit, in vec3 wo, in vec3 wi, in vec3 m) {
+    GgxTerms t;
+    t.NoM   = max(dot(hit.normal, m), EPS);
+    t.VoM   = max(dot(wo, m), EPS);
+    t.cosWo = max(abs(dot(hit.normal, wo)), EPS);
+    t.cosWi = max(abs(dot(hit.normal, wi)), EPS);
+    t.D     = D_ggx(alpha, hit.normal, m);
+    t.G     = G1_ggx(alpha, hit.normal, wo) * G1_ggx(alpha, hit.normal, wi);
+    return t;
 }
 
-vec3 partialGgxF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi, in float alpha) {
-    // Partial Cook-Torrance f without the F (Fresnel) component
-    vec3 m = normalize(wo + wi);
-    
-    float D = D_ggx(alpha, hit.normal, m);
-    float G = G1_ggx(alpha, hit.normal, wo) * G1_ggx(alpha, hit.normal, wi);
-    
-    float cosWo = abs(dot(hit.normal, wo));
-    float cosWi = abs(dot(hit.normal, wi));
-    return vec3(D * G / (4 * cosWo * cosWi + EPS));
+vec3 ggxBRDF(in GgxTerms t) {
+    return vec3(t.D * t.G / (4.0 * t.cosWo * t.cosWi + EPS));
 }
+
+float ggxPDF(in GgxTerms t) {
+    return (t.D * t.NoM) / (4.0 * t.VoM);
+}
+
 
 #endif // GGX_UTILS_GLSL

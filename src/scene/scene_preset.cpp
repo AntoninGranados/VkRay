@@ -27,8 +27,8 @@ void initEmpty(Scene& scene, LightMode& lightMode) {
         .type = MaterialType::GgxGlossy,
         .albedo = glm::vec3(1.0f, 0.05f, 0.10f),
     };
-    ggxGlossyRoughness(cubeMaterial) = 0.02;
-    ggxGlossyIoR(cubeMaterial) = 0.7;
+    cubeMaterial.roughness = 0.02f;
+    cubeMaterial.ior = 0.7f;
 
     const MaterialHandle cubeHandle = scene.pushMaterial(cubeMaterial);
     scene.pushBox(
@@ -111,7 +111,7 @@ void initMaterialZoo(Scene& scene, LightMode& lightMode) {
             .name = "Light",
             .type = MaterialType::Emissive,
             .albedo = glm::vec3(1.0),
-            .payload = { 10.0, 0.0 }
+            .emissionStrength = 10.0f,
         }
     );
     
@@ -125,7 +125,8 @@ void initMaterialZoo(Scene& scene, LightMode& lightMode) {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
                     .type = MaterialType::GgxGlossy,
                     .albedo = glm::vec3(0.0, 1.0, 0.0) * 0.8f,
-                    .payload = { rough, ior }
+                    .roughness = rough,
+                    .ior = ior,
                 }
             );
             scene.pushSphere(
@@ -149,7 +150,6 @@ void initMaterialZoo(Scene& scene, LightMode& lightMode) {
             .name = "Floor",
             .type = MaterialType::Programmable,
             .albedo = glm::vec3(0.59, 0.27, 0.09),
-            .payload = { 0.0, 0.0 }
         }
     );
     scene.pushPlane(
@@ -169,7 +169,8 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         .name = "Object",
         .type = MaterialType::GgxGlossy,
         .albedo = { 0.1f, 0.3f, 0.6f },
-        .payload = { 0.1f, 0.4f },
+        .roughness = 0.1f,
+        .ior = 0.4f,
     });
     glm::mat4 transform(1.0f);
     transform = glm::translate(transform, glm::vec3(0.0f, 1.2f, 0.0f));
@@ -187,7 +188,7 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         .name = "Light",
         .type = MaterialType::Emissive,
         .albedo = glm::vec3(1.0f),
-        .payload = { 50.0f },
+        .emissionStrength = 50.0f,
     });
     scene.pushBox(
         "Light",
@@ -200,7 +201,8 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         .name = "Base",
         .type = MaterialType::GgxGlossy,
         .albedo = glm::vec3(1.0f),
-        .payload = { 0.05f, 0.1f },
+        .roughness = 0.05f,
+        .ior = 0.1f,
     });
     scene.pushBox(
         "Base",
@@ -339,7 +341,8 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
         .name = "Lucy",
         .type = MaterialType::Dielectric,
         .albedo = { 1.0f, 0.5f, 0.5f },
-        .payload = { 1.3f, 0.1f },
+        .roughness = 0.1f,
+        .ior = 1.3f,
     });
     scene.pushMesh(
         "Object",
@@ -419,7 +422,7 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
         .name = "Light",
         .type = MaterialType::Emissive,
         .albedo = { 1.0, 0.7, 0.5 },
-        .payload = { 30.0, 0.0 },
+        .emissionStrength = 30.0f,
     };
     const MaterialHandle lightHandle = scene.pushMaterial(lightBoxMat);
     scene.pushBox(
@@ -456,7 +459,7 @@ void initRandomSpheres(Scene& scene, LightMode& lightMode) {
         .type = MaterialType::Emissive,
         .albedo = { 1.0, 1.0, 1.0 },
     };
-    emissiveIntensity(lightMat) = 15.0f;
+    lightMat.emissionStrength = 15.0f;
     const MaterialHandle lightHandle = scene.pushMaterial(lightMat);
     scene.pushSphere(
         "Light",

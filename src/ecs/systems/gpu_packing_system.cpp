@@ -205,7 +205,9 @@ void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame
         materials.push_back(GpuMaterial{
             .type = mat.type,
             .albedo = mat.albedo,
-            .payload = { mat.payload[0], mat.payload[1] }
+            .roughness = mat.roughness,
+            .ior = mat.ior,
+            .emissionStrength = mat.emissionStrength,
         });
     }
 

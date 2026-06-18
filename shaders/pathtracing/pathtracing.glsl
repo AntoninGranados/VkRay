@@ -125,11 +125,11 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     vec3 radiance = vec3(0.0);
 
     int i = 0;
-    SampleResult result;
-    LightSampleResult lightResult;
+    BSDFSample bsdf;
+    LightSample lightSample;
     Material mat;
 
-    SampleResult prevResult;
+    BSDFSample prevBsdf;
     Hit prevHit;
     bool insideMedium = false;
     vec3 mediumAbsorption = vec3(1.0f);
@@ -147,11 +147,11 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                     break;
                 }
 
-                vec3 Le = mat.albedo * emissiveIntensity(mat);
+                vec3 Le = mat.albedo * mat.emissionStrength;
                 float w = 1.0;
-                if (ubo.importanceSampling == 1 && !prevResult.isDelta) {
-                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevResult.wi, hit.p - prevHit.p);
-                    float pdfB = prevResult.pdf;
+                if (ubo.importanceSampling == 1 && !prevBsdf.isDelta) {
+                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevBsdf.wi, hit.p - prevHit.p);
+                    float pdfB = prevBsdf.pdf;
                     float denom = pdfB*pdfB + pdfL*pdfL;
                     w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
                 }
@@ -163,39 +163,31 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 if (hit.frontFace) {
                     insideMedium = true;
                     mediumAbsorption = mat.albedo;
-                } else if (dot(result.wi, hit.normal) < 0.0) {
+                } else if (dot(prevBsdf.wi, hit.normal) < 0.0) {
                     insideMedium = false;
                 }
             }
  
-            sampleBSDF(mat, hit, -ray.dir, result, seed);
-            if (result.pdf < EPS) {
+            bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
+            if (bsdf.pdf < EPS && !bsdf.isDelta) {
                 break;
             }
-            if (ubo.importanceSampling == 1 && !result.isDelta) {
-                sampleLight(hit, lightResult, seed);
-                float pdfL = lightResult.pdf;
-                if (pdfL > EPS) {
-                    float cosTheta = max(dot(hit.normal, lightResult.wi), 0.0);
-                    vec3 f = sampleF(mat, hit, -ray.dir, lightResult.wi);
-
-                    float pdfB = samplePDF(mat, hit, -ray.dir, lightResult.wi);
-                    if (pdfB > EPS) {
-                        float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
-                        radiance += clamp(throughput * (w / pdfL) * f * cosTheta, 0.0, 1.5) * lightResult.Le;
-                    }
+            if (ubo.importanceSampling == 1 && !bsdf.isDelta) {
+                lightSample = sampleLight(hit, seed);
+                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
+                if (lightSample.pdf > EPS) {
+                    float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
+                    float wMIS = (lightSample.pdf*lightSample.pdf) / (lightSample.pdf*lightSample.pdf + eval.pdf*eval.pdf);
+                    radiance += clamp(throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf, 0.0, 1.5);
                 }
             }
 
-            float cosB = abs(dot(hit.normal, result.wi));
-            throughput *= (result.f * cosB) / result.pdf;
+            throughput *= bsdf.weight;
 
-            prevResult.isDelta = result.isDelta;
-            prevResult.pdf   = result.pdf;
-            prevResult.wi    = result.wi;
+            prevBsdf = bsdf;
             prevHit = hit;
 
-            ray = Ray(hit.p + result.wi * EPS, result.wi);
+            ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
             hit = intersection(ray);
         } else {
             radiance += throughput * skyColor(ray.dir);

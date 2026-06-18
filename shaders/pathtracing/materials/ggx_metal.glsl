@@ -7,28 +7,29 @@
 #include "material_utils.glsl"
 #include "ggx_utils.glsl"
 
-float ggxMetalPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    return ggxPDF(mat, hit, wo, wi);
-}
-
-vec3 ggxMetalF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float alpha = ggxMetalRoughness(mat) * ggxMetalRoughness(mat);
+BSDFEval evalGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    float alpha = mat.roughness * mat.roughness;
     vec3 m = normalize(wo + wi);
-    vec3 F = schlickAlbedo(dot(wo, m), mat.albedo);
-    return F * partialGgxF(mat, hit, wo, wi, alpha);
+    GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
+    vec3 F = schlickAlbedo(t.VoM, mat.albedo);
+    return BSDFEval(F * ggxBRDF(t), ggxPDF(t));
 }
 
-void sampleGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
-    if (ggxMetalRoughness(mat) < 0.05) {
-        sampleMirrorBSDF(mat.albedo, hit, wo, result);
-    } else {
-        float alpha = ggxMetalRoughness(mat) * ggxMetalRoughness(mat);
-        result.wi = ggxScatter(mat, hit, wo, alpha, seed);
+BSDFSample sampleGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+    if (mat.roughness < 0.05) return sampleMirrorBSDF(mat.albedo, hit, wo);
 
-        result.f = ggxMetalF(mat, hit, wo, result.wi);
-        result.pdf = ggxPDF(mat, hit, wo, result.wi);
-        result.isDelta = ggxMetalRoughness(mat) < EPS;
-    }
+    float alpha = mat.roughness * mat.roughness;
+    vec3 m;
+    vec3 wi = ggxScatter(mat, hit, wo, alpha, m, seed);
+    GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
+    vec3 F = schlickAlbedo(t.VoM, mat.albedo);
+
+    BSDFSample bsdf;
+    bsdf.wi      = wi;
+    bsdf.weight  = F * t.G * t.VoM / (t.cosWo * t.NoM);
+    bsdf.pdf     = ggxPDF(t);
+    bsdf.isDelta = false;
+    return bsdf;
 }
 
 #endif // GGX_METAL_GLSL

@@ -6,22 +6,19 @@
 
 #include "material_utils.glsl"
 
-// Should never be called as the material is delta
-vec3 dielectricF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    return vec3(0.0);
+BSDFEval evalDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    return BSDFEval(
+        vec3(0.0),
+        -1.0
+    );
 }
 
-// Should never be called as the material is delta
-float dielectricPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    return -1.0f;
-}
-
-void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
+BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
     float etaI = 1.0;   // TODO: keep track of the current IOR as we traverse the scene
-    float etaT = dielectricIoR(mat);
+    float etaT = mat.ior;
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
-    vec3 normal = hit.normal + randomInSphere(seed) * dielectricRoughness(mat);
+    vec3 normal = hit.normal + randomInSphere(seed) * mat.roughness;
     if (length(normal) < EPS) normal = hit.normal;
     else normal = normalize(normal);
 
@@ -34,29 +31,29 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
     bool tir = (eta * eta) * sin2Theta > 1.0;
 
     float F = schlickIoR(cosTheta, ri).x;
-
+    
     vec3 wi;
+    vec3 weight;
+    float pdf;
     if (tir || rand(seed) < F) {
         wi = reflect(-wo, normal);
 
-        float absCos = max(abs(dot(normal, wi)), EPS);
-
-        result.pdf = max(F, EPS);
-        // result.f = (mat.albedo * result.pdf) / absCos;
-        result.f = vec3(1.0) * result.pdf / absCos;
+        pdf = max(F, EPS);
+        weight = vec3(1.0);
     } else {
         wi = refract(-wo, normal, eta);
-
-        float absCos = max(abs(dot(normal, wi)), EPS);
         float etaFactor = (etaI * etaI) / (etaT * etaT);
 
-        result.pdf = max(1.0 - F, EPS);
-        // result.f = (mat.albedo * result.pdf * etaFactor) / absCos;
-        result.f = vec3(1.0) * (result.pdf * etaFactor) / absCos;
+        pdf = max(1.0 - F, EPS);
+        weight = vec3(etaFactor);
     }
 
-    result.wi = wi;
-    result.isDelta = true;
+    BSDFSample bsdf;
+    bsdf.wi      = wi;
+    bsdf.weight  = weight;
+    bsdf.pdf     = pdf;
+    bsdf.isDelta = true;
+    return bsdf;
 }
 
 #endif // DIELECTRIC_GLSL

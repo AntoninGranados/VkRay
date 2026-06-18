@@ -23,7 +23,9 @@ float luma(vec3 c) {
 struct Material {
     Enum type;
     vec3 albedo;
-    float payload[2];
+    float roughness;
+    float ior;
+    float emissionStrength;
 };
 
 #define MaterialHandle int

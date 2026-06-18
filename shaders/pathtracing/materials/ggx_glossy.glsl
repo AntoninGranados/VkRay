@@ -8,58 +8,57 @@
 #include "lambertian.glsl"
 #include "ggx_utils.glsl"
 
-vec3 ggxGlossyF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);
+BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+    BSDFEval lambertianEval = evalLambertianBSDF(mat, hit, wo, wi);
+
+    float alpha = mat.roughness * mat.roughness;
     vec3 m = normalize(wo + wi);
-    
+    GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3 F  = schlickIoR(NoV, ggxGlossyIoR(mat));
+    vec3 F = schlickIoR(NoV, mat.ior);
 
-    vec3 fs = F * partialGgxF(mat, hit, wo, wi, alpha);         // specular
-    vec3 fd = (vec3(1.0) - F) * lambertianF(mat, hit, wo, wi);  // diffuse
+    float pSpec = luma(F);
+    vec3 fSpec = F * ggxBRDF(t);
+    vec3 fDiff = (vec3(1.0) - F) * lambertianEval.f;
 
-    return fs + fd;
+    return BSDFEval(
+        fSpec + fDiff,
+        pSpec * ggxPDF(t) + (1.0 - pSpec) * lambertianEval.pdf
+    );
 }
 
-float ggxGlossyPDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
-    // float pSpec  = clamp(luma(Fv), 0.05, 0.95);
-    float pSpec = luma(Fv);
-    float pDiff  = 1.0 - pSpec;
-
-    float pdfS = ggxPDF(mat, hit, wo, wi);
-    float pdfD = lambertianPDF(mat, hit, wo, wi);
-
-    return pSpec * pdfS + pDiff * pdfD;
-}
-
-void sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleResult result, inout uint seed) {
-    float rough = ggxGlossyRoughness(mat);
-    bool specIsDelta = (rough < 0.05);
+BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+    bool specIsDelta = (mat.roughness < 0.05);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3  Fv  = schlickIoR(NoV, ggxGlossyIoR(mat));
+    vec3  Fv  = schlickIoR(NoV, mat.ior);
     // float pSpec = clamp(luma(Fv), 0.05, 0.95);
     float pSpec = luma(Fv);
 
     float xi = rand(seed);
 
+    vec3 wi;
     if (xi < pSpec) {
         if (specIsDelta) {
-            sampleMirrorBSDF(vec3(1.0), hit, wo, result);
-            return;
+            return sampleMirrorBSDF(vec3(1.0), hit, wo);
         } else {
-            float alpha = ggxGlossyRoughness(mat) * ggxGlossyRoughness(mat);
-            result.wi = ggxScatter(mat, hit, wo, alpha, seed);
+            float alpha = mat.roughness * mat.roughness;
+            vec3 v;
+            wi = ggxScatter(mat, hit, wo, alpha, v, seed);
         }
     } else {
-        result.wi = cosineScatter(mat, hit.normal, wo, seed);
+        wi = cosineScatter(mat, hit.normal, wo, seed);
     }
 
-    result.f   = ggxGlossyF(mat, hit, wo, result.wi);
-    result.pdf = ggxGlossyPDF(mat, hit, wo, result.wi);
-    result.isDelta = false;
+    BSDFEval eval = evalGgxGlossyBSDF(mat, hit, wo, wi);
+
+    BSDFSample bsdf;
+    float cosB = abs(dot(hit.normal, wi));
+    bsdf.wi      = wi;
+    bsdf.weight  = eval.f * cosB / eval.pdf;
+    bsdf.pdf     = eval.pdf;
+    bsdf.isDelta = false;
+    return bsdf;
 }
 
 #endif // GGX_GLOSSY_GLSL

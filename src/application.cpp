@@ -12,7 +12,7 @@
 Application::Application() {
     inputHandler.initCallbacks(ctx);
 
-    engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0));
+    engine.init("VkRay", VK_MAKE_API_VERSION(0, 1, 0, 0), 1280, 720);
 
     initParameters();
     initScene();

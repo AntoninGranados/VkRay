@@ -23,7 +23,7 @@ bool drawEmissiveUI(Material& material) {
         updated = true;
 
     ImGui::Text("Intensity:");
-    if (ImGui::DragFloat("##Mat Intensity", &emissiveIntensity(material), 0.1, 0.0, 100.0))
+    if (ImGui::DragFloat("##Mat Intensity", &material.emissionStrength, 0.1, 0.0, 100.0))
         updated = true;
         
     ImGui::PopItemWidth();
@@ -39,7 +39,7 @@ bool drawGgxMetalUI(Material& material) {
         updated = true;
 
     ImGui::Text("Roughness:");
-    if (ImGui::DragFloat("##Mat Roughness", &ggxMetalRoughness(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Roughness", &material.roughness, 0.01, 0.0, 1.0))
         updated = true;
         
     ImGui::PopItemWidth();
@@ -55,11 +55,11 @@ bool drawGgxGlossyUI(Material& material) {
         updated = true;
 
     ImGui::Text("Roughness:");
-    if (ImGui::DragFloat("##Mat Roughness", &ggxGlossyRoughness(material), 0.01, 0.0, 1.0))
+    if (ImGui::DragFloat("##Mat Roughness", &material.roughness, 0.01, 0.0, 1.0))
         updated = true;
-    
+
     ImGui::Text("IoR:");
-    if (ImGui::DragFloat("##Mat IoR", &ggxGlossyIoR(material), 0.01, 0.0, FLT_MAX))
+    if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01, 0.0, FLT_MAX))
         updated = true;
         
     ImGui::PopItemWidth();
@@ -76,11 +76,11 @@ bool drawDielectricUI(Material& material) {
         updated = true;
 
     ImGui::Text("IoR:");
-    if (ImGui::DragFloat("##Mat IoR", &dielectricIoR(material), 0.01, 0.0, FLT_MAX))
+    if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01, 0.0, FLT_MAX))
         updated = true;
 
     ImGui::Text("Roughness:");
-    if (ImGui::DragFloat("##Mat Roughness", &dielectricRoughness(material), 0.01f, 0.0f, 1.0f))
+    if (ImGui::DragFloat("##Mat Roughness", &material.roughness, 0.01f, 0.0f, 1.0f))
         updated = true;
     
     ImGui::PopItemWidth();
@@ -121,17 +121,17 @@ bool drawMaterialUI(Material& material) {
     if (material.type != prevType) {
         switch (material.type) {
             case MaterialType::Emissive:
-                emissiveIntensity(material) = 1.0f;
+                material.emissionStrength = 1.0f;
                 break;
             case MaterialType::GgxMetal:
-                ggxMetalRoughness(material) = 0.2f;
+                material.roughness = 0.2f;
                 break;
             case MaterialType::GgxGlossy:
-                ggxGlossyRoughness(material) = 0.2f;
-                ggxGlossyIoR(material) = 1.5f;
+                material.roughness = 0.2f;
+                material.ior = 1.5f;
                 break;
             case MaterialType::Dielectric:
-                dielectricRoughness(material) = 0.0f;
+                material.roughness = 0.0f;
                 break;
             default:
                 break;
