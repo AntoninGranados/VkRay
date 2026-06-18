@@ -5,18 +5,18 @@
 #include "./imgui/imgui.h"
 
 #include "engine/engine.hpp"
+#include "engine/render/pipeline/vertex_input.hpp"
 #include "engine/graph/graph_utils.hpp"
-#include "engine/graph/compute_pass_builder.hpp"
-#include "engine/graph/graphics_pass_builder.hpp"
-#include "engine/graph/present_pass_builder.hpp"
-#include "engine/graph/transfer_pass_builder.hpp"
+#include "engine/graph/pass/compute_pass_builder.hpp"
+#include "engine/graph/pass/graphics_pass_builder.hpp"
+#include "engine/graph/pass/present_pass_builder.hpp"
+#include "engine/graph/pass/transfer_pass_builder.hpp"
 #include "engine/graph/render_graph_builder.hpp"
 #include "engine/graph/builder_resource.hpp"
 
 #include "app/app_context.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
-#include "engine/graph/render_graph_executor.hpp"
 #include "engine/image/image.hpp"
 #include "scene/scene.hpp"
 #include "editor/editor_ui.hpp"
@@ -24,154 +24,145 @@
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    {
-        RenderGraphBuilder builder;
-        swapchainImageHandle = builder.importImage(
-            "SwapchainImage",
-            VK_FORMAT_R32G32B32A32_SFLOAT,
-            engine.getExtent().width, engine.getExtent().height, 1,
-            { .usage = ImageUsageType::Undefined, .access = AccessType::None },
-            { .usage = ImageUsageType::Present, .access = AccessType::Read }
-        );
-        previousPathtracingImageHandle = builder.createImage(
-            "PreviousPathtracingImage",
-            VK_FORMAT_R32G32B32A32_SFLOAT,
-            engine.getExtent().width, engine.getExtent().height, 1,
-            { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-            { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-            VK_IMAGE_USAGE_STORAGE_BIT  // also needed as write target after swapBindings
-        );
-        currentPathtracingImageHandle = builder.createImage(
-            "CurrentPathtracingImage",
-            VK_FORMAT_R32G32B32A32_SFLOAT,
-            engine.getExtent().width, engine.getExtent().height
-        );
-        outputImageHandle = builder.createImage(
-            "OutputImage",
-            VK_FORMAT_R32G32B32A32_SFLOAT,
-            engine.getExtent().width, engine.getExtent().height
-        );
+    RenderGraphBuilder builder;
+    mainGroupHandle = builder.addSubmissionGroup("Main");
+    uiGroupHandle   = builder.addSubmissionGroup("Ui");
 
-        ComputePassBuilder pathtrace = builder.addComputePass("PathtracingPass");
-        pathtracePassHandle = pathtrace.getHandle();
-        pathtrace.readImage(previousPathtracingImageHandle, ImageUsageType::Sampled);
-        pathtrace.writeImage(currentPathtracingImageHandle, ImageUsageType::StorageImage);
+    swapchainImageHandle = builder.importImage(
+        "SwapchainImage",
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        engine.getExtent().width, engine.getExtent().height, 1,
+        { .usage = ImageUsageType::Undefined, .access = AccessType::None },
+        { .usage = ImageUsageType::Present, .access = AccessType::Read }
+    );
+    previousPathtracingImageHandle = builder.createImage(
+        "PreviousPathtracingImage",
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        engine.getExtent().width, engine.getExtent().height, 1,
+        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        VK_IMAGE_USAGE_STORAGE_BIT
+    );
+    currentPathtracingImageHandle = builder.createImage(
+        "CurrentPathtracingImage",
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        engine.getExtent().width, engine.getExtent().height
+    );
+    outputImageHandle = builder.createImage(
+        "OutputImage",
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        engine.getExtent().width, engine.getExtent().height
+    );
 
-        ComputePassBuilder composite = builder.addComputePass("CompositionPass");
-        compositePassHandle = composite.getHandle();
-        composite.readImage(currentPathtracingImageHandle, ImageUsageType::Sampled);
-        composite.writeImage(outputImageHandle, ImageUsageType::StorageImage);
+    vertexBufferHandle = builder.createStaticBuffer("FullscreenVertexBuffer", vertices.data(), sizeof(ScreenVertex) * vertices.size());
+    indexBufferHandle  = builder.createStaticBuffer("FullscreenIndexBuffer",  indices.data(),  sizeof(index_t)     * indices.size());
 
-        TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
-        exportPassHandle = exportPass.getHandle();
-        exportPass.copyFrom(outputImageHandle);
+    VkExtent2D ext        = engine.getExtent();
+    pathtracingUBOHandle  = builder.createPerFrameBuffer("PathtracingUBO", sizeof(PathtracerUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    displayUBOHandle      = builder.createPerFrameBuffer("DisplayUBO",     sizeof(ScreenUBO),     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    pixelInfoBufferHandle = builder.createBuffer(
+        "PixelInfoBuffer",
+        static_cast<size_t>(ext.width) * ext.height * sizeof(PixelInfo),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+    );
 
-        GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
-        displayPassHandle = display.getHandle();
-        display.readImage(outputImageHandle, ImageUsageType::Sampled);
-        display.writeImage(
-            swapchainImageHandle,
-            ImageUsageType::ColorAttachment,
-            WriteMode::Overwrite,
-            AttachmentLoad::Clear
-        );
+    // Scene buffers must be created before passes so binding slots can be declared
+    SceneGpuBuffers sceneHandles = {};
+    sceneHandles.sphere   = { builder.createPerFrameBuffer("SceneSphereBuffer",   16 * sizeof(GpuSphere),   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.plane    = { builder.createPerFrameBuffer("ScenePlaneBuffer",    16 * sizeof(GpuPlane),    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.box      = { builder.createPerFrameBuffer("SceneBoxBuffer",      16 * sizeof(GpuBox),      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.vertex   = { builder.createPerFrameBuffer("SceneVertexBuffer",   16 * sizeof(Vertex),      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.index    = { builder.createPerFrameBuffer("SceneIndexBuffer",    16 * sizeof(uint32_t),    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.bvh      = { builder.createPerFrameBuffer("SceneBvhBuffer",      16 * sizeof(GpuBvhNode),  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.mesh     = { builder.createPerFrameBuffer("SceneMeshBuffer",     16 * sizeof(GpuMesh),     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.material = { builder.createPerFrameBuffer("SceneMaterialBuffer", 16 * sizeof(GpuMaterial), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.object   = { builder.createPerFrameBuffer("SceneObjectBuffer",   sizeof(GpuObjectHeader) + 16 * sizeof(ObjectHandle), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.light    = { builder.createPerFrameBuffer("SceneLightBuffer",    sizeof(GpuLightHeader)  + 16 * sizeof(GpuLight),      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
 
-        GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
-        uiPassHandle = ui.getHandle();
-        ui.writeImage(
-            swapchainImageHandle,
-            ImageUsageType::ColorAttachment,
-            WriteMode::Preserve,
-            AttachmentLoad::Load
-        );
+    // Pathtracing pass
+    ComputePassBuilder pathtrace = builder.addComputePass("PathtracingPass");
+    pathtracePassHandle = pathtrace.getHandle();
+    pathtrace.setGroup(mainGroupHandle);
+    pathtrace.readBuffer( 0, pathtracingUBOHandle,           BufferUsageType::Uniform);
+    pathtrace.readImage ( 1, previousPathtracingImageHandle, ImageUsageType::Sampled);
+    pathtrace.readBuffer( 2, pixelInfoBufferHandle,          BufferUsageType::Storage);
+    pathtrace.readBuffer( 3, sceneHandles.sphere.handle,     BufferUsageType::Storage);
+    pathtrace.readBuffer( 4, sceneHandles.plane.handle,      BufferUsageType::Storage);
+    pathtrace.readBuffer( 5, sceneHandles.box.handle,        BufferUsageType::Storage);
+    pathtrace.readBuffer( 6, sceneHandles.vertex.handle,     BufferUsageType::Storage);
+    pathtrace.readBuffer( 7, sceneHandles.index.handle,      BufferUsageType::Storage);
+    pathtrace.readBuffer( 8, sceneHandles.bvh.handle,        BufferUsageType::Storage);
+    pathtrace.readBuffer( 9, sceneHandles.mesh.handle,       BufferUsageType::Storage);
+    pathtrace.readBuffer(10, sceneHandles.material.handle,   BufferUsageType::Storage);
+    pathtrace.readBuffer(11, sceneHandles.object.handle,     BufferUsageType::Storage);
+    pathtrace.readBuffer(12, sceneHandles.light.handle,      BufferUsageType::Storage);
+    pathtrace.writeImage(13, currentPathtracingImageHandle,  ImageUsageType::Storage);
+    pathtracingPipelineHandle = pathtrace.setPipeline("./shaders/pathtracing/pathtracing.glsl");
 
-        PresentPassBuilder present = builder.addPresentPass("PresentPass");
-        presentPassHandle = present.getHandle();
-        present.setPresentationImage(swapchainImageHandle);
+    // Compositing pass
+    ComputePassBuilder composite = builder.addComputePass("CompositionPass");
+    compositePassHandle = composite.getHandle();
+    composite.setGroup(mainGroupHandle);
+    composite.readImage (0, currentPathtracingImageHandle, ImageUsageType::Sampled);
+    composite.readBuffer(1, displayUBOHandle,              BufferUsageType::Uniform);
+    composite.readBuffer(2, pixelInfoBufferHandle,         BufferUsageType::Storage);
+    composite.writeImage(3, outputImageHandle,             ImageUsageType::Storage);
+    compositingPipelineHandle = composite.setPipeline("./shaders/compositing.glsl");
 
-        executor.setCompiledGraph(builder.compile());
-    }
-    executor.init(engine);
+    TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
+    exportPassHandle = exportPass.getHandle();
+    exportPass.setGroup(mainGroupHandle);
+    exportPass.copyFrom(outputImageHandle);
+
+    // Display pass
+    GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
+    displayPassHandle = display.getHandle();
+    display.setGroup(mainGroupHandle);
+    display.readImage (0, outputImageHandle,     ImageUsageType::Sampled);
+    display.readBuffer(1, displayUBOHandle,      BufferUsageType::Uniform);
+    display.readBuffer(2, pixelInfoBufferHandle, BufferUsageType::Storage);
+    display.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
+    display.bindVertexBuffer(vertexBufferHandle);
+    display.bindIndexBuffer(indexBufferHandle);
+    VertexInput<ScreenVertex> vertexInput;
+    vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
+    displayPipelineHandle = display.setPipeline(
+        vertexInput.get(),
+        { 
+            { VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl" },
+            { VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl" }
+        }
+    );
+
+    GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
+    uiPassHandle = ui.getHandle();
+    ui.setGroup(uiGroupHandle);
+    ui.writeImage(
+        swapchainImageHandle,
+        ImageUsageType::ColorAttachment,
+        WriteMode::Preserve,
+        AttachmentLoad::Load
+    );
+
+    PresentPassBuilder present = builder.addPresentPass("PresentPass");
+    presentPassHandle = present.getHandle();
+    present.setGroup(uiGroupHandle);
+    present.setPresentationImage(swapchainImageHandle);
+
+    engine.setGraph(builder);
+    engine.initGraph();
+    ctx.scene->setGpuBufferHandles(sceneHandles);
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 
-    {   // Buffer creation
-        vertexBuffer = engine.createBuffer(
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            sizeof(ScreenVertex) * vertices.size(), (void*)vertices.data(),
-            "FullscreenVertexBuffer"
-        );
-
-        indexBuffer = engine.createBuffer(
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            sizeof(index_t) * indices.size(), (void*)indices.data(),
-            "FullscreenIndexBuffer"
-        );
-
-        pathtracingUniformBuffers = engine.createPerFrameBuffer<PathtracerUBO>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1, "PathtracingUniformBuffer");
-        displayUniformBuffers = engine.createPerFrameBuffer<ScreenUBO>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1, "DisplayUniformBuffer");
-
-        VkExtent2D extent = engine.getExtent();
-        size_t pixelInfoCount = static_cast<size_t>(extent.width) * extent.height;
-        pixelInfoBuffer = engine.createSharedBuffer<PixelInfo>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoCount, "PixelInfoBuffer");
-    }
-
     exportService.init(engine, engine.getExtent().width, engine.getExtent().height);
-
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    pathtracingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    engine.initDescriptorSetLayout(pathtracingSetLayout);
-
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    compositingSetLayout.addBinding(VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    engine.initDescriptorSetLayout(compositingSetLayout);
-
-    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    displaySetLayout.addBinding(VK_SHADER_STAGE_FRAGMENT_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-    engine.initDescriptorSetLayout(displaySetLayout);
-
-    rebuildDescriptors(ctx);
-
-    buildPipelines(ctx);
 }
 
 void RenderHandler::destroy(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-
-    engine.destroyDescriptorSetLayout(pathtracingSetLayout);
-    engine.destroyDescriptorSetLayout(compositingSetLayout);
-    engine.destroyDescriptorSetLayout(displaySetLayout);
-
-    destroyDescriptors(ctx);
-    executor.destroy(engine);
-    engine.destroySharedBuffer(pixelInfoBuffer);
+    engine.destroyGraph();
     exportService.destroy(engine);
-
-    engine.destroyPerFrameBuffer(pathtracingUniformBuffers);
-    engine.destroyPerFrameBuffer(displayUniformBuffers);
-
-    engine.destroyBuffer(vertexBuffer);
-    engine.destroyBuffer(indexBuffer);
-    
-    engine.destroyComputePipeline(pathtracingPipeline);
-    engine.destroyComputePipeline(compositingPipeline);
-    engine.destroyGraphicsPipeline(displayPipeline);
 }
 
 void RenderHandler::buildPipelines(AppContext& ctx) {
@@ -181,18 +172,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
     engine.waitIdle();
 
     try {
-        engine.reloadComputePipeline(pathtracingPipeline, "./shaders/pathtracing/pathtracing.glsl", { &pathtracingSetLayout });
-        engine.reloadComputePipeline(compositingPipeline, "./shaders/compositing.glsl", { &compositingSetLayout });
-
-        VertexInput<ScreenVertex> vertexInput;
-        vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
-        engine.reloadGraphicsPipeline(
-            displayPipeline,
-            vertexInput.get(),
-            { { VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl" },
-              { VK_SHADER_STAGE_FRAGMENT_BIT,  "./shaders/frag.glsl" } },
-            { &displaySetLayout }
-        );
+        engine.reloadPipelines();
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] " << e.what() << std::endl;
         notifications.pushMessage(NotificationType::Error, e.what());
@@ -210,14 +190,12 @@ void RenderHandler::render(AppContext& ctx) {
     if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
             exportService.requestSave();
-            ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle; // we don't want to exist when rendering an animation
+            ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle;
         }
     }
-    
+
     auto frameContext = engine.beginFrame();
-    if (!frameContext) {
-        return;
-    }
+    if (!frameContext) { return; }
     if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
         handleResize(ctx, frameContext->extent);
         lastSwapchainGeneration = frameContext->swapchainGeneration;
@@ -225,145 +203,65 @@ void RenderHandler::render(AppContext& ctx) {
     }
 
     ctx.scene->runOnRender(ctx, *frameContext);
-    executor.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
+    engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
-    if (ctx.scene->checkBufferUpdate()) {
-        DescriptorSetGroup newGroup = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet");
-        if (newGroup.isValide()) {
-            engine.destroyDescriptorSetGroup(pathtracingDescriptorSet);
-            pathtracingDescriptorSet = std::move(newGroup);
+    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.screenUBO);
 
-            for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
-                writePathtracingDescriptors(ctx, frameIndex);
-                writeCompositingDescriptors(ctx, frameIndex);
-            }
-        }
-    } else {
-        writePathtracingDescriptors(ctx, frameContext->currentFrame);
-        writeCompositingDescriptors(ctx, frameContext->currentFrame);
-    }
-    
-    
-    engine.fillBuffer(pathtracingUniformBuffers.current(frameContext.value()), ctx.pathtracerUBO);
-    engine.fillBuffer(displayUniformBuffers.current(frameContext.value()), ctx.screenUBO);
-
-    executor.bindImage(
+    engine.bindImage(
         swapchainImageHandle,
         engine.getSwapchainImage(frameContext->imageIndex).get(),
         engine.getSwapchainImageView(frameContext->imageIndex).get());
-    
+
     pathtracingPass(ctx, *frameContext);
     uiPass(ctx);
 
-    engine.endFrame();
+    engine.present();
 
     exportService.handleSave(ctx);
-}
-
-void RenderHandler::destroyDescriptors(AppContext& ctx) {
-    VkSmol& engine = *ctx.engine;
-
-    engine.destroyDescriptorSetGroup(pathtracingDescriptorSet);
-    engine.destroyDescriptorSetGroup(compositingDescriptorSet);
-    engine.destroyDescriptorSetGroup(displayDescriptorSet);
-}
-
-void RenderHandler::writePathtracingDescriptors(AppContext& ctx, uint32_t frameIndex) {
-    SceneGpuBuffers& buffers = ctx.scene->getBuffers();
-    DescriptorWriter writer(pathtracingSetLayout);
-    writer.uniform(0, pathtracingUniformBuffers.at(frameIndex))
-        .combinedImageSampler(1, executor.getView(previousPathtracingImageHandle), executor.getSampler(previousPathtracingImageHandle))
-        .storage(2, pixelInfoBuffer.get())
-        .storage(3, buffers.sphere.at(frameIndex))
-        .storage(4, buffers.plane.at(frameIndex))
-        .storage(5, buffers.box.at(frameIndex))
-        .storage(6, buffers.vertex.at(frameIndex))
-        .storage(7, buffers.index.at(frameIndex))
-        .storage(8, buffers.bvh.at(frameIndex))
-        .storage(9, buffers.mesh.at(frameIndex))
-        .storage(10, buffers.material.at(frameIndex))
-        .storage(11, buffers.object.at(frameIndex))
-        .storage(12, buffers.light.at(frameIndex))
-        .storageImage(13, executor.getView(currentPathtracingImageHandle));
-    ctx.engine->updateDescriptorSetGroup(pathtracingDescriptorSet, frameIndex, writer);
-}
-
-void RenderHandler::writeCompositingDescriptors(AppContext& ctx, uint32_t frameIndex) {
-    DescriptorWriter writer(compositingSetLayout);
-    writer.combinedImageSampler(0, executor.getView(currentPathtracingImageHandle), executor.getSampler(currentPathtracingImageHandle))
-        .uniform(1, displayUniformBuffers.at(frameIndex))
-        .storage(2, pixelInfoBuffer.get())
-        .storageImage(3, executor.getView(outputImageHandle));
-    ctx.engine->updateDescriptorSetGroup(compositingDescriptorSet, frameIndex, writer);
-}
-
-void RenderHandler::writeDisplayDescriptors(AppContext& ctx, uint32_t frameIndex) {
-    DescriptorWriter writer(displaySetLayout);
-    writer.combinedImageSampler(0, executor.getView(outputImageHandle), executor.getSampler(outputImageHandle))
-        .uniform(1, displayUniformBuffers.at(frameIndex))
-        .storage(2, pixelInfoBuffer.get());
-    ctx.engine->updateDescriptorSetGroup(displayDescriptorSet, frameIndex, writer);
-}
-
-void RenderHandler::rebuildDescriptors(AppContext& ctx) {
-    VkSmol& engine = *ctx.engine;
-
-    pathtracingDescriptorSet = engine.createDescriptorSetGroup(pathtracingSetLayout, "PathtracingDescriptorSet");
-    compositingDescriptorSet = engine.createDescriptorSetGroup(compositingSetLayout, "CompositingDescriptorSet");
-    displayDescriptorSet = engine.createDescriptorSetGroup(displaySetLayout, "DisplayDescriptorSet");
-
-    for (uint32_t frameIndex = 0; frameIndex < MAX_FRAME_IN_FLIGHT; ++frameIndex) {
-        writePathtracingDescriptors(ctx, frameIndex);
-        writeCompositingDescriptors(ctx, frameIndex);
-        writeDisplayDescriptors(ctx, frameIndex);
-    }
 }
 
 void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
     VkSmol& engine = *ctx.engine;
     engine.waitIdle();
 
-    executor.destroy(engine);
-    engine.destroySharedBuffer(pixelInfoBuffer);
     exportService.destroy(engine);
-    destroyDescriptors(ctx);
-
-    executor.resize(engine, extent.width, extent.height);
-    size_t pixelInfoCount = static_cast<size_t>(extent.width) * extent.height;
-    pixelInfoBuffer = engine.createSharedBuffer<PixelInfo>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, pixelInfoCount, "PixelInfoBuffer");
+    engine.resizeImage(previousPathtracingImageHandle, extent.width, extent.height);
+    engine.resizeImage(currentPathtracingImageHandle,  extent.width, extent.height);
+    engine.resizeImage(outputImageHandle,              extent.width, extent.height);
+    engine.resizeBuffer(pixelInfoBufferHandle, static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo));
     exportService.init(engine, extent.width, extent.height);
-    rebuildDescriptors(ctx);
 }
 
 void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameContext) {
     VkSmol& engine = *ctx.engine;
 
-    CommandBuffer& commandBuffer = engine.beginRecordingRender();
+    CommandBuffer& commandBuffer = engine.beginRecording(mainGroupHandle);
 
     VkExtent2D extent = frameContext.extent;
 
     {   // Pathtrace (compute)
-        executor.emitBarriers(commandBuffer, pathtracePassHandle);
-        pathtracingDescriptorSet.at(frameContext.currentFrame).bind(
-            commandBuffer, pathtracingPipeline.getLayout(), VK_PIPELINE_BIND_POINT_COMPUTE);
-        pathtracingPipeline.bind(commandBuffer);
-        pathtracingPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
+        ComputePipeline& ptPipeline = engine.getComputePipeline(pathtracingPipelineHandle);
+        engine.emitBarriers(commandBuffer, pathtracePassHandle);
+        engine.bindDescriptors(commandBuffer, pathtracePassHandle);
+        ptPipeline.bind(commandBuffer);
+        ptPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
     {   // Compositing (compute)
-        executor.emitBarriers(commandBuffer, compositePassHandle);
-        compositingDescriptorSet.at(frameContext.currentFrame).bind(
-            commandBuffer, compositingPipeline.getLayout(), VK_PIPELINE_BIND_POINT_COMPUTE);
-        compositingPipeline.bind(commandBuffer);
-        compositingPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
+        ComputePipeline& coPipeline = engine.getComputePipeline(compositingPipelineHandle);
+        engine.emitBarriers(commandBuffer, compositePassHandle);
+        engine.bindDescriptors(commandBuffer, compositePassHandle);
+        coPipeline.bind(commandBuffer);
+        coPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
-    executor.emitBarriers(commandBuffer, exportPassHandle);
-    exportService.handleCopy(ctx, commandBuffer, executor.getImage(outputImageHandle));
+    engine.emitBarriers(commandBuffer, exportPassHandle);
+    exportService.handleCopy(ctx, commandBuffer, engine.getImage(outputImageHandle));
 
     {   // Display
-        executor.emitBarriers(commandBuffer, displayPassHandle);
-        std::vector<AttachmentInfo> attachments = executor.getColorAttachment(displayPassHandle);
+        engine.emitBarriers(commandBuffer, displayPassHandle);
+        std::vector<AttachmentInfo> attachments = engine.getColorAttachment(displayPassHandle);
         assert(attachments.size() == 1);
         engine.beginDynamicRenderer(
             commandBuffer,
@@ -379,27 +277,28 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
         viewport.maxDepth = 1.0f;
         VkRect2D scissor{ .offset = {0, 0}, .extent = extent };
 
-        displayDescriptorSet.at(frameContext.currentFrame).bind(commandBuffer, displayPipeline.getLayout());
-        displayPipeline.bind(commandBuffer);
-        vertexBuffer.bindVertex(commandBuffer);
-        indexBuffer.bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
-        displayPipeline.setViewport(commandBuffer, viewport);
-        displayPipeline.setScissor(commandBuffer, scissor);
-        displayPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+        GraphicsPipeline& diPipeline = engine.getGraphicsPipeline(displayPipelineHandle);
+        engine.bindDescriptors(commandBuffer, displayPassHandle);
+        diPipeline.bind(commandBuffer);
+        engine.getBuffer(vertexBufferHandle).bindVertex(commandBuffer);
+        engine.getBuffer(indexBufferHandle).bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
+        diPipeline.setViewport(commandBuffer, viewport);
+        diPipeline.setScissor(commandBuffer, scissor);
+        diPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
         engine.endDynamicRenderer(commandBuffer);
     }
 
-    engine.endRecoringRender(commandBuffer);
+    engine.endRecording(mainGroupHandle);
 }
 
 void RenderHandler::uiPass(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    CommandBuffer& commandBuffer = engine.beginRecordingUiRender();
+    CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
 
-    executor.emitBarriers(commandBuffer, uiPassHandle);
-    std::vector<AttachmentInfo> attachments = executor.getColorAttachment(uiPassHandle);
+    engine.emitBarriers(commandBuffer, uiPassHandle);
+    std::vector<AttachmentInfo> attachments = engine.getColorAttachment(uiPassHandle);
     assert(attachments.size() == 1);
     engine.beginDynamicRenderer(
         commandBuffer,
@@ -407,15 +306,15 @@ void RenderHandler::uiPass(AppContext& ctx) {
         attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
         {{ 0.0f, 0.0f, 0.0f, 1.0f }}
     );
-    
+
     ctx.ui->draw(commandBuffer, ctx);
-    
+
     engine.endDynamicRenderer(commandBuffer);
-    
-    executor.emitBarriers(commandBuffer, presentPassHandle);
+
+    engine.emitBarriers(commandBuffer, presentPassHandle);
 
     // @warning this is out of place, but I need a command buffer
-    executor.emitOutputBarriers(commandBuffer);
+    engine.emitOutputBarriers(commandBuffer);
 
-    engine.endRecoringUiRender(commandBuffer);
+    engine.endRecording(uiGroupHandle);
 }

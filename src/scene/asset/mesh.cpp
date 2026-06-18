@@ -47,6 +47,7 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     for (size_t i = 0; i + 2 < attrib.vertices.size(); i += 3) {
         vertices.push_back(Vertex{
             .position = glm::vec3(attrib.vertices[i + 0], attrib.vertices[i + 1], attrib.vertices[i + 2]),
+            .normal = glm::vec3(0.0f),
         });
     }
 
@@ -68,6 +69,17 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
             indexOffset += fv;
         }
     }
+
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        uint32_t i0 = indices[i], i1 = indices[i+1], i2 = indices[i+2];
+        glm::vec3 e1 = vertices[i1].position - vertices[i0].position;
+        glm::vec3 e2 = vertices[i2].position - vertices[i0].position;
+        glm::vec3 n  = glm::cross(e1, e2);
+        vertices[i0].normal += n;
+        vertices[i1].normal += n;
+        vertices[i2].normal += n;
+    }
+    for (Vertex& v : vertices) v.normal = glm::normalize(v.normal);
 
     buildBvh();
     savedVertices = vertices;

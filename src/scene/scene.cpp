@@ -11,7 +11,6 @@
 #include "imgui/ImGuizmo.h"
 
 #include "scene/object/material.hpp"
-#include "scene/object/object.hpp"
 #include "scene_editor_ui.hpp"
 
 #include "ecs/systems/transform_system.hpp"
@@ -23,8 +22,6 @@
 // Public
 void Scene::init() {
     assert(ctx && ctx->engine);
-    VkSmol& engine = *ctx->engine;
-    initGpuBuffers(engine);
 
     auto& uiReg = ecs::ComponentUiRegistry::get();
     uiReg.setMaterials(&materials);
@@ -35,21 +32,29 @@ void Scene::init() {
     ensureDefaultAssets();
 }
 
-void Scene::destroy() {
-    assert(ctx && ctx->engine);
-    VkSmol& engine = *ctx->engine;
-    destroyGpuBuffers(engine);
+void Scene::destroy() {}
+
+void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
+    gpuBuffers = handles;
 }
 
 void Scene::clear() {
     assert(ctx && ctx->engine);
-    VkSmol& engine = *ctx->engine;
-    engine.waitIdle();
+    ctx->engine->waitIdle();
 
-    clearGpuBuffers(engine);
+    // Reset capacity so the next frame resizes buffers down to their initial size
+    gpuBuffers.sphere.capacity   = 0;
+    gpuBuffers.plane.capacity    = 0;
+    gpuBuffers.box.capacity      = 0;
+    gpuBuffers.vertex.capacity   = 0;
+    gpuBuffers.index.capacity    = 0;
+    gpuBuffers.bvh.capacity      = 0;
+    gpuBuffers.mesh.capacity     = 0;
+    gpuBuffers.material.capacity = 0;
+    gpuBuffers.object.capacity   = 0;
+    gpuBuffers.light.capacity    = 0;
     resetSceneState();
     ensureDefaultAssets();
-    bufferUpdated = true;
 }
 
 MaterialHandle Scene::pushMaterial(const Material& mat) {
@@ -244,32 +249,9 @@ bool Scene::isPreviewingCamera() {
     return false;
 }
 
-// std::vector<PerFrameBufferBase*> Scene::getBuffers() {
-//     return {
-//         &sphereBuffers,
-//         &planeBuffers,
-//         &boxBuffers,
-//         &vertexBuffers,
-//         &indexBuffers,
-//         &bvhBuffers,
-//         &meshBuffers,
-//         &materialBuffers,
-//         &objectBuffers,
-//         &lightBuffers,
-//     };
-// }
-
 bool Scene::checkUpdate() {
     if (updated) {
         updated = false;
-        return true;
-    }
-    return false;
-}
-
-bool Scene::checkBufferUpdate() {
-    if (bufferUpdated) {
-        bufferUpdated = false;
         return true;
     }
     return false;
@@ -299,47 +281,6 @@ void Scene::initSystems() {
     postUpdateScheduler.add(ecs::cameraPostUpdateSystem);
 }
 
-void Scene::initGpuBuffers(VkSmol& engine) {
-    gpuBuffers.sphere = engine.createDynamicPerFrameBuffer<GpuSphere>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.plane = engine.createDynamicPerFrameBuffer<GpuPlane>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.box = engine.createDynamicPerFrameBuffer<GpuBox>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.vertex = engine.createDynamicPerFrameBuffer<Vertex>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.index = engine.createDynamicPerFrameBuffer<unsigned int>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.bvh = engine.createDynamicPerFrameBuffer<GpuBvhNode>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.mesh = engine.createDynamicPerFrameBuffer<GpuMesh>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    
-    gpuBuffers.material = engine.createDynamicPerFrameBuffer<GpuMaterial>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.object = engine.createDynamicPerFrameBuffer<ObjectHandle, GpuObjectHeader>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    gpuBuffers.light = engine.createDynamicPerFrameBuffer<GpuLight, GpuLightHeader>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-}
-
-void Scene::clearGpuBuffers(VkSmol& engine) {
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.sphere);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.plane);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.box);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.vertex);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.index);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.bvh);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.mesh);
-    
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.material);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.object);
-    engine.clearDynamicPerFrameBuffer(gpuBuffers.light);
-}
-
-void Scene::destroyGpuBuffers(VkSmol& engine) {    
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.sphere);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.plane);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.box);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.vertex);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.index);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.bvh);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.mesh);
-    
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.material);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.object);
-    engine.destroyDynamicPerFrameBuffer(gpuBuffers.light);
-}
 
 ecs::Entity Scene::createNamedEntity(std::string name) {
     ecs::Entity e = registry.createEntity();

@@ -98,7 +98,6 @@ void SceneEditorUI::drawUI(Scene& scene) {
             scene.registry.destroyEntity(e);
             scene.entities.erase(std::next(scene.entities.begin(), scene.selectedEntity));
             scene.updated = true;
-            scene.bufferUpdated = true;
             scene.selectedEntity = -1;
         }
 
@@ -134,7 +133,6 @@ void SceneEditorUI::drawUI(Scene& scene) {
             mat.name = matName;
             scene.pushMaterial(mat);
             scene.updated = true;
-            scene.bufferUpdated = true;
         }
         if (ImGui::Button("-##Materials", ImVec2(32, 0)) &&
             scene.selectedMaterial > 0 &&
@@ -152,7 +150,6 @@ void SceneEditorUI::drawUI(Scene& scene) {
                     ref.handle--;
             }
             scene.updated = true;
-            scene.bufferUpdated = true;
             scene.selectedMaterial = -1;
         }
 
@@ -197,7 +194,6 @@ void SceneEditorUI::drawUI(Scene& scene) {
                     ref.handle--;
             }
             scene.updated = true;
-            scene.bufferUpdated = true;
             scene.selectedMeshAsset = -1;
         }
 
@@ -221,7 +217,6 @@ void SceneEditorUI::drawUI(Scene& scene) {
             if (asset.loadFromObj(*scene.ctx, meshPath)) {
                 scene.meshAssets.push_back(std::move(asset));
                 scene.updated = true;
-                scene.bufferUpdated = true;
                 meshPath[0] = '\0';
                 ImGui::CloseCurrentPopup();
             }
@@ -416,7 +411,6 @@ void SceneEditorUI::drawSelectedMeshAssetUI(Scene& scene) {
     {
         bool changed = drawMeshAssetUI(scene.meshAssets[scene.selectedMeshAsset]);
         scene.updated |= changed;
-        scene.bufferUpdated |= changed;
     }
     ImGui::End();
 

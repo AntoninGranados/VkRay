@@ -15,6 +15,7 @@ typedef int MeshHandle;
 
 struct Vertex {
     alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normal;
 };
 
 #define DEFAULT_MESH_ASSET MeshAsset( \

@@ -3,7 +3,7 @@
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
-#include "engine/graph/render_graph_executor.hpp"
+#include "engine/graph/builder_resource.hpp"
 
 struct FrameContext;
 
@@ -33,42 +33,30 @@ private:
         0, 1, 2, 2, 3, 0
     };
 
-    RenderGraphExecutor executor;
-
     ImageHandle swapchainImageHandle;
-    ImageHandle previousPathtracingImageHandle;
-    ImageHandle currentPathtracingImageHandle;
+    ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
     ImageHandle outputImageHandle;
 
-    PassHandle pathtracePassHandle;
-    PassHandle compositePassHandle;
-    PassHandle exportPassHandle;
-    PassHandle displayPassHandle;
+    SubmissionGroupHandle mainGroupHandle, uiGroupHandle;
+
+    PassHandle pathtracePassHandle, compositePassHandle, displayPassHandle;
     PassHandle uiPassHandle;
+    PassHandle exportPassHandle;
     PassHandle presentPassHandle;
 
     // =============================================================
 
-    DescriptorSetLayout pathtracingSetLayout, compositingSetLayout, displaySetLayout;
-    DescriptorSetGroup pathtracingDescriptorSet, compositingDescriptorSet, displayDescriptorSet;
-    ComputePipeline pathtracingPipeline, compositingPipeline;
-    GraphicsPipeline displayPipeline;
+    ComputePipelineHandle  pathtracingPipelineHandle, compositingPipelineHandle;
+    GraphicsPipelineHandle displayPipelineHandle;
 
-    Buffer vertexBuffer, indexBuffer;
-    PerFrameBuffer<PathtracerUBO> pathtracingUniformBuffers;
-    PerFrameBuffer<ScreenUBO> displayUniformBuffers;
-    SharedBuffer<PixelInfo> pixelInfoBuffer;
+    BufferHandle vertexBufferHandle, indexBufferHandle;
+    BufferHandle pathtracingUBOHandle;
+    BufferHandle displayUBOHandle;
+    BufferHandle pixelInfoBufferHandle;
 
     ExportService exportService;
 
     uint64_t lastSwapchainGeneration = 0;
-
-    void destroyDescriptors(AppContext& ctx);
-    void rebuildDescriptors(AppContext& ctx);
-
-    void writePathtracingDescriptors(AppContext& ctx, uint32_t frameIndex);
-    void writeCompositingDescriptors(AppContext& ctx, uint32_t frameIndex);
-    void writeDisplayDescriptors(AppContext& ctx, uint32_t frameIndex);
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
 

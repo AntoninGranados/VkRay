@@ -10,7 +10,6 @@
 #include "camera.hpp"
 
 // #include "object/object_buffers.hpp"
-#include "engine/memory/per_frame_buffer.hpp"
 #include "object/object.hpp"
 #include "asset/mesh.hpp"
 #include "raycast.hpp"
@@ -40,18 +39,22 @@ struct ScenePackingMaps {
     std::unordered_map<ecs::Entity, int> meshId;
 };
 
-struct SceneGpuBuffers {
-    DynamicPerFrameBuffer<GpuSphere> sphere;
-    DynamicPerFrameBuffer<GpuPlane> plane;
-    DynamicPerFrameBuffer<GpuBox> box;
-    DynamicPerFrameBuffer<Vertex> vertex;
-    DynamicPerFrameBuffer<uint32_t> index;
-    DynamicPerFrameBuffer<GpuBvhNode> bvh;
-    DynamicPerFrameBuffer<GpuMesh> mesh;
+struct SceneGpuBufferEntry {
+    BufferHandle handle;
+    size_t       capacity = 0;
+};
 
-    DynamicPerFrameBuffer<GpuMaterial> material;
-    DynamicPerFrameBuffer<ObjectHandle, GpuObjectHeader> object;
-    DynamicPerFrameBuffer<GpuLight, GpuLightHeader> light;
+struct SceneGpuBuffers {
+    SceneGpuBufferEntry sphere;
+    SceneGpuBufferEntry plane;
+    SceneGpuBufferEntry box;
+    SceneGpuBufferEntry vertex;
+    SceneGpuBufferEntry index;
+    SceneGpuBufferEntry bvh;
+    SceneGpuBufferEntry mesh;
+    SceneGpuBufferEntry material;
+    SceneGpuBufferEntry object;
+    SceneGpuBufferEntry light;
 };
 
 class Scene {
@@ -98,27 +101,14 @@ public:
     
     SceneGpuBuffers& getBuffers() { return gpuBuffers; }
     const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }
-
-    DynamicPerFrameBuffer<GpuSphere>& getSphereBuffers() { return gpuBuffers.sphere; }
-    DynamicPerFrameBuffer<GpuPlane>& getPlaneBuffers()   { return gpuBuffers.plane; }
-    DynamicPerFrameBuffer<GpuBox>& getBoxBuffers()       { return gpuBuffers.box; }
-    DynamicPerFrameBuffer<Vertex>& getVertexBuffers()    { return gpuBuffers.vertex; }
-    DynamicPerFrameBuffer<uint32_t>& getIndexBuffers()   { return gpuBuffers.index; }
-    DynamicPerFrameBuffer<GpuBvhNode>& getBvhBuffers()   { return gpuBuffers.bvh; }
-    DynamicPerFrameBuffer<GpuMesh>& getMeshBuffers()     { return gpuBuffers.mesh; }
-
-    DynamicPerFrameBuffer<GpuMaterial>& getMaterialBuffers()                 { return gpuBuffers.material; }
-    DynamicPerFrameBuffer<ObjectHandle, GpuObjectHeader>& getObjectBuffers() { return gpuBuffers.object; }
-    DynamicPerFrameBuffer<GpuLight, GpuLightHeader>& getLightBuffers()       { return gpuBuffers.light; }
+    void setGpuBufferHandles(SceneGpuBuffers handles);
 
     std::vector<Material>& getMaterials() { return materials; };
     std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
     ScenePackingMaps& getPackingMaps() { return packingMaps; }
-    void markBufferUpdated() { bufferUpdated = true; }
 
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
-    bool checkBufferUpdate();
 private:
     friend class SceneEditorUI;
 
@@ -144,14 +134,10 @@ private:
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
 
     bool updated = false;
-    bool bufferUpdated = false;
 
     AppContext* ctx = nullptr;
 
     void initSystems();
-    void initGpuBuffers(VkSmol& engine);
-    void clearGpuBuffers(VkSmol& engine);
-    void destroyGpuBuffers(VkSmol& engine);
 
     ecs::Entity createNamedEntity(std::string name);
     void addMaterialRef(ecs::Entity e, MaterialHandle materialHandle);

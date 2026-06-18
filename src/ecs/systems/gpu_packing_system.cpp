@@ -12,15 +12,21 @@
 
 namespace ecs {
 
-template <typename T, typename Header = std::monostate>
-inline void fillBufferWithPadding(AppContext& ctx, const FrameContext& frame, DynamicPerFrameBuffer<T, Header>& buffer, std::vector<T>& data) {
-    if (ctx.engine->setDynamicPerFrameBufferCount(buffer, data.size())) {
-        ctx.scene->markBufferUpdated();
-    }
+static size_t sceneCapacityFromCount(size_t count) {
+    size_t cap = 16;
+    while (cap < count) cap <<= 1;
+    return cap;
+}
 
-    std::vector<T> padded = data;
-    padded.resize(buffer.getCapacity());
-    ctx.engine->fillBuffer(buffer.current(frame), padded.data());
+template <typename T>
+inline void fillBufferWithPadding(AppContext& ctx, const FrameContext& frame, SceneGpuBufferEntry& entry, std::vector<T>& data) {
+    size_t required = sceneCapacityFromCount(data.size());
+    if (required > entry.capacity) {
+        ctx.engine->resizeBuffer(entry.handle, required * sizeof(T));
+        entry.capacity = required;
+    }
+    data.resize(entry.capacity);
+    ctx.engine->fillBuffer(ctx.engine->getBuffer(entry.handle, frame.currentFrame), data.data());
 }
 
 void spherePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -49,7 +55,7 @@ void spherePackingSystem(Registry& registry, AppContext& ctx, const FrameContext
         packingMaps.sphereId[e] = sphereId++;
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getSphereBuffers(), gpuSpheres);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().sphere, gpuSpheres);
 }
 
 void planePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -64,7 +70,6 @@ void planePackingSystem(Registry& registry, AppContext& ctx, const FrameContext&
 
     for (const auto& e : planes.entities()) {
         if (!transforms.has(e)) continue;
-        // ecs::Plane& p = planes.get(e);
         ecs::Transform& t = transforms.get(e);
 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
@@ -78,7 +83,7 @@ void planePackingSystem(Registry& registry, AppContext& ctx, const FrameContext&
         packingMaps.planeId[e] = planeId++;
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getPlaneBuffers(), gpuPlanes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().plane, gpuPlanes);
 }
 
 void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -93,11 +98,10 @@ void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& f
 
     for (const auto& e : boxes.entities()) {
         if (!transforms.has(e)) continue;
-        // ecs::Box& b = boxes.get(e);
         ecs::Transform& t = transforms.get(e);
 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
-        
+
         gpuBoxes.push_back(GpuBox{
             .transform = t.local,
             .invTransform = glm::inverse(t.local),
@@ -107,7 +111,7 @@ void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& f
         packingMaps.boxId[e] = boxId++;
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getBoxBuffers(), gpuBoxes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().box, gpuBoxes);
 }
 
 void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -162,9 +166,9 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         }
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getVertexBuffers(), vertices);
-    fillBufferWithPadding(ctx, frame, ctx.scene->getIndexBuffers(), indices);
-    fillBufferWithPadding(ctx, frame, ctx.scene->getBvhBuffers(), bvhNodes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().vertex, vertices);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().index, indices);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().bvh, bvhNodes);
 
     std::vector<GpuMesh> meshes;
     packingMaps.meshId.clear();
@@ -191,7 +195,7 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         packingMaps.meshId[e] = meshId++;
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getMeshBuffers(), meshes);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().mesh, meshes);
 }
 
 void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame) {
@@ -205,7 +209,7 @@ void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame
         });
     }
 
-    fillBufferWithPadding(ctx, frame, ctx.scene->getMaterialBuffers(), materials);
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().material, materials);
 }
 
 void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -254,23 +258,24 @@ void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext
         objectId++;
     }
 
-    auto& objectBuffers = ctx.scene->getObjectBuffers();
-    if (ctx.engine->setDynamicPerFrameBufferCount(objectBuffers, objectHandles.size())) {
-        ctx.scene->markBufferUpdated();
+    SceneGpuBufferEntry& objectEntry = ctx.scene->getBuffers().object;
+    size_t objectRequired = sceneCapacityFromCount(objectHandles.size());
+    if (objectRequired > objectEntry.capacity) {
+        ctx.engine->resizeBuffer(objectEntry.handle, sizeof(GpuObjectHeader) + objectRequired * sizeof(ObjectHandle));
+        objectEntry.capacity = objectRequired;
     }
     uint32_t objectCount = static_cast<uint32_t>(objectHandles.size());
-    objectHandles.resize(objectBuffers.getCapacity());
+    objectHandles.resize(objectEntry.capacity);
 
-    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(ObjectHandle) * objectBuffers.getCapacity(), 0);
+    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(ObjectHandle) * objectEntry.capacity, 0);
     size_t offset = 0;
-    // Compute the object buffers data (including the header)
     memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
     memcpy(objectData.data() + offset, &objectSelected, sizeof(objectSelected));
     offset += sizeof(objectSelected);
     memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
 
-    ctx.engine->fillBuffer(objectBuffers.current(frame), objectData.data());
+    ctx.engine->fillBuffer(ctx.engine->getBuffer(objectEntry.handle, frame.currentFrame), objectData.data());
 }
 
 void lightPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -336,20 +341,21 @@ void lightPackingSystem(Registry& registry, AppContext& ctx, const FrameContext&
         });
     }
 
-    auto& lightBuffers = ctx.scene->getLightBuffers();
-    if (ctx.engine->setDynamicPerFrameBufferCount(lightBuffers, lights.size())) {
-        ctx.scene->markBufferUpdated();
+    SceneGpuBufferEntry& lightEntry = ctx.scene->getBuffers().light;
+    size_t lightRequired = sceneCapacityFromCount(lights.size());
+    if (lightRequired > lightEntry.capacity) {
+        ctx.engine->resizeBuffer(lightEntry.handle, sizeof(GpuLightHeader) + lightRequired * sizeof(GpuLight));
+        lightEntry.capacity = lightRequired;
     }
-    lights.resize(lightBuffers.getCapacity());
+    lights.resize(lightEntry.capacity);
 
-    std::vector<char> lightData(sizeof(GpuLightHeader) + sizeof(GpuLight) * lightBuffers.getCapacity(), 0);
-    // Compute the light buffers data (including the header)
+    std::vector<char> lightData(sizeof(GpuLightHeader) + sizeof(GpuLight) * lightEntry.capacity, 0);
     size_t offset = 0;
     memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
     offset += sizeof(totalArea);
     memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
-    
-    ctx.engine->fillBuffer(lightBuffers.current(frame), lightData.data());
+
+    ctx.engine->fillBuffer(ctx.engine->getBuffer(lightEntry.handle, frame.currentFrame), lightData.data());
 }
 
 } // namespace ecs

@@ -1,5 +1,9 @@
 #include "scene_preset.hpp"
+#include "ecs/components/animation/transform_anim.hpp"
+#include "ecs/components/objects/camera_object.hpp"
 #include "scene/object/material.hpp"
+
+#include <cmath>
 
 void initEmpty(Scene& scene, LightMode& lightMode) {
     scene.clear();
@@ -159,44 +163,113 @@ void initMaterialZoo(Scene& scene, LightMode& lightMode) {
 void initMesh(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
-    lightMode = LightMode::Day;
+    lightMode = LightMode::Empty;
 
-    // scene.pushMeshFromObj(
-    //     engine,
-    //     "Suzanne",
-    //     "./res/model/suzanne.obj",
-    //     Material {
-    //         .type = MaterialType::Lambertian,
-    //         .albedo = { 1.0f, 0.0f, 1.0f },
-    //     },
-    //     glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
-    // );
-
-    const MaterialHandle lucyHandle = scene.pushMaterial(Material{
-        .name = "Lucy",
-        .type = MaterialType::GgxMetal,
-        .albedo = { 0.8f, 0.2f, 0.2f },
-        .payload = { 0.4f, 0.0f },
+    const MaterialHandle objectHandle = scene.pushMaterial(Material{
+        .name = "Object",
+        .type = MaterialType::GgxGlossy,
+        .albedo = { 0.1f, 0.3f, 0.6f },
+        .payload = { 0.1f, 0.4f },
     });
+    glm::mat4 transform(1.0f);
+    transform = glm::translate(transform, glm::vec3(0.0f, 1.2f, 0.0f));
+    transform = glm::scale(transform, glm::vec3(4.7f));
+    transform = glm::rotate(transform, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    // transform = glm::rotate(transform, glm::radians(-40.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     scene.pushMesh(
-        "Lucy",
-        "./res/model/lucy.obj",
-        glm::mat4(1.0f),
-        lucyHandle
+        "Object",
+        "./res/model/dragon.obj",
+        transform,  
+        objectHandle
     );
-
+    
+    const MaterialHandle lightHandle = scene.pushMaterial(Material{
+        .name = "Light",
+        .type = MaterialType::Emissive,
+        .albedo = glm::vec3(1.0f),
+        .payload = { 50.0f },
+    });
+    scene.pushBox(
+        "Light",
+        glm::vec3(-2.0f, 14.99f, -2.0f),
+        glm::vec3( 2.0f, 15.01f,  2.0f),
+        lightHandle
+    );
+    
+    const MaterialHandle baseHandle = scene.pushMaterial(Material{
+        .name = "Base",
+        .type = MaterialType::GgxGlossy,
+        .albedo = glm::vec3(1.0f),
+        .payload = { 0.05f, 0.1f },
+    });
+    scene.pushBox(
+        "Base",
+        glm::vec3(-3.0f,  -3.0f, -2.0f),
+        glm::vec3( 3.0f, -0.45f,  2.0f),
+        baseHandle
+    );
+    
     Material floorMat = {
         .name = "Floor",
         .type = MaterialType::Lambertian,
-        .albedo = { 1.0, 1.0, 1.0 },
+        .albedo = glm::vec3(0.04f),
     };
     const MaterialHandle floorHandle = scene.pushMaterial(floorMat);
+    
+    scene.pushBox(
+        "Base Border",
+        glm::vec3(-3.1f, -3.00f, -2.1f),
+        glm::vec3( 3.1f, -0.46f,  2.1f),
+        floorHandle
+    );
     scene.pushPlane(
         "Floor",
         glm::vec3(0.0, -2.0, 0.0),
         glm::vec3(0.0,  1.0 , 0.0),
         floorHandle
     );
+
+    {
+        constexpr int   GRID_H    = 24;     // horizontal (azimuth) samples
+        constexpr int   GRID_V    = 24;     // vertical (elevation) samples
+        constexpr float HALF_SPAN = 30.0f;  // degrees from center to edge
+        constexpr float BASE_AZIM = 180.0f; // front-facing direction of the bunny
+        constexpr float BASE_ELEV = 10.0f;  // degrees above horizontal (camera slightly above, looking down)
+        constexpr float RADIUS    = 8.0f;
+        const     glm::vec3 target(0.0f, 1.5f, 0.0f);
+
+        auto spherePose = [&](float azimDeg, float elevDeg) -> std::pair<glm::vec3, glm::quat> {
+            const float az = glm::radians(azimDeg);
+            const float el = glm::radians(elevDeg);
+            const glm::vec3 pos = target + RADIUS * glm::vec3(
+                std::cos(el) * std::sin(az),
+                std::sin(el),
+                std::cos(el) * std::cos(az)
+            );
+            const glm::vec3 d = glm::normalize(target - pos);
+            const glm::vec3 r = glm::normalize(glm::cross(d, glm::vec3(0.0f, 1.0f, 0.0f)));
+            const glm::vec3 u = glm::cross(r, d);
+            return { pos, glm::quat_cast(glm::mat3(r, u, -d)) };
+        };
+
+        auto [initPos, initRot] = spherePose(BASE_AZIM, BASE_ELEV);
+        scene.pushCamera("GridCamera", glm::translate(glm::mat4(1.0f), initPos) * glm::mat4_cast(initRot));
+
+        ecs::Entity camEntity = scene.getRegistry().storage<ecs::CameraObject>().entities().back();
+        ecs::TransformAnim anim;
+
+        for (int v = 0; v < GRID_V; ++v) {
+            const float elev = BASE_ELEV + (-HALF_SPAN + v * (2.0f * HALF_SPAN / (GRID_V - 1)));
+            for (int h = 0; h < GRID_H; ++h) {
+                const float azim = BASE_AZIM + (-HALF_SPAN + h * (2.0f * HALF_SPAN / (GRID_H - 1)));
+                auto [pos, rot] = spherePose(azim, elev);
+                anim.insertPositionKeyframe(v * GRID_H + h, pos);
+                anim.insertRotationKeyframe(v * GRID_H + h, rot);
+            }
+        }
+
+        scene.getRegistry().add<ecs::TransformAnim>(camEntity, anim);
+    }
 }
 
 void initSponza(Scene& scene, LightMode& lightMode) {
@@ -262,17 +335,19 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
     */
 
-    const MaterialHandle lucyHandle = scene.pushMaterial(Material{
+    const MaterialHandle objectHandle = scene.pushMaterial(Material{
         .name = "Lucy",
-        .type = MaterialType::GgxMetal,
-        .albedo = { 1.0f, 1.0f, 1.0f },
-        .payload = { 3.0f, 0.1f },
+        .type = MaterialType::Dielectric,
+        .albedo = { 1.0f, 0.5f, 0.5f },
+        .payload = { 1.3f, 0.1f },
     });
     scene.pushMesh(
-        "Lucy",
+        "Object",
         "./res/model/lucy.obj",
-        glm::mat4(1.0f),
-        lucyHandle
+        glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)),
+        // "./res/model/armadillo.obj",
+        // glm::scale(glm::mat4(1.0f), glm::vec3(0.04f)),
+        objectHandle
     );
     
     Material leftMat {

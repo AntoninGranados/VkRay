@@ -265,6 +265,7 @@ void ComponentUiRegistry::init() {
         }
         ImGui::Text("Scale:");
         if (ImGui::DragFloat3("##Scale", glm::value_ptr(t.scale), 0.01f)) {
+            t.scale = glm::max(glm::vec3(1e-6f), t.scale);
             t.updated = true;
             update = true;
         }
