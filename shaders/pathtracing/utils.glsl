@@ -74,6 +74,7 @@ struct Box {
 
 struct Vertex {
     vec3 position;
+    vec3 normal;
 };
 
 struct BvhNode {

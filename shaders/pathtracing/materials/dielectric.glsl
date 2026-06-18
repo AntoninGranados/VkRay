@@ -42,7 +42,8 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
         float absCos = max(abs(dot(normal, wi)), EPS);
 
         result.pdf = max(F, EPS);
-        result.f   = (mat.albedo * result.pdf) / absCos;
+        // result.f = (mat.albedo * result.pdf) / absCos;
+        result.f = vec3(1.0) * result.pdf / absCos;
     } else {
         wi = refract(-wo, normal, eta);
 
@@ -50,7 +51,8 @@ void sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, out SampleRes
         float etaFactor = (etaI * etaI) / (etaT * etaT);
 
         result.pdf = max(1.0 - F, EPS);
-        result.f = (mat.albedo * result.pdf * etaFactor) / absCos;
+        // result.f = (mat.albedo * result.pdf * etaFactor) / absCos;
+        result.f = vec3(1.0) * (result.pdf * etaFactor) / absCos;
     }
 
     result.wi = wi;

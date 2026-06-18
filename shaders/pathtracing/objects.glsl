@@ -169,7 +169,7 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
     return makeHit(ray, obj, tWorld, worldNormal);
 }
 
-float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
+float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2, out float u, out float v) {
     vec3 edge1 = v1 - v0;
     vec3 edge2 = v2 - v0;
     vec3 pvec = cross(ray.dir, edge2);
@@ -178,11 +178,11 @@ float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2) {
 
     float invDet = 1.0 / det;
     vec3 tvec = ray.origin - v0;
-    float u = dot(tvec, pvec) * invDet;
+    u = dot(tvec, pvec) * invDet;
     if (u < -TRI_EPS || u > 1.0 + TRI_EPS) return -1.0;
 
     vec3 qvec = cross(tvec, edge1);
-    float v = dot(ray.dir, qvec) * invDet;
+    v = dot(ray.dir, qvec) * invDet;
     if (v < -TRI_EPS || u + v > 1.0 + TRI_EPS) return -1.0;
 
     float t = dot(edge2, qvec) * invDet;
@@ -202,7 +202,11 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
 
     float tClosest = INFINITY;
     bool foundHit = false;
-    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+    // vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+    uint bestI0 = -1;
+    uint bestI1 = -1;
+    uint bestI2 = -1;
+    float bestU, bestV;
 
     uint stack[BVH_STACK_SIZE];
     int stackPtr = 0;
@@ -231,11 +235,16 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
                 vec3 v1 = vertexBuffer.vertices[i1].position;
                 vec3 v2 = vertexBuffer.vertices[i2].position;
 
-                float tLocal = rayTriangleIntersection(localRay, v0, v1, v2);
+                float u, v;
+                float tLocal = rayTriangleIntersection(localRay, v0, v1, v2, u, v);
                 if (tLocal > 0.0 && tLocal < tClosest) {
                     tClosest = tLocal;
-                    bestNormal = normalize(cross(v1 - v0, v2 - v0));
                     foundHit = true;
+                    bestI0 = i0;
+                    bestI1 = i1;
+                    bestI2 = i2;
+                    bestU = u;
+                    bestV = v;
                 }
             }
         } else {
@@ -254,8 +263,18 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
         return noHit;
     }
 
+    vec3 normal;
+    // vec3 v0 = vertexBuffer.vertices[bestI0].position;
+    // vec3 v1 = vertexBuffer.vertices[bestI1].position;
+    // vec3 v2 = vertexBuffer.vertices[bestI2].position;
+    // normal = normalize(cross(v1 - v0, v2 - v0));
+    vec3 n0 = vertexBuffer.vertices[bestI0].normal;
+    vec3 n1 = vertexBuffer.vertices[bestI1].normal;
+    vec3 n2 = vertexBuffer.vertices[bestI2].normal;
+    normal = normalize((1.0 - bestU - bestV) * n0 + bestU * n1 + bestV * n2);
+
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
-    vec3 worldNormal = normalize(normalMat * bestNormal);
+    vec3 worldNormal = normalize(normalMat * normal);
     vec3 localP = localOrigin + localDir * tClosest;
     vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);

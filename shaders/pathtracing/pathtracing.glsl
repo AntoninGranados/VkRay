@@ -131,11 +131,16 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
     SampleResult prevResult;
     Hit prevHit;
+    bool insideMedium = false;
+    vec3 mediumAbsorption = vec3(1.0f);
 
     for (; i < ubo.maxBounces; i++) {
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
+            if (insideMedium) {
+                throughput *= pow(max(mediumAbsorption, vec3(1e-4)), vec3(hit.t));
+            }
             if (mat.type == mat_Emissive) {
                 if (i == 0) {
                     radiance = mat.albedo;
@@ -154,7 +159,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 radiance += clamp(throughput * w, 0.0, 1.5) * Le;
                 break;
             }
-
+            if (mat.type == mat_Dielectric) {
+                if (hit.frontFace) {
+                    insideMedium = true;
+                    mediumAbsorption = mat.albedo;
+                } else if (dot(result.wi, hit.normal) < 0.0) {
+                    insideMedium = false;
+                }
+            }
+ 
             sampleBSDF(mat, hit, -ray.dir, result, seed);
             if (result.pdf < EPS) {
                 break;
@@ -169,7 +182,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                     float pdfB = samplePDF(mat, hit, -ray.dir, lightResult.wi);
                     if (pdfB > EPS) {
                         float w = (pdfL*pdfL) / (pdfL*pdfL + pdfB*pdfB);
-                        radiance += clamp(throughput* (w / pdfL) * f * cosTheta, 0.0, 1.5) * lightResult.Le;
+                        radiance += clamp(throughput * (w / pdfL) * f * cosTheta, 0.0, 1.5) * lightResult.Le;
                     }
                 }
             }
