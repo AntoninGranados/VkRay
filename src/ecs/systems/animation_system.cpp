@@ -9,6 +9,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "app/animation_handler.hpp"
+#include "scene/scene.hpp"
 
 #include "../components.hpp"
 
@@ -103,6 +104,38 @@ void transformAnimationSystem(Registry& registry, AppContext& ctx) {
             *ctx.restartRender = true;
         }
     }
+}
+
+void materialAnimationSystem(Registry& registry, AppContext& ctx) {
+    static int prevFrame = -1;
+    const int currFrame = ctx.animation->getFrame();
+    if (currFrame == prevFrame && !*ctx.restartRender) return;
+    const bool frameChanged = (currFrame != prevFrame);
+    prevFrame = currFrame;
+
+    auto& materialAnims = registry.storage<ecs::MaterialAnim>();
+    auto& materialRefs  = registry.storage<ecs::MaterialRef>();
+    auto& materials     = ctx.scene->getMaterials();
+
+    for (const auto& e : materialAnims.entities()) {
+        if (!materialRefs.has(e)) continue;
+
+        auto&     anim   = materialAnims.get(e);
+        const int handle = materialRefs.get(e).handle;
+
+        if (handle < 0 || handle >= static_cast<int>(materials.size())) continue;
+
+        const KeyMaterial kf = anim.getKeyframe(currFrame);
+        Material& mat        = materials[handle];
+
+        mat.roughness        = kf.roughness;
+        mat.metalness        = kf.metalness;
+        mat.ior              = kf.ior;
+        mat.transmission     = kf.transmission;
+        mat.emissionStrength = kf.emissionStrength;
+    }
+
+    if (frameChanged) *ctx.restartRender = true;
 }
 
 } // namespace ecs

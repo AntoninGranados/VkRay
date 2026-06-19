@@ -163,7 +163,8 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box) {
 
 
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
-    vec3 worldNormal = normalize(normalMat * hit.normal);
+    vec3 localOutwardNormal = hit.frontFace ? hit.normal : -hit.normal;
+    vec3 worldNormal = normalize(normalMat * localOutwardNormal);
     vec3 worldP = (box.modelMatrix * vec4(hit.p, 1.0)).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);
     return makeHit(ray, obj, tWorld, worldNormal);

@@ -15,7 +15,7 @@ struct BSDFEval {
     float pdf;
 };
 
-#define DEFAULT_MATERIAL Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0)
+#define DEFAULT_MATERIAL Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
 

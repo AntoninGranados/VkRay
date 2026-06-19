@@ -206,7 +206,9 @@ void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame
             .type = mat.type,
             .albedo = mat.albedo,
             .roughness = mat.roughness,
+            .metalness = mat.metalness,
             .ior = mat.ior,
+            .transmission = mat.transmission,
             .emissionStrength = mat.emissionStrength,
         });
     }

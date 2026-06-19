@@ -5,6 +5,7 @@
 #include "../random.glsl"
 
 #include "material_utils.glsl"
+#include "principled.glsl"
 #include "lambertian.glsl"
 #include "ggx_metal.glsl"
 #include "ggx_glossy.glsl"
@@ -19,6 +20,7 @@ Material resolveMaterial(in Material mat, in Hit hit) {
 BSDFEval evalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     mat = resolveMaterial(mat, hit);
     switch (mat.type) {
+        case mat_Principled: return evalPrincipledBSDF(mat, hit, wo, wi);
         case mat_Lambertian: return evalLambertianBSDF(mat, hit, wo, wi);
         case mat_GgxMetal:   return evalGgxMetalBSDF(mat, hit, wo, wi);
         case mat_GgxGlossy:  return evalGgxGlossyBSDF(mat, hit, wo, wi);
@@ -30,6 +32,7 @@ BSDFEval evalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
 BSDFSample sampleBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
     mat = resolveMaterial(mat, hit);
     switch (mat.type) {
+        case mat_Principled: return samplePrincipledBSDF(mat, hit, wo, seed);              break;
         case mat_Lambertian: return sampleLambertianBSDF(mat, hit, wo, seed);              break;
         case mat_GgxMetal:   return sampleGgxMetalBSDF(mat, hit, wo, seed);                break;
         case mat_GgxGlossy:  return sampleGgxGlossyBSDF(mat, hit, wo, seed);               break;

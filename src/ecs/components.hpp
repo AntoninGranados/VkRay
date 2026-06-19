@@ -19,11 +19,14 @@
 #include "./components/editor/name.hpp"
 
 #include "./components/animation/transform_anim.hpp"
+#include "./components/animation/material_anim.hpp"
+#include "ecs/registry.hpp"
 
 #define REQ_NONE {}
 #define CONFLICT_NONE {}
 
 #define REQ_TRANSFORM ComponentId::Transform
+
 #define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
 
 enum class ComponentGroup {
@@ -46,6 +49,7 @@ enum class ComponentGroup {
     X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MaterialRef,   Other,    { },               { })                  \
     X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
+    X(MaterialAnim,  Other,    { },               { })                  \
 
 #define COMPONENTS_ID(Id, Group, Req, Conflict) Id,
 enum class ComponentId {

@@ -6,5 +6,6 @@
 namespace ecs {
 
 void transformAnimationSystem(Registry& registry, AppContext& ctx);
+void materialAnimationSystem(Registry& registry, AppContext& ctx);
 
 } // namespace ecs

@@ -42,7 +42,7 @@ float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in v
     if (lightId < 0) return -1.0;
 
     Light light = lightBuffer.lights[lightId];
-    float cosLight = max(dot(normal, wi), 0.0);
+    float cosLight = abs(dot(normal, wi));
     return light.pdfA * dist*dist / max(cosLight, EPS) * light.area / lightBuffer.totalArea;
 }
 

@@ -261,6 +261,7 @@ bool Scene::checkUpdate() {
 void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::transformAnimationSystem);
+    preUpdateScheduler.add(ecs::materialAnimationSystem);
     preUpdateScheduler.add(ecs::physicsSystem);
     preUpdateScheduler.add(ecs::transformSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);

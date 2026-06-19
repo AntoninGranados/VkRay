@@ -141,7 +141,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             if (insideMedium) {
                 throughput *= pow(max(mediumAbsorption, vec3(1e-4)), vec3(hit.t));
             }
-            if (mat.type == mat_Emissive) {
+            if (mat.emissionStrength > 0) {
                 if (i == 0) {
                     radiance = mat.albedo;
                     break;
@@ -150,7 +150,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 vec3 Le = mat.albedo * mat.emissionStrength;
                 float w = 1.0;
                 if (ubo.importanceSampling == 1 && !prevBsdf.isDelta) {
-                    float pdfL = lightPDF(prevHit.object.id, length(prevHit.p - hit.p), prevHit.normal, prevBsdf.wi, hit.p - prevHit.p);
+                    float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
                     float pdfB = prevBsdf.pdf;
                     float denom = pdfB*pdfB + pdfL*pdfL;
                     w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
@@ -189,6 +189,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 float p = clamp(luma(throughput), 0.1, 1.0);
                 if (rand(seed) > p) break;
                 throughput /= p;
+                throughput = min(throughput, vec3(1.5));    //! might too harsh of a clamp
             }
             prevBsdf = bsdf;
             prevHit = hit;
@@ -269,10 +270,11 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
             vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
             vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
-            if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b)) {
+            if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
                 pixelInfo.count -= 1;
                 continue;
             }
+            rayColor = min(rayColor, vec3(2.0));    //! might too harsh of a clamp
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;

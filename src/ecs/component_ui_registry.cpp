@@ -8,9 +8,11 @@
 
 #include "IconsFontAwesome7.h"
 
+#include "ecs/components/animation/material_anim.hpp"
 #include "scene/asset/mesh.hpp"
 #include "app/animation_handler.hpp"
 #include "editor/ui_constants.hpp"
+#include "scene/object/material.hpp"
 
 namespace ecs {
 

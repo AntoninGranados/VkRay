@@ -11,7 +11,7 @@ vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, out vec
     float s2 = rand(seed);
 
     float phi = 2.0 * PI * s1;
-    float theta = atan(alpha * sqrt(s2 / sqrt(1 - s2)));
+    float theta = atan(alpha * sqrt(s2 / (1.0 - s2)));
 
     vec3 local = vec3(
         sin(theta) * cos(phi),
