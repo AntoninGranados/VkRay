@@ -25,6 +25,7 @@ struct GpuMaterial {
     float ior;
     float transmission;
     float emissionStrength;
+    float density;
 };
 
 struct Material {
@@ -36,6 +37,7 @@ struct Material {
     float ior              = 0.0f;
     float transmission     = 0.0f;
     float emissionStrength = 0.0f;
+    float density          = 1.0f;
 };
 
 #define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }

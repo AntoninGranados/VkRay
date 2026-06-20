@@ -14,15 +14,14 @@ BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) 
     float alpha = max(mat.roughness * mat.roughness, 1e-6);
     vec3 m = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
-    float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3 F = schlickIoR(NoV, mat.ior);
+    float F = fresnelDielectric(t.VoM, 1.0, mat.ior);
 
-    float pSpec = luma(F);
-    vec3 fSpec = F * ggxBRDF(t);
-    vec3 fDiff = (vec3(1.0) - F) * lambertianEval.f;
+    float pSpec = F;
+    vec3 fSpec = ggxBRDF(t);
+    vec3 fDiff = lambertianEval.f;
 
     return BSDFEval(
-        fSpec + fDiff,
+        pSpec * fSpec + (1.0 - pSpec) * fDiff,
         pSpec * ggxPDF(t) + (1.0 - pSpec) * lambertianEval.pdf
     );
 }
@@ -31,8 +30,7 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
     float alpha = max(mat.roughness * mat.roughness, 1e-6);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
-    vec3  Fv  = schlickIoR(NoV, mat.ior);
-    float pSpec = luma(Fv);
+    float pSpec = fresnelDielectric(NoV, 1.0, mat.ior);
 
     float xi = rand(seed);
 
@@ -52,6 +50,7 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
     bsdf.weight  = eval.f * cosB / max(eval.pdf, EPS);
     bsdf.pdf     = eval.pdf;
     bsdf.isDelta = false;
+    bsdf.medium.isInside = false;
     return bsdf;
 }
 

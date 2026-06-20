@@ -44,6 +44,10 @@ BSDFSample samplePrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
         bsdf.pdf    = eval.pdf;
         bsdf.weight = eval.f * cosB / max(eval.pdf, EPS);
     }
+
+    bsdf.medium.isInside = (dot(bsdf.wi, hit.normal) < 0.0) == hit.frontFace && mat.transmission > 0.0;
+    bsdf.medium.absorption = mat.albedo;
+    bsdf.medium.density = mat.density;
     return bsdf;
 }
 

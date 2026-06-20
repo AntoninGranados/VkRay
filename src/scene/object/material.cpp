@@ -26,6 +26,12 @@ bool drawPrincipledUI(Material& material) {
     if (ImGui::DragFloat("##Mat Transmission", &material.transmission, 0.01f, 0.0f, 1.0f))
         updated = true;
 
+    if (material.transmission > 0.0f) {
+        ImGui::Text("Density:");
+        if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
+            updated = true;
+    }
+
     ImGui::PopItemWidth();
     return updated;
 }
@@ -87,7 +93,7 @@ bool drawGgxGlossyUI(Material& material) {
         updated = true;
 
     ImGui::Text("IoR:");
-    if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01f, 0.0f, FLT_MAX))
+    if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01f, 1.0f, FLT_MAX))
         updated = true;
 
     ImGui::PopItemWidth();
@@ -108,6 +114,10 @@ bool drawDielectricUI(Material& material) {
 
     ImGui::Text("Roughness:");
     if (ImGui::DragFloat("##Mat Roughness", &material.roughness, 0.01f, 0.0f, 1.0f))
+        updated = true;
+
+    ImGui::Text("Density:");
+    if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
         updated = true;
 
     ImGui::PopItemWidth();

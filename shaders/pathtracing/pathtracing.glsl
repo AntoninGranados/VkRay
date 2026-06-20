@@ -129,17 +129,21 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     LightSample lightSample;
     Material mat;
 
-    BSDFSample prevBsdf;
+    BSDFSample prevBsdf = BSDFSample(
+        vec3(0.0),
+        vec3(0.0),
+        0.0,
+        false,
+        BSDFMediumInfo(false, vec3(1.0), 1.0)
+    );
     Hit prevHit;
-    bool insideMedium = false;
-    vec3 mediumAbsorption = vec3(1.0f);
 
     for (; i < ubo.maxBounces; i++) {
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
-            if (insideMedium) {
-                throughput *= pow(max(mediumAbsorption, vec3(1e-4)), vec3(hit.t));
+            if (prevBsdf.medium.isInside) {
+                throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
             }
             if (mat.emissionStrength > 0) {
                 if (i == 0) {
@@ -158,14 +162,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
                 radiance += clamp(throughput * w, 0.0, 1.5) * Le;
                 break;
-            }
-            if (mat.type == mat_Dielectric) {
-                if (hit.frontFace) {
-                    insideMedium = true;
-                    mediumAbsorption = mat.albedo;
-                } else if (dot(prevBsdf.wi, hit.normal) < 0.0) {
-                    insideMedium = false;
-                }
             }
  
             bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
@@ -189,7 +185,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 float p = clamp(luma(throughput), 0.1, 1.0);
                 if (rand(seed) > p) break;
                 throughput /= p;
-                throughput = min(throughput, vec3(1.5));    //! might too harsh of a clamp
+                throughput = min(throughput, vec3(1.5));
             }
             prevBsdf = bsdf;
             prevHit = hit;

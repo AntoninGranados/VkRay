@@ -29,6 +29,7 @@ struct Material {
     float ior;
     float transmission;
     float emissionStrength;
+    float density;
 };
 
 #define MaterialHandle int

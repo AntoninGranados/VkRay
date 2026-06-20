@@ -23,19 +23,14 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     else normal = normalize(normal);
 
     float eta = etaI / etaT;
-    float ri  = etaT / etaI;
 
     float cosTheta = clamp(dot(wo, normal), 0.0, 1.0);
-    float sin2Theta = max(0.0, 1.0 - cosTheta*cosTheta);
+    float F = fresnelDielectric(cosTheta, etaI, etaT);
 
-    bool tir = (eta * eta) * sin2Theta > 1.0;
-
-    float F = schlickIoR(cosTheta, ri).x;
-    
     vec3 wi;
     vec3 weight;
     float pdf;
-    if (tir || rand(seed) < F) {
+    if (rand(seed) < F) {
         wi = reflect(-wo, normal);
 
         pdf = max(F, EPS);
@@ -53,6 +48,9 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     bsdf.weight  = weight;
     bsdf.pdf     = pdf;
     bsdf.isDelta = true;
+    bsdf.medium.isInside = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
+    bsdf.medium.absorption = mat.albedo;
+    bsdf.medium.density = mat.density;
     return bsdf;
 }
 

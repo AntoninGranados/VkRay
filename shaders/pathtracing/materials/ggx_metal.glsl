@@ -27,6 +27,7 @@ BSDFSample sampleGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, inout uin
     bsdf.weight  = F * t.G * t.VoM / (t.cosWo * t.NoM);
     bsdf.pdf     = ggxPDF(t);
     bsdf.isDelta = false;
+    bsdf.medium.isInside = false;
     return bsdf;
 }
 

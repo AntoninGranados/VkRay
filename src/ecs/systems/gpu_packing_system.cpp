@@ -210,6 +210,7 @@ void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame
             .ior = mat.ior,
             .transmission = mat.transmission,
             .emissionStrength = mat.emissionStrength,
+            .density = mat.density,
         });
     }
 

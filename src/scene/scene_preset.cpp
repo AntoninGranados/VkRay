@@ -1,11 +1,5 @@
 #include "scene_preset.hpp"
-#include "ecs/components/animation/transform_anim.hpp"
-#include "ecs/components/animation/material_anim.hpp"
-#include "ecs/components/objects/camera_object.hpp"
-#include "ecs/components/objects/mesh.hpp"
 #include "scene/object/material.hpp"
-
-#include <cmath>
 
 void initEmpty(Scene& scene, LightMode& lightMode) {
     scene.clear();
@@ -26,11 +20,13 @@ void initEmpty(Scene& scene, LightMode& lightMode) {
 
     Material cubeMaterial = Material{
         .name = "Cube",
-        .type = MaterialType::GgxGlossy,
+        .type = MaterialType::Principled,
         .albedo = glm::vec3(1.0f, 0.05f, 0.10f),
+        .roughness = 0.2,
+        .ior = 1.3
     };
     cubeMaterial.roughness = 0.02f;
-    cubeMaterial.ior = 0.7f;
+    cubeMaterial.ior = 1.5f;
 
     const MaterialHandle cubeHandle = scene.pushMaterial(cubeMaterial);
     scene.pushBox(
@@ -121,7 +117,7 @@ void initMaterialZoo(Scene& scene, LightMode& lightMode) {
     for (int j = 0; j <= v; j++) {
         for (int i = 0; i <= v; i++) {
             float rough = i/v * 0.7f;
-            float ior = j/v;
+            float ior = 1.0f + j/v;
             MaterialHandle temp = scene.pushMaterial(
                 Material {
                     .name = "Temp_" + std::to_string(i) + std::to_string(j),
@@ -172,13 +168,12 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         .type = MaterialType::GgxGlossy,
         .albedo = { 0.1f, 0.3f, 0.6f },
         .roughness = 0.1f,
-        .ior = 0.4f,
+        .ior = 4.0f,
     });
     glm::mat4 transform(1.0f);
     transform = glm::translate(transform, glm::vec3(0.0f, 1.2f, 0.0f));
     transform = glm::scale(transform, glm::vec3(4.7f));
     transform = glm::rotate(transform, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    // transform = glm::rotate(transform, glm::radians(-40.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     scene.pushMesh(
         "Object",
         "./res/model/dragon.obj",
@@ -204,7 +199,7 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         .type = MaterialType::GgxGlossy,
         .albedo = glm::vec3(1.0f),
         .roughness = 0.05f,
-        .ior = 0.1f,
+        .ior = 1.5f,
     });
     scene.pushBox(
         "Base",
@@ -232,48 +227,6 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         glm::vec3(0.0,  1.0 , 0.0),
         floorHandle
     );
-
-    {
-        constexpr int   GRID_H    = 24;     // horizontal (azimuth) samples
-        constexpr int   GRID_V    = 24;     // vertical (elevation) samples
-        constexpr float HALF_SPAN = 30.0f;  // degrees from center to edge
-        constexpr float BASE_AZIM = 180.0f; // front-facing direction of the bunny
-        constexpr float BASE_ELEV = 10.0f;  // degrees above horizontal (camera slightly above, looking down)
-        constexpr float RADIUS    = 8.0f;
-        const     glm::vec3 target(0.0f, 1.5f, 0.0f);
-
-        auto spherePose = [&](float azimDeg, float elevDeg) -> std::pair<glm::vec3, glm::quat> {
-            const float az = glm::radians(azimDeg);
-            const float el = glm::radians(elevDeg);
-            const glm::vec3 pos = target + RADIUS * glm::vec3(
-                std::cos(el) * std::sin(az),
-                std::sin(el),
-                std::cos(el) * std::cos(az)
-            );
-            const glm::vec3 d = glm::normalize(target - pos);
-            const glm::vec3 r = glm::normalize(glm::cross(d, glm::vec3(0.0f, 1.0f, 0.0f)));
-            const glm::vec3 u = glm::cross(r, d);
-            return { pos, glm::quat_cast(glm::mat3(r, u, -d)) };
-        };
-
-        auto [initPos, initRot] = spherePose(BASE_AZIM, BASE_ELEV);
-        scene.pushCamera("GridCamera", glm::translate(glm::mat4(1.0f), initPos) * glm::mat4_cast(initRot));
-
-        ecs::Entity camEntity = scene.getRegistry().storage<ecs::CameraObject>().entities().back();
-        ecs::TransformAnim anim;
-
-        for (int v = 0; v < GRID_V; ++v) {
-            const float elev = BASE_ELEV + (-HALF_SPAN + v * (2.0f * HALF_SPAN / (GRID_V - 1)));
-            for (int h = 0; h < GRID_H; ++h) {
-                const float azim = BASE_AZIM + (-HALF_SPAN + h * (2.0f * HALF_SPAN / (GRID_H - 1)));
-                auto [pos, rot] = spherePose(azim, elev);
-                anim.insertPositionKeyframe(v * GRID_H + h, pos);
-                anim.insertRotationKeyframe(v * GRID_H + h, rot);
-            }
-        }
-
-        scene.getRegistry().add<ecs::TransformAnim>(camEntity, anim);
-    }
 }
 
 void initSponza(Scene& scene, LightMode& lightMode) {
@@ -299,46 +252,6 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
 
     lightMode = LightMode::Empty;
     
-    /*
-    scene.pushSphere(
-        engine,
-        "GgxMetal",
-        glm::vec3(-2.0, 0.0, 0.0),
-        1.5,
-        Material {
-            .type = MaterialType::GgxMetal,
-            .albedo = { 1.0, 0.1, 0.9 },
-            .payload = { 1.5, 0.0 },
-        }
-    );
-    
-    scene.pushSphere(
-        engine,
-        "Metal",
-        glm::vec3( 2.0, 0.0, 0.0),
-        1.5,
-        Material {
-            .type = MaterialType::Metal,
-            .albedo = { 0.2, 0.4, 0.8 },
-            .payload = { 0.01, 0.0 },
-        }
-    );
-    */
-
-    /*
-    scene.pushMeshFromObj(
-        engine,
-        "Suzanne",
-        "./res/model/suzanne.obj",
-        Material {
-            .type = MaterialType::GgxMetal,
-            .albedo = { 1.0f, 1.0f, 1.0f },
-            .payload = { 3.0f, 0.1f },
-        },
-        glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(3.0f)), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f))
-    );
-    */
-
     const MaterialHandle objectHandle = scene.pushMaterial(Material{
         .name = "Lucy",
         .type = MaterialType::Dielectric,
@@ -350,8 +263,6 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
         "Object",
         "./res/model/lucy.obj",
         glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)),
-        // "./res/model/armadillo.obj",
-        // glm::scale(glm::mat4(1.0f), glm::vec3(0.04f)),
         objectHandle
     );
     
@@ -435,104 +346,6 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     );
 }
 
-void initArmadilloBSDF(Scene& scene, LightMode& lightMode) {
-    scene.clear();
-
-    lightMode = LightMode::Empty;
-
-    constexpr int   GRID_W       = 24;
-    constexpr int   GRID_H       = 24;
-    constexpr float FEET_Y       = -2.17f;  // armadillo feet in world space at scale 0.04
-    constexpr float PEDESTAL_BOT = -3.0f;
-
-    const MaterialHandle darkMat = scene.pushMaterial(Material{
-        .name      = "Dark",
-        .type      = MaterialType::Lambertian,
-        .albedo    = glm::vec3(0.04f),
-    });
-    scene.pushPlane(
-        "Floor",
-        glm::vec3(0.0f, PEDESTAL_BOT, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        darkMat
-    );
-
-    const MaterialHandle baseMat = scene.pushMaterial(Material{
-        .name      = "Pedestal",
-        .type      = MaterialType::GgxGlossy,
-        .albedo    = glm::vec3(1.0f),
-        .roughness = 0.05f,
-        .ior       = 0.1f,
-    });
-    scene.pushBox(
-        "Pedestal",
-        glm::vec3(-2.5f, PEDESTAL_BOT, -2.5f),
-        glm::vec3( 2.5f, FEET_Y,        2.5f),
-        baseMat
-    );
-    scene.pushBox(
-        "Pedestal Border",
-        glm::vec3(-2.6f, PEDESTAL_BOT, -2.6f),
-        glm::vec3( 2.6f, FEET_Y - 0.01f, 2.6f),
-        darkMat
-    );
-
-    const MaterialHandle lightMat = scene.pushMaterial(Material{
-        .name            = "Light",
-        .type            = MaterialType::Emissive,
-        .albedo          = glm::vec3(1.0f),
-        .emissionStrength = 10.0f,
-    });
-    scene.pushBox(
-        "Light",
-        glm::vec3(-3.0f, 14.99f, -3.0f),
-        glm::vec3( 3.0f, 15.01f,  3.0f),
-        lightMat
-    );
-
-    Material armadilloMat{
-        .name         = "Armadillo",
-        .type         = MaterialType::Principled,
-        .albedo       = glm::vec3(0.2f, 0.9f, 0.1f),
-        .roughness    = 0.0f,
-        .metalness    = 0.0f,
-        .ior          = 1.5f,
-        .transmission = 0.0f,
-    };
-    const MaterialHandle armadilloHandle = scene.pushMaterial(armadilloMat);
-    glm::mat4 armadilloTransform(1.0f);
-    armadilloTransform = glm::scale(armadilloTransform, glm::vec3(0.04f));
-    armadilloTransform = glm::translate(armadilloTransform, glm::vec3(0.1, 0.0, -0.55));
-    armadilloTransform = glm::rotate(armadilloTransform, glm::radians(25.0f), glm::vec3(0.0, 1.0, 0.0));
-    scene.pushMesh(
-        "Armadillo",
-        "./res/model/armadillo.obj",
-        armadilloTransform,
-        armadilloHandle
-    );
-    ecs::Entity meshEntity = scene.getRegistry().storage<ecs::MeshRef>().entities().back();
-
-    ecs::MaterialAnim matAnim;
-    for (int v = 0; v < GRID_H; ++v) {
-        const float metalness = static_cast<float>(v) / static_cast<float>(GRID_H - 1);
-        for (int h = 0; h < GRID_W; ++h) {
-            const float roughness = (static_cast<float>(h) + 1.0f) / static_cast<float>(GRID_W) * 0.95f;
-            matAnim.insertKeyframe(v * GRID_W + h, roughness, metalness, 1.5f, 0.0f, 0.0f);
-        }
-    }
-    scene.getRegistry().add<ecs::MaterialAnim>(meshEntity, matAnim);
-
-    const glm::vec3 camPos(0.0f, 2.2f, -10.0f);
-    const glm::vec3 camTarget(0.0f, 1.0f, 0.0f);
-    const glm::vec3 d = glm::normalize(camTarget - camPos);
-    const glm::vec3 r = glm::normalize(glm::cross(d, glm::vec3(0.0f, 1.0f, 0.0f)));
-    const glm::vec3 u = glm::cross(r, d);
-    const glm::quat camRot = glm::quat_cast(glm::mat3(r, u, -d));
-    scene.pushCamera(
-        "Camera",
-        glm::translate(glm::mat4(1.0f), camPos) * glm::mat4_cast(camRot)
-    );
-}
 
 #define RAND_FLOAT static_cast<float>(rand() % 100000) / 100000.0f
 void initRandomSpheres(Scene& scene, LightMode& lightMode) {
