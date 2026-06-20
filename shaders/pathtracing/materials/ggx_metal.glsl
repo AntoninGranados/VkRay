@@ -8,7 +8,7 @@
 #include "ggx_utils.glsl"
 
 BSDFEval evalGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float alpha = mat.roughness * mat.roughness;
+    float alpha = max(mat.roughness * mat.roughness, 1e-6);
     vec3 m = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
     vec3 F = schlickAlbedo(t.VoM, mat.albedo);
@@ -16,9 +16,7 @@ BSDFEval evalGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
 }
 
 BSDFSample sampleGgxMetalBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
-    if (mat.roughness < 0.05) return sampleMirrorBSDF(mat.albedo, hit, wo);
-
-    float alpha = mat.roughness * mat.roughness;
+    float alpha = max(mat.roughness * mat.roughness, 1e-6);
     vec3 m;
     vec3 wi = ggxScatter(mat, hit, wo, alpha, m, seed);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);

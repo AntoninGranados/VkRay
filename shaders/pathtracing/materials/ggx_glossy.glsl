@@ -11,7 +11,7 @@
 BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     BSDFEval lambertianEval = evalLambertianBSDF(mat, hit, wo, wi);
 
-    float alpha = mat.roughness * mat.roughness;
+    float alpha = max(mat.roughness * mat.roughness, 1e-6);
     vec3 m = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
     float NoV = max(dot(hit.normal, wo), 0.0);
@@ -28,7 +28,7 @@ BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) 
 }
 
 BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
-    bool specIsDelta = (mat.roughness < 0.05);
+    float alpha = max(mat.roughness * mat.roughness, 1e-6);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
     vec3  Fv  = schlickIoR(NoV, mat.ior);
@@ -38,13 +38,8 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
 
     vec3 wi;
     if (xi < pSpec) {
-        if (specIsDelta) {
-            return sampleMirrorBSDF(vec3(1.0), hit, wo);
-        } else {
-            float alpha = mat.roughness * mat.roughness;
-            vec3 v;
-            wi = ggxScatter(mat, hit, wo, alpha, v, seed);
-        }
+        vec3 v;
+        wi = ggxScatter(mat, hit, wo, alpha, v, seed);
     } else {
         wi = cosineScatter(mat, hit.normal, wo, seed);
     }
@@ -54,7 +49,7 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
     BSDFSample bsdf;
     float cosB = abs(dot(hit.normal, wi));
     bsdf.wi      = wi;
-    bsdf.weight  = eval.f * cosB / eval.pdf;
+    bsdf.weight  = eval.f * cosB / max(eval.pdf, EPS);
     bsdf.pdf     = eval.pdf;
     bsdf.isDelta = false;
     return bsdf;

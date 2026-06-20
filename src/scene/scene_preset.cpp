@@ -1,6 +1,8 @@
 #include "scene_preset.hpp"
 #include "ecs/components/animation/transform_anim.hpp"
+#include "ecs/components/animation/material_anim.hpp"
 #include "ecs/components/objects/camera_object.hpp"
+#include "ecs/components/objects/mesh.hpp"
 #include "scene/object/material.hpp"
 
 #include <cmath>
@@ -430,6 +432,105 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
         glm::vec3(-1.0, 3.9,-1.0),
         glm::vec3( 1.0, 4.0, 1.0),
         lightHandle
+    );
+}
+
+void initArmadilloBSDF(Scene& scene, LightMode& lightMode) {
+    scene.clear();
+
+    lightMode = LightMode::Empty;
+
+    constexpr int   GRID_W       = 24;
+    constexpr int   GRID_H       = 24;
+    constexpr float FEET_Y       = -2.17f;  // armadillo feet in world space at scale 0.04
+    constexpr float PEDESTAL_BOT = -3.0f;
+
+    const MaterialHandle darkMat = scene.pushMaterial(Material{
+        .name      = "Dark",
+        .type      = MaterialType::Lambertian,
+        .albedo    = glm::vec3(0.04f),
+    });
+    scene.pushPlane(
+        "Floor",
+        glm::vec3(0.0f, PEDESTAL_BOT, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        darkMat
+    );
+
+    const MaterialHandle baseMat = scene.pushMaterial(Material{
+        .name      = "Pedestal",
+        .type      = MaterialType::GgxGlossy,
+        .albedo    = glm::vec3(1.0f),
+        .roughness = 0.05f,
+        .ior       = 0.1f,
+    });
+    scene.pushBox(
+        "Pedestal",
+        glm::vec3(-2.5f, PEDESTAL_BOT, -2.5f),
+        glm::vec3( 2.5f, FEET_Y,        2.5f),
+        baseMat
+    );
+    scene.pushBox(
+        "Pedestal Border",
+        glm::vec3(-2.6f, PEDESTAL_BOT, -2.6f),
+        glm::vec3( 2.6f, FEET_Y - 0.01f, 2.6f),
+        darkMat
+    );
+
+    const MaterialHandle lightMat = scene.pushMaterial(Material{
+        .name            = "Light",
+        .type            = MaterialType::Emissive,
+        .albedo          = glm::vec3(1.0f),
+        .emissionStrength = 10.0f,
+    });
+    scene.pushBox(
+        "Light",
+        glm::vec3(-3.0f, 14.99f, -3.0f),
+        glm::vec3( 3.0f, 15.01f,  3.0f),
+        lightMat
+    );
+
+    Material armadilloMat{
+        .name         = "Armadillo",
+        .type         = MaterialType::Principled,
+        .albedo       = glm::vec3(0.2f, 0.9f, 0.1f),
+        .roughness    = 0.0f,
+        .metalness    = 0.0f,
+        .ior          = 1.5f,
+        .transmission = 0.0f,
+    };
+    const MaterialHandle armadilloHandle = scene.pushMaterial(armadilloMat);
+    glm::mat4 armadilloTransform(1.0f);
+    armadilloTransform = glm::scale(armadilloTransform, glm::vec3(0.04f));
+    armadilloTransform = glm::translate(armadilloTransform, glm::vec3(0.1, 0.0, -0.55));
+    armadilloTransform = glm::rotate(armadilloTransform, glm::radians(25.0f), glm::vec3(0.0, 1.0, 0.0));
+    scene.pushMesh(
+        "Armadillo",
+        "./res/model/armadillo.obj",
+        armadilloTransform,
+        armadilloHandle
+    );
+    ecs::Entity meshEntity = scene.getRegistry().storage<ecs::MeshRef>().entities().back();
+
+    ecs::MaterialAnim matAnim;
+    for (int v = 0; v < GRID_H; ++v) {
+        const float metalness = static_cast<float>(v) / static_cast<float>(GRID_H - 1);
+        for (int h = 0; h < GRID_W; ++h) {
+            const float roughness = (static_cast<float>(h) + 1.0f) / static_cast<float>(GRID_W) * 0.95f;
+            matAnim.insertKeyframe(v * GRID_W + h, roughness, metalness, 1.5f, 0.0f, 0.0f);
+        }
+    }
+    scene.getRegistry().add<ecs::MaterialAnim>(meshEntity, matAnim);
+
+    const glm::vec3 camPos(0.0f, 2.2f, -10.0f);
+    const glm::vec3 camTarget(0.0f, 1.0f, 0.0f);
+    const glm::vec3 d = glm::normalize(camTarget - camPos);
+    const glm::vec3 r = glm::normalize(glm::cross(d, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 u = glm::cross(r, d);
+    const glm::quat camRot = glm::quat_cast(glm::mat3(r, u, -d));
+    scene.pushCamera(
+        "Camera",
+        glm::translate(glm::mat4(1.0f), camPos) * glm::mat4_cast(camRot)
     );
 }
 

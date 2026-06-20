@@ -12,7 +12,8 @@ enum class ScenePreset : int {
     Mesh,
     Sponza,
     CornellBox,
-    RandomSpheres
+    RandomSpheres,
+    ArmadilloBSDF
 };
 
 using PresetInit = std::function<void(Scene&, LightMode&)>;
@@ -24,6 +25,7 @@ void initMesh(Scene& scene, LightMode& lightMode);
 void initSponza(Scene& scene, LightMode& lightMode);
 void initCornellBox(Scene& scene, LightMode& lightMode);
 void initRandomSpheres(Scene& scene, LightMode& lightMode);
+void initArmadilloBSDF(Scene& scene, LightMode& lightMode);
 
 static std::map<ScenePreset, std::string> scenePresetName = {
     { ScenePreset::Empty,         "Empty" },
@@ -32,6 +34,7 @@ static std::map<ScenePreset, std::string> scenePresetName = {
     { ScenePreset::Sponza,        "Sponza" },
     { ScenePreset::CornellBox,    "Cornell Box" },
     { ScenePreset::RandomSpheres, "Random Spheres" },
+    { ScenePreset::ArmadilloBSDF, "Armadillo BSDF Scan" },
 };
 
 static std::map<ScenePreset,PresetInit> scenePresetInitMethod = {
@@ -41,4 +44,5 @@ static std::map<ScenePreset,PresetInit> scenePresetInitMethod = {
     { ScenePreset::Sponza,        initSponza },
     { ScenePreset::CornellBox,    initCornellBox },
     { ScenePreset::RandomSpheres, initRandomSpheres },
+    { ScenePreset::ArmadilloBSDF, initArmadilloBSDF },
 };
