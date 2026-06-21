@@ -44,6 +44,7 @@ struct PathtracerUBO {
     int varianceSampling;
     int varianceWarmupSamples;
     int debugView;
+    int clipAccumulation;
 };
 
 struct ScreenUBO {

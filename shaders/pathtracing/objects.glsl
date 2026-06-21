@@ -190,7 +190,64 @@ float rayTriangleIntersection(in Ray ray, vec3 v0, vec3 v1, vec3 v2, out float u
     return (t >= TRI_EPS) ? t : -1.0;
 }
 
+Hit rayMeshIntersectionBvhDebug(in Ray ray, in Object obj, in Mesh mesh) {
+    if (mesh.bvhNodeCount == 0u) return NO_HIT;
+
+    vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
+    vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
+    Ray localRay = Ray(localOrigin, localDir);
+
+    const int DEBUG_DEPTH = 8;
+    uint stack[BVH_STACK_SIZE];
+    int stackDepth[BVH_STACK_SIZE];
+    int stackPtr = 0;
+
+    stack[stackPtr] = mesh.bvhOffset;
+    stackDepth[stackPtr] = 0;
+    stackPtr++;
+
+    float tClosest = INFINITY;
+    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
+    bool foundHit = false;
+
+    while (stackPtr > 0) {
+        stackPtr--;
+        uint nodeIdx = stack[stackPtr];
+        int depth = stackDepth[stackPtr];
+        BvhNode node = bvhBuffer.bvhNodes[nodeIdx];
+
+        if (depth >= DEBUG_DEPTH || node.isLeaf != 0u) {
+            Hit nodeHit = rayAabbIntersection(localRay, node.aabbMin, node.aabbMax, true);
+            if (foundIntersection(nodeHit) && nodeHit.t < tClosest) {
+                tClosest = nodeHit.t;
+                bestNormal = nodeHit.normal;
+                foundHit = true;
+            }
+            continue;
+        }
+
+        uint left = BVH_childLeft(node);
+        uint right = BVH_childRight(node);
+        if (stackPtr + 2 <= BVH_STACK_SIZE) {
+            stack[stackPtr] = left;
+            stackDepth[stackPtr] = depth + 1;
+            stackPtr++;
+            stack[stackPtr] = right;
+            stackDepth[stackPtr] = depth + 1;
+            stackPtr++;
+        }
+    }
+
+    if (!foundHit) return NO_HIT;
+
+    mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
+    vec3 normal = normalize(normalMat * bestNormal);
+    return makeHit(ray, obj, tClosest, normal);
+}
+
 Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
+    // return rayMeshIntersectionBvhDebug(ray, obj, mesh);
+
     if (mesh.bvhNodeCount == 0u) return NO_HIT;
 
     vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
@@ -283,61 +340,6 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh) {
     Hit hit = makeHit(ray, obj, tWorld, worldNormal);
     hit.hitChecks = hitChecks;
     return hit;
-}
-
-Hit rayMeshIntersectionBvhDebug(in Ray ray, in Object obj, in Mesh mesh) {
-    if (mesh.bvhNodeCount == 0u) return NO_HIT;
-
-    vec3 localOrigin = (mesh.invModelMatrix * vec4(ray.origin, 1.0)).xyz;
-    vec3 localDir = (mesh.invModelMatrix * vec4(ray.dir, 0.0)).xyz;
-    Ray localRay = Ray(localOrigin, localDir);
-
-    const int DEBUG_DEPTH = 8;
-    uint stack[BVH_STACK_SIZE];
-    int stackDepth[BVH_STACK_SIZE];
-    int stackPtr = 0;
-
-    stack[stackPtr] = mesh.bvhOffset;
-    stackDepth[stackPtr] = 0;
-    stackPtr++;
-
-    float tClosest = INFINITY;
-    vec3 bestNormal = vec3(0.0, 1.0, 0.0);
-    bool foundHit = false;
-
-    while (stackPtr > 0) {
-        stackPtr--;
-        uint nodeIdx = stack[stackPtr];
-        int depth = stackDepth[stackPtr];
-        BvhNode node = bvhBuffer.bvhNodes[nodeIdx];
-
-        if (depth >= DEBUG_DEPTH || node.isLeaf != 0u) {
-            Hit nodeHit = rayAabbIntersection(localRay, node.aabbMin, node.aabbMax, true);
-            if (foundIntersection(nodeHit) && nodeHit.t < tClosest) {
-                tClosest = nodeHit.t;
-                bestNormal = nodeHit.normal;
-                foundHit = true;
-            }
-            continue;
-        }
-
-        uint left = BVH_childLeft(node);
-        uint right = BVH_childRight(node);
-        if (stackPtr + 2 <= BVH_STACK_SIZE) {
-            stack[stackPtr] = left;
-            stackDepth[stackPtr] = depth + 1;
-            stackPtr++;
-            stack[stackPtr] = right;
-            stackDepth[stackPtr] = depth + 1;
-            stackPtr++;
-        }
-    }
-
-    if (!foundHit) return NO_HIT;
-
-    mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
-    vec3 normal = normalize(normalMat * bestNormal);
-    return makeHit(ray, obj, tClosest, normal);
 }
 
 // ================ SURFACE SAMPLING ================

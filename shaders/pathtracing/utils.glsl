@@ -2,7 +2,8 @@
 #define UTILS_GLSL
 
 #define TRI_EPS 1e-8
-#define EPS 1e-4
+#define EPS 1e-6
+#define EPS_HIGH 1e-3   // @note arbitrary, but EPS is too small for GGX alpha clamping
 #define PI 3.14159265
 #define INFINITY abs(1.0/0.0)
 

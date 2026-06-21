@@ -116,7 +116,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     }
 
     if (ubo.debugView == debug_HitChecks) {
-        float v = hit.hitChecks / 64.0;
+        float v = hit.hitChecks / 256.0;
         v = clamp(v, 0, 1);
         return vec3(v);
     }
@@ -185,7 +185,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 float p = clamp(luma(throughput), 0.1, 1.0);
                 if (rand(seed) > p) break;
                 throughput /= p;
-                throughput = min(throughput, vec3(1.5));
             }
             prevBsdf = bsdf;
             prevHit = hit;
@@ -270,7 +269,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
                 pixelInfo.count -= 1;
                 continue;
             }
-            rayColor = min(rayColor, vec3(2.0));    //! might too harsh of a clamp
+            rayColor = min(rayColor, vec3(5.0));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;

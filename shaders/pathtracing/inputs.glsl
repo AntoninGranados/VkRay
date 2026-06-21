@@ -27,6 +27,7 @@ layout(std140, set = 0, binding = 0) uniform UBO {
     int varianceSampling;
     int varianceWarmupSamples;
     int debugView;
+    int clipAccumulation;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;

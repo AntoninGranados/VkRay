@@ -79,6 +79,7 @@ void Application::initParameters() {
         true,
         "Pathtracer"
     );
+    parameters.addBool("clipAccumulation", "Clip Accumulation", false, true, "Pathtracer");
 
     parameters.addEnum(
         "lightMode",
@@ -183,6 +184,7 @@ void Application::fillUBOs() {
     pathtracer.varianceSampling = static_cast<int>(parameters.getBool("varianceSampling"));
     pathtracer.varianceWarmupSamples = parameters.getInt("varianceWarmup");
     pathtracer.debugView = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
+    pathtracer.clipAccumulation = static_cast<int>(parameters.getBool("clipAccumulation"));
 
     // Screen UBO
     screen.frameCount = frameCount;

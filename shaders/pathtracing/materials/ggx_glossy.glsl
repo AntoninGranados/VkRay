@@ -9,25 +9,27 @@
 #include "ggx_utils.glsl"
 
 BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    BSDFEval lambertianEval = evalLambertianBSDF(mat, hit, wo, wi);
+    if (dot(hit.normal, wi) <= 0.0) return BSDFEval(vec3(0.0), 0.0);
 
-    float alpha = max(mat.roughness * mat.roughness, 1e-6);
+    float alpha = max(mat.roughness * mat.roughness, EPS_HIGH);
     vec3 m = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
-    float F = fresnelDielectric(t.VoM, 1.0, mat.ior);
 
-    float pSpec = F;
-    vec3 fSpec = ggxBRDF(t);
-    vec3 fDiff = lambertianEval.f;
+    float F_VoH = fresnelDielectric(t.VoH,  1.0, mat.ior);
+    float F_NoL = fresnelDielectric(t.cosWi, 1.0, mat.ior);
+    float F_NoV = fresnelDielectric(t.cosWo, 1.0, mat.ior);
+
+    vec3 fSpec = F_VoH * ggxBRDF(t);
+    vec3 fDiff = (1.0 - F_NoL) * (1.0 - F_NoV) * mat.albedo / PI;
 
     return BSDFEval(
-        pSpec * fSpec + (1.0 - pSpec) * fDiff,
-        pSpec * ggxPDF(t) + (1.0 - pSpec) * lambertianEval.pdf
+        fSpec + fDiff,
+        F_NoV * ggxPDF(t) + (1.0 - F_NoV) * (t.cosWi / PI)
     );
 }
 
 BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
-    float alpha = max(mat.roughness * mat.roughness, 1e-6);
+    float alpha = max(mat.roughness * mat.roughness, EPS_HIGH);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
     float pSpec = fresnelDielectric(NoV, 1.0, mat.ior);

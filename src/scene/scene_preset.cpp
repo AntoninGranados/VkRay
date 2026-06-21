@@ -194,6 +194,19 @@ void initMesh(Scene& scene, LightMode& lightMode) {
         lightHandle
     );
     
+    const MaterialHandle largeLightHandle = scene.pushMaterial(Material{
+        .name = "Large Light",
+        .type = MaterialType::Emissive,
+        .albedo = glm::vec3(0.6f, 0.6f, 0.9f),
+        .emissionStrength = 5.0f,
+    });
+    scene.pushBox(
+        "Large Light",
+        glm::vec3(-20.0f, 49.99f, -20.0f),
+        glm::vec3( 20.0f, 50.01f,  20.0f),
+        largeLightHandle
+    );
+    
     const MaterialHandle baseHandle = scene.pushMaterial(Material{
         .name = "Base",
         .type = MaterialType::GgxGlossy,
