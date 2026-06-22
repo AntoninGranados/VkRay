@@ -255,7 +255,7 @@ void initSponza(Scene& scene, LightMode& lightMode) {
     scene.pushMesh(
         "Sponza",
         "./res/model/sponza.obj",
-        glm::scale(glm::mat4(1.0f), glm::vec3(0.1f)),
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.04f)),
         sponzaHandle
     );
 }

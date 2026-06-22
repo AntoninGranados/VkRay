@@ -6,12 +6,12 @@
 #include "materials/materials.glsl"
 #include "objects.glsl"
 
-Hit rayObjectIntersection(in Ray ray, in Object obj) {
+Hit rayObjectIntersection(in Ray ray, in Object obj, inout Statistics stats) {
     switch (obj.type) {
         case obj_Sphere: return raySphereIntersection(ray, obj, sphereBuffer.spheres[obj.id]);
         case obj_Plane:  return rayPlaneIntersection(ray, obj, planeBuffer.planes[obj.id]);
         case obj_Box:    return rayBoxIntersection(ray, obj, boxBuffer.boxes[obj.id]);
-        case obj_Mesh:   return rayMeshIntersection(ray, obj, meshBuffer.meshes[obj.id]);
+        case obj_Mesh:   return rayMeshIntersection(ray, obj, meshBuffer.meshes[obj.id], stats);
         default:         return NO_HIT;
     }
 }

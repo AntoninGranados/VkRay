@@ -11,7 +11,7 @@
 
 typedef int MeshHandle;
 
-#define LEAF_SIZE 8
+#define LEAF_SIZE 32
 
 struct Vertex {
     alignas(16) glm::vec3 position;
@@ -21,14 +21,14 @@ struct Vertex {
 #define DEFAULT_MESH_ASSET MeshAsset( \
     "Cube", \
     std::vector<Vertex>{ \
-        { glm::vec3(-0.5f, -0.5f, -0.5f) }, \
-        { glm::vec3( 0.5f, -0.5f, -0.5f) }, \
-        { glm::vec3( 0.5f,  0.5f, -0.5f) }, \
-        { glm::vec3(-0.5f,  0.5f, -0.5f) }, \
-        { glm::vec3(-0.5f, -0.5f,  0.5f) }, \
-        { glm::vec3( 0.5f, -0.5f,  0.5f) }, \
-        { glm::vec3( 0.5f,  0.5f,  0.5f) }, \
-        { glm::vec3(-0.5f,  0.5f,  0.5f) }, \
+        { glm::vec3(-0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f, -0.5f)) }, \
+        { glm::vec3( 0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f, -0.5f)) }, \
+        { glm::vec3( 0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f, -0.5f)) }, \
+        { glm::vec3(-0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f, -0.5f)) }, \
+        { glm::vec3(-0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f,  0.5f)) }, \
+        { glm::vec3( 0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f,  0.5f)) }, \
+        { glm::vec3( 0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f,  0.5f)) }, \
+        { glm::vec3(-0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f,  0.5f)) }, \
     }, \
     std::vector<uint32_t>{ \
         0, 1, 2, 2, 3, 0, \

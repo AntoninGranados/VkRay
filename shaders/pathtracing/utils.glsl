@@ -2,7 +2,7 @@
 #define UTILS_GLSL
 
 #define TRI_EPS 1e-8
-#define EPS 1e-6
+#define EPS 1e-4
 #define EPS_HIGH 1e-3   // @note arbitrary, but EPS is too small for GGX alpha clamping
 #define PI 3.14159265
 #define INFINITY abs(1.0/0.0)
@@ -131,15 +131,19 @@ struct Ray {
     vec3 dir;
 };
 
+struct Statistics {
+    uint bvhChecks;
+    uint triangleChecks;
+};
+
 struct Hit {
     vec3 p;
     vec3 normal;
     float t;
     bool frontFace;
     Object object;
-    int hitChecks;
 };
-#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE, 0)
+#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE)
 #define foundIntersection(h) ((h).object.type != obj_None)
 
 // ============== LIGHTS ==============
