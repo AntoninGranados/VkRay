@@ -84,19 +84,18 @@ struct Vertex {
     vec3 normal;
 };
 
+struct BvhChild {
+    float minX, minY, minZ;
+    float maxX, maxY, maxZ;
+    uint index;
+};
+
 struct BvhNode {
-    vec3 aabbMin;
-    vec3 aabbMax;
-    uint data0; // left or first triangle
-    uint data1; // right or triangle count
-    uint isLeaf;
+    BvhChild children[2];
+    uint firstTriangle;
+    uint triangleCount;
 };
 #define BVH_STACK_SIZE 64
-
-#define BVH_childLeft(node)     (node.data0)
-#define BVH_childRight(node)    (node.data1)
-#define BVH_firstTriangle(node) (node.data0)
-#define BVH_triangleCount(node) (node.data1)
 
 struct Mesh {
     mat4 modelMatrix;
@@ -105,6 +104,8 @@ struct Mesh {
     uint triangleCount;
     uint bvhOffset;
     uint bvhNodeCount;
+    float aabbMinX, aabbMinY, aabbMinZ;
+    float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
 };
 

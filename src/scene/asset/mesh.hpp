@@ -11,7 +11,8 @@
 
 typedef int MeshHandle;
 
-#define LEAF_SIZE 32
+#define LEAF_SIZE 16
+#define SAH_K     12    // Number of bins used to find the best split with the SAH 
 
 struct Vertex {
     alignas(16) glm::vec3 position;
@@ -50,6 +51,8 @@ public:
     const std::vector<Vertex>& getVertices() const { return vertices; }
     const std::vector<uint32_t>& getIndices() const { return indices; }
     const std::vector<GpuBvhNode>& getBvhNodes() const { return bvhNodes; }
+    glm::vec3 getAabbMin() const { return aabbMin; }
+    glm::vec3 getAabbMax() const { return aabbMax; }
     const std::string& getName() const { return name; }
     void setName(const std::string& newName) { name = newName; }
     const std::string& getPath() const { return path; }
@@ -76,6 +79,8 @@ private:
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<GpuBvhNode> bvhNodes;
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
 
     struct TriBounds {
         glm::vec3 min;
@@ -83,7 +88,7 @@ private:
         glm::vec3 centroid;
     };
 
-    size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start, uint32_t count);
+    size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start, uint32_t count, glm::vec3& outAabbMin, glm::vec3& outAabbMax);
 };
 
 bool drawMeshAssetUI(MeshAsset& mesh);

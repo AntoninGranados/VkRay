@@ -39,12 +39,13 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
     return Ray(origin, dir);
 }
 
-Hit intersection(in Ray ray, inout Statistics stats) {
+Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     Hit bestHit = NO_HIT;
     for (int i = 0; i < objectBuffer.objectCount; i++) {
-        Hit hit = rayObjectIntersection(ray, objectBuffer.objects[i], stats);
-        if (foundIntersection(hit) && hit.t < bestHit.t) {
-            bestHit = hit;
+        Hit hit = rayObjectIntersection(ray, objectBuffer.objects[i], anyHit, tMax, stats);
+        if (foundIntersection(hit) && hit.t < tMax) {
+            if (anyHit) return hit;
+            if (hit.t < bestHit.t) bestHit = hit;
         }
     }
     return bestHit;
@@ -80,7 +81,7 @@ vec3 skyColor(vec3 dir) {
 
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
-    Hit hit = intersection(ray, stats);
+    Hit hit = intersection(ray, false, INFINITY, stats);
 
     if (foundIntersection(hit)) {
         Material diffuseMat = resolveMaterial(getMaterial(hit.object), hit);
@@ -112,13 +113,13 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     }
 
     if (ubo.debugView == debug_HitChecks) {
-        float v = float(stats.triangleChecks) / 256.0;
-        if (v > 1.0) return vec3(1.0, 0.0, 0.0);
-        return vec3(v);
-        // float bvh = float(stats.bvhChecks) / 256.0;
-        // float tri = float(stats.triangleChecks) / 256.0;
-        // if (max(bvh, tri) > 1.0) return vec3(1.0);
-        // return vec3(tri, 0.0, bvh);
+        // float v = float(stats.bvhChecks) / 256.0;
+        // if (v > 1.0) return vec3(1.0, 0.0, 0.0);
+        // return vec3(v);
+        float bvh = float(stats.bvhChecks) / 256.0;
+        float tri = float(stats.triangleChecks) / 256.0;
+        if (max(bvh, tri) > 1.0) return vec3(1.0);
+        return vec3(tri, 0.0, bvh);
     }
 
     vec3 throughput = vec3(1.0);
@@ -190,7 +191,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             prevHit = hit;
 
             ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
-            hit = intersection(ray, stats);
+            hit = intersection(ray, false, INFINITY, stats);
         } else {
             radiance += throughput * skyColor(ray.dir);
             break;
@@ -349,7 +350,7 @@ void main() {
     int selectedIntersection = 0;
     if (objectBuffer.selectedObjectId >= 0) {
         Statistics selectionStats = Statistics(0, 0);
-        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[objectBuffer.selectedObjectId], selectionStats);
+        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[objectBuffer.selectedObjectId], false, INFINITY, selectionStats);
         if (foundIntersection(selectedHit)) {
             selectedIntersection = 1;
         }

@@ -133,11 +133,15 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         uint32_t vertexOffset = static_cast<uint32_t>(vertices.size());
         uint32_t indexOffset = static_cast<uint32_t>(indices.size());
         uint32_t bvhOffset = static_cast<uint32_t>(bvhNodes.size());
+        glm::vec3 meshAabbMin = mesh.getAabbMin();
+        glm::vec3 meshAabbMax = mesh.getAabbMax();
         meshTemplates.push_back(GpuMesh{
-            .indexOffset = indexOffset,
+            .indexOffset  = indexOffset,
             .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
-            .bvhOffset = bvhOffset,
+            .bvhOffset    = bvhOffset,
             .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
+            .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
+            .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
@@ -145,24 +149,17 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         for (size_t i = 0; i < meshIndices.size(); i++) {
             indices.push_back(meshIndices[i] + vertexOffset);
         }
-        // Offset the BVH links and leaf links
+        // Offset the BVH links and leaf triangle indices
         for (size_t n = 0; n < meshBvhNodes.size(); n++) {
             const GpuBvhNode& node = meshBvhNodes[n];
-            uint32_t data0, data1;
-            if (node.isLeaf != 0) {
-                data0 = static_cast<uint32_t>(node.data0 + (indexOffset / 3));
-                data1 = node.data1;
+            GpuBvhNode packed = node;
+            if (node.triangleCount > 0u) {
+                packed.firstTriangle = static_cast<uint32_t>(node.firstTriangle + (indexOffset / 3));
             } else {
-                data0 = static_cast<uint32_t>(node.data0 + bvhOffset);
-                data1 = static_cast<uint32_t>(node.data1 + bvhOffset);
+                packed.children[0].index = static_cast<uint32_t>(node.children[0].index + bvhOffset);
+                packed.children[1].index = static_cast<uint32_t>(node.children[1].index + bvhOffset);
             }
-            bvhNodes.push_back(GpuBvhNode{
-                .aabbMin = node.aabbMin,
-                .aabbMax = node.aabbMax,
-                .data0 = data0,
-                .data1 = data1,
-                .isLeaf = node.isLeaf,
-            });
+            bvhNodes.push_back(packed);
         }
     }
 
@@ -183,12 +180,14 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
 
         meshes.push_back(GpuMesh{
-            .transform = t.local,
-            .invTransform = glm::inverse(t.local),
-            .indexOffset = meshTemplate.indexOffset,
+            .transform     = t.local,
+            .invTransform  = glm::inverse(t.local),
+            .indexOffset   = meshTemplate.indexOffset,
             .triangleCount = meshTemplate.triangleCount,
-            .bvhOffset = meshTemplate.bvhOffset,
-            .bvhNodeCount = meshTemplate.bvhNodeCount,
+            .bvhOffset     = meshTemplate.bvhOffset,
+            .bvhNodeCount  = meshTemplate.bvhNodeCount,
+            .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
+            .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
             .materialHandle = handle,
         });
 

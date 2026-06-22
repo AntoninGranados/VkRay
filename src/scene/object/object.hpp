@@ -30,18 +30,17 @@ struct GpuBox {
     MaterialHandle materialHandle;
 };
 
-struct GpuBvhNode {
-    alignas(16) glm::vec3 aabbMin;
-    alignas(16) glm::vec3 aabbMax;
-    uint32_t data0; // left or first triangle
-    uint32_t data1; // right or triangle count
-    uint32_t isLeaf;
+struct GpuBvhChild {
+    float minX, minY, minZ;
+    float maxX, maxY, maxZ;
+    uint32_t index;
 };
 
-#define BVH_childLeft(node)   (node.data0)
-#define BVH_childRight(node)  (node.data1)
-#define BVH_firstTriangle(node) (node.data0)
-#define BVH_triangleCount(node) (node.data1)
+struct GpuBvhNode {
+    GpuBvhChild children[2];
+    uint32_t firstTriangle;
+    uint32_t triangleCount;
+};
 
 struct GpuMesh {
     alignas(16) glm::mat4 transform;
@@ -50,6 +49,8 @@ struct GpuMesh {
     uint32_t triangleCount;
     uint32_t bvhOffset;
     uint32_t bvhNodeCount;
+    float aabbMinX, aabbMinY, aabbMinZ;
+    float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
 };
 

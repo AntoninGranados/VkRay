@@ -29,7 +29,7 @@ uint getLightIdFromObjectId(uint objectId) {
     return 0;
 }
 
-Hit intersection(in Ray ray, inout Statistics stats); // Forward declaration
+Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats); // Forward declaration
 
 struct LightSample {
     vec3 wi;
@@ -60,10 +60,11 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
     vec3 toLight = surfaceSample.p - hit.p;
     light.wi = normalize(toLight);
 
+    float tLight = length(toLight) - EPS;
     Ray shadowRay = Ray(hit.p + hit.normal * EPS, light.wi);
     Statistics shadowStats = Statistics(0, 0);
-    Hit shadowHit = intersection(shadowRay, shadowStats);
-    bool visible = foundIntersection(shadowHit) && (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type);
+    Hit shadowHit = intersection(shadowRay, true, tLight, shadowStats);
+    bool visible = !foundIntersection(shadowHit);
     if (!visible) {
         light.pdf = -1.0;
         return light;
