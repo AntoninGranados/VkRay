@@ -266,22 +266,27 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     lightMode = LightMode::Empty;
     
     const MaterialHandle objectHandle = scene.pushMaterial(Material{
-        .name = "Lucy",
+        .name = "Object",
         .type = MaterialType::Dielectric,
         .albedo = { 1.0f, 0.5f, 0.5f },
         .roughness = 0.1f,
         .ior = 1.3f,
     });
+    glm::mat4 transform(1.0f);
+    transform = glm::translate(transform, glm::vec3(0.0, -2.2, 0.0));
+    transform = glm::scale(transform, glm::vec3(5.0f));
+    transform = glm::rotate(transform, glm::radians(200.0f), glm::vec3(0.0, 1.0, 0.0));
     scene.pushMesh(
         "Object",
-        "./res/model/lucy.obj",
-        glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)),
+        // "./res/model/lucy.obj",
+        "./res/model/dragon.obj",
+        transform,
         objectHandle
     );
     
     Material leftMat {
         .name = "Left",
-        .type = MaterialType::Lambertian,
+        .type = MaterialType::Programmable,
         .albedo = { 1.0, 0.1, 0.1 },
     };
     const MaterialHandle leftHandle = scene.pushMaterial(leftMat);
@@ -294,7 +299,7 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     
     Material rightMat {
         .name = "Right",
-        .type = MaterialType::Lambertian,
+        .type = MaterialType::Programmable,
         .albedo = { 0.1, 1.0, 0.1 },
     };
     const MaterialHandle rightHandle = scene.pushMaterial(rightMat);
@@ -307,7 +312,7 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     
     Material topMat {
         .name = "Top",
-        .type = MaterialType::Lambertian,
+        .type = MaterialType::Programmable,
         .albedo = { 1.0, 1.0, 1.0 },
     };
     const MaterialHandle topHandle = scene.pushMaterial(topMat);
@@ -320,7 +325,7 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     
     Material bottomMat {
         .name = "Bottom",
-        .type = MaterialType::Lambertian,
+        .type = MaterialType::Programmable,
         .albedo = { 1.0, 1.0, 1.0 },
     };
     const MaterialHandle bottomHandle = scene.pushMaterial(bottomMat);
@@ -333,7 +338,7 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     
     Material backMat {
         .name = "Back",
-        .type = MaterialType::Lambertian,
+        .type = MaterialType::Programmable,
         .albedo = { 0.2, 0.2, 0.6 },
     };
     const MaterialHandle backHandle = scene.pushMaterial(backMat);

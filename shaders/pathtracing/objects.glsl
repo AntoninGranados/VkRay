@@ -341,14 +341,14 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
     if (!foundHit) return NO_HIT;
 
     vec3 normal;
-    vec3 v0 = vertexBuffer.vertices[bestI0].position;
-    vec3 v1 = vertexBuffer.vertices[bestI1].position;
-    vec3 v2 = vertexBuffer.vertices[bestI2].position;
-    normal = normalize(cross(v1 - v0, v2 - v0));
-    // vec3 n0 = vertexBuffer.vertices[bestI0].normal;
-    // vec3 n1 = vertexBuffer.vertices[bestI1].normal;
-    // vec3 n2 = vertexBuffer.vertices[bestI2].normal;
-    // normal = normalize((1.0 - bestU - bestV) * n0 + bestU * n1 + bestV * n2);
+    // vec3 v0 = vertexBuffer.vertices[bestI0].position;
+    // vec3 v1 = vertexBuffer.vertices[bestI1].position;
+    // vec3 v2 = vertexBuffer.vertices[bestI2].position;
+    // normal = normalize(cross(v1 - v0, v2 - v0));
+    vec3 n0 = vertexBuffer.vertices[bestI0].normal;
+    vec3 n1 = vertexBuffer.vertices[bestI1].normal;
+    vec3 n2 = vertexBuffer.vertices[bestI2].normal;
+    normal = normalize((1.0 - bestU - bestV) * n0 + bestU * n1 + bestV * n2);
 
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
     vec3 worldNormal = normalize(normalMat * normal);

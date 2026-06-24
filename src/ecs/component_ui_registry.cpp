@@ -282,6 +282,34 @@ void ComponentUiRegistry::init() {
         return false;
     });
 
+    ui_reg.add<ecs::MaterialAnim>([](ecs::MaterialAnim& anim, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+        ImGui::CollapsingHeader(ICON_FA_PALETTE " Material Anim", ImGuiTreeNodeFlags_Bullet);
+
+        auto* mats = ComponentUiRegistry::get().materials;
+        auto& matRefs = r.storage<ecs::MaterialRef>();
+        if (!mats || mats->empty() || !matRefs.has(e)) return false;
+
+        const Material& mat = (*mats)[matRefs.get(e).handle];
+        const int frame = ctx.animation->getFrame();
+        const bool hasKeyframe = anim.hasKeyframe(frame);
+
+        if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOnColor);
+        else             ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOffColor);
+
+        ImGui::PushID((long long)&anim);
+        ui::PushTransparentStyleColor();
+        const char* label = hasKeyframe ? ICON_FA_SQUARE " Remove keyframe" : ICON_FA_SQUARE " Insert keyframe";
+        if (ImGui::Button(label)) {
+            if (hasKeyframe) anim.removeKeyframe(frame);
+            else             anim.insertKeyframe(frame, mat.roughness, mat.metalness, mat.ior, mat.transmission, mat.emissionStrength);
+        }
+        ui::PopTransparentStyleColor();
+        ImGui::PopID();
+
+        ImGui::PopStyleColor();
+        return false;
+    });
+
     ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
         auto* mats = ComponentUiRegistry::get().materials;
         if (!mats || mats->empty()) return false;

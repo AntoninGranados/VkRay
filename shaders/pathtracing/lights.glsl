@@ -58,23 +58,51 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
     SurfaceSample surfaceSample = sampleSurface(lightObj, lightBuffer.lights[lightId].area, seed);
 
     vec3 toLight = surfaceSample.p - hit.p;
-    light.wi = normalize(toLight);
+    float dist = length(toLight);
+    light.wi = toLight / dist;
 
-    float tLight = length(toLight) - EPS;
-    Ray shadowRay = Ray(hit.p + hit.normal * EPS, light.wi);
-    Statistics shadowStats = Statistics(0, 0);
-    Hit shadowHit = intersection(shadowRay, true, tLight, shadowStats);
-    bool visible = !foundIntersection(shadowHit);
-    if (!visible) {
+    // Reject back-facing samples: the sampled face is not visible from the shading point.
+    if (dot(surfaceSample.normal, light.wi) >= 0.0) {
         light.pdf = -1.0;
         return light;
     }
 
-    float dist = length(toLight);
-    light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, shadowRay.dir, light.wi);
+    Statistics shadowStats = Statistics(0, 0);
+    vec3 shadowOrigin = hit.p + hit.normal * EPS;
+    float remaining = dist - EPS;
+    vec3 transmission = vec3(1.0);
 
+    for (int i = 0; i < 8 && remaining > 0.0; i++) {
+        Hit shadowHit = intersection(Ray(shadowOrigin, light.wi), true, remaining, shadowStats);
+        if (!foundIntersection(shadowHit)) break;
+
+        // Reached the light object itself
+        if (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type) break;
+
+        Material shadowMat = getMaterial(shadowHit.object);
+        float T = shadowTransmissionFactor(shadowMat, shadowHit, light.wi);
+        if (T < 0.0) {
+            light.pdf = -1.0;
+            return light;
+        }
+
+        transmission *= T;
+        if (shadowMat.density > EPS) {
+            transmission *= pow(max(shadowMat.albedo, vec3(1e-4)), vec3(shadowHit.t * shadowMat.density));
+        }
+
+        remaining -= shadowHit.t + EPS;
+        shadowOrigin = shadowHit.p + light.wi * EPS;
+    }
+
+    if (max(transmission.r, max(transmission.g, transmission.b)) < EPS) {
+        light.pdf = -1.0;
+        return light;
+    }
+
+    light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
     Material lightMat = getMaterial(lightObj);
-    light.Le = lightMat.albedo * lightMat.emissionStrength;
+    light.Le = lightMat.albedo * lightMat.emissionStrength * transmission;
     return light;
 }
 

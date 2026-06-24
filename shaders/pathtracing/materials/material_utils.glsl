@@ -45,6 +45,24 @@ vec3 schlickAlbedo(float cosine, vec3 albedo) {
     return SCHLICK_APPROX(cosine, albedo);
 }
 
+// Returns the expected scalar transmission factor through a surface for shadow rays.
+// Returns -1.0 if the material is fully opaque (shadow ray should be blocked).
+float shadowTransmissionFactor(in Material mat, in Hit shadowHit, in vec3 wi) {
+    float cosI = abs(dot(wi, shadowHit.normal));
+    float etaI = shadowHit.frontFace ? 1.0 : mat.ior;
+    float etaT = shadowHit.frontFace ? mat.ior : 1.0;
+    float T = 1.0 - fresnelDielectric(cosI, etaI, etaT);
+
+    if (mat.type == mat_Dielectric) {
+        return T;
+    }
+    if (mat.type == mat_Principled) {
+        float pTrans = (1.0 - mat.metalness) * mat.transmission;
+        if (pTrans > EPS) return pTrans * T;
+    }
+    return -1.0;
+}
+
 BSDFEval evalMirrorBSDF(in vec3 albedo, in Hit hit, in vec3 wo, in vec3 wi) {
     float VoN = max(dot(wo, hit.normal), 0.0);
     return BSDFEval(

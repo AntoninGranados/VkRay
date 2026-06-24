@@ -148,7 +148,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             }
             if (mat.emissionStrength > 0) {
                 if (i == 0) {
-                    radiance = mat.albedo;
+                    radiance = mat.albedo * mat.emissionStrength;
                     break;
                 }
 
@@ -161,10 +161,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                     w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
                 }
 
-                radiance += clamp(throughput * w, 0.0, 1.5) * Le;
+                radiance += throughput * w * Le;
                 break;
             }
- 
+
             bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
             if (bsdf.pdf < EPS && !bsdf.isDelta) {
                 break;
@@ -175,14 +175,14 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 if (lightSample.pdf > EPS) {
                     float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
                     float wMIS = (lightSample.pdf*lightSample.pdf) / (lightSample.pdf*lightSample.pdf + eval.pdf*eval.pdf);
-                    radiance += clamp(throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf, 0.0, 1.5);
+                    radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
                 }
             }
 
             throughput *= bsdf.weight;
 
             // Russian Roulette
-            if (i >= 2) {
+            if (i >= 2 && !bsdf.isDelta) {
                 float p = clamp(luma(throughput), 0.1, 1.0);
                 if (rand(seed) > p) break;
                 throughput /= p;
