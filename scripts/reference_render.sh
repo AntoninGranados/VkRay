@@ -13,7 +13,7 @@ fi
 
 VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
 
-OUTPUT_DIR="$PROJECT_ROOT/outputs/reference"
+OUTPUT_DIR="$PROJECT_ROOT/snapshots"
 LAST_VERSION_FILE="$OUTPUT_DIR/.last_version"
 mkdir -p "$OUTPUT_DIR"
 

@@ -9,7 +9,6 @@
 #include "VkSmol/engine.hpp"
 #include "camera.hpp"
 
-// #include "object/object_buffers.hpp"
 #include "object/object.hpp"
 #include "asset/mesh.hpp"
 #include "raycast.hpp"
@@ -36,6 +35,7 @@ struct ScenePackingMaps {
     std::unordered_map<ecs::Entity, int> sphereId;
     std::unordered_map<ecs::Entity, int> planeId;
     std::unordered_map<ecs::Entity, int> boxId;
+    std::unordered_map<ecs::Entity, int> quadId;
     std::unordered_map<ecs::Entity, int> meshId;
 };
 
@@ -48,6 +48,7 @@ struct SceneGpuBuffers {
     SceneGpuBufferEntry sphere;
     SceneGpuBufferEntry plane;
     SceneGpuBufferEntry box;
+    SceneGpuBufferEntry quad;
     SceneGpuBufferEntry vertex;
     SceneGpuBufferEntry index;
     SceneGpuBufferEntry bvh;
@@ -69,6 +70,7 @@ public:
     void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
     void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle = 0);
     void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle = 0);
+    void pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation = 0.0f, MaterialHandle materialHandle = 0);
     void pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle = 0);
     void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle = 0);
     void pushCamera(std::string name, const glm::mat4& transform);

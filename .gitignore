@@ -5,8 +5,7 @@
 
 bin/
 build/
-#! Temporary removal
-docs/
+snapshots/
 
 imgui.ini
 outputs/

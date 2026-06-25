@@ -11,6 +11,7 @@ Hit rayObjectIntersection(in Ray ray, in Object obj, bool anyHit, float tMax, in
         case obj_Sphere: return raySphereIntersection(ray, obj, sphereBuffer.spheres[obj.id], anyHit, tMax, stats);
         case obj_Plane:  return rayPlaneIntersection(ray, obj, planeBuffer.planes[obj.id], anyHit, tMax, stats);
         case obj_Box:    return rayBoxIntersection(ray, obj, boxBuffer.boxes[obj.id], anyHit, tMax, stats);
+        case obj_Quad:   return rayQuadIntersection(ray, obj, quadBuffer.quads[obj.id], anyHit, tMax, stats);
         case obj_Mesh:   return rayMeshIntersection(ray, obj, meshBuffer.meshes[obj.id], anyHit, tMax, stats);
         default:         return NO_HIT;
     }
@@ -21,6 +22,7 @@ Material getMaterial(in Object obj) {
         case obj_Sphere: return materialBuffer.materials[sphereBuffer.spheres[obj.id].materialHandle];
         case obj_Plane:  return materialBuffer.materials[planeBuffer.planes[obj.id].materialHandle];
         case obj_Box:    return materialBuffer.materials[boxBuffer.boxes[obj.id].materialHandle];
+        case obj_Quad:   return materialBuffer.materials[quadBuffer.quads[obj.id].materialHandle];
         case obj_Mesh:   return materialBuffer.materials[meshBuffer.meshes[obj.id].materialHandle];
         default:         return DEFAULT_MATERIAL;
     }
@@ -31,6 +33,7 @@ SurfaceSample sampleSurface(in Object obj, in float area, inout uint seed) {
         case obj_Sphere: return sampleSphereSurface(sphereBuffer.spheres[obj.id], area, seed);
         case obj_Plane:  return SurfaceSample(vec3(0.0), vec3(0.0));
         case obj_Box:    return sampleBoxSurface(boxBuffer.boxes[obj.id], area, seed);
+        case obj_Quad:   return sampleQuadSurface(quadBuffer.quads[obj.id], area, seed);
         case obj_Mesh:   return sampleMeshSurface(meshBuffer.meshes[obj.id], area, seed);
         default:         return SurfaceSample(vec3(0.0), vec3(0.0));
     }

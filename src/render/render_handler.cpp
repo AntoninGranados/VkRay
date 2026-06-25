@@ -82,6 +82,7 @@ void RenderHandler::init(AppContext& ctx) {
     sceneHandles.sphere   = { builder.createPerFrameBuffer("SceneSphereBuffer",   16 * sizeof(GpuSphere),   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     sceneHandles.plane    = { builder.createPerFrameBuffer("ScenePlaneBuffer",    16 * sizeof(GpuPlane),    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     sceneHandles.box      = { builder.createPerFrameBuffer("SceneBoxBuffer",      16 * sizeof(GpuBox),      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    sceneHandles.quad     = { builder.createPerFrameBuffer("SceneQuadBuffer",     16 * sizeof(GpuQuad),     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     sceneHandles.vertex   = { builder.createPerFrameBuffer("SceneVertexBuffer",   16 * sizeof(Vertex),      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     sceneHandles.index    = { builder.createPerFrameBuffer("SceneIndexBuffer",    16 * sizeof(uint32_t),    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     sceneHandles.bvh      = { builder.createPerFrameBuffer("SceneBvhBuffer",      16 * sizeof(GpuBvhNode),  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
@@ -107,7 +108,8 @@ void RenderHandler::init(AppContext& ctx) {
     pathtrace.readBuffer(10, sceneHandles.material.handle,   BufferUsageType::Storage);
     pathtrace.readBuffer(11, sceneHandles.object.handle,     BufferUsageType::Storage);
     pathtrace.readBuffer(12, sceneHandles.light.handle,      BufferUsageType::Storage);
-    pathtrace.writeImage(13, currentPathtracingImageHandle,  ImageUsageType::Storage);
+    pathtrace.readBuffer(13, sceneHandles.quad.handle,       BufferUsageType::Storage);
+    pathtrace.writeImage(14, currentPathtracingImageHandle,  ImageUsageType::Storage);
     pathtracingPipelineHandle = pathtrace.setPipeline("./shaders/pathtracing/pathtracing.glsl");
 
     // Compositing pass

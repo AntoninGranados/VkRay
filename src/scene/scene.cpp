@@ -46,6 +46,7 @@ void Scene::clear() {
     gpuBuffers.sphere.capacity   = 0;
     gpuBuffers.plane.capacity    = 0;
     gpuBuffers.box.capacity      = 0;
+    gpuBuffers.quad.capacity      = 0;
     gpuBuffers.vertex.capacity   = 0;
     gpuBuffers.index.capacity    = 0;
     gpuBuffers.bvh.capacity      = 0;
@@ -106,6 +107,30 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     ecs::Transform transformComponent;
     transformComponent.setPosition(center);
     transformComponent.setScale(halfExtents);
+    registry.add<ecs::Transform>(e, transformComponent);
+
+    entities.push_back(e);
+}
+
+void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation, MaterialHandle materialHandle) {
+    ecs::Entity e = createNamedEntity(std::move(name));
+
+    normal = glm::normalize(normal);
+    glm::vec3 ref = std::abs(glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f))) < 0.99f
+        ? glm::vec3(0.0f, 1.0f, 0.0f)
+        : glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 tangent   = glm::normalize(glm::cross(ref, normal));
+    glm::vec3 bitangent = glm::normalize(glm::cross(normal, tangent));
+
+    glm::vec3 u = (std::cos(rotation) * tangent + std::sin(rotation) * bitangent) * scale.x;
+    glm::vec3 v = (-std::sin(rotation) * tangent + std::cos(rotation) * bitangent) * scale.y;
+
+    registry.add<ecs::Quad>(e, ecs::Quad{ .u = u, .v = v, .normal = normal });
+
+    addMaterialRef(e, materialHandle);
+
+    ecs::Transform transformComponent;
+    transformComponent.setPosition(center - 0.5f * (u + v));
     registry.add<ecs::Transform>(e, transformComponent);
 
     entities.push_back(e);
@@ -189,6 +214,7 @@ bool Scene::raycast(const glm::vec2& screenPos, const glm::vec2& screenSize, flo
     auto& sphereStorage = registry.storage<ecs::Sphere>();
     auto& planeStorage = registry.storage<ecs::Plane>();
     auto& boxStorage = registry.storage<ecs::Box>();
+    auto& quadStorage = registry.storage<ecs::Quad>();
     auto& meshStorage = registry.storage<ecs::MeshRef>();
     auto& cameraStorage = registry.storage<ecs::CameraObject>();
     auto& transformStorage = registry.storage<ecs::Transform>();
@@ -208,6 +234,9 @@ bool Scene::raycast(const glm::vec2& screenPos, const glm::vec2& screenSize, flo
             t = rayPlaneIntersection(ray, transform.position, normal);
         } else if (boxStorage.has(e)) {
             t = rayBoxIntersection(ray, transform.local);
+        } else if (quadStorage.has(e)) {
+            const ecs::Quad& q = quadStorage.get(e);
+            t = rayQuadIntersection(ray, transform.position, q.u, q.v, q.normal);
         } else if (meshStorage.has(e)) {
             const ecs::MeshRef& meshRef = meshStorage.get(e);
             if (meshRef.handle >= 0 && static_cast<size_t>(meshRef.handle) < meshAssets.size()) {
@@ -270,6 +299,7 @@ void Scene::initSystems() {
     onRenderScheduler.add(ecs::spherePackingSystem);
     onRenderScheduler.add(ecs::planePackingSystem);
     onRenderScheduler.add(ecs::boxPackingSystem);
+    onRenderScheduler.add(ecs::quadPackingSystem);
     onRenderScheduler.add(ecs::meshPackingSystem);
     onRenderScheduler.add(ecs::materialPackingSystem);
     onRenderScheduler.add(ecs::objectPackingSystem);

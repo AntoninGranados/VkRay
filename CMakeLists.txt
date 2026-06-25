@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(vkRay LANGUAGES CXX)
+project(VkRay LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,6 +16,7 @@ if(APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
 endif()
 
 # ── Version ───────────────────────────────────────────────────────────────────
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/VERSION")
 file(READ "${CMAKE_SOURCE_DIR}/VERSION" VK_RAY_VERSION_STRING)
 string(STRIP "${VK_RAY_VERSION_STRING}" VK_RAY_VERSION_STRING)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ "${VK_RAY_VERSION_STRING}")
@@ -56,9 +57,9 @@ file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*
 set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
 list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 
-add_executable(vkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
+add_executable(VkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
-target_include_directories(vkRay PRIVATE
+target_include_directories(VkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/libs"
   "${CMAKE_SOURCE_DIR}/third_party/imgui"
@@ -68,27 +69,27 @@ target_include_directories(vkRay PRIVATE
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(vkRay PRIVATE VkSmol)
-target_compile_options(vkRay PRIVATE -Wall)
+target_link_libraries(VkRay PRIVATE VkSmol)
+target_compile_options(VkRay PRIVATE -Wall)
 if(DEFINED ENV{VULKAN_SDK})
-  set_property(TARGET vkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")
+  set_property(TARGET VkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")
 endif()
 
 # ── Post-build ────────────────────────────────────────────────────────────────
 option(VKRAY_COPY_RESOURCES "Copy res/ into the build output directory" ON)
 if(VKRAY_COPY_RESOURCES)
   add_custom_command(
-    TARGET vkRay POST_BUILD
+    TARGET VkRay POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/res"
-            "$<TARGET_FILE_DIR:vkRay>/res"
+            "$<TARGET_FILE_DIR:VkRay>/res"
   )
 endif()
 
 add_custom_command(
-  TARGET vkRay POST_BUILD
+  TARGET VkRay POST_BUILD
   COMMAND "${CMAKE_SOURCE_DIR}/scripts/reference_render.sh"
-          "$<TARGET_FILE:vkRay>"
+          "$<TARGET_FILE:VkRay>"
           "${CMAKE_SOURCE_DIR}"
   WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   COMMENT "Checking if a reference render is needed..."

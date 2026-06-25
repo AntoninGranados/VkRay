@@ -68,5 +68,8 @@ layout(set = 0, binding = 12) buffer readonly LightBuffer {
     float totalArea;
     Light lights[];
 } lightBuffer;
+layout(set = 0, binding = 13) buffer readonly QuadBuffer {
+    Quad quads[];
+} quadBuffer;
 
 #endif

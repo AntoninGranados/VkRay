@@ -10,7 +10,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "global.glsl"
 #include "random.glsl"
 
-layout(rgba32f, set = 0, binding = 13) writeonly uniform image2D outputImage;
+layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
 
 
 Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {

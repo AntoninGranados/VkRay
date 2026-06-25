@@ -114,6 +114,37 @@ void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& f
     fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().box, gpuBoxes);
 }
 
+void quadPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
+    auto& quads = registry.storage<ecs::Quad>();
+    auto& transforms = registry.storage<ecs::Transform>();
+    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& packingMaps = ctx.scene->getPackingMaps();
+
+    std::vector<GpuQuad> gpuQuads;
+    packingMaps.quadId.clear();
+    size_t quadId = 0;
+
+    for (const auto& e : quads.entities()) {
+        if (!transforms.has(e)) continue;
+        ecs::Transform& t = transforms.get(e);
+
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+
+        const ecs::Quad& q = quads.get(e);
+        gpuQuads.push_back(GpuQuad{
+            .point  = t.position,
+            .u      = q.u,
+            .v      = q.v,
+            .normal = q.normal,
+            .materialHandle = handle,
+        });
+
+        packingMaps.quadId[e] = quadId++;
+    }
+
+    fillBufferWithPadding(ctx, frame, ctx.scene->getBuffers().quad, gpuQuads);
+}
+
 void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
     auto& meshRefs = registry.storage<ecs::MeshRef>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -252,6 +283,15 @@ void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext
         if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
         objectId++;
     }
+    // Quads
+    for (const auto& [e, id] : packingMaps.quadId) {
+        objectHandles.push_back(ObjectHandle{
+            .type = ObjectType::Quad,
+            .id = id,
+        });
+        if (selectedEntity && e == *selectedEntity) objectSelected = objectId;
+        objectId++;
+    }
     // Meshes
     for (const auto& [e, id] : packingMaps.meshId) {
         objectHandles.push_back(ObjectHandle{
@@ -323,6 +363,22 @@ void lightPackingSystem(Registry& registry, AppContext& ctx, const FrameContext&
         const float hy = glm::length(axisY);
         const float hz = glm::length(axisZ);
         const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
+        totalArea += area;
+        lights.push_back(GpuLight{
+            .objectId = objectId-1,
+            .area = area,
+            .pdfA = 1.0f / area,
+        });
+    }
+    // Quads
+    for (const auto& [e, id] : packingMaps.quadId) {
+        objectId++;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+
+        const glm::mat4& local = transforms.get(e).local;
+        const glm::vec3 u = glm::vec3(local[0]);
+        const glm::vec3 v = glm::vec3(local[2]);
+        const float area = glm::length(glm::cross(u, v));
         totalArea += area;
         lights.push_back(GpuLight{
             .objectId = objectId-1,

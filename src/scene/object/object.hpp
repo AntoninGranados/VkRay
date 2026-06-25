@@ -30,6 +30,14 @@ struct GpuBox {
     MaterialHandle materialHandle;
 };
 
+struct GpuQuad {
+    alignas(16) glm::vec3 point;
+    alignas(16) glm::vec3 u;
+    alignas(16) glm::vec3 v;
+    alignas(16) glm::vec3 normal;
+    MaterialHandle materialHandle;
+};
+
 struct GpuBvhChild {
     float minX, minY, minZ;
     float maxX, maxY, maxZ;
@@ -84,12 +92,12 @@ inline float clampScalarDelta(float delta, float maxDelta) {
 
 // Objects
 enum class ObjectType : int {
-    None = 0,
+    None   = 0,
     Sphere = 1,
-    Plane = 2,
-    Aabb = 3,
-    Box = 4,
-    Mesh = 5,
+    Plane  = 2,
+    Box    = 3,
+    Quad   = 4,
+    Mesh   = 5,
     Camera = 6,
 };
 

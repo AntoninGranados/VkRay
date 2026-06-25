@@ -113,6 +113,23 @@ Hit rayPlaneIntersection(in Ray ray, in Object obj, in Plane plane, bool anyHit,
     return NO_HIT;
 }
 
+Hit rayQuadIntersection(in Ray ray, in Object obj, in Quad quad, bool anyHit, float tMax, inout Statistics stats) {
+    float denom = dot(quad.normal, ray.dir);
+    if (denom >= -EPS) return NO_HIT; // back-face or parallel
+
+    float t = dot(quad.point - ray.origin, quad.normal) / denom;
+    if (t < EPS || t >= tMax) return NO_HIT;
+
+    vec3 p = ray.origin + ray.dir * t - quad.point;
+    float uu = dot(quad.u, quad.u);
+    float vv = dot(quad.v, quad.v);
+    float pu = dot(p, quad.u) / uu;
+    float pv = dot(p, quad.v) / vv;
+    if (pu < 0.0 || pu > 1.0 || pv < 0.0 || pv > 1.0) return NO_HIT;
+
+    return makeHit(ray, obj, t, quad.normal);
+}
+
 Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool computeNormal) {
     vec3 invDir = 1.0 / ray.dir;
     vec3 t0 = (aabbMin - ray.origin) * invDir;
@@ -430,6 +447,15 @@ SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
     surfaceSample.p = (box.modelMatrix * vec4(surfaceSample.p, 1.0)).xyz;
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
     surfaceSample.normal = normalize(normalMat * surfaceSample.normal);
+    return surfaceSample;
+}
+
+SurfaceSample sampleQuadSurface(in Quad quad, in float area, inout uint seed) {
+    SurfaceSample surfaceSample;
+    float r1 = rand(seed);
+    float r2 = rand(seed);
+    surfaceSample.p = quad.point + r1 * quad.u + r2 * quad.v;
+    surfaceSample.normal = quad.normal;
     return surfaceSample;
 }
 

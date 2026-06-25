@@ -39,9 +39,10 @@ struct Material {
 #define obj_None    Enum(0)
 #define obj_Sphere  Enum(1)
 #define obj_Plane   Enum(2)
-#define obj_Aabb    Enum(3)
-#define obj_Box     Enum(4)
+#define obj_Box     Enum(3)
+#define obj_Quad    Enum(4)
 #define obj_Mesh    Enum(5)
+#define obj_Aabb    Enum(6) // NOTE: only used internally
 
 // ============== DEBUG VIEW ==============
 #define debug_None          Enum(0)
@@ -76,6 +77,14 @@ struct Plane {
 struct Box {
     mat4 modelMatrix;
     mat4 invModelMatrix;
+    MaterialHandle materialHandle;
+};
+
+struct Quad {
+    vec3 point;
+    vec3 u;
+    vec3 v;
+    vec3 normal;
     MaterialHandle materialHandle;
 };
 

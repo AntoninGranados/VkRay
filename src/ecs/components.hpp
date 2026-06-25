@@ -11,6 +11,7 @@
 #include "./components/objects/plane.hpp"
 #include "./components/objects/collider.hpp"
 #include "./components/objects/box.hpp"
+#include "./components/objects/quad.hpp"
 #include "./components/objects/mesh.hpp"
 #include "./components/objects/rigid_body.hpp"
 #include "./components/objects/camera_object.hpp"
@@ -39,16 +40,20 @@ enum class ComponentGroup {
 
 #define ECS_COMPONENTS(X)                                               \
     X(Name,          Editor,   { },               { })                  \
+                                                                        \
     X(Transform,     Movement, { },               { })                  \
+    X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
+                                                                        \
     X(Sphere,        Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(Plane,         Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(Collider,      Physics,  { REQ_TRANSFORM }, { })                  \
     X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(Quad,          Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
     X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(RigidBody,     Physics,  { REQ_TRANSFORM }, { })                  \
     X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
+    X(Collider,      Physics,  { REQ_TRANSFORM }, { })                  \
+    X(RigidBody,     Physics,  { REQ_TRANSFORM }, { })                  \
+                                                                        \
     X(MaterialRef,   Other,    { },               { })                  \
-    X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
     X(MaterialAnim,  Other,    { },               { })                  \
 
 #define COMPONENTS_ID(Id, Group, Req, Conflict) Id,

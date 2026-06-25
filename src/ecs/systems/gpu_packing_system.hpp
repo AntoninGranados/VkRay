@@ -11,6 +11,7 @@ namespace ecs {
 void spherePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
 void planePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
 void boxPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
+void quadPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
 void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
 void materialPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);
 void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame);

@@ -78,6 +78,23 @@ float rayBoxIntersection(const Ray& ray, const glm::mat4& transform) {
     return tmin >= 0.0f ? tmin : tmax;
 }
 
+float rayQuadIntersection(const Ray& ray, const glm::vec3& origin, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal) {
+    const float denom = glm::dot(normal, ray.dir);
+    if (denom >= -1e-12f) return -1.0f; // back-face or parallel
+
+    const float t = glm::dot(origin - ray.origin, normal) / denom;
+    if (t < 0.0f) return -1.0f;
+
+    const glm::vec3 p = ray.origin + ray.dir * t - origin;
+    const float uu = glm::dot(u, u);
+    const float vv = glm::dot(v, v);
+    const float pu = glm::dot(p, u) / uu;
+    const float pv = glm::dot(p, v) / vv;
+
+    if (pu < 0.0f || pu > 1.0f || pv < 0.0f || pv > 1.0f) return -1.0f;
+    return t;
+}
+
 static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& dir,
                                     const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
                                     float& tOut) {

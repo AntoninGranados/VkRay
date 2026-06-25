@@ -264,7 +264,13 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     scene.clear();
 
     lightMode = LightMode::Empty;
-    
+
+    const float R = 4.0f;
+
+    auto quad = [&](const std::string& name, Material mat, glm::vec3 center, glm::vec3 normal, glm::vec2 size) {
+        scene.pushQuad(name, center, normal, size, 0.0f, scene.pushMaterial(mat));
+    };
+
     const MaterialHandle objectHandle = scene.pushMaterial(Material{
         .name = "Object",
         .type = MaterialType::Dielectric,
@@ -276,92 +282,23 @@ void initCornellBox(Scene& scene, LightMode& lightMode) {
     transform = glm::translate(transform, glm::vec3(0.0, -2.2, 0.0));
     transform = glm::scale(transform, glm::vec3(5.0f));
     transform = glm::rotate(transform, glm::radians(200.0f), glm::vec3(0.0, 1.0, 0.0));
-    scene.pushMesh(
-        "Object",
-        // "./res/model/lucy.obj",
-        "./res/model/dragon.obj",
-        transform,
-        objectHandle
-    );
-    
-    Material leftMat {
-        .name = "Left",
-        .type = MaterialType::Programmable,
-        .albedo = { 1.0, 0.1, 0.1 },
-    };
-    const MaterialHandle leftHandle = scene.pushMaterial(leftMat);
-    scene.pushBox(
-        "Left",
-        glm::vec3(4.0,-4.0,-4.0),
-        glm::vec3(4.1, 4.0, 4.0),
-        leftHandle
-    );
-    
-    Material rightMat {
-        .name = "Right",
-        .type = MaterialType::Programmable,
-        .albedo = { 0.1, 1.0, 0.1 },
-    };
-    const MaterialHandle rightHandle = scene.pushMaterial(rightMat);
-    scene.pushBox(
-        "Right",
-        glm::vec3(-4.1,-4.0,-4.0),
-        glm::vec3(-4.0, 4.0, 4.0),
-        rightHandle
-    );
-    
-    Material topMat {
-        .name = "Top",
-        .type = MaterialType::Programmable,
-        .albedo = { 1.0, 1.0, 1.0 },
-    };
-    const MaterialHandle topHandle = scene.pushMaterial(topMat);
-    scene.pushBox(
-        "Top",
-        glm::vec3(-4.0, 4.0,-4.0),
-        glm::vec3( 4.0, 4.1, 4.0),
-        topHandle
-    );
-    
-    Material bottomMat {
-        .name = "Bottom",
-        .type = MaterialType::Programmable,
-        .albedo = { 1.0, 1.0, 1.0 },
-    };
-    const MaterialHandle bottomHandle = scene.pushMaterial(bottomMat);
-    scene.pushBox(
-        "Bottom",
-        glm::vec3(-4.0,-4.1,-4.0),
-        glm::vec3( 4.0,-4.0, 4.0),
-        bottomHandle
-    );
-    
-    Material backMat {
-        .name = "Back",
-        .type = MaterialType::Programmable,
-        .albedo = { 0.2, 0.2, 0.6 },
-    };
-    const MaterialHandle backHandle = scene.pushMaterial(backMat);
-    scene.pushBox(
-        "Back",
-        glm::vec3(-4.0,-4.0, 4.0),
-        glm::vec3( 4.0, 4.0, 4.1),
-        backHandle
-    );
-    
-    Material lightBoxMat {
+    scene.pushMesh("Object", "./res/model/dragon.obj", transform, objectHandle);
+
+    const glm::vec2 wallSize(2.0f * R, 2.0f * R);
+    quad("Left",   {.name="Left",   .type=MaterialType::Programmable, .albedo={1.0f,0.1f,0.1f}}, {-R, 0, 0}, { 1, 0, 0}, wallSize);
+    quad("Right",  {.name="Right",  .type=MaterialType::Programmable, .albedo={0.1f,1.0f,0.1f}}, { R, 0, 0}, {-1, 0, 0}, wallSize);
+    quad("Top",    {.name="Top",    .type=MaterialType::Programmable, .albedo={1.0f,1.0f,1.0f}}, {0,  R, 0}, { 0,-1, 0}, wallSize);
+    quad("Bottom", {.name="Bottom", .type=MaterialType::Programmable, .albedo={1.0f,1.0f,1.0f}}, {0, -R, 0}, { 0, 1, 0}, wallSize);
+    quad("Back",   {.name="Back",   .type=MaterialType::Programmable, .albedo={0.2f,0.2f,0.6f}}, {0, 0,  R}, { 0, 0,-1}, wallSize);
+    quad("Front",  {.name="Front",  .type=MaterialType::Programmable, .albedo={1.0f,1.0f,1.0f}}, {0, 0, -R}, { 0, 0, 1}, wallSize);
+
+    const MaterialHandle lightHandle = scene.pushMaterial(Material{
         .name = "Light",
         .type = MaterialType::Emissive,
-        .albedo = { 1.0, 0.7, 0.5 },
+        .albedo = { 1.0f, 0.7f, 0.5f },
         .emissionStrength = 30.0f,
-    };
-    const MaterialHandle lightHandle = scene.pushMaterial(lightBoxMat);
-    scene.pushBox(
-        "Light",
-        glm::vec3(-1.0, 3.9,-1.0),
-        glm::vec3( 1.0, 4.0, 1.0),
-        lightHandle
-    );
+    });
+    scene.pushBox("Light", {-1.0f, R - 0.1f, -1.0f}, {1.0f, R, 1.0f}, lightHandle);
 }
 
 
@@ -379,18 +316,23 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
     auto box = [&](const std::string& name, Material mat, glm::vec3 mn, glm::vec3 mx) {
         scene.pushBox(name, mn, mx, scene.pushMaterial(mat));
     };
+    auto quad = [&](const std::string& name, Material mat, glm::vec3 center, glm::vec3 normal, glm::vec2 size) {
+        scene.pushQuad(name, center, normal, size, 0.0f, scene.pushMaterial(mat));
+    };
     auto sphere = [&](const std::string& name, Material mat, glm::vec3 pos, float r) {
         scene.pushSphere(name, pos, r, scene.pushMaterial(mat));
     };
 
     const MaterialHandle floorHandle = scene.pushMaterial({
-        .name="Floor", .type=MaterialType::Programmable, .albedo={0.40f,0.40f,0.40f}
+        .name="Floor", .type=MaterialType::Programmable, .albedo={0.32f,0.32f,0.32f}
     });
-    box("Top",    {.name="Top",    .type=MaterialType::Lambertian,  .albedo={0.90f,0.90f,0.88f}}, {-R, R,      -R}, { R, R+0.1f, R});
-    scene.pushBox("Bottom", {-R,-R-0.1f,-R}, {R,-R,R}, floorHandle);
-    box("Back",   {.name="Back",   .type=MaterialType::GgxGlossy,   .albedo={0.12f,0.20f,0.70f}, .roughness=0.20f, .ior=1.5f}, {-R,-R,  R}, { R, R, R+0.1f});
-    box("Left",   {.name="Left",   .type=MaterialType::GgxGlossy,   .albedo={0.07f,0.62f,0.10f}, .roughness=0.20f, .ior=1.5f}, {-R-0.1f,-R,-R}, {-R, R, R});
-    box("Right",  {.name="Right",  .type=MaterialType::GgxGlossy,   .albedo={0.80f,0.07f,0.05f}, .roughness=0.20f, .ior=1.5f}, { R,-R,-R}, { R+0.1f, R, R});
+    const glm::vec2 wallSize(2.0f * R, 2.0f * R);
+    scene.pushQuad("Bottom", {0, -R, 0}, {0, 1, 0}, wallSize, 0.0f, floorHandle);
+    quad("Top",   {.name="Top",   .type=MaterialType::Lambertian, .albedo={0.90f,0.90f,0.90f}}, {0,  R, 0}, { 0,-1, 0}, wallSize);
+    quad("Back",  {.name="Back",  .type=MaterialType::GgxGlossy,  .albedo={0.10f,0.18f,0.72f}, .roughness=0.20f, .ior=1.5f}, {0, 0,  R}, { 0, 0,-1}, wallSize);
+    quad("Left",  {.name="Left",  .type=MaterialType::GgxGlossy,  .albedo={0.06f,0.65f,0.08f}, .roughness=0.20f, .ior=1.5f}, {-R, 0, 0}, { 1, 0, 0}, wallSize);
+    quad("Right", {.name="Right", .type=MaterialType::GgxGlossy,  .albedo={0.82f,0.06f,0.04f}, .roughness=0.20f, .ior=1.5f}, { R, 0, 0}, {-1, 0, 0}, wallSize);
+    quad("Front", {.name="Front", .type=MaterialType::Lambertian,  .albedo={0.10f,0.10f,0.10f}}, {0, 0, -R}, { 0, 0, 1}, wallSize);
 
     box("Light", {.name="Light", .type=MaterialType::Emissive,
                   .albedo={1.0f,0.72f,0.38f}, .emissionStrength=60.0f},
@@ -399,7 +341,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
     {
         constexpr float dragonScale      = 5.2f;
         constexpr float dragonTranslateY = -1.4f;
-        constexpr float dragonFootY      = -0.338f; // model-space foot position
+        constexpr float dragonFootY      = -0.33f; // model-space foot position
         const float pedestalTop = dragonTranslateY + dragonScale * dragonFootY;
 
         const MaterialHandle h = scene.pushMaterial({
@@ -413,7 +355,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
         scene.pushMesh("Dragon", "./res/model/dragon.obj", t, h);
 
         box("Pedestal", {.name="Pedestal", .type=MaterialType::GgxGlossy,
-                         .albedo={1.0f,1.0f,1.0f}, .roughness=0.0f, .ior=8.0f},
+                         .albedo={1.0f,1.0f,1.0f}, .roughness=0.0f, .ior=12.0f},
             {-3.25f, -R, -1.6f}, {3.25f, pedestalTop, 3.2f});
         scene.pushBox("PedestalBorder", {-3.29f, -R, -1.64f}, {3.29f, pedestalTop - 0.02f, 3.24f}, floorHandle);
     }
@@ -437,7 +379,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
            {sx0 + 2.0f * step, sy, sz}, sr);
 
     sphere("Glossy", {.name="Glossy", .type=MaterialType::GgxGlossy,
-                      .albedo={1.0f,1.0f,1.0f}, .roughness=0.06f, .ior=1.5f},
+                      .albedo={1.0f,1.0f,1.0f}, .roughness=0.04f, .ior=2.0f},
            {sx0 + 3.0f * step, sy, sz}, sr);
 }
 
