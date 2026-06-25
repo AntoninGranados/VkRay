@@ -73,6 +73,7 @@ class ParameterHandler;
 class NotificationHandler;
 class EditorUi;
 class AnimationHandler;
+class Platform;
 
 struct AppContext {
     VkSmol* engine;
@@ -88,4 +89,5 @@ struct AppContext {
     ScreenUBO* screenUBO;
 
     bool* restartRender = nullptr;
+    Platform* platform = nullptr;
 };

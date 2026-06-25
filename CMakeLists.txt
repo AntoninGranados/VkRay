@@ -15,16 +15,19 @@ if(APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
   set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures" FORCE)
 endif()
 
-file(GLOB_RECURSE VKRAY_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
-
-add_executable(vkRay ${VKRAY_SOURCES})
-
-target_include_directories(vkRay PRIVATE
-  "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/include/imgui"
+# ── Version ───────────────────────────────────────────────────────────────────
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" VK_RAY_VERSION_STRING)
+string(STRIP "${VK_RAY_VERSION_STRING}" VK_RAY_VERSION_STRING)
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ "${VK_RAY_VERSION_STRING}")
+set(VK_RAY_VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(VK_RAY_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(VK_RAY_VERSION_PATCH "${CMAKE_MATCH_3}")
+configure_file(
+  "${CMAKE_SOURCE_DIR}/src/version.hpp.in"
+  "${CMAKE_BINARY_DIR}/version.hpp"
 )
 
+# ── Engine submodule ──────────────────────────────────────────────────────────
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 
@@ -45,25 +48,31 @@ target_include_directories(imgui_third_party PUBLIC
 )
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
 
-add_custom_target(third-party DEPENDS imgui_third_party)
+set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include;${CMAKE_SOURCE_DIR}/include/imgui")
+add_subdirectory("${CMAKE_SOURCE_DIR}/src/engine" engine)
 
-target_link_libraries(vkRay PRIVATE ${VKRAY_GLFW_TARGET} Vulkan::Vulkan imgui_third_party)
+# ── Sources ───────────────────────────────────────────────────────────────────
+file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
+set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
+list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
+list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/engine/.*\\.cpp$")
+
+add_executable(vkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
+
+target_include_directories(vkRay PRIVATE
+  "${CMAKE_SOURCE_DIR}/src"
+  "${CMAKE_SOURCE_DIR}/include"
+  "${CMAKE_SOURCE_DIR}/include/imgui"
+  "${CMAKE_BINARY_DIR}"
+)
+
+target_link_libraries(vkRay PRIVATE VkSmol)
 target_compile_options(vkRay PRIVATE -Wall)
-
-if(APPLE)
-  target_link_libraries(vkRay PRIVATE
-    "-framework Accelerate"
-    "-framework Cocoa"
-    "-framework IOKit"
-    "-framework Metal"
-    "-framework QuartzCore"
-  )
-endif()
-
 if(DEFINED ENV{VULKAN_SDK})
   set_property(TARGET vkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")
 endif()
 
+# ── Post-build ────────────────────────────────────────────────────────────────
 option(VKRAY_COPY_RESOURCES "Copy res/ into the build output directory" ON)
 if(VKRAY_COPY_RESOURCES)
   add_custom_command(
@@ -73,3 +82,12 @@ if(VKRAY_COPY_RESOURCES)
             "$<TARGET_FILE_DIR:vkRay>/res"
   )
 endif()
+
+add_custom_command(
+  TARGET vkRay POST_BUILD
+  COMMAND "${CMAKE_SOURCE_DIR}/scripts/reference_render.sh"
+          "$<TARGET_FILE:vkRay>"
+          "${CMAKE_SOURCE_DIR}"
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  COMMENT "Checking if a reference render is needed..."
+)

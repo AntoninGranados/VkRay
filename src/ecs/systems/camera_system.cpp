@@ -2,6 +2,9 @@
 
 #include <GLFW/glfw3.h>
 
+#include "engine/platform/platform.hpp"
+#include "app/app_context.hpp"
+
 #include <algorithm>
 
 #include <glm/glm.hpp>
@@ -39,7 +42,7 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
 
         const Camera& activeCamera = ctx.scene->getCamera();
         const glm::mat4 view = activeCamera.getView();
-        const glm::mat4 proj = activeCamera.getProjection(ctx.engine->getWindow().get());
+        const glm::mat4 proj = activeCamera.getProjection(static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle()));
         const glm::mat4 viewProj = proj * view;
     
         const glm::vec3 camPos = t.position;
@@ -187,7 +190,7 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
 void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
-    bool escapePressed = glfwGetKey(ctx.engine->getWindow().get(), GLFW_KEY_ESCAPE);
+    bool escapePressed = glfwGetKey(static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle()), GLFW_KEY_ESCAPE);
     Camera& camera = *ctx.camera;
     constexpr float previewViewportScale = 0.8f;
 

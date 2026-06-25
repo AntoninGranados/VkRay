@@ -1,7 +1,11 @@
 #include "render_handler.hpp"
 
 #include <iostream>
+#include <cmath>
+#include <cstring>
+#include <vector>
 
+#include <stb_image/stb_image_write.h>
 #include "./imgui/imgui.h"
 
 #include "engine/engine.hpp"
@@ -23,18 +27,23 @@
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
+    headless = engine.isHeadless();
 
     RenderGraphBuilder builder;
     mainGroupHandle = builder.addSubmissionGroup("Main");
-    uiGroupHandle   = builder.addSubmissionGroup("Ui");
+    if (!headless)
+        uiGroupHandle = builder.addSubmissionGroup("Ui");
 
-    swapchainImageHandle = builder.importImage(
-        "SwapchainImage",
-        VK_FORMAT_R32G32B32A32_SFLOAT,
-        engine.getExtent().width, engine.getExtent().height, 1,
-        { .usage = ImageUsageType::Undefined, .access = AccessType::None },
-        { .usage = ImageUsageType::Present, .access = AccessType::Read }
-    );
+    if (!headless) {
+        swapchainImageHandle = builder.importImage(
+            "SwapchainImage",
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            engine.getExtent().width, engine.getExtent().height, 1,
+            { .usage = ImageUsageType::Undefined, .access = AccessType::None },
+            { .usage = ImageUsageType::Present, .access = AccessType::Read }
+        );
+    }
+
     previousPathtracingImageHandle = builder.createImage(
         "PreviousPathtracingImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -54,8 +63,10 @@ void RenderHandler::init(AppContext& ctx) {
         engine.getExtent().width, engine.getExtent().height
     );
 
-    vertexBufferHandle = builder.createStaticBuffer("FullscreenVertexBuffer", vertices.data(), sizeof(ScreenVertex) * vertices.size());
-    indexBufferHandle  = builder.createStaticBuffer("FullscreenIndexBuffer",  indices.data(),  sizeof(index_t)     * indices.size());
+    if (!headless) {
+        vertexBufferHandle = builder.createStaticBuffer("FullscreenVertexBuffer", vertices.data(), sizeof(ScreenVertex) * vertices.size());
+        indexBufferHandle  = builder.createStaticBuffer("FullscreenIndexBuffer",  indices.data(),  sizeof(index_t)     * indices.size());
+    }
 
     VkExtent2D ext        = engine.getExtent();
     pathtracingUBOHandle  = builder.createPerFrameBuffer("PathtracingUBO", sizeof(PathtracerUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -114,55 +125,58 @@ void RenderHandler::init(AppContext& ctx) {
     exportPass.setGroup(mainGroupHandle);
     exportPass.copyFrom(outputImageHandle);
 
-    // Display pass
-    GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
-    displayPassHandle = display.getHandle();
-    display.setGroup(mainGroupHandle);
-    display.readImage (0, outputImageHandle,     ImageUsageType::Sampled);
-    display.readBuffer(1, displayUBOHandle,      BufferUsageType::Uniform);
-    display.readBuffer(2, pixelInfoBufferHandle, BufferUsageType::Storage);
-    display.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
-    display.bindVertexBuffer(vertexBufferHandle);
-    display.bindIndexBuffer(indexBufferHandle);
-    VertexInput<ScreenVertex> vertexInput;
-    vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
-    displayPipelineHandle = display.setPipeline(
-        vertexInput.get(),
-        { 
-            { VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl" },
-            { VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl" }
-        }
-    );
+    if (!headless) {
+        GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
+        displayPassHandle = display.getHandle();
+        display.setGroup(mainGroupHandle);
+        display.readImage (0, outputImageHandle,     ImageUsageType::Sampled);
+        display.readBuffer(1, displayUBOHandle,      BufferUsageType::Uniform);
+        display.readBuffer(2, pixelInfoBufferHandle, BufferUsageType::Storage);
+        display.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
+        display.bindVertexBuffer(vertexBufferHandle);
+        display.bindIndexBuffer(indexBufferHandle);
+        VertexInput<ScreenVertex> vertexInput;
+        vertexInput.addAttributeDescription(VK_FORMAT_R32G32_SFLOAT, offsetof(ScreenVertex, pos));
+        displayPipelineHandle = display.setPipeline(
+            vertexInput.get(),
+            {
+                { VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl" },
+                { VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl" }
+            }
+        );
 
-    GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
-    uiPassHandle = ui.getHandle();
-    ui.setGroup(uiGroupHandle);
-    ui.writeImage(
-        swapchainImageHandle,
-        ImageUsageType::ColorAttachment,
-        WriteMode::Preserve,
-        AttachmentLoad::Load
-    );
+        GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
+        uiPassHandle = ui.getHandle();
+        ui.setGroup(uiGroupHandle);
+        ui.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Preserve, AttachmentLoad::Load);
 
-    PresentPassBuilder present = builder.addPresentPass("PresentPass");
-    presentPassHandle = present.getHandle();
-    present.setGroup(uiGroupHandle);
-    present.setPresentationImage(swapchainImageHandle);
+        PresentPassBuilder present = builder.addPresentPass("PresentPass");
+        presentPassHandle = present.getHandle();
+        present.setGroup(uiGroupHandle);
+        present.setPresentationImage(swapchainImageHandle);
+    }
 
     engine.setGraph(builder);
     engine.initGraph();
     ctx.scene->setGpuBufferHandles(sceneHandles);
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
-
-    exportService.init(engine, engine.getExtent().width, engine.getExtent().height);
+    if (headless) {
+        VkExtent2D ext = engine.getExtent();
+        readbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(ext.width) * ext.height * 4 * sizeof(float));
+    } else {
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
+        exportService.init(engine, engine.getExtent().width, engine.getExtent().height);
+    }
 }
 
 void RenderHandler::destroy(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
+    if (headless)
+        engine.destroyBuffer(readbackBuffer);
+    else
+        exportService.destroy(engine);
     engine.destroyGraph();
-    exportService.destroy(engine);
 }
 
 void RenderHandler::buildPipelines(AppContext& ctx) {
@@ -217,6 +231,7 @@ void RenderHandler::render(AppContext& ctx) {
     uiPass(ctx);
 
     engine.present();
+    engine.advanceFrame();
 
     exportService.handleSave(ctx);
 }
@@ -233,7 +248,7 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
     exportService.init(engine, extent.width, extent.height);
 }
 
-void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameContext) {
+void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput) {
     VkSmol& engine = *ctx.engine;
 
     CommandBuffer& commandBuffer = engine.beginRecording(mainGroupHandle);
@@ -257,39 +272,90 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
     }
 
     engine.emitBarriers(commandBuffer, exportPassHandle);
-    exportService.handleCopy(ctx, commandBuffer, engine.getImage(outputImageHandle));
+    if (headless) {
+        if (captureOutput)
+            engine.getImage(outputImageHandle).copyToBuffer(commandBuffer, readbackBuffer);
+    } else {
+        exportService.handleCopy(ctx, commandBuffer, engine.getImage(outputImageHandle));
 
-    {   // Display
-        engine.emitBarriers(commandBuffer, displayPassHandle);
-        std::vector<AttachmentInfo> attachments = engine.getColorAttachment(displayPassHandle);
-        assert(attachments.size() == 1);
-        engine.beginDynamicRenderer(
-            commandBuffer,
-            attachments[0].view, attachments[0].layout,
-            attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
-            {{ 0.0f, 0.0f, 0.0f, 1.0f }}
-        );
+        {   // Display
+            engine.emitBarriers(commandBuffer, displayPassHandle);
+            std::vector<AttachmentInfo> attachments = engine.getColorAttachment(displayPassHandle);
+            assert(attachments.size() == 1);
+            engine.beginDynamicRenderer(
+                commandBuffer,
+                attachments[0].view, attachments[0].layout,
+                attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
+                {{ 0.0f, 0.0f, 0.0f, 1.0f }}
+            );
 
-        VkViewport viewport{};
-        viewport.width = (float)extent.width;
-        viewport.height = (float)extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        VkRect2D scissor{ .offset = {0, 0}, .extent = extent };
+            VkViewport viewport{};
+            viewport.width = (float)extent.width;
+            viewport.height = (float)extent.height;
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            VkRect2D scissor{ .offset = {0, 0}, .extent = extent };
 
-        GraphicsPipeline& diPipeline = engine.getGraphicsPipeline(displayPipelineHandle);
-        engine.bindDescriptors(commandBuffer, displayPassHandle);
-        diPipeline.bind(commandBuffer);
-        engine.getBuffer(vertexBufferHandle).bindVertex(commandBuffer);
-        engine.getBuffer(indexBufferHandle).bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
-        diPipeline.setViewport(commandBuffer, viewport);
-        diPipeline.setScissor(commandBuffer, scissor);
-        diPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
+            GraphicsPipeline& diPipeline = engine.getGraphicsPipeline(displayPipelineHandle);
+            engine.bindDescriptors(commandBuffer, displayPassHandle);
+            diPipeline.bind(commandBuffer);
+            engine.getBuffer(vertexBufferHandle).bindVertex(commandBuffer);
+            engine.getBuffer(indexBufferHandle).bindIndex(commandBuffer, VK_INDEX_TYPE_UINT16);
+            diPipeline.setViewport(commandBuffer, viewport);
+            diPipeline.setScissor(commandBuffer, scissor);
+            diPipeline.drawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()));
 
-        engine.endDynamicRenderer(commandBuffer);
+            engine.endDynamicRenderer(commandBuffer);
+        }
     }
 
     engine.endRecording(mainGroupHandle);
+}
+
+void RenderHandler::renderHeadless(AppContext& ctx, bool captureOutput) {
+    VkSmol& engine = *ctx.engine;
+
+    auto frameContext = engine.beginFrame();
+    if (!frameContext) return;
+
+    ctx.scene->runPreUpdate(ctx);
+    ctx.scene->runOnRender(ctx, *frameContext);
+    engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
+
+    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.screenUBO);
+
+    pathtracingPass(ctx, *frameContext, captureOutput);
+
+    engine.advanceFrame();
+}
+
+void RenderHandler::saveCapture(AppContext& ctx, const std::string& path, uint32_t width, uint32_t height) {
+    VkSmol& engine = *ctx.engine;
+    engine.waitIdle();
+
+    size_t floatCount = static_cast<size_t>(width) * height * 4;
+    std::vector<float> floatPixels(floatCount);
+    engine.readBuffer(readbackBuffer, floatPixels.data(), floatCount * sizeof(float));
+
+    std::vector<uint8_t> pixels(floatCount);
+    auto toByte = [](float v) -> uint8_t {
+        const float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+        v = std::clamp((v * (a * v + b)) / (v * (c * v + d) + e), 0.0f, 1.0f);
+        v = std::pow(v, 1.0f / 2.2f);
+        return static_cast<uint8_t>(v * 255.0f + 0.5f);
+    };
+    for (size_t i = 0; i < floatCount; i += 4) {
+        pixels[i + 0] = toByte(floatPixels[i + 0]);
+        pixels[i + 1] = toByte(floatPixels[i + 1]);
+        pixels[i + 2] = toByte(floatPixels[i + 2]);
+        pixels[i + 3] = 255;
+    }
+
+    if (stbi_write_png(path.c_str(), static_cast<int>(width), static_cast<int>(height), 4, pixels.data(), static_cast<int>(width) * 4))
+        std::cout << "[RenderHandler] Saved capture to " << path << std::endl;
+    else
+        std::cerr << "[RenderHandler] Failed to write " << path << std::endl;
 }
 
 void RenderHandler::uiPass(AppContext& ctx) {

@@ -2,11 +2,15 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <optional>
+#include <string>
 
 #include "engine/engine.hpp"
+#include "engine/platform/platform.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
+#include "scene/scene_preset.hpp"
 
 #include "app/app_context.hpp"
 #include "editor/editor_ui.hpp"
@@ -14,6 +18,8 @@
 #include "render/render_handler.hpp"
 
 #include "app/input_handler.hpp"
+
+#include "version.hpp"
 
 enum class DebugView : int {
     None = 0,
@@ -28,19 +34,22 @@ enum class DebugView : int {
 
 class Application {
 public:
-    Application();
+    explicit Application(Platform& platform);
     ~Application();
 
     void run();
+    void runHeadless(ScenePreset preset, uint32_t targetSamples, const std::string& outputPath);
 
     friend void InputHandler::initCallbacks(const AppContext& ctx);
 
 private:
+    Platform& platform;
+
     VkSmol engine;
     Scene scene;
     ParameterHandler parameters;
     NotificationHandler notifications;
-    EditorUi ui;
+    std::optional<EditorUi> ui;
     AnimationHandler animation = AnimationHandler(24.0f * 5, 24.0f);
 
     RenderState renderState;
@@ -48,21 +57,22 @@ private:
     ScreenUBO screenUBO{};
 
     bool restartRender = false;
-    
-    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, &ui, &animation, &renderState, &pathtracerUBO, &screenUBO, &restartRender };
-    
-    InputHandler inputHandler;
+
+    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, nullptr, &animation, &renderState, &pathtracerUBO, &screenUBO, &restartRender, &platform };
+
+    std::optional<InputHandler> inputHandler;
     RenderHandler renderer;
 
     int frameCount = 0;
     bool shouldClose = false;
-    
+
     void initParameters();
-    void initScene();
+    void initScene(ScenePreset preset = ScenePreset::Empty);
 
     void onFrameStart(float dt);
     void clearReaderingData(RenderMode newRenderMode);
     void handleCommands();
     void fillUBOs();
+    void fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode);
     float lastTime = 0.0f;
 };

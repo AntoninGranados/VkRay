@@ -13,6 +13,7 @@ enum class ScenePreset : int {
     Sponza,
     CornellBox,
     RandomSpheres,
+    ReferenceScene,
 };
 
 using PresetInit = std::function<void(Scene&, LightMode&)>;
@@ -24,21 +25,24 @@ void initMesh(Scene& scene, LightMode& lightMode);
 void initSponza(Scene& scene, LightMode& lightMode);
 void initCornellBox(Scene& scene, LightMode& lightMode);
 void initRandomSpheres(Scene& scene, LightMode& lightMode);
+void initReferenceScene(Scene& scene, LightMode& lightMode);
 
 static std::map<ScenePreset, std::string> scenePresetName = {
-    { ScenePreset::Empty,         "Empty" },
-    { ScenePreset::MaterialZoo,   "Material Zoo" },
-    { ScenePreset::Mesh,          "Mesh" },
-    { ScenePreset::Sponza,        "Sponza" },
-    { ScenePreset::CornellBox,    "Cornell Box" },
-    { ScenePreset::RandomSpheres, "Random Spheres" },
+    { ScenePreset::Empty,          "Empty" },
+    { ScenePreset::MaterialZoo,    "Material Zoo" },
+    { ScenePreset::Mesh,           "Mesh" },
+    { ScenePreset::Sponza,         "Sponza" },
+    { ScenePreset::CornellBox,     "Cornell Box" },
+    { ScenePreset::RandomSpheres,  "Random Spheres" },
+    { ScenePreset::ReferenceScene, "Reference Scene" },
 };
 
 static std::map<ScenePreset,PresetInit> scenePresetInitMethod = {
-    { ScenePreset::Empty,         initEmpty },
-    { ScenePreset::MaterialZoo,   initMaterialZoo },
-    { ScenePreset::Mesh,          initMesh },
-    { ScenePreset::Sponza,        initSponza },
-    { ScenePreset::CornellBox,    initCornellBox },
-    { ScenePreset::RandomSpheres, initRandomSpheres },
+    { ScenePreset::Empty,          initEmpty },
+    { ScenePreset::MaterialZoo,    initMaterialZoo },
+    { ScenePreset::Mesh,           initMesh },
+    { ScenePreset::Sponza,         initSponza },
+    { ScenePreset::CornellBox,     initCornellBox },
+    { ScenePreset::RandomSpheres,  initRandomSpheres },
+    { ScenePreset::ReferenceScene, initReferenceScene },
 };

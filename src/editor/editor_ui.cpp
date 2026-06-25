@@ -1,5 +1,8 @@
 #include "editor_ui.hpp"
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
@@ -9,6 +12,8 @@
 #include "./ui_constants.hpp"
 
 #include "engine/engine.hpp"
+#include "engine/platform/platform.hpp"
+#include "app/app_context.hpp"
 
 
 void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
@@ -76,7 +81,7 @@ void EditorUi::drawPreview(AppContext& ctx) {
 
         scene.drawGuizmo(
             camera.getView(),
-            camera.getProjection(ctx.engine->getWindow().get())
+            camera.getProjection(static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle()))
         );
     }
     ImGui::End();

@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
@@ -14,27 +17,28 @@
 #include "app/animation_handler.hpp"
 #include "scene/scene.hpp"
 #include "engine/engine.hpp"
+#include "engine/platform/platform.hpp"
 
 
 void InputHandler::initCallbacks(const AppContext& ctx) {
-    ctx.engine->getWindow().setCursorPosCallback([&ctx](double x, double y){
-        GLFWwindow* window = ctx.engine->getWindow().get();
+    ctx.platform->setCursorPosCallback([&ctx](double x, double y){
+        auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
         const bool cameraLocked = ctx.camera->isLocked();
         if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured() || ImGuizmo::IsUsing()))
             return;
         *ctx.restartRender |= ctx.camera->cursorPosCallback(window, x, y);
     });
 
-    ctx.engine->getWindow().setScrollCallback([&ctx](double xoffset, double yoffset){
-        GLFWwindow* window = ctx.engine->getWindow().get();
+    ctx.platform->setScrollCallback([&ctx](double xoffset, double yoffset){
+        auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
         if (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured()) return;
         if (ctx.renderState->renderMode != RenderMode::Preview) return;
         *ctx.restartRender |= ctx.camera->scrollCallback(window, xoffset, yoffset);
     });
 }
 
-void InputHandler::pollEvents() {
-    glfwPollEvents();
+void InputHandler::pollEvents(const AppContext& ctx) {
+    ctx.platform->pollEvents();
 }
 
 void InputHandler::handle(const AppContext& ctx, float dt) {
@@ -46,20 +50,18 @@ void InputHandler::handle(const AppContext& ctx, float dt) {
 }
 
 void InputHandler::handlePreview(const AppContext& ctx, float dt) {
-    GLFWwindow* window = ctx.engine->getWindow().get();
+    auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
     ctx.renderState->resolution = ctx.parameters->getFloat("previewResolution");
 
     const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ctx.ui->isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ctx.ui->isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
-    // Set cursor mode: hiddent when the camera is not locked or the mouse is blocked
     glfwSetInputMode(
         window,
         GLFW_CURSOR,
         (ctx.camera->isLocked() || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
     );
 
-    // Middle-click performs a focus-depth pick
     const bool middleDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
     if (!blockMouseInput && middleDown && !middleClickWasDown) {
         double xpos, ypos;
@@ -75,7 +77,6 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
     }
     middleClickWasDown = middleDown;
 
-    // Left-click pick the targeted object
     if (!blockMouseInput && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
@@ -86,13 +87,11 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
         ctx.scene->raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, true);
     }
 
-    // On escape: reopen ui if it is hidden; unselect object
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         if (!ctx.ui->isToggled()) ctx.ui->toggle();
         else ctx.scene->clearSelection();
     }
 
-    // Space toggles play/pause only on the rising edge to avoid repeat toggles while held.
     if (!blockKeyboardInput && ctx.camera->isLocked() && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
         if (!spaceWasDown) ctx.animation->toggle();
         spaceWasDown = true;
@@ -100,23 +99,21 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
         spaceWasDown = false;
     }
 
-    // Process camera input
     if (!blockKeyboardInput) {
         *ctx.restartRender |= ctx.camera->processInput(window, dt);
     }
 
-    // Restart rendering when `R` is pressed
     if (!blockKeyboardInput && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         *ctx.restartRender = true;
     }
-    
+
     if (ctx.scene->checkUpdate()) {
         *ctx.restartRender = true;
     }
 }
 
 void InputHandler::handleRender(const AppContext& ctx, float dt) {
-    GLFWwindow* window = ctx.engine->getWindow().get();
+    auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
     ctx.renderState->resolution = ctx.parameters->getFloat("renderResolution");
     updateRenderSamplesPerSecond(ctx, dt);
 
@@ -132,7 +129,6 @@ void InputHandler::updateRenderSamplesPerSecond(const AppContext& ctx, float dt)
     ctx.renderState->samplesPerSecAccumSamples += static_cast<double>(ctx.parameters->getInt("previewSamples"));
 
     if (ctx.renderState->samplesPerSecAccumTime >= 1.0) {
-        // Smooth instantaneous throughput with an EMA to reduce noisy ETA/UI updates.
         const double instant = ctx.renderState->samplesPerSecAccumSamples / std::max(ctx.renderState->samplesPerSecAccumTime, 1e-6);
         const double alpha = 1.0 - std::exp(-ctx.renderState->samplesPerSecAccumTime / 5.0);
         if (!ctx.renderState->samplesPerSecInitialized) {

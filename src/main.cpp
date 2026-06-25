@@ -1,7 +1,21 @@
-#include "application.hpp"
+#include <cstdlib>
+#include <string_view>
 
-int main()  {
-    Application application;
-    application.run();
+#include "engine/platform/glfw_platform.hpp"
+#include "engine/platform/headless_platform.hpp"
+#include "application.hpp"
+#include "scene/scene_preset.hpp"
+
+int main(int argc, char* argv[]) {
+    if (argc >= 2 && std::string_view(argv[1]) == "--reference") {
+        const std::string output = argc >= 3 ? argv[2] : "reference.png";
+        HeadlessPlatform platform(1080, 1080);
+        Application app(platform);
+        app.runHeadless(ScenePreset::ReferenceScene, 2048, output);
+    } else {
+        GLFWPlatform platform("VkRay", 1280, 720);
+        Application app(platform);
+        app.run();
+    }
     return EXIT_SUCCESS;
 }

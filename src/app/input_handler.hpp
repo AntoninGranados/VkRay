@@ -1,13 +1,11 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-
 struct AppContext;
 
 class InputHandler {
 public:
     void initCallbacks(const AppContext& ctx);
-    void pollEvents();
+    void pollEvents(const AppContext& ctx);
     void handle(const AppContext& ctx, float dt);
 
 private:

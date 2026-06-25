@@ -1,9 +1,12 @@
 #pragma once
 
+#include <string>
+
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
 #include "engine/graph/builder_resource.hpp"
+#include "engine/memory/buffer.hpp"
 
 struct FrameContext;
 
@@ -19,9 +22,17 @@ public:
     void destroy(AppContext& ctx);
     void buildPipelines(AppContext& ctx);
 
+    // Windowed: called each frame from Application::run()
     void render(AppContext& ctx);
 
+    // Headless: render one accumulated sample; captureOutput copies to readback on last frame
+    void renderHeadless(AppContext& ctx, bool captureOutput = false);
+    // Headless: write the captured frame to a PNG file
+    void saveCapture(AppContext& ctx, const std::string& path, uint32_t width, uint32_t height);
+
 private:
+    bool headless = false;
+
     const std::vector<ScreenVertex> vertices = {
         { .pos = {  1.0f, 1.0f } },
         { .pos = {  1.0f,-1.0f } },
@@ -33,33 +44,34 @@ private:
         0, 1, 2, 2, 3, 0
     };
 
+    // Windowed-only
     ImageHandle swapchainImageHandle;
+    SubmissionGroupHandle uiGroupHandle;
+    PassHandle displayPassHandle, uiPassHandle, presentPassHandle;
+    GraphicsPipelineHandle displayPipelineHandle;
+    BufferHandle vertexBufferHandle, indexBufferHandle;
+    ExportService exportService;
+    uint64_t lastSwapchainGeneration = 0;
+
+    // Common
     ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
     ImageHandle outputImageHandle;
 
-    SubmissionGroupHandle mainGroupHandle, uiGroupHandle;
+    SubmissionGroupHandle mainGroupHandle;
 
-    PassHandle pathtracePassHandle, compositePassHandle, displayPassHandle;
-    PassHandle uiPassHandle;
+    PassHandle pathtracePassHandle, compositePassHandle;
     PassHandle exportPassHandle;
-    PassHandle presentPassHandle;
 
-    // =============================================================
+    ComputePipelineHandle pathtracingPipelineHandle, compositingPipelineHandle;
 
-    ComputePipelineHandle  pathtracingPipelineHandle, compositingPipelineHandle;
-    GraphicsPipelineHandle displayPipelineHandle;
-
-    BufferHandle vertexBufferHandle, indexBufferHandle;
     BufferHandle pathtracingUBOHandle;
     BufferHandle displayUBOHandle;
     BufferHandle pixelInfoBufferHandle;
 
-    ExportService exportService;
-
-    uint64_t lastSwapchainGeneration = 0;
+    // Headless-only
+    Buffer readbackBuffer;
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
-
-    void pathtracingPass(AppContext& ctx, const FrameContext& frameContext);
+    void pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput = false);
     void uiPass(AppContext& ctx);
 };
