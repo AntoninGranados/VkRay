@@ -383,58 +383,62 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
         scene.pushSphere(name, pos, r, scene.pushMaterial(mat));
     };
 
-    // ── Walls ────────────────────────────────────────────────────────────────
-    // x=+R appears on the LEFT in camera view → red; x=-R appears on RIGHT → green; back → blue
+    const MaterialHandle floorHandle = scene.pushMaterial({
+        .name="Floor", .type=MaterialType::Programmable, .albedo={0.40f,0.40f,0.40f}
+    });
     box("Top",    {.name="Top",    .type=MaterialType::Lambertian,  .albedo={0.90f,0.90f,0.88f}}, {-R, R,      -R}, { R, R+0.1f, R});
-    box("Bottom", {.name="Bottom", .type=MaterialType::Programmable,.albedo={0.82f,0.78f,0.68f}}, {-R,-R-0.1f, -R}, { R,-R,      R});
+    scene.pushBox("Bottom", {-R,-R-0.1f,-R}, {R,-R,R}, floorHandle);
     box("Back",   {.name="Back",   .type=MaterialType::GgxGlossy,   .albedo={0.12f,0.20f,0.70f}, .roughness=0.20f, .ior=1.5f}, {-R,-R,  R}, { R, R, R+0.1f});
     box("Left",   {.name="Left",   .type=MaterialType::GgxGlossy,   .albedo={0.07f,0.62f,0.10f}, .roughness=0.20f, .ior=1.5f}, {-R-0.1f,-R,-R}, {-R, R, R});
     box("Right",  {.name="Right",  .type=MaterialType::GgxGlossy,   .albedo={0.80f,0.07f,0.05f}, .roughness=0.20f, .ior=1.5f}, { R,-R,-R}, { R+0.1f, R, R});
 
-    // ── Warm ceiling light ────────────────────────────────────────────────────
     box("Light", {.name="Light", .type=MaterialType::Emissive,
-                  .albedo={1.0f,0.72f,0.38f}, .emissionStrength=35.0f},
-        {-1.2f, R-0.1f, -1.2f}, {1.2f, R, 1.2f});
+                  .albedo={1.0f,0.72f,0.38f}, .emissionStrength=60.0f},
+        {-1.0f, R-0.02f, -1.0f}, {1.0f, R, 1.0f});
 
-    // ── Dragon (magenta glass) centered on a glossy pedestal ─────────────────
     {
+        constexpr float dragonScale      = 5.2f;
+        constexpr float dragonTranslateY = -1.4f;
+        constexpr float dragonFootY      = -0.338f; // model-space foot position
+        const float pedestalTop = dragonTranslateY + dragonScale * dragonFootY;
+
         const MaterialHandle h = scene.pushMaterial({
             .name="DragonGlass", .type=MaterialType::Dielectric,
-            .albedo={0.88f,0.38f,0.82f}, .roughness=0.10f, .ior=1.52f, .density=0.85f,
+            .albedo={0.88f,0.38f,0.82f}, .roughness=0.10f, .ior=1.45f, .density=1.0f,
         });
         glm::mat4 t(1.0f);
-        t = glm::translate(t, {0.0f, -1.3f, 1.0f});
-        t = glm::scale(t, glm::vec3(4.2f));
+        t = glm::translate(t, {0.0f, dragonTranslateY, 1.0f});
+        t = glm::scale(t, glm::vec3(dragonScale));
         t = glm::rotate(t, glm::radians(205.0f), {0.0f, 1.0f, 0.0f});
         scene.pushMesh("Dragon", "./res/model/dragon.obj", t, h);
+
+        box("Pedestal", {.name="Pedestal", .type=MaterialType::GgxGlossy,
+                         .albedo={1.0f,1.0f,1.0f}, .roughness=0.0f, .ior=8.0f},
+            {-3.25f, -R, -1.6f}, {3.25f, pedestalTop, 3.2f});
+        scene.pushBox("PedestalBorder", {-3.29f, -R, -1.64f}, {3.29f, pedestalTop - 0.02f, 3.24f}, floorHandle);
     }
-    // Glossy ivory pedestal
-    box("Pedestal", {.name="Pedestal", .type=MaterialType::GgxGlossy,
-                     .albedo={0.12f,0.12f,0.12f}, .roughness=0.08f, .ior=2.0f},
-        {-2.6f, -R, -1.0f}, {2.6f, -2.7f, 2.5f});
 
-    // ── Four accent spheres in a row in front of the pedestal ────────────────
-    const float sy = -R + 0.75f;
-    const float sz = -2.5f;
-    // Polished gold (GgxMetal) — roughness bumped by 0.05
-    sphere("Gold", {.name="Gold", .type=MaterialType::GgxMetal,
-                    .albedo={1.0f,1.0f,1.0f}, .roughness=0.10f, .ior=0.47f},
-           {-2.55f, sy, sz}, 0.75f);
+    const float sr   = 0.85f;
+    const float sy   = -R + sr + 1.5f;
+    const float sz   = -2.0f;
+    const float sgap = (2.0f * R - 4.0f * 2.0f * sr) / 5.0f;
+    const float step = 2.0f * sr + sgap;
+    const float sx0  = -R + sgap + sr;
+    sphere("Metal", {.name="Metal", .type=MaterialType::GgxMetal,
+                    .albedo={1.0f,1.0f,1.0f}, .roughness=0.10f},
+           {sx0, sy, sz}, sr);
 
-    // Orange matte (Lambertian)
-    sphere("Orange", {.name="Orange", .type=MaterialType::Lambertian,
+    sphere("Matte", {.name="Matte", .type=MaterialType::Lambertian,
                       .albedo={1.0f,1.0f,1.0f}},
-           {-0.85f, sy, sz}, 0.75f);
+           {sx0 + step, sy, sz}, sr);
 
-    // Frosted glass (Dielectric)
     sphere("FrostedGlass", {.name="FrostedGlass", .type=MaterialType::Dielectric,
                              .albedo={1.0f,1.0f,1.0f}, .roughness=0.08f, .ior=1.45f},
-           {0.85f, sy, sz}, 0.75f);
+           {sx0 + 2.0f * step, sy, sz}, sr);
 
-    // Near-mirror glossy
     sphere("Glossy", {.name="Glossy", .type=MaterialType::GgxGlossy,
-                      .albedo={1.0f,1.0f,1.0f}, .roughness=0.04f, .ior=1.5f},
-           {2.55f, sy, sz}, 0.75f);
+                      .albedo={1.0f,1.0f,1.0f}, .roughness=0.06f, .ior=1.5f},
+           {sx0 + 3.0f * step, sy, sz}, sr);
 }
 
 #define RAND_FLOAT static_cast<float>(rand() % 100000) / 100000.0f

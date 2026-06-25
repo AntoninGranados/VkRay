@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include <string_view>
 
-#include "engine/platform/glfw_platform.hpp"
-#include "engine/platform/headless_platform.hpp"
+#include "VkSmol/platform/glfw_platform.hpp"
+#include "VkSmol/platform/headless_platform.hpp"
 #include "application.hpp"
 #include "scene/scene_preset.hpp"
 

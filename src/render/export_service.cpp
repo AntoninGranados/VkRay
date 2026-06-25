@@ -53,7 +53,7 @@ void ExportService::handleSave(AppContext& ctx) {
     }
 
     if (ctx.renderState->pendingExit) {
-        ctx.ui->restorToggledState();
+        ctx.ui->restoreToggledState();
         ctx.renderState->renderMode = RenderMode::Preview;
         ctx.renderState->pendingExit = false;
         ctx.renderState->samplesPerSecEMA = 0.0;

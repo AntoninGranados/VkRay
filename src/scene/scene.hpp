@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "engine/engine.hpp"
+#include "VkSmol/engine.hpp"
 #include "camera.hpp"
 
 // #include "object/object_buffers.hpp"

@@ -8,6 +8,7 @@
 
 enum class ScenePreset : int {
     Empty,
+    Pyramid,
     MaterialZoo,
     Mesh,
     Sponza,
@@ -29,6 +30,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode);
 
 static std::map<ScenePreset, std::string> scenePresetName = {
     { ScenePreset::Empty,          "Empty" },
+    { ScenePreset::Pyramid,        "Pyramid" },
     { ScenePreset::MaterialZoo,    "Material Zoo" },
     { ScenePreset::Mesh,           "Mesh" },
     { ScenePreset::Sponza,         "Sponza" },
@@ -39,6 +41,7 @@ static std::map<ScenePreset, std::string> scenePresetName = {
 
 static std::map<ScenePreset,PresetInit> scenePresetInitMethod = {
     { ScenePreset::Empty,          initEmpty },
+    { ScenePreset::Pyramid,        initPyramid },
     { ScenePreset::MaterialZoo,    initMaterialZoo },
     { ScenePreset::Mesh,           initMesh },
     { ScenePreset::Sponza,         initSponza },

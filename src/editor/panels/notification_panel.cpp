@@ -18,7 +18,7 @@ void NotificationPanel::draw(AppContext& ctx) {
     {
         ImGui::BeginChild("MessagesRegion", { 0, -ImGui::GetFrameHeightWithSpacing() }, 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-        for (auto& n : ctx.notifications->notifications) {
+        for (auto& n : ctx.notifications->getNotifications()) {
             std::string label = "";
             ImVec4 color;
             switch (n.type) {
@@ -52,7 +52,7 @@ void NotificationPanel::draw(AppContext& ctx) {
         ImGui::PushItemWidth(-FLT_MIN);
         if (ImGui::InputText("##Input", buff, IM_ARRAYSIZE(buff), ImGuiInputTextFlags_EnterReturnsTrue))
         {
-            ctx.notifications->notifications.push_back({ NotificationType::Command, buff });
+            ctx.notifications->pushMessage(NotificationType::Command, buff);
             ctx.notifications->parseInput(buff);
             buff[0] = '\0';
         }

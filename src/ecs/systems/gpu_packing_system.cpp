@@ -4,8 +4,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "engine/engine.hpp"
-#include "engine/frame_context.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/frame_context.hpp"
 #include "scene/scene.hpp"
 #include "scene/object/object.hpp"
 #include "app/app_context.hpp"

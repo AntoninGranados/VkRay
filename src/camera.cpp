@@ -2,6 +2,9 @@
 
 #include <cmath>
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 namespace {
 
 void updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch) {
@@ -21,7 +24,7 @@ Camera::Camera(glm::vec3 position)
     updateYawPitchFromDirection(getDirection(), yaw, pitch);
 }
 
-bool Camera::cursorPosCallback(GLFWwindow* window, double x, double y) {
+bool Camera::cursorPosCallback(double x, double y) {
     if (locked || dragMode == DragMode::None) return false;
 
     bool change = false;
@@ -88,7 +91,7 @@ bool Camera::cursorPosCallback(GLFWwindow* window, double x, double y) {
     return change;
 }
 
-bool Camera::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+bool Camera::scrollCallback(double xoffset, double yoffset) {
     float newFov = getFov() - static_cast<float>(yoffset);
     if (newFov < 1.0f) newFov = 1.0f;
     if (newFov > 160.0f) newFov = 160.0f;
@@ -96,18 +99,18 @@ bool Camera::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) 
     return yoffset != 0;
 }
 
-bool Camera::processInput(GLFWwindow* window, float deltaTime) {
+bool Camera::processInput(Platform& platform, float deltaTime) {
     float velocity = speed * deltaTime;
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+    if (platform.getKey(GLFW_KEY_LEFT_CONTROL)) {
         velocity /= 8.0f;
     }
 
     bool change = false;
 
-    const bool rmb = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    const bool mmb = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
-    const bool shift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    const bool ctrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    const bool rmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
+    const bool mmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
+    const bool shift = platform.getKey(GLFW_KEY_LEFT_SHIFT) || platform.getKey(GLFW_KEY_RIGHT_SHIFT);
+    const bool ctrl  = platform.getKey(GLFW_KEY_LEFT_CONTROL) || platform.getKey(GLFW_KEY_RIGHT_CONTROL);
 
     DragMode newDragMode = DragMode::None;
     if (rmb) {
@@ -133,32 +136,32 @@ bool Camera::processInput(GLFWwindow* window, float deltaTime) {
         glm::vec3 dir = getDirection();
         glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_W)) {
             position += dir * velocity;
             target += dir * velocity;
             change = true;
         }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_S)) {
             position -= dir * velocity;
             target -= dir * velocity;
             change = true;
         }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_A)) {
             position -= right * velocity;
             target -= right * velocity;
             change = true;
         }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_D)) {
             position += right * velocity;
             target += right * velocity;
             change = true;
         }
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_SPACE)) {
             position += getUp() * velocity;
             target += getUp() * velocity;
             change = true;
         }
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        if (platform.getKey(GLFW_KEY_LEFT_SHIFT)) {
             position -= getUp() * velocity;
             target -= getUp() * velocity;
             change = true;

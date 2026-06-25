@@ -1,20 +1,21 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "editor/panels/camera_panel.hpp"
+#include "VkSmol/platform/platform.hpp"
+
+struct GLFWwindow;
 
 class Camera {
 public:
     Camera(glm::vec3 position = glm::vec3(0.0f));
 
-    bool cursorPosCallback(GLFWwindow* window, double x, double y);
-    bool scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-    bool processInput(GLFWwindow* window, float deltaTime);
-    
+    bool cursorPosCallback(double x, double y);
+    bool scrollCallback(double xoffset, double yoffset);
+    bool processInput(Platform& platform, float deltaTime);
+
     float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
     glm::vec3 getDirection() const { return glm::normalize(target - position); };
     glm::vec3 getUp() const { return up; }

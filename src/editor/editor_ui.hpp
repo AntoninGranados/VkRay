@@ -2,7 +2,7 @@
 
 #include "app/app_context.hpp"
 
-#include "engine/command/command_buffer.hpp"
+#include "VkSmol/command/command_buffer.hpp"
 #include "panels/stats_panel.hpp"
 #include "panels/animation_panel.hpp"
 #include "panels/render_panel.hpp"
@@ -22,7 +22,7 @@ public:
     void toggle() { toggled = !toggled; }
     void setToggle(bool newToggle) { toggled = newToggle; }
     void saveToggledState() { toggleState = toggled; }
-    void restorToggledState() { toggled = toggleState; }
+    void restoreToggledState() { toggled = toggleState; }
 
     bool isMouseCaptured() { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }

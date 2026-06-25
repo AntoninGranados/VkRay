@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "engine/engine.hpp"
+#include "VkSmol/engine.hpp"
 #include "app/app_context.hpp"
 
 #define OUTPUT_DIR "outputs"

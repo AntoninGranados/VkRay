@@ -9,6 +9,8 @@
 #include "scene/scene_preset.hpp"
 #include "scene/object/object.hpp"
 
+#include "version.hpp"
+
 // Public
 Application::Application(Platform& p) : platform(p) {
     engine.init("VkRay", VK_RAY_VERSION, platform);
@@ -75,6 +77,8 @@ void Application::runHeadless(ScenePreset preset, uint32_t targetSamples, const 
     engine.waitIdle();
     restartRender = true;
 
+    const auto startTime = std::chrono::steady_clock::now();
+
     for (uint32_t i = 0; i < targetSamples; ++i) {
         fillHeadlessUBOs(static_cast<int>(i), targetSamples, lightMode);
         renderer.renderHeadless(ctx, i == targetSamples - 1);
@@ -82,11 +86,17 @@ void Application::runHeadless(ScenePreset preset, uint32_t targetSamples, const 
         const float progress = static_cast<float>(i + 1) / static_cast<float>(targetSamples);
         const int filled = static_cast<int>(progress * kBarWidth);
 
+        const double elapsedSec = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
+        const double etaSec = elapsedSec / progress - elapsedSec;
+        const int etaMin  = static_cast<int>(etaSec) / 60;
+        const int etaSecs = static_cast<int>(etaSec) % 60;
+
         std::cout << "\r[";
         for (int j = 0; j < kBarWidth; ++j)
             std::cout << (j < filled ? '=' : ' ');
         std::cout << "] " << static_cast<int>(progress * 100.0f)
-                  << "% (" << (i + 1) << "/" << targetSamples << " spp)  ";
+                  << "% (" << (i + 1) << "/" << targetSamples << " spp)"
+                  << "  ETA " << etaMin << "m" << etaSecs << "s  ";
         std::cout.flush();
     }
     std::cout << '\n';
@@ -161,7 +171,7 @@ void Application::onFrameStart(float dt) {
     renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
 }
 
-void Application::clearReaderingData(RenderMode newRenderMode) {
+void Application::clearRenderingData(RenderMode newRenderMode) {
     scene.clearSelection();
     if (ui) {
         ui->saveToggledState();
@@ -181,11 +191,11 @@ void Application::handleCommands() {
         shouldClose = true;
     } if (notifications.isCommandRequested(Command::Render)) {
         if (renderState.renderMode == RenderMode::Preview) {
-            clearReaderingData(RenderMode::RenderSingle);
+            clearRenderingData(RenderMode::RenderSingle);
         }
     } if (notifications.isCommandRequested(Command::RenderAnim)) {
         if (renderState.renderMode == RenderMode::Preview) {
-            clearReaderingData(RenderMode::RenderAnimation);
+            clearRenderingData(RenderMode::RenderAnimation);
             animation.reset(0);
         }
     } if (notifications.isCommandRequested(Command::Reload)) {

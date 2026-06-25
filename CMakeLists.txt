@@ -27,7 +27,7 @@ configure_file(
   "${CMAKE_BINARY_DIR}/version.hpp"
 )
 
-# ── Engine submodule ──────────────────────────────────────────────────────────
+# ── Dependencies ──────────────────────────────────────────────────────────────
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 
@@ -43,26 +43,28 @@ endif()
 file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/third_party/imgui/*.cpp")
 add_library(imgui_third_party STATIC ${VKRAY_IMGUI_SOURCES})
 target_include_directories(imgui_third_party PUBLIC
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/include/imgui"
+  "${CMAKE_SOURCE_DIR}/third_party/imgui"
 )
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
 
-set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include;${CMAKE_SOURCE_DIR}/include/imgui")
-add_subdirectory("${CMAKE_SOURCE_DIR}/src/engine" engine)
+# ── Engine submodule ──────────────────────────────────────────────────────────
+set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/imgui;${CMAKE_SOURCE_DIR}/third_party")
+add_subdirectory("${CMAKE_SOURCE_DIR}/libs/VkSmol" engine)
 
 # ── Sources ───────────────────────────────────────────────────────────────────
 file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
 set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
 list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
-list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/engine/.*\\.cpp$")
 
 add_executable(vkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 target_include_directories(vkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/include/imgui"
+  "${CMAKE_SOURCE_DIR}/libs"
+  "${CMAKE_SOURCE_DIR}/third_party/imgui"
+  "${CMAKE_SOURCE_DIR}/third_party/FontAwesome"
+  "${CMAKE_SOURCE_DIR}/third_party"
+  "${CMAKE_SOURCE_DIR}/third_party/tiny_obj_loader"
   "${CMAKE_BINARY_DIR}"
 )
 

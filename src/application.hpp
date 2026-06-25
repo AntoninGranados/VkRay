@@ -5,8 +5,8 @@
 #include <optional>
 #include <string>
 
-#include "engine/engine.hpp"
-#include "engine/platform/platform.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/platform/platform.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
@@ -18,8 +18,6 @@
 #include "render/render_handler.hpp"
 
 #include "app/input_handler.hpp"
-
-#include "version.hpp"
 
 enum class DebugView : int {
     None = 0,
@@ -70,7 +68,7 @@ private:
     void initScene(ScenePreset preset = ScenePreset::Empty);
 
     void onFrameStart(float dt);
-    void clearReaderingData(RenderMode newRenderMode);
+    void clearRenderingData(RenderMode newRenderMode);
     void handleCommands();
     void fillUBOs();
     void fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode);

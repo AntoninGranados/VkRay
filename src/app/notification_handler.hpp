@@ -1,8 +1,7 @@
 #pragma once
 
-#include "editor/panels/notification_panel.hpp"
-
 #include <vector>
+#include <string>
 
 enum NotificationType : int{
     Info,
@@ -37,10 +36,10 @@ public:
 
     bool isCommandRequested(enum Command command);
 
-    friend NotificationPanel;
+    const std::vector<Notification>& getNotifications() const { return notifications; }
+    void parseInput(char* buff);
 
 private:
-    void parseInput(char* buff);
     void pushHelp();
     void pushKeymaps();
 
@@ -56,7 +55,7 @@ private:
         { "render-anim", "render animation mode (ESC to go to normal)" },
         { "reload", "reload the shaders" },
     };
-    
+
     std::vector<std::pair<std::string, std::string> > keymaps = {
         { "RMB + W/A/S/D/SPACE/SHFT", "Fly mode (camera)" },
         { "MMB", "Orbit mode (camera)" },

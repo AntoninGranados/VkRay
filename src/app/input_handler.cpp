@@ -16,24 +16,22 @@
 #include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
 #include "scene/scene.hpp"
-#include "engine/engine.hpp"
-#include "engine/platform/platform.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/platform/platform.hpp"
 
 
 void InputHandler::initCallbacks(const AppContext& ctx) {
     ctx.platform->setCursorPosCallback([&ctx](double x, double y){
-        auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
         const bool cameraLocked = ctx.camera->isLocked();
         if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured() || ImGuizmo::IsUsing()))
             return;
-        *ctx.restartRender |= ctx.camera->cursorPosCallback(window, x, y);
+        *ctx.restartRender |= ctx.camera->cursorPosCallback(x, y);
     });
 
     ctx.platform->setScrollCallback([&ctx](double xoffset, double yoffset){
-        auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
         if (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured()) return;
         if (ctx.renderState->renderMode != RenderMode::Preview) return;
-        *ctx.restartRender |= ctx.camera->scrollCallback(window, xoffset, yoffset);
+        *ctx.restartRender |= ctx.camera->scrollCallback(xoffset, yoffset);
     });
 }
 
@@ -50,24 +48,21 @@ void InputHandler::handle(const AppContext& ctx, float dt) {
 }
 
 void InputHandler::handlePreview(const AppContext& ctx, float dt) {
-    auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
     ctx.renderState->resolution = ctx.parameters->getFloat("previewResolution");
 
     const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ctx.ui->isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ctx.ui->isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
-    glfwSetInputMode(
-        window,
-        GLFW_CURSOR,
+    ctx.platform->setCursorMode(
         (ctx.camera->isLocked() || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
     );
 
-    const bool middleDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+    const bool middleDown = ctx.platform->getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
     if (!blockMouseInput && middleDown && !middleClickWasDown) {
         double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
+        ctx.platform->getCursorPos(xpos, ypos);
         int width, height;
-        glfwGetWindowSize(window, &width, &height);
+        ctx.platform->getWindowSize(width, height);
         float dist;
         glm::vec3 p;
         if (ctx.scene->raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, false, false)) {
@@ -77,22 +72,22 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
     }
     middleClickWasDown = middleDown;
 
-    if (!blockMouseInput && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (!blockMouseInput && ctx.platform->getMouseButton(GLFW_MOUSE_BUTTON_LEFT)) {
         double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
+        ctx.platform->getCursorPos(xpos, ypos);
         int width, height;
-        glfwGetWindowSize(window, &width, &height);
+        ctx.platform->getWindowSize(width, height);
         float dist;
         glm::vec3 p;
         ctx.scene->raycast({ xpos, ypos }, { static_cast<float>(width), static_cast<float>(height) }, dist, p, true);
     }
 
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    if (ctx.platform->getKey(GLFW_KEY_ESCAPE)) {
         if (!ctx.ui->isToggled()) ctx.ui->toggle();
         else ctx.scene->clearSelection();
     }
 
-    if (!blockKeyboardInput && ctx.camera->isLocked() && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    if (!blockKeyboardInput && ctx.camera->isLocked() && ctx.platform->getKey(GLFW_KEY_SPACE)) {
         if (!spaceWasDown) ctx.animation->toggle();
         spaceWasDown = true;
     } else {
@@ -100,10 +95,10 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
     }
 
     if (!blockKeyboardInput) {
-        *ctx.restartRender |= ctx.camera->processInput(window, dt);
+        *ctx.restartRender |= ctx.camera->processInput(*ctx.platform, dt);
     }
 
-    if (!blockKeyboardInput && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+    if (!blockKeyboardInput && ctx.platform->getKey(GLFW_KEY_R)) {
         *ctx.restartRender = true;
     }
 
@@ -113,12 +108,11 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
 }
 
 void InputHandler::handleRender(const AppContext& ctx, float dt) {
-    auto* window = static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle());
     ctx.renderState->resolution = ctx.parameters->getFloat("renderResolution");
     updateRenderSamplesPerSecond(ctx, dt);
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    ctx.platform->setCursorMode(GLFW_CURSOR_NORMAL);
+    if (ctx.platform->getKey(GLFW_KEY_ESCAPE)) {
         returnToPreview(ctx);
     }
 }
@@ -143,7 +137,7 @@ void InputHandler::updateRenderSamplesPerSecond(const AppContext& ctx, float dt)
 }
 
 void InputHandler::returnToPreview(const AppContext& ctx) {
-    ctx.ui->restorToggledState();
+    ctx.ui->restoreToggledState();
     ctx.renderState->renderMode = RenderMode::Preview;
     ctx.renderState->pendingExit = false;
     ctx.renderState->samplesPerSecEMA = 0.0;

@@ -8,33 +8,33 @@
 #include <stb_image/stb_image_write.h>
 #include "./imgui/imgui.h"
 
-#include "engine/engine.hpp"
-#include "engine/render/pipeline/vertex_input.hpp"
-#include "engine/graph/graph_utils.hpp"
-#include "engine/graph/pass/compute_pass_builder.hpp"
-#include "engine/graph/pass/graphics_pass_builder.hpp"
-#include "engine/graph/pass/present_pass_builder.hpp"
-#include "engine/graph/pass/transfer_pass_builder.hpp"
-#include "engine/graph/render_graph_builder.hpp"
-#include "engine/graph/builder_resource.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/render/pipeline/vertex_input.hpp"
+#include "VkSmol/graph/graph_utils.hpp"
+#include "VkSmol/graph/pass/compute_pass_builder.hpp"
+#include "VkSmol/graph/pass/graphics_pass_builder.hpp"
+#include "VkSmol/graph/pass/present_pass_builder.hpp"
+#include "VkSmol/graph/pass/transfer_pass_builder.hpp"
+#include "VkSmol/graph/render_graph_builder.hpp"
+#include "VkSmol/graph/builder_resource.hpp"
 
 #include "app/app_context.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
-#include "engine/image/image.hpp"
+#include "VkSmol/image/image.hpp"
 #include "scene/scene.hpp"
 #include "editor/editor_ui.hpp"
 
 void RenderHandler::init(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-    headless = engine.isHeadless();
+
 
     RenderGraphBuilder builder;
     mainGroupHandle = builder.addSubmissionGroup("Main");
-    if (!headless)
+    if (!engine.isHeadless())
         uiGroupHandle = builder.addSubmissionGroup("Ui");
 
-    if (!headless) {
+    if (!engine.isHeadless()) {
         swapchainImageHandle = builder.importImage(
             "SwapchainImage",
             VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -63,7 +63,7 @@ void RenderHandler::init(AppContext& ctx) {
         engine.getExtent().width, engine.getExtent().height
     );
 
-    if (!headless) {
+    if (!engine.isHeadless()) {
         vertexBufferHandle = builder.createStaticBuffer("FullscreenVertexBuffer", vertices.data(), sizeof(ScreenVertex) * vertices.size());
         indexBufferHandle  = builder.createStaticBuffer("FullscreenIndexBuffer",  indices.data(),  sizeof(index_t)     * indices.size());
     }
@@ -125,7 +125,7 @@ void RenderHandler::init(AppContext& ctx) {
     exportPass.setGroup(mainGroupHandle);
     exportPass.copyFrom(outputImageHandle);
 
-    if (!headless) {
+    if (!engine.isHeadless()) {
         GraphicsPassBuilder display = builder.addGraphicsPass("DisplayPass");
         displayPassHandle = display.getHandle();
         display.setGroup(mainGroupHandle);
@@ -160,7 +160,7 @@ void RenderHandler::init(AppContext& ctx) {
     engine.initGraph();
     ctx.scene->setGpuBufferHandles(sceneHandles);
 
-    if (headless) {
+    if (engine.isHeadless()) {
         VkExtent2D ext = engine.getExtent();
         readbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(ext.width) * ext.height * 4 * sizeof(float));
     } else {
@@ -172,7 +172,7 @@ void RenderHandler::init(AppContext& ctx) {
 
 void RenderHandler::destroy(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-    if (headless)
+    if (engine.isHeadless())
         engine.destroyBuffer(readbackBuffer);
     else
         exportService.destroy(engine);
@@ -272,7 +272,7 @@ void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameCo
     }
 
     engine.emitBarriers(commandBuffer, exportPassHandle);
-    if (headless) {
+    if (engine.isHeadless()) {
         if (captureOutput)
             engine.getImage(outputImageHandle).copyToBuffer(commandBuffer, readbackBuffer);
     } else {

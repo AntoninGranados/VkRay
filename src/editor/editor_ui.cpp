@@ -11,8 +11,8 @@
 #include "scene/scene.hpp"
 #include "./ui_constants.hpp"
 
-#include "engine/engine.hpp"
-#include "engine/platform/platform.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/platform/glfw_platform.hpp"
 #include "app/app_context.hpp"
 
 
@@ -81,7 +81,7 @@ void EditorUi::drawPreview(AppContext& ctx) {
 
         scene.drawGuizmo(
             camera.getView(),
-            camera.getProjection(static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle()))
+            camera.getProjection(static_cast<GLFWPlatform*>(ctx.platform)->getWindow())
         );
     }
     ImGui::End();

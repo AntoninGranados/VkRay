@@ -5,8 +5,8 @@
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
-#include "engine/graph/builder_resource.hpp"
-#include "engine/memory/buffer.hpp"
+#include "VkSmol/graph/builder_resource.hpp"
+#include "VkSmol/memory/buffer.hpp"
 
 struct FrameContext;
 
@@ -31,8 +31,6 @@ public:
     void saveCapture(AppContext& ctx, const std::string& path, uint32_t width, uint32_t height);
 
 private:
-    bool headless = false;
-
     const std::vector<ScreenVertex> vertices = {
         { .pos = {  1.0f, 1.0f } },
         { .pos = {  1.0f,-1.0f } },
