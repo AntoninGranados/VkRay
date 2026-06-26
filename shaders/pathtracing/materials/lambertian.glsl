@@ -29,7 +29,8 @@ BSDFSample sampleLambertianBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     bsdf.weight  = eval.f * cosB / eval.pdf;
     bsdf.pdf     = eval.pdf;
     bsdf.isDelta = false;
-    bsdf.medium.isInside = false;
+    bsdf.medium.isDielectric = false;
+    bsdf.medium.isVolume = false;
     return bsdf;
 }
 

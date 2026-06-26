@@ -52,7 +52,8 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
     bsdf.weight  = eval.f * cosB / max(eval.pdf, EPS);
     bsdf.pdf     = eval.pdf;
     bsdf.isDelta = false;
-    bsdf.medium.isInside = false;
+    bsdf.medium.isDielectric = false;
+    bsdf.medium.isVolume = false;
     return bsdf;
 }
 

@@ -241,6 +241,7 @@ void materialPackingSystem(Registry&, AppContext& ctx, const FrameContext& frame
             .transmission = mat.transmission,
             .emissionStrength = mat.emissionStrength,
             .density = mat.density,
+            .anisotropic = mat.anisotropic,
         });
     }
 

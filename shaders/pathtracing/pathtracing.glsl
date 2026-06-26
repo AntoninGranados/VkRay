@@ -9,6 +9,8 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "lights.glsl"
 #include "global.glsl"
 #include "random.glsl"
+#include "sky.glsl"
+#include "adaptive_sampling.glsl"
 
 layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
 
@@ -51,34 +53,6 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     return bestHit;
 }
 
-vec3 skyColor(vec3 dir) {
-    float t = clamp(0.5*(dir.y + 1.0), 0.0, 1.0);
-    vec3 zenith, horizon;
-
-    switch (ubo.lightMode) {
-        case lightMode_Day:
-            zenith = vec3(0.5, 0.7, 1.0);
-            horizon = vec3(1.0, 1.0, 1.0);
-            break;
-        case lightMode_Sunset:
-            zenith = vec3(0.2, 0.1, 0.4);
-            horizon = vec3(1.0, 0.4, 0.2);
-            break;
-        case lightMode_Night:
-            zenith  = vec3(0.01, 0.01, 0.03);
-            horizon = vec3(0.05, 0.05, 0.1);
-            break;
-        case lightMode_Empty:
-            return vec3(0.0);
-            break;
-        default:
-            return vec3(1.0, 0.0, 1.0);
-            break;
-    }
-
-    return mix(horizon, zenith, t);
-}
-
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
@@ -113,9 +87,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     }
 
     if (ubo.debugView == debug_HitChecks) {
-        // float v = float(stats.bvhChecks) / 256.0;
-        // if (v > 1.0) return vec3(1.0, 0.0, 0.0);
-        // return vec3(v);
         float bvh = float(stats.bvhChecks) / 256.0;
         float tri = float(stats.triangleChecks) / 256.0;
         if (max(bvh, tri) > 1.0) return vec3(1.0);
@@ -135,17 +106,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         vec3(0.0),
         0.0,
         false,
-        BSDFMediumInfo(false, vec3(1.0), 1.0)
+        BSDFMediumInfo(false, false, vec3(1.0), 1.0, 0.0)
     );
     Hit prevHit;
+    BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
 
     for (; i < ubo.maxBounces; i++) {
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
-            if (prevBsdf.medium.isInside) {
-                throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
-            }
             if (mat.emissionStrength > 0) {
                 if (i == 0) {
                     radiance = mat.albedo * mat.emissionStrength;
@@ -168,6 +137,9 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
             if (bsdf.pdf < EPS && !bsdf.isDelta) {
                 break;
+            }
+            if (mat.type == mat_Volume) {
+                currentMedium = hit.frontFace ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
             }
             if (ubo.importanceSampling == 1 && !bsdf.isDelta) {
                 lightSample = sampleLight(hit, seed);
@@ -192,6 +164,36 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
             ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
             hit = intersection(ray, false, INFINITY, stats);
+
+            // Might not be the best place, but we can use the new `hit` here
+            if (currentMedium.isVolume) {
+                float sigma_t = currentMedium.density;
+                float t_scatter = -log(rand(seed)) / sigma_t;
+                if (t_scatter > hit.t) {
+                    throughput *= exp(-sigma_t * hit.t);
+                } else {
+                    ray.origin += ray.dir * t_scatter;
+
+                    if (ubo.importanceSampling == 1) {
+                        Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE);
+                        LightSample volLight = sampleLight(scatterHit, seed);
+                        if (volLight.pdf > EPS) {
+                            float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
+                            float wMIS = (volLight.pdf*volLight.pdf) / (volLight.pdf*volLight.pdf + phase*phase);
+                            radiance += throughput * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
+                        }
+                    }
+
+                    ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
+                    throughput *= currentMedium.absorption;
+                    hit = intersection(ray, false, INFINITY, stats);
+                    continue;
+                }
+            }
+            if (prevBsdf.medium.isDielectric) {
+                throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
+            }
+            
         } else {
             radiance += throughput * skyColor(ray.dir);
             break;
@@ -203,58 +205,6 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         return vec3(i / float(ubo.maxBounces));
     }
     return radiance;
-}
-
-uint varianceIndexFromCoord(ivec2 coord, ivec2 texSize) {
-    return uint(coord.y * texSize.x + coord.x);
-}
-
-ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
-    ivec2 blockCoord = pixelCoord;
-    if (resolution > 1.0f) {
-        blockCoord = ivec2(floor(screenCoord / resolution) * resolution);
-    }
-    return clamp(blockCoord, ivec2(0), texSize - ivec2(1));
-}
-
-void updateVariance(in float value, inout PixelInfo pixelInfo) {
-    float delta = value - pixelInfo.mean;
-    pixelInfo.mean += delta / pixelInfo.count;
-    float delta2 = value - pixelInfo.mean;
-    pixelInfo.m2 += delta * delta2;
-}
-
-float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
-    const int radius = 2;
-    float mean = 0.0;
-    float meanSq = 0.0;
-    int samples = 0;
-    float stepSize = max(ubo.resolution, 1.0);
-    for (int y = -radius; y <= radius; y++) {
-        for (int x = -radius; x <= radius; x++) {
-            ivec2 p = blockCoord + ivec2(x, y) * int(stepSize);
-            p = clamp(p, ivec2(0), ivec2(texSize) - ivec2(1));
-            vec3 c = texelFetch(prevTex, p, 0).rgb;
-            float lum = luma(c);
-            mean += lum;
-            meanSq += lum * lum;
-            samples++;
-        }
-    }
-    mean /= float(samples);
-    meanSq /= float(samples);
-    return sqrt(max(meanSq - mean * mean, 0.0));
-}
-
-float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec2 texSize, float resolution) {
-    float temporalVariance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
-    float spatialSigma = computeSpatialVariance(blockCoord, texSize);
-
-    float sigma = mix(sqrt(max(temporalVariance, 0.0)), spatialSigma, 0.5);
-    float minAdaptiveSamples = max(float(ubo.varianceWarmupSamples), 0.0);
-    float proba = clamp(sigma * 4.0, 0.1, 1.0);
-    pixelInfo.varianceProba = proba;
-    return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;
 }
 
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {

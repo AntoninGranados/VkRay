@@ -9,30 +9,6 @@
 
 #define Enum int
 
-// ============== MATERIAL ==============
-float luma(vec3 c) {
-    return dot(c, vec3(0.2126, 0.7152, 0.0722));
-}
-
-#define mat_Principled   Enum(0)
-#define mat_Emissive     Enum(1)
-#define mat_Lambertian   Enum(2)
-#define mat_GgxMetal     Enum(3)
-#define mat_GgxGlossy    Enum(4)
-#define mat_Dielectric   Enum(5)
-#define mat_Programmable Enum(6)
-
-struct Material {
-    Enum type;
-    vec3 albedo;
-    float roughness;
-    float metalness;
-    float ior;
-    float transmission;
-    float emissionStrength;
-    float density;
-};
-
 #define MaterialHandle int
 
 // ============== OBJECTS  ==============

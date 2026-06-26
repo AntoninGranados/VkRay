@@ -14,6 +14,7 @@ enum MaterialType {
     GgxMetal,
     GgxGlossy,
     Dielectric,
+    Volume,
     Programmable,
 };
 
@@ -26,6 +27,7 @@ struct GpuMaterial {
     float transmission;
     float emissionStrength;
     float density;
+    float anisotropic;
 };
 
 struct Material {
@@ -38,6 +40,7 @@ struct Material {
     float transmission     = 0.0f;
     float emissionStrength = 0.0f;
     float density          = 1.0f;
+    float anisotropic      = 0.0f;
 };
 
 #define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }
@@ -48,6 +51,7 @@ bool drawLambertianUI(Material& mat);
 bool drawGgxMetalUI(Material& mat);
 bool drawGgxGlossyUI(Material& mat);
 bool drawDielectricUI(Material& mat);
+bool drawVolumeUI(Material& mat);
 bool drawProgrammableUI(Material& mat);
 
 bool drawMaterialUI(Material& mat);

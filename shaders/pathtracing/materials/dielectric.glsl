@@ -48,7 +48,8 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     bsdf.weight  = weight;
     bsdf.pdf     = pdf;
     bsdf.isDelta = true;
-    bsdf.medium.isInside = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
+    bsdf.medium.isDielectric = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
+    bsdf.medium.isVolume = false;
     bsdf.medium.absorption = mat.albedo;
     bsdf.medium.density = mat.density;
     return bsdf;

@@ -332,11 +332,15 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
     quad("Back",  {.name="Back",  .type=MaterialType::GgxGlossy,  .albedo={0.10f,0.18f,0.72f}, .roughness=0.20f, .ior=1.5f}, {0, 0,  R}, { 0, 0,-1}, wallSize);
     quad("Left",  {.name="Left",  .type=MaterialType::GgxGlossy,  .albedo={0.06f,0.65f,0.08f}, .roughness=0.20f, .ior=1.5f}, {-R, 0, 0}, { 1, 0, 0}, wallSize);
     quad("Right", {.name="Right", .type=MaterialType::GgxGlossy,  .albedo={0.82f,0.06f,0.04f}, .roughness=0.20f, .ior=1.5f}, { R, 0, 0}, {-1, 0, 0}, wallSize);
-    quad("Front", {.name="Front", .type=MaterialType::Lambertian,  .albedo={0.10f,0.10f,0.10f}}, {0, 0, -R}, { 0, 0, 1}, wallSize);
+    quad("Front", {.name="Front", .type=MaterialType::Lambertian,  .albedo={0.08f,0.08f,0.08f}}, {0, 0, -R}, { 0, 0, 1}, wallSize);
 
     box("Light", {.name="Light", .type=MaterialType::Emissive,
-                  .albedo={1.0f,0.72f,0.38f}, .emissionStrength=60.0f},
-        {-1.0f, R-0.02f, -1.0f}, {1.0f, R, 1.0f});
+                  .albedo={1.0f,0.72f,0.38f}, .emissionStrength=400.0f},
+        {-0.3f, R-0.02f, -0.3f}, {0.3f, R, 0.3f});
+    
+    box("Smoke", {.name="Smoke", .type=MaterialType::Volume,
+                  .albedo={0.6f, 0.6f, 0.6f}, .density=0.02, .anisotropic=0.5f},
+        {-4.01f, -4.01f, -4.01f}, {4.01f, 4.01f, 4.01f});
 
     {
         constexpr float dragonScale      = 5.2f;

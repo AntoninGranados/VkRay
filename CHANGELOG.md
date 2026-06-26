@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0]
+
+### Added
+- Homogeneous participating media (`mat_Volume`)
+  - Free-flight sampling with Beer-Lambert transmittance
+  - Henyey-Greenstein phase function with importance sampling
+  - Next event estimation at scatter points for direct lighting in volumes
+  - Shadow ray transmittance through volume boundaries
+
+### Changed
+- Pathtracing shader split into `sky.glsl` and `adaptive_sampling.glsl`
+- Medium state tracked via persistent `currentMedium` variable, decoupled from surface BSDF; dielectric and volume media handled independently
+
+---
+
 ## [0.1.0]
 
 ### Added

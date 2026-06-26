@@ -3,10 +3,38 @@
 
 #include "../utils.glsl"
 
+float luma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+#define mat_Principled   Enum(0)
+#define mat_Emissive     Enum(1)
+#define mat_Lambertian   Enum(2)
+#define mat_GgxMetal     Enum(3)
+#define mat_GgxGlossy    Enum(4)
+#define mat_Dielectric   Enum(5)
+#define mat_Volume       Enum(6)
+#define mat_Programmable Enum(7)
+
+struct Material {
+    Enum type;
+    vec3 albedo;
+    float roughness;
+    float metalness;
+    float ior;
+    float transmission;
+    float emissionStrength;
+    float density;
+    float anisotropic;
+};
+
+// ============== BSDF ==============
 struct BSDFMediumInfo {
-    bool isInside;
+    bool isDielectric;
+    bool isVolume;
     vec3 absorption;
     float density;
+    float anisotropic;   // `g` in the Henyey–Greenstein phase function (https://en.wikipedia.org/wiki/Henyey–Greenstein_phase_function)
 };
 
 struct BSDFSample {
@@ -22,8 +50,9 @@ struct BSDFEval {
     float pdf;
 };
 
-#define DEFAULT_MATERIAL Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+#define DEFAULT_MATERIAL Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 
+// ============== REFRACTION/REFLECTION ==============
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
 
 vec3 schlickIoR(float cosine, float ri) {
@@ -60,9 +89,13 @@ float shadowTransmissionFactor(in Material mat, in Hit shadowHit, in vec3 wi) {
         float pTrans = (1.0 - mat.metalness) * mat.transmission;
         if (pTrans > EPS) return pTrans * T;
     }
+    if (mat.type == mat_Volume) {
+        return 1.0; // boundary is transparent; attenuation is handled by density in the shadow loop
+    }
     return -1.0;
 }
 
+// ============== MIRROR ==============
 BSDFEval evalMirrorBSDF(in vec3 albedo, in Hit hit, in vec3 wo, in vec3 wi) {
     float VoN = max(dot(wo, hit.normal), 0.0);
     return BSDFEval(
@@ -81,7 +114,7 @@ BSDFSample sampleMirrorBSDF(in vec3 albedo, in Hit hit, in vec3 wo) {
     bsdf.weight = eval.f * cosB;
     bsdf.pdf = eval.pdf;
     bsdf.isDelta = true;
-    bsdf.medium.isInside = false;
+    bsdf.medium.isDielectric = false;
     return bsdf;
 }
 

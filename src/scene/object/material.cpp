@@ -124,6 +124,26 @@ bool drawDielectricUI(Material& material) {
     return updated;
 }
 
+bool drawVolumeUI(Material& material) {
+    bool updated = false;
+    ImGui::PushItemWidth(-FLT_MIN);
+
+    ImGui::Text("Albedo:");
+    if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
+        updated = true;
+
+    ImGui::Text("Density:");
+    if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
+        updated = true;
+
+    ImGui::Text("Anisotropic:");
+    if (ImGui::DragFloat("##Mat Anisotropic", &material.anisotropic, 0.01f, -1.0f, 1.0))
+        updated = true;
+
+    ImGui::PopItemWidth();
+    return updated;
+}
+
 bool drawProgrammableUI(Material& material) {
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
@@ -147,7 +167,7 @@ bool drawMaterialUI(Material& material) {
     ImGui::Text("Name:");
     ImGui::InputText("##Name", material.name.data(), 128);
 
-    const char* types[] = { "Principled", "Emissive", "Lambertian", "GGX Metal", "GGX Glossy", "Dielectric", "Programmable" };
+    const char* types[] = { "Principled", "Emissive", "Lambertian", "GGX Metal", "GGX Glossy", "Dielectric", "Volume", "Programmable" };
     ImGui::Text("Type:");
     if (ImGui::Combo("##Mat Type", (int*)&material.type, types, IM_ARRAYSIZE(types)))
         updated = true;
@@ -189,6 +209,7 @@ bool drawMaterialUI(Material& material) {
         case MaterialType::GgxMetal:     updated |= drawGgxMetalUI(material);     break;
         case MaterialType::GgxGlossy:    updated |= drawGgxGlossyUI(material);    break;
         case MaterialType::Dielectric:   updated |= drawDielectricUI(material);   break;
+        case MaterialType::Volume:       updated |= drawVolumeUI(material);       break;
         case MaterialType::Programmable: updated |= drawProgrammableUI(material); break;
     }
 
