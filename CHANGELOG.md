@@ -1,31 +1,33 @@
 # Changelog
 
+## [0.2.1]
+
+### Fixed
+- Volume free-flight sampling: removed double Beer-Lambert in the no-scatter case (`T/P(no scatter) = 1`, no explicit attenuation needed)
+- Volume MIS: `prevBsdf` now updated after a scatter event so emitter hits on the next bounce use the HG phase PDF instead of the stale surface BSDF PDF
+- NEE shadow rays now treat transmissive surfaces (dielectric and transmissive Principled) as full obstacles; glass no longer incorrectly contributes to direct lighting
+
+---
+
 ## [0.2.0]
 
 ### Added
-- Homogeneous participating media (`mat_Volume`)
-  - Free-flight sampling with Beer-Lambert transmittance
-  - Henyey-Greenstein phase function with importance sampling
-  - Next event estimation at scatter points for direct lighting in volumes
-  - Shadow ray transmittance through volume boundaries
+- Homogeneous participating media (`mat_Volume`) with Beer-Lambert transmittance, Henyey-Greenstein phase function, and next event estimation at scatter points
 
 ### Changed
-- Pathtracing shader split into `sky.glsl` and `adaptive_sampling.glsl`
-- Medium state tracked via persistent `currentMedium` variable, decoupled from surface BSDF; dielectric and volume media handled independently
+- Pathtracing shader split into multiple files; medium state decoupled from surface BSDF
 
 ---
 
 ## [0.1.0]
 
 ### Added
-- Quad primitive: single-sided, defined by normal, origin, and scale
-- Cornell box and reference scene walls converted to quads; both scenes are now fully closed
-- Automatic render snapshot on version bump, saved to `snapshots/`
-- `--reference <path>` CLI flag for headless rendering, following VkSmol's new platform abstraction
+- Quad primitive
+- Automatic render snapshot on version bump
+- `--reference` CLI flag for headless rendering (only render the reference scene)
 
 ### Changed
 - Camera and input unified under Platform API
-- Reference scene colors neutralized; light remains slightly warm
 - `ReferenceRenderer` removed; headless rendering unified into the main application
 
 ---
@@ -33,15 +35,6 @@
 ## [0.0.0] — Initial
 
 ### Added
-- Vulkan path tracer running as a compute shader
-- BVH with SAH construction and ordered traversal
-- GGX BSDF with true Fresnel, dielectric, Lambertian, Principled BSDF; medium transitions
-- Importance sampling; Russian Roulette path termination
-- Material animation system
-- Scene editor UI with gizmos
-- Physics and transform animation systems
+- Vulkan path tracer with BVH (SAH), GGX/Lambertian/Principled/Dielectric BSDFs, importance sampling, Russian Roulette
+- Material animation, scene editor UI with gizmos, physics and transform animation systems
 - Export service (PNG, video frames)
-
-### Changed
-- GPU packing and BVH child storage optimisations
-- Fixed false shadow hit in importance sampling

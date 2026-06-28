@@ -80,13 +80,14 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
         if (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type) break;
 
         Material shadowMat = getMaterial(shadowHit.object);
-        float T = shadowTransmissionFactor(shadowMat, shadowHit, light.wi);
-        if (T < 0.0) {
-            light.pdf = -1.0;
-            return light;
-        }
 
-        transmission *= T;
+        // Transmissive surfaces (glass, principled glass) block NEE: shadow rays don't refract.
+        if (isTransmissive(shadowMat)) { light.pdf = -1.0; return light; }
+
+        // Opaque surfaces block NEE.
+        if (shadowMat.type != mat_Volume) { light.pdf = -1.0; return light; }
+
+        // Volume boundary: transparent, apply Beer-Lambert attenuation.
         if (shadowMat.density > EPS) {
             transmission *= pow(max(shadowMat.albedo, vec3(1e-4)), vec3(shadowHit.t * shadowMat.density));
         }

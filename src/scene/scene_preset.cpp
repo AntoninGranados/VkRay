@@ -339,7 +339,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
         {-0.3f, R-0.02f, -0.3f}, {0.3f, R, 0.3f});
     
     box("Smoke", {.name="Smoke", .type=MaterialType::Volume,
-                  .albedo={0.6f, 0.6f, 0.6f}, .density=0.02, .anisotropic=0.5f},
+                  .albedo={0.6f, 0.6f, 0.6f}, .density=0.03f, .anisotropic=0.0f},
         {-4.01f, -4.01f, -4.01f}, {4.01f, 4.01f, 4.01f});
 
     {
@@ -365,7 +365,7 @@ void initReferenceScene(Scene& scene, LightMode& lightMode) {
     }
 
     const float sr   = 0.85f;
-    const float sy   = -R + sr + 1.5f;
+    const float sy   = -R + sr + 0.8f;
     const float sz   = -2.0f;
     const float sgap = (2.0f * R - 4.0f * 2.0f * sr) / 5.0f;
     const float step = 2.0f * sr + sgap;

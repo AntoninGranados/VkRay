@@ -169,9 +169,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             if (currentMedium.isVolume) {
                 float sigma_t = currentMedium.density;
                 float t_scatter = -log(rand(seed)) / sigma_t;
-                if (t_scatter > hit.t) {
-                    throughput *= exp(-sigma_t * hit.t);
-                } else {
+                if (t_scatter < hit.t) {
                     ray.origin += ray.dir * t_scatter;
 
                     if (ubo.importanceSampling == 1) {
@@ -184,8 +182,14 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                         }
                     }
 
+                    vec3 incomingDir = ray.dir;
                     ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
                     throughput *= currentMedium.absorption;
+
+                    prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
+                    prevBsdf.isDelta = false;
+                    prevHit.p = ray.origin;
+
                     hit = intersection(ray, false, INFINITY, stats);
                     continue;
                 }
@@ -220,7 +224,8 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
                 pixelInfo.count -= 1;
                 continue;
             }
-            rayColor = min(rayColor, vec3(5.0));
+
+            if (ubo.clipAccumulation == 1) rayColor = min(rayColor, vec3(50.0));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;

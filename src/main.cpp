@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
         const std::string output = argc >= 3 ? argv[2] : "reference.png";
         HeadlessPlatform platform(1080, 1080);
         Application app(platform);
-        app.runHeadless(ScenePreset::ReferenceScene, 2048, output);
+        app.runHeadless(ScenePreset::ReferenceScene, 8192, output);
     } else {
         GLFWPlatform platform("VkRay", 1280, 720);
         Application app(platform);
