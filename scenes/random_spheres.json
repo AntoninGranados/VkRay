@@ -1,0 +1,72 @@
+{
+    "version": 0,
+
+    "light": "empty",
+
+    "camera": {
+        "position": [0, 5, -20],
+        "target": [0, 0, 0],
+        "fov": 60
+    },
+
+    "materials": [
+        {
+            "name": "Floor",
+            "type": "lambertian",
+            "albedo": [1, 1, 1]
+        },
+        {
+            "name": "Light",
+            "type": "emissive",
+            "albedo": [1, 1, 1],
+            "emissionStrength": 15
+        },
+        {
+            "name": "SphereMatteMat_{n}",
+            "type": "lambertian",
+            "albedo": { "rand": { "min": [0, 0, 0], "max": [1, 1, 1] } },
+            "repeat": { "count": 30 }
+        },
+        {
+            "name": "SphereGlassMat_{n}",
+            "type": "dielectric",
+            "albedo": { "rand": { "min": [0, 0, 0], "max": [1, 1, 1] } },
+            "ior": { "rand": { "min": 1.2, "max": 1.7 } },
+            "roughness": { "rand": { "min": 0.0, "max": 0.3 } },
+            "repeat": { "count": 30 }
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Floor",
+            "type": "plane",
+            "material": "Floor",
+            "point": [0, -2, 0],
+            "normal": [0, 1, 0]
+        },
+        {
+            "name": "Light",
+            "type": "sphere",
+            "material": "Light",
+            "center": [0, 15, 0],
+            "radius": 3
+        },
+        {
+            "name": "SphereMatte_{n}",
+            "type": "sphere",
+            "material": "SphereMatteMat_{n}",
+            "center": { "rand": { "min": [-15, 0, -15], "max": [15, 0, 15] } },
+            "radius": { "rand": { "min": 0.8, "max": 1.0 } },
+            "repeat": { "count": 30 }
+        },
+        {
+            "name": "SphereGlass_{n}",
+            "type": "sphere",
+            "material": "SphereGlassMat_{n}",
+            "center": { "rand": { "min": [-15, 0, -15], "max": [15, 0, 15] } },
+            "radius": { "rand": { "min": 0.8, "max": 1.0 } },
+            "repeat": { "count": 30 }
+        }
+    ]
+}

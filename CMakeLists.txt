@@ -52,6 +52,9 @@ target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulk
 set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/imgui;${CMAKE_SOURCE_DIR}/third_party")
 add_subdirectory("${CMAKE_SOURCE_DIR}/libs/VkSmol" engine)
 
+# ── NFD (Native File Dialog Extended) ────────────────────────────────────────
+add_subdirectory("${CMAKE_SOURCE_DIR}/third_party/nfd")
+
 # ── Sources ───────────────────────────────────────────────────────────────────
 file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
 set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
@@ -66,10 +69,11 @@ target_include_directories(VkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/third_party/FontAwesome"
   "${CMAKE_SOURCE_DIR}/third_party"
   "${CMAKE_SOURCE_DIR}/third_party/tiny_obj_loader"
+  "${CMAKE_SOURCE_DIR}/third_party/nlohmann"
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(VkRay PRIVATE VkSmol)
+target_link_libraries(VkRay PRIVATE VkSmol nfd)
 target_compile_options(VkRay PRIVATE -Wall)
 target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})

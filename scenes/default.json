@@ -1,0 +1,43 @@
+{
+    "version": 0,
+
+    "light": "day",
+    
+    "camera": {
+        "position": [0, 0, -10],
+        "target": [0, 0, 0],
+        "fov": 80
+    },
+    
+    "materials": [
+        {
+            "name": "Floor",
+            "type": "programmable",
+            "albedo": [ 0.75, 0.75, 0.78]
+        },
+        {
+            "name": "Cube",
+            "type": "principled",
+            "albedo": [1.0, 0.05, 0.10],
+            "roughness": 0.02,
+            "ior": 1.5
+        }
+    ],
+    
+    "objects": [
+        {
+            "name": "Floor",
+            "type": "plane",
+            "point":  [0, -1, 0],
+            "normal": [0,  1, 0],
+            "material": "Floor"
+        },
+        {
+            "name": "Cube",
+            "type": "box",
+            "min": [-1, -1, -1],
+            "max": [ 1,  1,  1],
+            "material": "Cube"
+        }
+    ]
+}

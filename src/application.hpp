@@ -10,7 +10,7 @@
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
-#include "scene/scene_preset.hpp"
+#include "scene/scene_serializer.hpp"
 
 #include "app/app_context.hpp"
 #include "editor/editor_ui.hpp"
@@ -36,7 +36,7 @@ public:
     ~Application();
 
     void run();
-    void runHeadless(ScenePreset preset, uint32_t targetSamples, const std::string& outputPath);
+    void runHeadless(const std::string& sceneFile, uint32_t targetSamples, const std::string& outputPath);
 
     friend void InputHandler::initCallbacks(const AppContext& ctx);
 
@@ -65,7 +65,7 @@ private:
     bool shouldClose = false;
 
     void initParameters();
-    void initScene(ScenePreset preset = ScenePreset::Empty);
+    void initScene(const std::string& sceneFile = "scenes/default.json");
 
     void onFrameStart(float dt);
     void clearRenderingData(RenderMode newRenderMode);

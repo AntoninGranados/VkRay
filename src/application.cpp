@@ -1,12 +1,12 @@
 #include "application.hpp"
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 
 #include "imgui/imgui.h"
 #include "IconsFontAwesome7.h"
 
-#include "scene/scene_preset.hpp"
 #include "scene/object/object.hpp"
 #include "VkSmol/render/shader.hpp"
 
@@ -68,12 +68,11 @@ void Application::run() {
     }
 }
 
-void Application::runHeadless(ScenePreset preset, uint32_t targetSamples, const std::string& outputPath) {
+void Application::runHeadless(const std::string& sceneFile, uint32_t targetSamples, const std::string& outputPath) {
     constexpr int kBarWidth = 40;
 
     LightMode lightMode = LightMode::Day;
-    scene.clear();
-    scenePresetInitMethod[preset](scene, lightMode);
+    SceneSerializer::load(scene, lightMode, sceneFile);
     ctx.camera = &scene.getCamera();
 
     engine.waitIdle();
@@ -89,16 +88,20 @@ void Application::runHeadless(ScenePreset preset, uint32_t targetSamples, const 
         const int filled = static_cast<int>(progress * kBarWidth);
 
         const double elapsedSec = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
-        const double etaSec = elapsedSec / progress - elapsedSec;
-        const int etaMin  = static_cast<int>(etaSec) / 60;
-        const int etaSecs = static_cast<int>(etaSec) % 60;
+        const double etaSec  = elapsedSec / progress - elapsedSec;
+        const int etaTotal   = static_cast<int>(etaSec);
+        const int etaHours   = etaTotal / 3600;
+        const int etaMins    = (etaTotal % 3600) / 60;
+        const int etaSeconds = etaTotal % 60;
 
         std::cout << "\r[";
         for (int j = 0; j < kBarWidth; ++j)
             std::cout << (j < filled ? '=' : ' ');
         std::cout << "] " << static_cast<int>(progress * 100.0f)
                   << "% (" << (i + 1) << "/" << targetSamples << " spp)"
-                  << "  ETA " << etaMin << "m" << etaSecs << "s  ";
+                  << "  ETA " << etaHours << ":"
+                  << std::setw(2) << std::setfill('0') << etaMins << ":"
+                  << std::setw(2) << std::setfill('0') << etaSeconds << "  ";
         std::cout.flush();
     }
     std::cout << '\n';
@@ -139,12 +142,12 @@ void Application::initParameters() {
     );
 }
 
-void Application::initScene(ScenePreset preset) {
+void Application::initScene(const std::string& sceneFile) {
     scene.setContext(ctx);
     scene.init();
 
-    LightMode mode;
-    scenePresetInitMethod[preset](scene, mode);
+    LightMode mode = LightMode::Day;
+    SceneSerializer::load(scene, mode, sceneFile);
 
     parameters.setEnum<LightMode>("lightMode", mode);
     ctx.camera = &scene.getCamera();
@@ -264,7 +267,7 @@ void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, Ligh
     pathtracer.maxBounces            = 16;
     pathtracer.samplesPerPixel       = 1;
     pathtracer.importanceSampling    = 1;
-    pathtracer.varianceSampling      = 1;
+    pathtracer.varianceSampling      = 0;
     pathtracer.varianceWarmupSamples = static_cast<int>(targetSamples / 2);
     pathtracer.debugView             = 0;
     pathtracer.clipAccumulation      = 0;

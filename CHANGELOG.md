@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0]
+
+### Added
+- JSON scene format: save/load scenes
+    - Procedural scene values: `rand`, `lerp`, `repeat`, `grid`, and `seed` for generative scene descriptions
+    - Physics fields (`collider`, `rigid_body`) in the scene format
+- Native file dialogs for scene load and save
+
+### Removed
+- Hard-coded scene presets; replaced by JSON files in `scenes/`
+
+---
+
 ## [0.2.1]
 
 ### Fixed

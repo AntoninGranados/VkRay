@@ -1,0 +1,29 @@
+{
+    "version": 0,
+
+    "light": "day",
+
+    "camera": {
+        "position": [0, 3, -5],
+        "target": [0, 3, 0],
+        "fov": 70
+    },
+
+    "materials": [
+        {
+            "name": "Sponza",
+            "type": "lambertian",
+            "albedo": [1, 1, 1]
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Sponza",
+            "type": "mesh",
+            "material": "Sponza",
+            "path": "./res/model/sponza.obj",
+            "scale": [0.04, 0.04, 0.04]
+        }
+    ]
+}

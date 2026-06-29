@@ -28,7 +28,6 @@ enum LightMode : int {
     Empty,
 };
 
-enum class ScenePreset : int;
 class SceneEditorUI;
 
 struct ScenePackingMaps {
@@ -107,6 +106,7 @@ public:
 
     std::vector<Material>& getMaterials() { return materials; };
     std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
+    const std::vector<ecs::Entity>& getEntities() const { return entities; }
     ScenePackingMaps& getPackingMaps() { return packingMaps; }
 
     // Returns true if the scene have been updated since the last call of this function

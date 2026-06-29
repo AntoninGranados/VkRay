@@ -1,0 +1,62 @@
+{
+    "version": 0,
+
+    "light": "empty",
+
+    "camera": {
+        "position": [0, 4, -7],
+        "target": [0, 0, 0],
+        "fov": 60
+    },
+
+    "materials": [
+        {
+            "name": "Light",
+            "type": "emissive",
+            "albedo": [1, 1, 1],
+            "emissionStrength": 10
+        },
+        {
+            "name": "Floor",
+            "type": "programmable",
+            "albedo": [0.59, 0.27, 0.09]
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Sphere_{row}_{col}",
+            "type": "sphere",
+            "radius": 0.4,
+            "material": {
+                "name": "Mat_{row}_{col}",
+                "type": "ggx_glossy",
+                "albedo": [0.0, 0.8, 0.0],
+                "roughness": { "lerp": { "from": 0.0, "to": 0.7, "axis": "col" } },
+                "ior":       { "lerp": { "from": 1.0, "to": 2.0, "axis": "row" } }
+            },
+            "grid": {
+                "rows": 5,
+                "cols": 5,
+                "origin": [-2, 0, -2],
+                "row_spacing": [0, 0, 1],
+                "col_spacing": [1, 0, 0]
+            }
+        },
+        {
+            "name": "Light_{n}",
+            "type": "box",
+            "material": "Light",
+            "min": [-2.0, 2.995, -2.1],
+            "max": [ 2.0, 3.005, -1.9],
+            "repeat": { "count": 5, "offset": [0, 0, 1] }
+        },
+        {
+            "name": "Floor",
+            "type": "plane",
+            "material": "Floor",
+            "point": [0, -1, 0],
+            "normal": [0, 1, 0]
+        }
+    ]
+}

@@ -1,0 +1,84 @@
+{
+    "version": 0,
+
+    "light": "sunset",
+
+    "camera": {
+        "position": [0, 4, -12],
+        "target": [0, 1, 0],
+        "fov": 60
+    },
+
+    "materials": [
+        {
+            "name": "Floor",
+            "type": "lambertian",
+            "albedo": [0.75, 0.75, 0.78]
+        },
+        {
+            "name": "PyramidBox",
+            "type": "lambertian",
+            "albedo": [0.75, 0.35, 0.25]
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Floor",
+            "type": "plane",
+            "material": "Floor",
+            "point": [0, -1, 0],
+            "normal": [0, 1, 0],
+            "collider": { "restitution": 0.2, "friction": 0.8 }
+        },
+        {
+            "name": "Level0_{n}",
+            "type": "box",
+            "material": "PyramidBox",
+            "repeat": { "count": 5, "offset": [1.02, 0, 0] },
+            "min": [-2.54, -1.0, -0.5],
+            "max": [-1.54,  0.0,  0.5],
+            "collider": {},
+            "rigid_body": {}
+        },
+        {
+            "name": "Level1_{n}",
+            "type": "box",
+            "material": "PyramidBox",
+            "repeat": { "count": 4, "offset": [1.02, 0, 0] },
+            "min": [-2.03, 0.02, -0.5],
+            "max": [-1.03, 1.02,  0.5],
+            "collider": {},
+            "rigid_body": {}
+        },
+        {
+            "name": "Level2_{n}",
+            "type": "box",
+            "material": "PyramidBox",
+            "repeat": { "count": 3, "offset": [1.02, 0, 0] },
+            "min": [-1.52, 1.04, -0.5],
+            "max": [-0.52, 2.04,  0.5],
+            "collider": {},
+            "rigid_body": {}
+        },
+        {
+            "name": "Level3_{n}",
+            "type": "box",
+            "material": "PyramidBox",
+            "repeat": { "count": 2, "offset": [1.02, 0, 0] },
+            "min": [-1.01, 2.06, -0.5],
+            "max": [-0.01, 3.06,  0.5],
+            "collider": {},
+            "rigid_body": {}
+        },
+        {
+            "name": "Level4",
+            "type": "box",
+            "material": "PyramidBox",
+            "min": [-0.5, 3.08, -0.5],
+            "max": [ 0.5, 4.08,  0.5],
+            "collider": {},
+            "rigid_body": {}
+        }
+    ]
+}

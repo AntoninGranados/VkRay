@@ -1,0 +1,56 @@
+{
+    "version": 0,
+    "light": "empty",
+    "camera": {
+        "name": "Camera",
+        "position": [0.0, -2.0, 50.0],
+        "target": [0.0, -2.0, 49.0],
+        "fov": 28.0,
+        "aperture": 0.0,
+        "focusDepth": 1.0
+    },
+    "materials": [
+        {
+            "name": "Smoke",
+            "type": "volume",
+            "albedo": [1.0, 1.0, 1.0],
+            "density": 0.004999999888241291
+        },
+        {
+            "name": "Light",
+            "type": "emissive",
+            "albedo": [1.0, 1.0, 1.0],
+            "emissionStrength": 4000.0
+        },
+        {
+            "name": "Glass",
+            "type": "dielectric",
+            "albedo": [0.6764705777168274, 1.0, 0.6955017447471619],
+            "roughness": 0.05000000074505806,
+            "ior": 1.399999976158142
+        }
+    ],
+    "objects": [
+        {
+            "name": "Light",
+            "type": "sphere",
+            "material": "Light",
+            "center": [0.0, 9.0, 0.0],
+            "radius": 0.20000000298023224
+        },
+        {
+            "name": "Ball",
+            "type": "sphere",
+            "material": "Glass",
+            "center": [0.0, 2.799999952316284, 0.0],
+            "radius": 2.0
+        },
+        {
+            "name": "Smoke",
+            "type": "box",
+            "material": "Smoke",
+            "min": [-15.0, -17.0, -15.0],
+            "max": [15.0, 13.0, 15.0]
+        }
+    ]
+}
