@@ -3,7 +3,7 @@
 ## [0.2.1]
 
 ### Fixed
-- Volume free-flight sampling: removed double Beer-Lambert in the no-scatter case (`T/P(no scatter) = 1`, no explicit attenuation needed)
+- Volume free-flight sampling: removed double Beer-Lambert in the no-scatter case
 - Volume MIS: `prevBsdf` now updated after a scatter event so emitter hits on the next bounce use the HG phase PDF instead of the stale surface BSDF PDF
 - NEE shadow rays now treat transmissive surfaces (dielectric and transmissive Principled) as full obstacles; glass no longer incorrectly contributes to direct lighting
 

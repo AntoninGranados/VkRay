@@ -53,38 +53,36 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     return bestHit;
 }
 
+void collectGBuffer(in Hit hit, inout PixelInfo pixelInfo) {
+    if (!foundIntersection(hit)) return;
+    Material diffuseMat = resolveMaterial(getMaterial(hit.object), hit);
+
+    vec3 currNormal   = normalize(hit.normal);
+    vec3 currPosition = hit.p;
+    vec3 currDiffuse  = diffuseMat.albedo;
+    float guideMix    = 1.0 / float(pixelInfo.count);
+
+    if (pixelInfo.normal.w > 0.0)
+        pixelInfo.normal = vec4(normalize(mix(pixelInfo.normal.xyz, currNormal, guideMix)), 1.0);
+    else
+        pixelInfo.normal = vec4(currNormal, 1.0);
+
+    if (pixelInfo.position.w > 0.0)
+        pixelInfo.position = vec4(mix(pixelInfo.position.xyz, currPosition, guideMix), 1.0);
+    else
+        pixelInfo.position = vec4(currPosition, 1.0);
+
+    if (pixelInfo.diffuse.w > 0.0)
+        pixelInfo.diffuse = vec4(mix(pixelInfo.diffuse.xyz, currDiffuse, guideMix), 1.0);
+    else
+        pixelInfo.diffuse = vec4(currDiffuse, 1.0);
+}
+
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
 
-    if (foundIntersection(hit)) {
-        Material diffuseMat = resolveMaterial(getMaterial(hit.object), hit);
-
-        vec3 currNormal = normalize(hit.normal);
-        vec3 currPosition = hit.p;
-        vec3 currDiffuse = diffuseMat.albedo;
-
-        float guideMix = 1.0 / float(pixelInfo.count);
-
-        if (pixelInfo.normal.w > 0.0) {
-            vec3 avgNormal = mix(pixelInfo.normal.xyz, currNormal, guideMix);
-            pixelInfo.normal = vec4(normalize(avgNormal), 1.0);
-        } else {
-            pixelInfo.normal = vec4(currNormal, 1.0);
-        }
-
-        if (pixelInfo.position.w > 0.0) {
-            pixelInfo.position = vec4(mix(pixelInfo.position.xyz, currPosition, guideMix), 1.0);
-        } else {
-            pixelInfo.position = vec4(currPosition, 1.0);
-        }
-
-        if (pixelInfo.diffuse.w > 0.0) {
-            pixelInfo.diffuse = vec4(mix(pixelInfo.diffuse.xyz, currDiffuse, guideMix), 1.0);
-        } else {
-            pixelInfo.diffuse = vec4(currDiffuse, 1.0);
-        }
-    }
+    collectGBuffer(hit, pixelInfo);
 
     if (ubo.debugView == debug_HitChecks) {
         float bvh = float(stats.bvhChecks) / 256.0;
@@ -125,9 +123,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 float w = 1.0;
                 if (ubo.importanceSampling == 1 && !prevBsdf.isDelta) {
                     float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
-                    float pdfB = prevBsdf.pdf;
-                    float denom = pdfB*pdfB + pdfL*pdfL;
-                    w = (denom > 0.0) ? (pdfB*pdfB / denom) : 1.0;
+                    w = powerHeuristic(prevBsdf.pdf, pdfL);
                 }
 
                 radiance += throughput * w * Le;
@@ -146,7 +142,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
                 if (lightSample.pdf > EPS) {
                     float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
-                    float wMIS = (lightSample.pdf*lightSample.pdf) / (lightSample.pdf*lightSample.pdf + eval.pdf*eval.pdf);
+                    float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
                     radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
                 }
             }
@@ -177,7 +173,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                         LightSample volLight = sampleLight(scatterHit, seed);
                         if (volLight.pdf > EPS) {
                             float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
-                            float wMIS = (volLight.pdf*volLight.pdf) / (volLight.pdf*volLight.pdf + phase*phase);
+                            float wMIS = powerHeuristic(volLight.pdf, phase);
                             radiance += throughput * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
                         }
                     }

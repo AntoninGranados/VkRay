@@ -149,4 +149,16 @@ struct SurfaceSample {
     vec3 normal;
 };
 
+// ============== MIS ==============
+float powerHeuristic(float fPdf, float gPdf) {
+    float f2 = fPdf * fPdf;
+    float g2 = gPdf * gPdf;
+    return (f2 + g2 > 0.0) ? f2 / (f2 + g2) : 0.0;
+}
+
+float balanceHeuristic(float fPdf, float gPdf) {
+    float sum = fPdf + gPdf;
+    return (sum > 0.0) ? fPdf / sum : 0.0;
+}
+
 #endif

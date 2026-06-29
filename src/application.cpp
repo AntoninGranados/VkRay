@@ -8,11 +8,13 @@
 
 #include "scene/scene_preset.hpp"
 #include "scene/object/object.hpp"
+#include "VkSmol/render/shader.hpp"
 
 #include "version.hpp"
 
 // Public
 Application::Application(Platform& p) : platform(p) {
+    Shader::setSpvOutputDir(BUILD_DIR);
     engine.init("VkRay", VK_RAY_VERSION, platform);
 
     if (!platform.isHeadless()) {

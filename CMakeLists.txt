@@ -71,6 +71,7 @@ target_include_directories(VkRay PRIVATE
 
 target_link_libraries(VkRay PRIVATE VkSmol)
 target_compile_options(VkRay PRIVATE -Wall)
+target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})
   set_property(TARGET VkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")
 endif()
