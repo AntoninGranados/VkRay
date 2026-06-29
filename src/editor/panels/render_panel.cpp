@@ -3,12 +3,12 @@
 #include <algorithm>
 
 #include "imgui/imgui.h"
-#include "IconsFontAwesome7.h"
-#include "editor/ui_constants.hpp"
+#include "FontAwesome/IconsFontAwesome7.h"
 
 #include "app/app_context.hpp"
 #include "app/animation_handler.hpp"
 #include "app/parameter_handler.hpp"
+#include "editor/ui_constants.hpp"
 
 void RenderPanel::draw(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});

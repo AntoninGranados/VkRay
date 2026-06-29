@@ -7,7 +7,7 @@
 #include <cstring>
 #include <vector>
 
-#include "IconsFontAwesome7.h"
+#include "FontAwesome/IconsFontAwesome7.h"
 
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"

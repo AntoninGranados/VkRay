@@ -1,11 +1,11 @@
 #include "render_parameter_panel.hpp"
 
 #include "imgui/imgui.h"
-#include "IconsFontAwesome7.h"
-#include "editor/ui_constants.hpp"
+#include "FontAwesome/IconsFontAwesome7.h"
 
 #include "app/app_context.hpp"
 #include "app/parameter_handler.hpp"
+#include "editor/ui_constants.hpp"
 
 void RenderParameterPanel::draw(AppContext& ctx) {
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);

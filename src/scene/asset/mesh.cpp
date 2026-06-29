@@ -6,7 +6,7 @@
 #include <numeric>
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
+#include "tinyobjloader/tiny_obj_loader.h"
 
 #include "mesh_simplify.hpp"
 #include "app/notification_handler.hpp"

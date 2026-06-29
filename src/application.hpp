@@ -7,6 +7,7 @@
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
+
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"

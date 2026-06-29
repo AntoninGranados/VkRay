@@ -5,11 +5,11 @@
 #include <iostream>
 
 #include "imgui/imgui.h"
-#include "IconsFontAwesome7.h"
+#include "FontAwesome/IconsFontAwesome7.h"
 
-#include "scene/object/object.hpp"
 #include "VkSmol/render/shader.hpp"
 
+#include "scene/object/object.hpp"
 #include "version.hpp"
 
 // Public

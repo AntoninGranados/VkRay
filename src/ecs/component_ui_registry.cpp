@@ -6,7 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "IconsFontAwesome7.h"
+#include "FontAwesome/IconsFontAwesome7.h"
 
 #include "ecs/components/animation/material_anim.hpp"
 #include "scene/asset/mesh.hpp"

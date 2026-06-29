@@ -65,11 +65,7 @@ add_executable(VkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
 target_include_directories(VkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/libs"
-  "${CMAKE_SOURCE_DIR}/third_party/imgui"
-  "${CMAKE_SOURCE_DIR}/third_party/FontAwesome"
   "${CMAKE_SOURCE_DIR}/third_party"
-  "${CMAKE_SOURCE_DIR}/third_party/tiny_obj_loader"
-  "${CMAKE_SOURCE_DIR}/third_party/nlohmann"
   "${CMAKE_BINARY_DIR}"
 )
 

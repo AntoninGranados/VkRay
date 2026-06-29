@@ -1,11 +1,11 @@
 #include "animation_panel.hpp"
 
 #include "imgui/imgui.h"
-#include "IconsFontAwesome7.h"
-#include "editor/ui_constants.hpp"
+#include "FontAwesome/IconsFontAwesome7.h"
 
 #include "app/app_context.hpp"
 #include "app/animation_handler.hpp"
+#include "editor/ui_constants.hpp"
 #include "scene/scene.hpp"
 
 void AnimationPanel::draw(AppContext& ctx) {

@@ -1,17 +1,17 @@
 #include "scene_panel.hpp"
 
 #include "imgui/imgui.h"
-#include "IconsFontAwesome7.h"
-#include "editor/ui_constants.hpp"
+#include "FontAwesome/IconsFontAwesome7.h"
+#include <nfd.hpp>
 
 #include "app/app_context.hpp"
 #include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
+#include "editor/ui_constants.hpp"
 
 #include "scene/scene.hpp"
 #include "scene/scene_serializer.hpp"
 
-#include <nfd.hpp>
 
 void ScenePanel::draw(AppContext& ctx) {
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);

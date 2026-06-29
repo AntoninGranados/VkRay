@@ -11,7 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 
 #include "scene.hpp"
 #include "scene/object/material.hpp"
