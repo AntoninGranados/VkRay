@@ -53,36 +53,82 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     return bestHit;
 }
 
-void collectGBuffer(in Hit hit, inout PixelInfo pixelInfo) {
-    if (!foundIntersection(hit)) return;
-    Material diffuseMat = resolveMaterial(getMaterial(hit.object), hit);
+void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
+    Hit firstHit  = NO_HIT;
+    Hit opaqueHit = NO_HIT;
+    Ray probe     = ray;
+    for (int i = 0; i < 8; i++) {
+        Statistics dummy = Statistics(0u, 0u);
+        Hit h = intersection(probe, false, INFINITY, dummy);
+        if (!foundIntersection(h)) break;
+        if (i == 0) firstHit = h;
+        Material hMat = getMaterial(h.object);
+        if (hMat.type != mat_Dielectric && hMat.type != mat_Volume) {
+            opaqueHit = h;
+            break;
+        }
+        probe = Ray(h.p + probe.dir * EPS, probe.dir);
+    }
 
-    vec3 currNormal   = normalize(hit.normal);
-    vec3 currPosition = hit.p;
-    vec3 currDiffuse  = diffuseMat.albedo;
-    float guideMix    = 1.0 / float(pixelInfo.count);
+    if (!foundIntersection(firstHit)) {
+        pixelInfo.aov.skyMask       = 1u;
+        pixelInfo.aov.skyMaskOpaque = 1u;
+        return;
+    }
 
-    if (pixelInfo.normal.w > 0.0)
-        pixelInfo.normal = vec4(normalize(mix(pixelInfo.normal.xyz, currNormal, guideMix)), 1.0);
-    else
-        pixelInfo.normal = vec4(currNormal, 1.0);
+    Material mat    = resolveMaterial(getMaterial(firstHit.object), firstHit);
+    float guideMix  = 1.0 / float(pixelInfo.count);
 
-    if (pixelInfo.position.w > 0.0)
-        pixelInfo.position = vec4(mix(pixelInfo.position.xyz, currPosition, guideMix), 1.0);
-    else
-        pixelInfo.position = vec4(currPosition, 1.0);
+    vec3 right = normalize(cross(camera.dir, camera.up));
+    vec3 up    = cross(right, camera.dir);
 
-    if (pixelInfo.diffuse.w > 0.0)
-        pixelInfo.diffuse = vec4(mix(pixelInfo.diffuse.xyz, currDiffuse, guideMix), 1.0);
-    else
-        pixelInfo.diffuse = vec4(currDiffuse, 1.0);
+    vec3  currNormal    = normalize(firstHit.normal);
+    vec3  currPosition  = firstHit.p;
+    vec3  currAlbedo    = mat.albedo;
+    vec2  currCamNormal = vec2(dot(currNormal, right), dot(currNormal, up));
+    float currDepth     = dot(currPosition - camera.pos, normalize(camera.dir));
+
+    if (pixelInfo.aov.hitValid != 0u) {
+        pixelInfo.aov.normal    = normalize(mix(pixelInfo.aov.normal, currNormal, guideMix));
+        pixelInfo.aov.position  = mix(pixelInfo.aov.position, currPosition, guideMix);
+        pixelInfo.aov.albedo    = mix(pixelInfo.aov.albedo, currAlbedo, guideMix);
+        pixelInfo.aov.camNormal = mix(pixelInfo.aov.camNormal, currCamNormal, guideMix);
+        pixelInfo.aov.depth     = mix(pixelInfo.aov.depth, currDepth, guideMix);
+    } else {
+        pixelInfo.aov.normal    = currNormal;
+        pixelInfo.aov.position  = currPosition;
+        pixelInfo.aov.albedo    = currAlbedo;
+        pixelInfo.aov.camNormal = currCamNormal;
+        pixelInfo.aov.depth     = currDepth;
+        pixelInfo.aov.hitValid  = 1u;
+    }
+
+    if (foundIntersection(opaqueHit)) {
+        Material opaqueMat    = resolveMaterial(getMaterial(opaqueHit.object), opaqueHit);
+        vec3  oNormal         = normalize(opaqueHit.normal);
+        vec3  oAlbedo         = opaqueMat.albedo;
+        vec3  oPos            = opaqueHit.p;
+        vec2  oCamNormal      = vec2(dot(oNormal, right), dot(oNormal, up));
+        float oDepth          = dot(oPos - camera.pos, normalize(camera.dir));
+
+        if (pixelInfo.aov.opaqueHitValid != 0u) {
+            pixelInfo.aov.albedoOpaque    = mix(pixelInfo.aov.albedoOpaque, oAlbedo, guideMix);
+            pixelInfo.aov.camNormalOpaque = mix(pixelInfo.aov.camNormalOpaque, oCamNormal, guideMix);
+            pixelInfo.aov.depthOpaque     = mix(pixelInfo.aov.depthOpaque, oDepth, guideMix);
+        } else {
+            pixelInfo.aov.albedoOpaque      = oAlbedo;
+            pixelInfo.aov.camNormalOpaque   = oCamNormal;
+            pixelInfo.aov.depthOpaque       = oDepth;
+            pixelInfo.aov.opaqueHitValid    = 1u;
+        }
+    } else {
+        pixelInfo.aov.skyMaskOpaque += 1u;
+    }
 }
 
 vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
-
-    collectGBuffer(hit, pixelInfo);
 
     if (ubo.render.debugView == debug_HitChecks) {
         float bvh = float(stats.bvhChecks) / 256.0;
@@ -215,6 +261,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
             pixelInfo.count += 1;
             vec2 offset = ubo.screen.resolution * vec2(rand(seed), rand(seed)) / ubo.screen.size;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
+            collectGBuffer(ray, camera, pixelInfo);
             vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
             if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
                 pixelInfo.count -= 1;
@@ -255,14 +302,15 @@ void main() {
 
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
         PixelInfo initInfo = pixelInfoBuffer.pixels[varianceIndex];
-        initInfo.normal.w = 0.0;
-        initInfo.position.w = 0.0;
-        initInfo.diffuse.w = 0.0;
-        initInfo.mean = 0.0;
-        initInfo.m2 = 0.0;
-        initInfo.count = 0;
-        initInfo.varianceProba = 0.0;
-        initInfo.selectionMask = 0;
+        initInfo.aov.skyMask        = 0u;
+        initInfo.aov.skyMaskOpaque  = 0u;
+        initInfo.aov.hitValid       = 0u;
+        initInfo.aov.opaqueHitValid = 0u;
+        initInfo.mean                   = 0.0;
+        initInfo.m2                     = 0.0;
+        initInfo.count                  = 0;
+        initInfo.varianceProba          = 0.0;
+        initInfo.selectionMask          = 0u;
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
@@ -284,9 +332,7 @@ void main() {
     if (isCenterPixel) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
         PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
-        updatedInfo.normal = pixelInfo.normal;
-        updatedInfo.position = pixelInfo.position;
-        updatedInfo.diffuse = pixelInfo.diffuse;
+        updatedInfo.aov = pixelInfo.aov;
         updatedInfo.mean = pixelInfo.mean;
         updatedInfo.m2 = pixelInfo.m2;
         updatedInfo.count = pixelInfo.count;
@@ -308,7 +354,7 @@ void main() {
     }
     uint selectionIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo selectionInfo = pixelInfoBuffer.pixels[selectionIndex];
-    selectionInfo.selectionMask = selectedIntersection;
+    selectionInfo.selectionMask = uint(selectedIntersection);
     pixelInfoBuffer.pixels[selectionIndex] = selectionInfo;
 
     float totalCount = prevCount + takenSamples;

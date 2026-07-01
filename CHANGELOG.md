@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.2]
+
+### Added
+- AOV (Arbitrary Output Variables) export: camera-space 2D normals, albedo, linear depth, sky mask; each with an opaque-hit variant
+    - output as a single multi-channel EXR file alongside the beauty render
+    - enable/disable checkboxes in the render parameter panel
+    - Python viewer (`scripts/view_aovs.py`)
+
+### Changed
+- Mesh loading via native file dialog; per-mesh smooth shading toggle
+- `PathtracingUBO` split into typed sub-structures (`CameraUBO`, `ScreenUBO`, `FrameUBO`, `RenderUBO`)
+- `collectGBuffer` moved out of `traceRay` into the per-sample loop; single traversal now yields both the first hit and the first opaque hit
+
+---
+
 ## [0.3.1]
 
 ### Added

@@ -67,15 +67,44 @@ struct DisplayUBO {
     int denoisingEnabled;
 };
 
+struct alignas(16) AOVBuffer {
+    alignas(16) glm::vec3 normal;
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 albedo;
+    alignas(16) glm::vec3 albedoOpaque;
+    alignas(8)  glm::vec2 camNormal;
+    alignas(8)  glm::vec2 camNormalOpaque;
+    float      depth;
+    float      depthOpaque;
+    uint32_t   skyMask;
+    uint32_t   skyMaskOpaque;
+    uint32_t   hitValid;
+    uint32_t   opaqueHitValid;
+};
+
 struct PixelInfo {
-    alignas(16) glm::vec4 normal;
-    alignas(16) glm::vec4 position;
-    alignas(16) glm::vec4 diffuse;
-    float mean;
-    float m2;
-    int count;
-    float varianceProba;
-    int selectionMask;
+    AOVBuffer aov;
+    float    mean;
+    float    m2;
+    int      count;
+    float    varianceProba;
+    uint32_t selectionMask;
+};
+
+struct AovConfig {
+    bool normal        = false;
+    bool normalOpaque  = false;
+    bool albedo        = false;
+    bool albedoOpaque  = false;
+    bool depth         = false;
+    bool depthOpaque   = false;
+    bool skyMask       = false;
+    bool skyMaskOpaque = false;
+
+    bool hasAnyEnabled() const {
+        return normal || normalOpaque || albedo || albedoOpaque
+            || depth || depthOpaque || skyMask || skyMaskOpaque;
+    }
 };
 
 class VkSmol;
@@ -99,6 +128,7 @@ struct AppContext {
     RenderState* renderState;
     PathtracerUBO* pathtracerUBO;
     DisplayUBO* displayUBO;
+    AovConfig* aovConfig;
 
     bool* restartRender = nullptr;
     Platform* platform = nullptr;

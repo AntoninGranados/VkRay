@@ -2,16 +2,7 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-struct PixelInfo {
-    vec4 normal;
-    vec4 position;
-    vec4 diffuse;
-    float mean;
-    float m2;
-    int count;
-    float varianceProba;
-    int selectionMask;
-};
+#include "pixel_info.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
@@ -87,17 +78,17 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
         PixelInfo sampleInfo = fetchPixelInfoAt(sampleCoord, texSize);
 
         float nW = 1.0;
-        bool nValid = centerInfo.normal.w > 0.0 && sampleInfo.normal.w > 0.0;
+        bool nValid = centerInfo.aov.hitValid != 0u && sampleInfo.aov.hitValid != 0u;
         if (nValid) {
-            vec3 nDelta = centerInfo.normal.xyz - sampleInfo.normal.xyz;
+            vec3 nDelta = centerInfo.aov.normal - sampleInfo.aov.normal;
             float nDist2 = dot(nDelta, nDelta);
             nW = min(exp(-nDist2 / max(n_phi, 1e-6)), 1.0);
         }
 
         float pW = 1.0;
-        bool pValid = centerInfo.position.w > 0.0 && sampleInfo.position.w > 0.0;
+        bool pValid = centerInfo.aov.hitValid != 0u && sampleInfo.aov.hitValid != 0u;
         if (pValid) {
-            vec3 pDelta = centerInfo.position.xyz - sampleInfo.position.xyz;
+            vec3 pDelta = centerInfo.aov.position - sampleInfo.aov.position;
             float pDist2 = dot(pDelta, pDelta) / float(stride * stride);
             pW = min(exp(-pDist2 / max(p_phi, 1e-6)), 1.0);
         }

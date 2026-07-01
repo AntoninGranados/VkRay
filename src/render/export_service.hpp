@@ -13,7 +13,7 @@
 
 class ExportService {
 public:
-    void init(VkSmol& engine, const uint32_t& width, const uint32_t& height);
+    void init(VkSmol& engine, const uint32_t& width, const uint32_t& height, BufferHandle pixelInfoHandle);
     void destroy(VkSmol& engine);
     void requestSave() { renderRequested = true; }
     bool promptOutputPath();
@@ -29,9 +29,12 @@ private:
     void copyImageToBuffer(CommandBuffer& commandBuffer, Image& image);
     void saveBufferToPNG(AppContext& ctx, const std::filesystem::path& path);
     void saveBufferToEXR(AppContext& ctx, const std::filesystem::path& path);
+    void saveAOVs(AppContext& ctx, const std::filesystem::path& basePath);
     void convertFramesToVideo();
 
     Buffer buffer;
+    Buffer pixelInfoReadbackBuffer;
+    BufferHandle pixelInfoBufferHandle;
 
     bool renderRequested   = false;
     bool renderPendingSave = false;

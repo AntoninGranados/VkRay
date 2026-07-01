@@ -74,7 +74,7 @@ void RenderHandler::init(AppContext& ctx) {
     pixelInfoBufferHandle = builder.createBuffer(
         "PixelInfoBuffer",
         static_cast<size_t>(ext.width) * ext.height * sizeof(PixelInfo),
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
     );
 
     // Scene buffers must be created before passes so binding slots can be declared
@@ -162,7 +162,7 @@ void RenderHandler::init(AppContext& ctx) {
     engine.initGraph();
     ctx.scene->setGpuBufferHandles(sceneHandles);
 
-    exportService.init(engine, engine.getExtent().width, engine.getExtent().height);
+    exportService.init(engine, engine.getExtent().width, engine.getExtent().height, pixelInfoBufferHandle);
     if (!engine.isHeadless()) {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
@@ -241,7 +241,7 @@ void RenderHandler::handleResize(AppContext& ctx, const VkExtent2D& extent) {
     engine.resizeImage(currentPathtracingImageHandle,  extent.width, extent.height);
     engine.resizeImage(outputImageHandle,              extent.width, extent.height);
     engine.resizeBuffer(pixelInfoBufferHandle, static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo));
-    exportService.init(engine, extent.width, extent.height);
+    exportService.init(engine, extent.width, extent.height, pixelInfoBufferHandle);
 }
 
 void RenderHandler::pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput) {

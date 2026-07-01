@@ -1,15 +1,6 @@
 #version 450
 
-struct PixelInfo {
-    vec4 normal;
-    vec4 position;
-    vec4 diffuse;
-    float mean;
-    float m2;
-    int count;
-    float varianceProba;
-    int selectionMask;
-};
+#include "pixel_info.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
@@ -58,23 +49,23 @@ vec3 visualizeVariance(vec2 uv, vec2 texSize) {
     return vec3(pixelInfo.varianceProba);
 }
 
-vec3 visualizeSelectionMask(int mask) {
-    return vec3(mask != 0 ? 1.0 : 0.0);
+vec3 visualizeSelectionMask(uint mask) {
+    return vec3(mask != 0u ? 1.0 : 0.0);
 }
 
 vec3 visualizeNormal(PixelInfo pixelInfo) {
-    if (pixelInfo.normal.w <= 0.0) return vec3(0.0);
-    return normalize(pixelInfo.normal.xyz) * 0.5 + 0.5;
+    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
+    return normalize(pixelInfo.aov.normal) * 0.5 + 0.5;
 }
 
 vec3 visualizePosition(PixelInfo pixelInfo) {
-    if (pixelInfo.position.w <= 0.0) return vec3(0.0);
-    return clamp(pixelInfo.position.xyz, 0.0, 1.0);
+    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
+    return clamp(pixelInfo.aov.position, 0.0, 1.0);
 }
 
 vec3 visualizeDiffuse(PixelInfo pixelInfo) {
-    if (pixelInfo.diffuse.w <= 0.0) return vec3(0.0);
-    return clamp(pixelInfo.diffuse.xyz, 0.0, 1.0);
+    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
+    return clamp(pixelInfo.aov.albedo, 0.0, 1.0);
 }
 
 const vec3 edgeColor = vec3(1.0, 0.5, 0.062);
@@ -98,7 +89,7 @@ void main() {
 
     uint centerIndex = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
     PixelInfo centerPixelInfo = pixelInfoBuffer.pixels[centerIndex];
-    int centerMask = centerPixelInfo.selectionMask;
+    uint centerMask = centerPixelInfo.selectionMask;
     int stepPx = int(outlineWidth);
 
     float neighborMask = 0.0;
@@ -112,13 +103,13 @@ void main() {
             if (sampleCoord.y < 0 || sampleCoord.y >= int(texSize.y)) continue;
 
             uint sampleIndex = uint(sampleCoord.y * int(texSize.x) + sampleCoord.x);
-            neighborMask += pixelInfoBuffer.pixels[sampleIndex].selectionMask != 0 ? 1.0 : 0.0;
+            neighborMask += pixelInfoBuffer.pixels[sampleIndex].selectionMask != 0u ? 1.0 : 0.0;
             count += 1;
         }
     }
     neighborMask /= count;
 
-    float edgeAmount = centerMask != 0 ? 1.0 - neighborMask : neighborMask;
+    float edgeAmount = centerMask != 0u ? 1.0 - neighborMask : neighborMask;
     float outline = smoothstep(0.0, feather, edgeAmount);
     color = mix(color, edgeColor, outline);
 

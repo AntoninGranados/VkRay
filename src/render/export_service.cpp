@@ -12,14 +12,17 @@
 #include "app/animation_handler.hpp"
 #include "editor/editor_ui.hpp"
 
-void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height) {
+void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height, BufferHandle pixelInfoHandle) {
     width  = _width;
     height = _height;
-    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    buffer                  = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    pixelInfoBufferHandle   = pixelInfoHandle;
+    pixelInfoReadbackBuffer = engine.createReadbackBuffer(engine.getBuffer(pixelInfoHandle).getSize());
 }
 
 void ExportService::destroy(VkSmol& engine) {
     engine.destroyBuffer(buffer);
+    engine.destroyBuffer(pixelInfoReadbackBuffer);
 }
 
 void ExportService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
@@ -93,6 +96,7 @@ void ExportService::handleSave(AppContext& ctx) {
         } else {
             saveBufferToPNG(ctx, path);
         }
+        saveAOVs(ctx, path);
     }
 
     if (toVideo) convertFramesToVideo();
@@ -109,6 +113,7 @@ void ExportService::saveCapture(AppContext& ctx, const std::filesystem::path& pa
     } else {
         saveBufferToPNG(ctx, path);
     }
+    saveAOVs(ctx, path);
 }
 
 
@@ -214,6 +219,142 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
         ctx.notifications->pushMessage(NotificationType::Error, "Failed to write EXR");
     } else {
         ctx.notifications->pushMessage(NotificationType::Info, "Saved screenshot to " + path.string());
+    }
+
+    free(header.channels);
+    free(header.pixel_types);
+    free(header.requested_pixel_types);
+}
+
+void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& basePath) {
+    if (!ctx.aovConfig->hasAnyEnabled()) return;
+
+    VkSmol& engine = *ctx.engine;
+    engine.copyBuffer(engine.getBuffer(pixelInfoBufferHandle), pixelInfoReadbackBuffer);
+
+    size_t pixelCount = static_cast<size_t>(width) * height;
+    std::vector<PixelInfo> pixels(pixelCount);
+    engine.readBuffer(pixelInfoReadbackBuffer, pixels.data(), pixelCount * sizeof(PixelInfo));
+
+    std::vector<std::pair<std::string, std::vector<float>>> channels;
+
+    auto push = [&](const std::string& name, std::vector<float> data) {
+        channels.emplace_back(name, std::move(data));
+    };
+
+    if (ctx.aovConfig->albedo) {
+        std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            r[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.x : 0.0f;
+            g[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.y : 0.0f;
+            b[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.z : 0.0f;
+        }
+        push("albedo.R", std::move(r));
+        push("albedo.G", std::move(g));
+        push("albedo.B", std::move(b));
+    }
+
+    if (ctx.aovConfig->albedoOpaque) {
+        std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            r[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.x : 0.0f;
+            g[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.y : 0.0f;
+            b[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.z : 0.0f;
+        }
+        push("albedoOpaque.R", std::move(r));
+        push("albedoOpaque.G", std::move(g));
+        push("albedoOpaque.B", std::move(b));
+    }
+
+    if (ctx.aovConfig->normal) {
+        std::vector<float> x(pixelCount), y(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.camNormal.x : 0.0f;
+            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.camNormal.y : 0.0f;
+        }
+        push("normal.X", std::move(x));
+        push("normal.Y", std::move(y));
+    }
+
+    if (ctx.aovConfig->normalOpaque) {
+        std::vector<float> x(pixelCount), y(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.camNormalOpaque.x : 0.0f;
+            y[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.camNormalOpaque.y : 0.0f;
+        }
+        push("normalOpaque.X", std::move(x));
+        push("normalOpaque.Y", std::move(y));
+    }
+
+    if (ctx.aovConfig->depth) {
+        std::vector<float> d(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++)
+            d[i] = pixels[i].aov.hitValid ? pixels[i].aov.depth : -1.0f;
+        push("depth.Z", std::move(d));
+    }
+
+    if (ctx.aovConfig->depthOpaque) {
+        std::vector<float> d(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++)
+            d[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.depthOpaque : -1.0f;
+        push("depthOpaque.Z", std::move(d));
+    }
+
+    if (ctx.aovConfig->skyMask) {
+        std::vector<float> m(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            int c = pixels[i].count;
+            m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;
+        }
+        push("skyMask.V", std::move(m));
+    }
+
+    if (ctx.aovConfig->skyMaskOpaque) {
+        std::vector<float> m(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            int c = pixels[i].count;
+            m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMaskOpaque) / static_cast<float>(c) : 0.0f;
+        }
+        push("skyMaskOpaque.V", std::move(m));
+    }
+
+    if (channels.empty()) return;
+
+    std::sort(channels.begin(), channels.end(),
+        [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    int nch = static_cast<int>(channels.size());
+
+    EXRHeader header; InitEXRHeader(&header);
+    EXRImage  image;  InitEXRImage(&image);
+
+    std::vector<float*> ptrs(nch);
+    for (int i = 0; i < nch; i++) ptrs[i] = channels[i].second.data();
+    image.images = (unsigned char**)ptrs.data();
+    image.width  = width;
+    image.height = height;
+    image.num_channels = nch;
+
+    header.num_channels = nch;
+    header.channels     = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * nch);
+    header.pixel_types           = (int*)malloc(sizeof(int) * nch);
+    header.requested_pixel_types = (int*)malloc(sizeof(int) * nch);
+    for (int i = 0; i < nch; i++) {
+        strncpy(header.channels[i].name, channels[i].first.c_str(), 255);
+        header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT;
+        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;
+    }
+
+    auto stem = basePath.stem().string();
+    auto aovPath = (basePath.parent_path() / (stem + "_aovs.exr")).string();
+
+    const char* err = nullptr;
+    int ret = SaveEXRImageToFile(&image, &header, aovPath.c_str(), &err);
+    if (ret != TINYEXR_SUCCESS) {
+        FreeEXRErrorMessage(err);
+        ctx.notifications->pushMessage(NotificationType::Error, "Failed to write AOV EXR");
+    } else {
+        ctx.notifications->pushMessage(NotificationType::Info, "Saved AOVs to " + aovPath);
     }
 
     free(header.channels);

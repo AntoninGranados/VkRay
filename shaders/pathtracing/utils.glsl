@@ -1,6 +1,8 @@
 #ifndef UTILS_GLSL
 #define UTILS_GLSL
 
+#include "../pixel_info.glsl"
+
 #define TRI_EPS 1e-8
 #define EPS 1e-4
 #define EPS_HIGH 1e-3   // @note arbitrary, but EPS is too small for GGX alpha clamping
@@ -96,17 +98,6 @@ struct Mesh {
 };
 
 // ============== PATH-TRACING  ==============
-struct PixelInfo {
-    vec4 normal;
-    vec4 position;
-    vec4 diffuse;
-    float mean;
-    float m2;
-    int count;
-    float varianceProba;
-    int selectionMask;
-};
-
 struct Camera {
     vec3 pos;
     vec3 dir;
