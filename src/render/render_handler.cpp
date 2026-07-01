@@ -70,7 +70,7 @@ void RenderHandler::init(AppContext& ctx) {
 
     VkExtent2D ext        = engine.getExtent();
     pathtracingUBOHandle  = builder.createPerFrameBuffer("PathtracingUBO", sizeof(PathtracerUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    displayUBOHandle      = builder.createPerFrameBuffer("DisplayUBO",     sizeof(ScreenUBO),     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    displayUBOHandle      = builder.createPerFrameBuffer("DisplayUBO",     sizeof(DisplayUBO),    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     pixelInfoBufferHandle = builder.createBuffer(
         "PixelInfoBuffer",
         static_cast<size_t>(ext.width) * ext.height * sizeof(PixelInfo),
@@ -216,7 +216,7 @@ void RenderHandler::render(AppContext& ctx) {
     engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.screenUBO);
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.displayUBO);
 
     engine.bindImage(
         swapchainImageHandle,
@@ -319,7 +319,7 @@ void RenderHandler::renderHeadless(AppContext& ctx, bool captureOutput) {
     engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.screenUBO);
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.displayUBO);
 
     pathtracingPass(ctx, *frameContext, captureOutput);
 

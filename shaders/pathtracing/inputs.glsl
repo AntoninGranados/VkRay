@@ -4,30 +4,42 @@
 #include "utils.glsl"
 #include "materials/materials.glsl"
 
-layout(std140, set = 0, binding = 0) uniform UBO {
-    vec3 cameraPos;
-    vec3 cameraDir;
+struct CameraUBO {
+    vec3 pos;
+    vec3 dir;
     float tanHFov;
     float aperture;
     float focusDepth;
+};
 
-    vec2 screenSize;
+struct ScreenUBO {
+    vec2 size;
     float aspect;
     float resolution;
     float prevResolution;
+};
 
-    int frameCount;
+struct FrameUBO {
+    int count;
     float time;
+};
 
+struct RenderUBO {
     Enum lightMode;
-
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
     int varianceSampling;
     int varianceWarmupSamples;
-    int debugView;
     int clipAccumulation;
+    int debugView;
+};
+
+layout(std140, set = 0, binding = 0) uniform UBO {
+    CameraUBO camera;
+    ScreenUBO screen;
+    FrameUBO  frame;
+    RenderUBO render;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D prevTex;

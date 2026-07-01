@@ -21,33 +21,45 @@ struct RenderState {
     float prevResolution = 1.0f;
 };
 
-struct PathtracerUBO {
-    alignas(16) glm::vec3 cameraPos;
-    alignas(16) glm::vec3 cameraDir;
+struct alignas(16) CameraUBO {
+    alignas(16) glm::vec3 pos;
+    alignas(16) glm::vec3 dir;
     float tanHFov;
     float aperture;
     float focusDepth;
+};
 
-    alignas(8) glm::vec2 screenSize;
+struct alignas(16) ScreenUBO {
+    alignas(8) glm::vec2 size;
     float aspect;
     float resolution;
     float prevResolution;
-    
-    int frameCount;
+};
+
+struct alignas(16) FrameUBO {
+    int count;
     float time;
+};
 
+struct alignas(16) RenderUBO {
     int lightMode;
-
     int maxBounces;
     int samplesPerPixel;
     int importanceSampling;
     int varianceSampling;
     int varianceWarmupSamples;
-    int debugView;
     int clipAccumulation;
+    int debugView;
 };
 
-struct ScreenUBO {
+struct PathtracerUBO {
+    CameraUBO camera;
+    ScreenUBO screen;
+    FrameUBO frame;
+    RenderUBO render;
+};
+
+struct DisplayUBO {
     int frameCount;
     float resolution;
     int debugView;
@@ -86,7 +98,7 @@ struct AppContext {
 
     RenderState* renderState;
     PathtracerUBO* pathtracerUBO;
-    ScreenUBO* screenUBO;
+    DisplayUBO* displayUBO;
 
     bool* restartRender = nullptr;
     Platform* platform = nullptr;

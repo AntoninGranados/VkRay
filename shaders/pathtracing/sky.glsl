@@ -8,7 +8,7 @@ vec3 skyColor(vec3 dir) {
     float t = clamp(0.5*(dir.y + 1.0), 0.0, 1.0);
     vec3 zenith, horizon;
 
-    switch (ubo.lightMode) {
+    switch (ubo.render.lightMode) {
         case lightMode_Day:
             zenith = vec3(0.5, 0.7, 1.0);
             horizon = vec3(1.0, 1.0, 1.0);

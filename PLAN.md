@@ -26,6 +26,11 @@ This plan will most likely be subjected to heavy modifications.
   - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
   - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer
   - Headless mode runs the renderer loop directly with no display layer
+- [ ] **[0.4.1] Multi-descriptor-set layout**: split the pathtracing pass into 3 descriptor sets by update frequency
+  - Requires VkSmol changes: `set` field in `DescriptorBindingDecl`, multi-layout pipeline creation, N-set `vkCmdBindDescriptorSets`
+  - Set 0 (per-frame): `PathtracerUBO`, `prevTex`, `PixelInfoBuffer`, `outputImage`
+  - Set 1 (scene): all geometry/material SSBOs — updated only on scene edits
+  - Set 2 (textures): bindless sampler array — groundwork for v0.7 texture support
 
 ## v0.5 Denoising
 

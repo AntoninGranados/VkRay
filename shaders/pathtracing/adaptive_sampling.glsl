@@ -29,7 +29,7 @@ float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
     float mean = 0.0;
     float meanSq = 0.0;
     int samples = 0;
-    float stepSize = max(ubo.resolution, 1.0);
+    float stepSize = max(ubo.screen.resolution, 1.0);
     for (int y = -radius; y <= radius; y++) {
         for (int x = -radius; x <= radius; x++) {
             ivec2 p = blockCoord + ivec2(x, y) * int(stepSize);
@@ -51,7 +51,7 @@ float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec
     float spatialSigma = computeSpatialVariance(blockCoord, texSize);
 
     float sigma = mix(sqrt(max(temporalVariance, 0.0)), spatialSigma, 0.5);
-    float minAdaptiveSamples = max(float(ubo.varianceWarmupSamples), 0.0);
+    float minAdaptiveSamples = max(float(ubo.render.varianceWarmupSamples), 0.0);
     float proba = clamp(sigma * 4.0, 0.1, 1.0);
     pixelInfo.varianceProba = proba;
     return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;

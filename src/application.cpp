@@ -9,7 +9,6 @@
 
 #include "VkSmol/render/shader.hpp"
 
-#include "scene/object/object.hpp"
 #include "version.hpp"
 
 // Public
@@ -212,70 +211,71 @@ void Application::handleCommands() {
 
 void Application::fillUBOs() {
     auto& pathtracer = *ctx.pathtracerUBO;
-    auto& screen     = *ctx.screenUBO;
+    auto& display    = *ctx.displayUBO;
 
-    pathtracer.cameraPos  = ctx.camera->getPosition();
-    pathtracer.cameraDir  = ctx.camera->getDirection();
-    pathtracer.tanHFov    = ctx.camera->getTanHFov();
-    pathtracer.aperture   = ctx.camera->getAperture();
-    pathtracer.focusDepth = ctx.camera->getFocusDepth();
+    pathtracer.camera.pos       = ctx.camera->getPosition();
+    pathtracer.camera.dir       = ctx.camera->getDirection();
+    pathtracer.camera.tanHFov   = ctx.camera->getTanHFov();
+    pathtracer.camera.aperture  = ctx.camera->getAperture();
+    pathtracer.camera.focusDepth = ctx.camera->getFocusDepth();
 
     VkExtent2D extent = engine.getExtent();
-    pathtracer.screenSize     = { (float)extent.width, (float)extent.height };
-    pathtracer.aspect         = pathtracer.screenSize.x / pathtracer.screenSize.y;
-    pathtracer.resolution     = renderState.resolution;
-    pathtracer.prevResolution = renderState.prevResolution;
+    pathtracer.screen.size         = { (float)extent.width, (float)extent.height };
+    pathtracer.screen.aspect       = pathtracer.screen.size.x / pathtracer.screen.size.y;
+    pathtracer.screen.resolution   = renderState.resolution;
+    pathtracer.screen.prevResolution = renderState.prevResolution;
 
     if (frameCount <= 1) lastTime = (float)platform.getTime();
-    pathtracer.frameCount = frameCount;
-    pathtracer.time = (float)platform.getTime() - lastTime;
+    pathtracer.frame.count = frameCount;
+    pathtracer.frame.time  = (float)platform.getTime() - lastTime;
 
-    pathtracer.lightMode      = static_cast<int>(parameters.getEnum<LightMode>("lightMode"));
-    pathtracer.maxBounces     = parameters.getInt("maxBounces");
-    pathtracer.samplesPerPixel = parameters.getInt("previewSamples");
-    pathtracer.importanceSampling    = static_cast<int>(parameters.getBool("importanceSampling"));
-    pathtracer.varianceSampling      = static_cast<int>(parameters.getBool("varianceSampling"));
-    pathtracer.varianceWarmupSamples = parameters.getInt("varianceWarmup");
-    pathtracer.debugView      = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
-    pathtracer.clipAccumulation = static_cast<int>(parameters.getBool("clipAccumulation"));
+    pathtracer.render.lightMode            = static_cast<int>(parameters.getEnum<LightMode>("lightMode"));
+    pathtracer.render.maxBounces           = parameters.getInt("maxBounces");
+    pathtracer.render.samplesPerPixel      = parameters.getInt("previewSamples");
+    pathtracer.render.importanceSampling   = static_cast<int>(parameters.getBool("importanceSampling"));
+    pathtracer.render.varianceSampling     = static_cast<int>(parameters.getBool("varianceSampling"));
+    pathtracer.render.varianceWarmupSamples = parameters.getInt("varianceWarmup");
+    pathtracer.render.clipAccumulation     = static_cast<int>(parameters.getBool("clipAccumulation"));
+    pathtracer.render.debugView            = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
 
-    screen.frameCount           = frameCount;
-    screen.resolution           = renderState.resolution;
-    screen.debugView            = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
-    screen.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
-    screen.denoisingEnabled     = static_cast<int>(parameters.getBool("denoising"));
+    display.frameCount           = frameCount;
+    display.resolution           = renderState.resolution;
+    display.debugView            = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
+    display.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
+    display.denoisingEnabled     = static_cast<int>(parameters.getBool("denoising"));
 }
 
 void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode) {
     auto& pathtracer = *ctx.pathtracerUBO;
-    auto& screen     = *ctx.screenUBO;
+    auto& display    = *ctx.displayUBO;
 
-    pathtracer.cameraPos  = ctx.camera->getPosition();
-    pathtracer.cameraDir  = ctx.camera->getDirection();
-    pathtracer.tanHFov    = ctx.camera->getTanHFov();
-    pathtracer.aperture   = ctx.camera->getAperture();
-    pathtracer.focusDepth = ctx.camera->getFocusDepth();
+    pathtracer.camera.pos        = ctx.camera->getPosition();
+    pathtracer.camera.dir        = ctx.camera->getDirection();
+    pathtracer.camera.tanHFov    = ctx.camera->getTanHFov();
+    pathtracer.camera.aperture   = ctx.camera->getAperture();
+    pathtracer.camera.focusDepth = ctx.camera->getFocusDepth();
 
     VkExtent2D extent = engine.getExtent();
-    pathtracer.screenSize     = { (float)extent.width, (float)extent.height };
-    pathtracer.aspect         = pathtracer.screenSize.x / pathtracer.screenSize.y;
-    pathtracer.resolution     = 1.0f;
-    pathtracer.prevResolution = 1.0f;
+    pathtracer.screen.size           = { (float)extent.width, (float)extent.height };
+    pathtracer.screen.aspect         = pathtracer.screen.size.x / pathtracer.screen.size.y;
+    pathtracer.screen.resolution     = 1.0f;
+    pathtracer.screen.prevResolution = 1.0f;
 
-    pathtracer.frameCount            = sampleIndex;
-    pathtracer.time                  = 0.0f;
-    pathtracer.lightMode             = static_cast<int>(lightMode);
-    pathtracer.maxBounces            = 16;
-    pathtracer.samplesPerPixel       = 1;
-    pathtracer.importanceSampling    = 1;
-    pathtracer.varianceSampling      = 0;
-    pathtracer.varianceWarmupSamples = static_cast<int>(targetSamples / 2);
-    pathtracer.debugView             = 0;
-    pathtracer.clipAccumulation      = 1;
+    pathtracer.frame.count = sampleIndex;
+    pathtracer.frame.time  = 0.0f;
 
-    screen.frameCount           = sampleIndex;
-    screen.resolution           = 1.0f;
-    screen.debugView            = 0;
-    screen.previewBorderEnabled = 0;
-    screen.denoisingEnabled     = 0;
+    pathtracer.render.lightMode             = static_cast<int>(lightMode);
+    pathtracer.render.maxBounces            = 16;
+    pathtracer.render.samplesPerPixel       = 1;
+    pathtracer.render.importanceSampling    = 1;
+    pathtracer.render.varianceSampling      = 0;
+    pathtracer.render.varianceWarmupSamples = static_cast<int>(targetSamples / 2);
+    pathtracer.render.clipAccumulation      = 1;
+    pathtracer.render.debugView             = 0;
+
+    display.frameCount           = sampleIndex;
+    display.resolution           = 1.0f;
+    display.debugView            = 0;
+    display.previewBorderEnabled = 0;
+    display.denoisingEnabled     = 0;
 }

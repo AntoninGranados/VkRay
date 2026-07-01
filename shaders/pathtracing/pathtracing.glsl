@@ -23,19 +23,19 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
     float scr_x = ndc_pos.x * 0.5f + 0.5f;
     float scr_y = ndc_pos.y * 0.5f + 0.5f;
 
-    float cam_x = (2.f * scr_x - 1.f) * ubo.aspect * ubo.tanHFov;
-    float cam_y = (1.f - 2.f * scr_y) * ubo.tanHFov;
+    float cam_x = (2.f * scr_x - 1.f) * ubo.screen.aspect * ubo.camera.tanHFov;
+    float cam_y = (1.f - 2.f * scr_y) * ubo.camera.tanHFov;
 
     vec3 offset = vec3(0.0);
     if (enableFocus) {
         vec2 p = randomInDisk(seed);
-        float lens_r = ubo.aperture * 0.5;
+        float lens_r = ubo.camera.aperture * 0.5;
         offset = lens_r * (right * p.x + up * p.y);
     }
 
     vec3 origin = camera.pos + offset;
 
-    vec3 target = camera.pos + (cam_x * right + cam_y * up + forward) * ubo.focusDepth;
+    vec3 target = camera.pos + (cam_x * right + cam_y * up + forward) * ubo.camera.focusDepth;
     vec3 dir = normalize(target - origin);
 
     return Ray(origin, dir);
@@ -84,7 +84,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
     collectGBuffer(hit, pixelInfo);
 
-    if (ubo.debugView == debug_HitChecks) {
+    if (ubo.render.debugView == debug_HitChecks) {
         float bvh = float(stats.bvhChecks) / 256.0;
         float tri = float(stats.triangleChecks) / 256.0;
         if (max(bvh, tri) > 1.0) return vec3(1.0);
@@ -109,7 +109,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     Hit prevHit;
     BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
 
-    for (; i < ubo.maxBounces; i++) {
+    for (; i < ubo.render.maxBounces; i++) {
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
 
@@ -121,7 +121,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
                 vec3 Le = mat.albedo * mat.emissionStrength;
                 float w = 1.0;
-                if (ubo.importanceSampling == 1 && !prevBsdf.isDelta) {
+                if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta) {
                     float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
                     w = powerHeuristic(prevBsdf.pdf, pdfL);
                 }
@@ -137,7 +137,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             if (mat.type == mat_Volume) {
                 currentMedium = hit.frontFace ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
             }
-            if (ubo.importanceSampling == 1 && !bsdf.isDelta) {
+            if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
                 lightSample = sampleLight(hit, seed);
                 BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
                 if (lightSample.pdf > EPS) {
@@ -168,7 +168,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 if (t_scatter < hit.t) {
                     ray.origin += ray.dir * t_scatter;
 
-                    if (ubo.importanceSampling == 1) {
+                    if (ubo.render.importanceSampling == 1) {
                         Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE);
                         LightSample volLight = sampleLight(scatterHit, seed);
                         if (volLight.pdf > EPS) {
@@ -199,10 +199,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             break;
         }
     }
-    if (i == ubo.maxBounces) radiance = vec3(0.0);
+    if (i == ubo.render.maxBounces) radiance = vec3(0.0);
 
-    if (ubo.debugView == debug_Bounces) {
-        return vec3(i / float(ubo.maxBounces));
+    if (ubo.render.debugView == debug_Bounces) {
+        return vec3(i / float(ubo.render.maxBounces));
     }
     return radiance;
 }
@@ -210,10 +210,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
-    for (int i = 0; i < ubo.samplesPerPixel; i++) {
+    for (int i = 0; i < ubo.render.samplesPerPixel; i++) {
         if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
             pixelInfo.count += 1;
-            vec2 offset = ubo.resolution * vec2(rand(seed), rand(seed)) / ubo.screenSize;
+            vec2 offset = ubo.screen.resolution * vec2(rand(seed), rand(seed)) / ubo.screen.size;
             Ray ray = getRay(camera, fragPos + offset, true, seed);
             vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
             if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
@@ -221,7 +221,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
                 continue;
             }
 
-            if (ubo.clipAccumulation == 1) rayColor = min(rayColor, vec3(100.0));
+            if (ubo.render.clipAccumulation == 1) rayColor = min(rayColor, vec3(100.0));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;
@@ -242,7 +242,7 @@ void main() {
     vec2 uv = screenCoord / vec2(texSize);
     vec2 fragPos = uv * 2.0 - 1.0;
 
-    float prevScale = max(ubo.prevResolution, 1.0);
+    float prevScale = max(ubo.screen.prevResolution, 1.0);
     ivec2 prevBlockCoord = pixelCoord;
     if (prevScale > 1.0) {
         prevBlockCoord = ivec2(floor(screenCoord / prevScale) * prevScale);
@@ -250,7 +250,7 @@ void main() {
     }
 
     vec3 prevColor = texelFetch(prevTex, prevBlockCoord, 0).rgb;
-    if (ubo.frameCount <= 1) {
+    if (ubo.frame.count <= 1) {
         prevColor = vec3(0);
 
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
@@ -266,21 +266,21 @@ void main() {
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
-    Camera camera = Camera(ubo.cameraPos, ubo.cameraDir, vec3(0, 1, 0));
-    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frameCount));
+    Camera camera = Camera(ubo.camera.pos, ubo.camera.dir, vec3(0, 1, 0));
+    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frame.count));
 
-    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.resolution);
+    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.screen.resolution);
     uint blockVarianceIndex = varianceIndexFromCoord(blockCoord, texSize);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
     float prevCount = max(pixelInfo.count, 0.0);
 
     float sampleProb = 1.0;
-    if (ubo.varianceSampling != 0)
-        sampleProb = computeSampleProbability(pixelInfo, blockCoord, texSize, ubo.prevResolution);
+    if (ubo.render.varianceSampling != 0)
+        sampleProb = computeSampleProbability(pixelInfo, blockCoord, texSize, ubo.screen.prevResolution);
 
     float takenSamples = 0.0;
     vec3 colorSum = vec3(0);
-    bool isCenterPixel = ubo.resolution == 1.0f || pixelCoord == blockCoord;
+    bool isCenterPixel = ubo.screen.resolution == 1.0f || pixelCoord == blockCoord;
     if (isCenterPixel) {
         colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
         PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
@@ -294,7 +294,7 @@ void main() {
         pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
     }
 
-    if (ubo.resolution < ubo.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
+    if (ubo.screen.resolution < ubo.screen.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
 
     Ray primaryRay = getRay(camera, fragPos, false, seed);
     Hit selectedHit = NO_HIT;
