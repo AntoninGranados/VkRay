@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
 #include "app/app_context.hpp"
 #include "./export_service.hpp"
 
 #include "VkSmol/graph/builder_resource.hpp"
-#include "VkSmol/memory/buffer.hpp"
 
 struct FrameContext;
 
@@ -22,13 +21,11 @@ public:
     void destroy(AppContext& ctx);
     void buildPipelines(AppContext& ctx);
 
-    // Windowed: called each frame from Application::run()
     void render(AppContext& ctx);
+    bool promptOutputPath();
 
-    // Headless: render one accumulated sample; captureOutput copies to readback on last frame
     void renderHeadless(AppContext& ctx, bool captureOutput = false);
-    // Headless: write the captured frame to a PNG file
-    void saveCapture(AppContext& ctx, const std::string& path, uint32_t width, uint32_t height);
+    void saveCapture(AppContext& ctx, const std::filesystem::path& path, uint32_t width, uint32_t height);
 
 private:
     const std::vector<ScreenVertex> vertices = {
@@ -65,9 +62,6 @@ private:
     BufferHandle pathtracingUBOHandle;
     BufferHandle displayUBOHandle;
     BufferHandle pixelInfoBufferHandle;
-
-    // Headless-only
-    Buffer readbackBuffer;
 
     void handleResize(AppContext& ctx, const VkExtent2D& extent);
     void pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput = false);

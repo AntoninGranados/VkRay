@@ -68,7 +68,7 @@ void Application::run() {
     }
 }
 
-void Application::runHeadless(const std::string& sceneFile, uint32_t targetSamples, const std::string& outputPath) {
+void Application::runHeadless(const std::filesystem::path& sceneFile, uint32_t targetSamples, const std::filesystem::path& outputPath) {
     constexpr int kBarWidth = 40;
 
     LightMode lightMode = LightMode::Day;
@@ -196,7 +196,8 @@ void Application::handleCommands() {
         shouldClose = true;
     } if (notifications.isCommandRequested(Command::Render)) {
         if (renderState.renderMode == RenderMode::Preview) {
-            clearRenderingData(RenderMode::RenderSingle);
+            if (renderer.promptOutputPath())
+                clearRenderingData(RenderMode::RenderSingle);
         }
     } if (notifications.isCommandRequested(Command::RenderAnim)) {
         if (renderState.renderMode == RenderMode::Preview) {
@@ -270,7 +271,7 @@ void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, Ligh
     pathtracer.varianceSampling      = 0;
     pathtracer.varianceWarmupSamples = static_cast<int>(targetSamples / 2);
     pathtracer.debugView             = 0;
-    pathtracer.clipAccumulation      = 0;
+    pathtracer.clipAccumulation      = 1;
 
     screen.frameCount           = sampleIndex;
     screen.resolution           = 1.0f;

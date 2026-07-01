@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1]
+
+### Added
+- EXR output; save dialog opens before the render, format determined by file extension
+- JSON scene files now support comments
+
+### Changed
+- Headless save unified through `ExportService` (removes separate readback buffer)
+- Turn ON support for comments in JSON
+
+---
+
 ## [0.3.0]
 
 ### Added

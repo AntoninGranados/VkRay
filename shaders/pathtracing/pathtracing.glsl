@@ -221,7 +221,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
                 continue;
             }
 
-            if (ubo.clipAccumulation == 1) rayColor = min(rayColor, vec3(50.0));
+            if (ubo.clipAccumulation == 1) rayColor = min(rayColor, vec3(100.0));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples += 1.0;

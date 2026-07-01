@@ -1,9 +1,11 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <optional>
 #include <string>
+#include <filesystem>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
@@ -37,7 +39,7 @@ public:
     ~Application();
 
     void run();
-    void runHeadless(const std::string& sceneFile, uint32_t targetSamples, const std::string& outputPath);
+    void runHeadless(const std::filesystem::path& sceneFile, uint32_t targetSamples, const std::filesystem::path& outputPath);
 
     friend void InputHandler::initCallbacks(const AppContext& ctx);
 

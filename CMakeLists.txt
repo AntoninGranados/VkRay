@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(VkRay LANGUAGES CXX)
+project(VkRay LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,11 @@ target_include_directories(imgui_third_party PUBLIC
 )
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
 
+add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/third_party/tinyexr/miniz.c")
+target_include_directories(tinyexr_third_party PUBLIC
+  "${CMAKE_SOURCE_DIR}/third_party/tinyexr"
+)
+
 # ── Engine submodule ──────────────────────────────────────────────────────────
 set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/imgui;${CMAKE_SOURCE_DIR}/third_party")
 add_subdirectory("${CMAKE_SOURCE_DIR}/libs/VkSmol" engine)
@@ -69,7 +74,7 @@ target_include_directories(VkRay PRIVATE
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(VkRay PRIVATE VkSmol nfd)
+target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr_third_party)
 target_compile_options(VkRay PRIVATE -Wall)
 target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})

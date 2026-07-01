@@ -302,7 +302,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     }
 
     json j;
-    try { j = json::parse(file); }
+    try { j = json::parse(file, nullptr, true, true); }
     catch (const json::parse_error& e) {
         fprintf(stderr, "[ERROR] Parse error: %s\n", e.what());
         return false;

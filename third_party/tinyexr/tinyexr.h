@@ -768,7 +768,7 @@ extern const char* EXRGetSpectralUnits(const EXRHeader *exr_header);
 #endif
 
 #if defined(TINYEXR_USE_MINIZ) && (TINYEXR_USE_MINIZ==1)
-#include <miniz.h>
+#include "miniz.h"
 #else
 //  Issue #46. Please include your own zlib-compatible API header before
 //  including `tinyexr.h`

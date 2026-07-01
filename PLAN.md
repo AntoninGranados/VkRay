@@ -7,7 +7,7 @@ This plan will most likely be subjected to heavy modifications.
 - [X] **[0.3.0] Scene file (JSON)**: save/load the full scene to/from a JSON file
   - Covers primitives, materials, camera, and render parameters
   - Replaces the hard-coded reference scene
-- [ ] **[0.3.1] EXR output**: write renders to OpenEXR instead of PNG only
+- [X] **[0.3.1] EXR output**: write renders to OpenEXR instead of PNG only
   - Preserves HDR values for compositing pipelines
   - Natural container for multi-channel AOV data
 - [ ] **[0.3.2] GBuffer / AOV passes**: expose auxiliary render buffers as outputs

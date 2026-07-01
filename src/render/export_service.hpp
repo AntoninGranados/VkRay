@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
 #include "VkSmol/engine.hpp"
 #include "app/app_context.hpp"
@@ -16,21 +16,25 @@ public:
     void init(VkSmol& engine, const uint32_t& width, const uint32_t& height);
     void destroy(VkSmol& engine);
     void requestSave() { renderRequested = true; }
+    bool promptOutputPath();
 
     void handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image);
     void handleSave(AppContext& ctx);
-    
+    void captureImage(CommandBuffer& commandBuffer, Image& image);
+    void saveCapture(AppContext& ctx, const std::filesystem::path& path);
+
 private:
-    std::string buildRenderOutputPath();
-    std::string buildAnimationoFramePath(int frame);
-    
+    std::filesystem::path buildAnimationFramePath(int frame);
+
     void copyImageToBuffer(CommandBuffer& commandBuffer, Image& image);
-    void saveBufferToFile(AppContext& ctx, std::string path);
+    void saveBufferToPNG(AppContext& ctx, const std::filesystem::path& path);
+    void saveBufferToEXR(AppContext& ctx, const std::filesystem::path& path);
     void convertFramesToVideo();
 
     Buffer buffer;
 
-    bool renderRequested = false;
+    bool renderRequested   = false;
     bool renderPendingSave = false;
+    std::filesystem::path pendingOutputPath;
     uint32_t width, height;
 };
