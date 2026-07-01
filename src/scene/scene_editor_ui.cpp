@@ -11,6 +11,7 @@
 
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
+#include <nfd.hpp>
 
 #include "app/notification_handler.hpp"
 #include "editor/ui_constants.hpp"
@@ -200,35 +201,18 @@ void SceneEditorUI::drawUI(Scene& scene) {
         ImGui::EndTable();
     }
 
-    if (openNewMeshAssetPopup) ImGui::OpenPopup("New Mesh Asset");
-    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (ImGui::BeginPopupModal("New Mesh Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-        static char meshPath[256] = "";
-        ImGui::Text("Path:");
-        ImGui::PushItemWidth(420.0f);
-        ImGui::InputText("##MeshPath", meshPath, sizeof(meshPath));
-        ImGui::PopItemWidth();
-
-        bool hasPath = std::strlen(meshPath) > 0;
-        ImGui::BeginDisabled(!hasPath);
-        if (ImGui::Button(ICON_FA_UPLOAD " Load", ui::kButtonSize)) {
+    if (openNewMeshAssetPopup) {
+        NFD::Guard guard;
+        NFD::UniquePath outPath;
+        nfdfilteritem_t filter[1] = { { "OBJ Mesh", "obj" } };
+        if (NFD::OpenDialog(outPath, filter, 1) == NFD_OKAY) {
+            const std::string meshPath = outPath.get();
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*scene.ctx, meshPath)) {
                 scene.meshAssets.push_back(std::move(asset));
                 scene.updated = true;
-                meshPath[0] = '\0';
-                ImGui::CloseCurrentPopup();
             }
         }
-        ImGui::EndDisabled();
-        ImGui::SameLine();
-        ui::PushCancelStyleColor();
-        if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
-            ImGui::CloseCurrentPopup();
-        }
-        ui::PopCancelStyleColor();
-        ImGui::EndPopup();
     }
 
     if (openNewObjectPopup) ImGui::OpenPopup("New Object");

@@ -167,12 +167,13 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         glm::vec3 meshAabbMin = mesh.getAabbMin();
         glm::vec3 meshAabbMax = mesh.getAabbMax();
         meshTemplates.push_back(GpuMesh{
-            .indexOffset  = indexOffset,
+            .indexOffset   = indexOffset,
             .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
-            .bvhOffset    = bvhOffset,
-            .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
+            .bvhOffset     = bvhOffset,
+            .bvhNodeCount  = static_cast<uint32_t>(meshBvhNodes.size()),
             .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
             .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
+            .smoothShading = mesh.getSmoothShading() ? 1u : 0u,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
@@ -211,15 +212,16 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
         MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
 
         meshes.push_back(GpuMesh{
-            .transform     = t.local,
-            .invTransform  = glm::inverse(t.local),
-            .indexOffset   = meshTemplate.indexOffset,
-            .triangleCount = meshTemplate.triangleCount,
-            .bvhOffset     = meshTemplate.bvhOffset,
-            .bvhNodeCount  = meshTemplate.bvhNodeCount,
+            .transform      = t.local,
+            .invTransform   = glm::inverse(t.local),
+            .indexOffset    = meshTemplate.indexOffset,
+            .triangleCount  = meshTemplate.triangleCount,
+            .bvhOffset      = meshTemplate.bvhOffset,
+            .bvhNodeCount   = meshTemplate.bvhNodeCount,
             .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
             .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
             .materialHandle = handle,
+            .smoothShading  = meshTemplate.smoothShading,
         });
 
         packingMaps.meshId[e] = meshId++;

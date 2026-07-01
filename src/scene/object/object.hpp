@@ -60,6 +60,7 @@ struct GpuMesh {
     float aabbMinX, aabbMinY, aabbMinZ;
     float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
+    uint32_t smoothShading;
 };
 
 

@@ -348,7 +348,15 @@ bool drawMeshAssetUI(MeshAsset& mesh) {
     ImGui::Text("Faces:    %zu", mesh.getIndices().size() / 3);
 
     ImGui::Separator();
-    
+
+    bool smooth = mesh.getSmoothShading();
+    if (ImGui::Checkbox("Smooth Shading", &smooth)) {
+        mesh.setSmoothShading(smooth);
+        updated = true;
+    }
+
+    ImGui::Separator();
+
     float ratio = mesh.getSimplifyRatio();
     ImGui::Text("Simplify Ratio:");
     ImGui::PushItemWidth(-FLT_MIN);

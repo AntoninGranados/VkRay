@@ -92,6 +92,7 @@ struct Mesh {
     float aabbMinX, aabbMinY, aabbMinZ;
     float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
+    uint smoothShading;
 };
 
 // ============== PATH-TRACING  ==============

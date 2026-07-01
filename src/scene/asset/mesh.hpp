@@ -66,10 +66,14 @@ public:
     bool applySimplification();
     bool revertSimplification();
 
+    bool getSmoothShading() const { return smoothShading; }
+    void setSmoothShading(bool v) { smoothShading = v; }
+
 private:
     std::string name;
     std::string path = "";
     float simplifyRatio = 1.0f;
+    bool smoothShading  = true;
     bool hasSaved = false;
     std::vector<Vertex> savedVertices;
     std::vector<uint32_t> savedIndices;
