@@ -17,7 +17,7 @@ void RenderPanel::draw(AppContext& ctx) {
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
-    int renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
+    int renderSamplesPerPixel = ctx.parameters->getInt("pathtracer/sampling/render_samples");
     if (renderSamplesPerPixel > 0) {
         float progress = static_cast<float>(std::min<uint64_t>(ctx.renderState->sampleCount, renderSamplesPerPixel))
             / static_cast<float>(renderSamplesPerPixel);

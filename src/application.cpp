@@ -111,34 +111,67 @@ void Application::runHeadless(const std::filesystem::path& sceneFile, uint32_t t
 
 // Private
 void Application::initParameters() {
-    parameters.addInt("maxBounces", "Max Bounces", 8, 1, 20, 1, false, "Pathtracer");
-    parameters.addInt("previewSamples", "Preview Samples", 1, 1, 10, 1, false, "Pathtracer");
-    parameters.addInt("renderSamples", "Render Samples", 2048, 1, 4096, 1, false, "Pathtracer");
-    parameters.addFloat("movingResolution", "Moving Resolution", 8.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
-    parameters.addFloat("previewResolution", "Preview Resolution", 4.0f, 1.0f, 50.0f, 1.0f, true, "Pathtracer");
-    parameters.addFloat("renderResolution", "Render Resolution", 1.0f, 1.0f, 50.0f, 1.0f, false, "Pathtracer");
-    parameters.addBool("importanceSampling", "Importance Sampling", true, false, "Pathtracer");
-    parameters.addBool("varianceSampling", "Variance Sampling", true, false, "Pathtracer");
-    parameters.addBool("denoising", "Denoising", false, false, "Pathtracer");
-    parameters.addInt("varianceWarmup", "Variance Warmup Samples", 64, 0, 2048, 1, false, "Pathtracer");
-    parameters.addEnum(
-        "debugView",
-        "Debug View",
-        static_cast<int>(DebugView::None),
-        { "None", "Bounces", "Normal", "Position", "Diffuse", "Selection Mask", "Variance", "Hit Checks" },
-        true,
-        "Pathtracer"
-    );
-    parameters.addBool("clipAccumulation", "Clip Accumulation", false, true, "Pathtracer");
+    auto& r = pathtracerUBO.render;
+    auto& d = displayUBO;
 
-    parameters.addEnum(
-        "lightMode",
-        "Light Mode",
-        static_cast<int>(LightMode::Day),
-        { "Day", "Sunset", "Night", "Empty" },
-        true,
-        "Scene"
+    parameters.setLabel("pathtracer", "Pathtracer");
+    parameters.addBool("pathtracer/denoising", "Denoising", false, false);
+    parameters.bind("pathtracer/denoising", [&]() { d.denoisingEnabled = static_cast<int>(parameters.getBool("pathtracer/denoising")); });
+
+    parameters.addEnum<DebugView>(
+        "pathtracer/debug_view",
+        "Debug View",
+        DebugView::None,
+        { "None", "Bounces", "Normal", "Position", "Diffuse", "Selection Mask", "Variance", "Hit Checks" },
+        true
     );
+    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = d.debugView = static_cast<int>(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
+
+    parameters.setLabel("pathtracer/sampling", "Sampling");
+    parameters.addInt("pathtracer/sampling/max_bounces", "Max Bounces", 8, 1, 20, 1, false);
+    parameters.bindInt("pathtracer/sampling/max_bounces", &r.maxBounces);
+
+    parameters.addInt("pathtracer/sampling/preview_samples", "Preview Samples", 1, 1, 10, 1, false);
+    parameters.bindInt("pathtracer/sampling/preview_samples", &r.samplesPerPixel);
+
+    parameters.addInt("pathtracer/sampling/render_samples", "Render Samples", 2048, 1, 4096, 1, false);
+
+    parameters.addBool("pathtracer/sampling/importance_sampling", "Importance Sampling", true, false);
+    parameters.bind("pathtracer/sampling/importance_sampling", [&]() { r.importanceSampling = static_cast<int>(parameters.getBool("pathtracer/sampling/importance_sampling")); });
+
+    parameters.addBool("pathtracer/sampling/clip_accumulation", "Clip Accumulation", false, true);
+    parameters.bind("pathtracer/sampling/clip_accumulation", [&]() { r.clipAccumulation = static_cast<int>(parameters.getBool("pathtracer/sampling/clip_accumulation")); });
+
+    parameters.addBool("pathtracer/sampling/variance_sampling", "Variance Sampling", true, false);
+    parameters.bind("pathtracer/sampling/variance_sampling", [&]() { r.varianceSampling = static_cast<int>(parameters.getBool("pathtracer/sampling/variance_sampling")); });
+
+    parameters.addInt("pathtracer/sampling/variance_warmup", "Variance Warmup Samples", 64, 0, 2048, 1, false);
+    parameters.bindInt("pathtracer/sampling/variance_warmup", &r.varianceWarmupSamples);
+
+    parameters.setLabel("pathtracer/resolution", "Resolution");
+    parameters.addFloat("pathtracer/resolution/moving",  "Moving Resolution",  8.0f, 1.0f, 50.0f, 1.0f, false);
+    parameters.addFloat("pathtracer/resolution/preview", "Preview Resolution", 4.0f, 1.0f, 50.0f, 1.0f, true);
+    parameters.addFloat("pathtracer/resolution/render",  "Render Resolution",  1.0f, 1.0f, 50.0f, 1.0f, false);
+
+    parameters.setLabel("pathtracer/aov", "Arbitrary Output Variables");
+    parameters.addBool("pathtracer/aov/normal",         "Normal",            false, false);
+    parameters.addBool("pathtracer/aov/normal_opaque",  "Normal (opaque)",   false, false);
+    parameters.addBool("pathtracer/aov/albedo",         "Albedo",            false, false);
+    parameters.addBool("pathtracer/aov/albedo_opaque",  "Albedo (opaque)",   false, false);
+    parameters.addBool("pathtracer/aov/depth",          "Depth",             false, false);
+    parameters.addBool("pathtracer/aov/depth_opaque",   "Depth (opaque)",    false, false);
+    parameters.addBool("pathtracer/aov/sky_mask",       "Sky mask",          false, false);
+    parameters.addBool("pathtracer/aov/sky_mask_opaque","Sky mask (opaque)", false, false);
+
+    parameters.setLabel("scene", "Scene");
+    parameters.addEnum<LightMode>(
+        "scene/light_mode",
+        "Light Mode",
+        LightMode::Day,
+        { "Day", "Sunset", "Night", "Empty" },
+        true
+    );
+    parameters.bind("scene/light_mode", [&]() { r.lightMode = static_cast<int>(parameters.getEnum<LightMode>("scene/light_mode")); });
 }
 
 void Application::initScene(const std::string& sceneFile) {
@@ -148,7 +181,7 @@ void Application::initScene(const std::string& sceneFile) {
     LightMode mode = LightMode::Day;
     SceneSerializer::load(scene, mode, sceneFile);
 
-    parameters.setEnum<LightMode>("lightMode", mode);
+    parameters.setEnum<LightMode>("scene/light_mode", mode);
     ctx.camera = &scene.getCamera();
 }
 
@@ -166,13 +199,13 @@ void Application::onFrameStart(float dt) {
         frameCount = 1;
         renderState.sampleCount = 0;
         restartRender = false;
-        if (renderState.renderMode == RenderMode::Preview) renderState.resolution = parameters.getFloat("movingResolution");
+        if (renderState.renderMode == RenderMode::Preview) renderState.resolution = parameters.getFloat("pathtracer/resolution/moving");
     }
 
     fillUBOs();
 
     frameCount++;
-    renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("previewSamples"));
+    renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("pathtracer/sampling/preview_samples"));
 }
 
 void Application::clearRenderingData(RenderMode newRenderMode) {
@@ -229,20 +262,9 @@ void Application::fillUBOs() {
     pathtracer.frame.count = frameCount;
     pathtracer.frame.time  = (float)platform.getTime() - lastTime;
 
-    pathtracer.render.lightMode            = static_cast<int>(parameters.getEnum<LightMode>("lightMode"));
-    pathtracer.render.maxBounces           = parameters.getInt("maxBounces");
-    pathtracer.render.samplesPerPixel      = parameters.getInt("previewSamples");
-    pathtracer.render.importanceSampling   = static_cast<int>(parameters.getBool("importanceSampling"));
-    pathtracer.render.varianceSampling     = static_cast<int>(parameters.getBool("varianceSampling"));
-    pathtracer.render.varianceWarmupSamples = parameters.getInt("varianceWarmup");
-    pathtracer.render.clipAccumulation     = static_cast<int>(parameters.getBool("clipAccumulation"));
-    pathtracer.render.debugView            = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
-
     display.frameCount           = frameCount;
     display.resolution           = renderState.resolution;
-    display.debugView            = static_cast<int>(parameters.getEnum<DebugView>("debugView"));
     display.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
-    display.denoisingEnabled     = static_cast<int>(parameters.getBool("denoising"));
 }
 
 void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode) {

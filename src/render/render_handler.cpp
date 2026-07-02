@@ -196,7 +196,7 @@ void RenderHandler::buildPipelines(AppContext& ctx) {
 void RenderHandler::render(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
 
-    uint64_t renderSamplesPerPixel = ctx.parameters->getInt("renderSamples");
+    uint64_t renderSamplesPerPixel = ctx.parameters->getInt("pathtracer/sampling/render_samples");
     if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
         if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
             exportService.requestSave();

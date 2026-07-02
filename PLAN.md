@@ -10,7 +10,7 @@ This plan will most likely be subjected to heavy modifications.
 - [X] **[0.3.1] EXR output**: write renders to OpenEXR instead of PNG only
   - Preserves HDR values for compositing pipelines
   - Natural container for multi-channel AOV data
-- [ ] **[0.3.2] GBuffer / AOV passes**: expose auxiliary render buffers as outputs
+- [X] **[0.3.2] GBuffer / AOV passes**: expose auxiliary render buffers as outputs
   - Normals, depth, albedo (pixel info buffer already stores these)
   - Enables external denoising workflows (OIDN, OptiX)
 - [ ] **[0.3.3] Jobs file (JSON)**: declarative headless render jobs

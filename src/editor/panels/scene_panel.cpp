@@ -22,9 +22,9 @@ void ScenePanel::draw(AppContext& ctx) {
             NFD::UniquePath outPath;
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
             if (NFD::OpenDialog(outPath, filter, 1, "scenes/") == NFD_OKAY) {
-                LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
+                LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(*ctx.scene, mode, outPath.get())) {
-                    ctx.parameters->setEnum<LightMode>("lightMode", mode);
+                    ctx.parameters->setEnum<LightMode>("scene/light_mode", mode);
                     *ctx.restartRender = true;
                     ctx.notifications->pushMessage(NotificationType::Info, "Scene loaded: " + std::string(outPath.get()));
                 } else {
@@ -41,7 +41,7 @@ void ScenePanel::draw(AppContext& ctx) {
                 std::string path = outPath.get();
                 if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
                     path += ".json";
-                LightMode mode = ctx.parameters->getEnum<LightMode>("lightMode");
+                LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
                 if (SceneSerializer::save(*ctx.scene, mode, path)) {
                     ctx.notifications->pushMessage(NotificationType::Info, "Scene saved: " + path);
                 } else {
@@ -50,7 +50,7 @@ void ScenePanel::draw(AppContext& ctx) {
             }
         }
 
-        ctx.parameters->drawGroup("Scene", *ctx.restartRender);
+        ctx.parameters->drawGroup("scene", *ctx.restartRender);
         ctx.scene->drawUI();
     }
     ImGui::End();

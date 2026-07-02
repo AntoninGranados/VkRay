@@ -56,11 +56,9 @@ private:
     RenderState renderState;
     PathtracerUBO pathtracerUBO{};
     DisplayUBO displayUBO{};
-    AovConfig aovConfig{};
-
     bool restartRender = false;
 
-    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, nullptr, &animation, &renderState, &pathtracerUBO, &displayUBO, &aovConfig, &restartRender, &platform };
+    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, nullptr, &animation, &renderState, &pathtracerUBO, &displayUBO, &restartRender, &platform };
 
     std::optional<InputHandler> inputHandler;
     RenderHandler renderer;

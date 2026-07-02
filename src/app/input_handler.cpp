@@ -48,7 +48,7 @@ void InputHandler::handle(const AppContext& ctx, float dt) {
 }
 
 void InputHandler::handlePreview(const AppContext& ctx, float dt) {
-    ctx.renderState->resolution = ctx.parameters->getFloat("previewResolution");
+    ctx.renderState->resolution = ctx.parameters->getFloat("pathtracer/resolution/preview");
 
     const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ctx.ui->isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ctx.ui->isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
@@ -108,7 +108,7 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
 }
 
 void InputHandler::handleRender(const AppContext& ctx, float dt) {
-    ctx.renderState->resolution = ctx.parameters->getFloat("renderResolution");
+    ctx.renderState->resolution = ctx.parameters->getFloat("pathtracer/resolution/render");
     updateRenderSamplesPerSecond(ctx, dt);
 
     ctx.platform->setCursorMode(GLFW_CURSOR_NORMAL);
@@ -120,7 +120,7 @@ void InputHandler::handleRender(const AppContext& ctx, float dt) {
 void InputHandler::updateRenderSamplesPerSecond(const AppContext& ctx, float dt) {
     const double dtSafe = std::max(static_cast<double>(dt), 0.0);
     ctx.renderState->samplesPerSecAccumTime += dtSafe;
-    ctx.renderState->samplesPerSecAccumSamples += static_cast<double>(ctx.parameters->getInt("previewSamples"));
+    ctx.renderState->samplesPerSecAccumSamples += static_cast<double>(ctx.parameters->getInt("pathtracer/sampling/preview_samples"));
 
     if (ctx.renderState->samplesPerSecAccumTime >= 1.0) {
         const double instant = ctx.renderState->samplesPerSecAccumSamples / std::max(ctx.renderState->samplesPerSecAccumTime, 1e-6);

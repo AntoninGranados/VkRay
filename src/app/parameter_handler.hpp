@@ -1,74 +1,75 @@
 #pragma once
 
+#include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <stdexcept>
 
+using ParameterPath = std::filesystem::path;
+
 class ParamBase {
 public:
     virtual ~ParamBase() = default;
     virtual bool draw() = 0;
 
-    std::string id;
-    std::string label;
-    std::string group;
-    bool restart = false;
+    ParameterPath         path;
+    std::string           label;
+    bool                  restart = false;
+    std::function<void()> onSync;
 };
 
 class IntParam : public ParamBase {
 public:
     IntParam(
-        const std::string& id_,
-        const std::string& label_,
-        int value_,
-        int minValue_,
-        int maxValue_,
-        int step_,
-        bool restart_,
-        const std::string& group_
+        const ParameterPath& path_,
+        const std::string&   label_,
+        int                  value_,
+        int                  minValue_,
+        int                  maxValue_,
+        int                  step_,
+        bool                 restart_
     );
     bool draw() override;
     int& get() { return value; }
 
 private:
-    int value = 0;
+    int value    = 0;
     int minValue = 0;
     int maxValue = 0;
-    int step = 1;
+    int step     = 1;
 };
 
 class FloatParam : public ParamBase {
 public:
     FloatParam(
-        const std::string& id_,
-        const std::string& label_,
-        float value_,
-        float minValue_,
-        float maxValue_,
-        float step_,
-        bool restart_,
-        const std::string& group_
+        const ParameterPath& path_,
+        const std::string&   label_,
+        float                value_,
+        float                minValue_,
+        float                maxValue_,
+        float                step_,
+        bool                 restart_
     );
     bool draw() override;
     float& get() { return value; }
 
 private:
-    float value = 0.0f;
+    float value    = 0.0f;
     float minValue = 0.0f;
     float maxValue = 0.0f;
-    float step = 0.1f;
+    float step     = 0.1f;
 };
 
 class BoolParam : public ParamBase {
 public:
     BoolParam(
-        const std::string& id_,
-        const std::string& label_,
-        bool value_,
-        bool restart_,
-        const std::string& group_
+        const ParameterPath& path_,
+        const std::string&   label_,
+        bool                 value_,
+        bool                 restart_
     );
     bool draw() override;
     bool& get() { return value; }
@@ -80,18 +81,17 @@ private:
 class EnumParam : public ParamBase {
 public:
     EnumParam(
-        const std::string& id_,
-        const std::string& label_,
-        int value_,
-        std::vector<std::string> items_,
-        bool restart_,
-        const std::string& group_
+        const ParameterPath&      path_,
+        const std::string&        label_,
+        int                       value_,
+        std::vector<std::string>  items_,
+        bool                      restart_
     );
     bool draw() override;
     int& get() { return value; }
 
 private:
-    int value = 0;
+    int                      value = 0;
     std::vector<std::string> items;
     std::vector<const char*> itemsName;
 };
@@ -99,69 +99,84 @@ private:
 class ParameterHandler {
 public:
     IntParam& addInt(
-        const std::string& id,
-        const std::string& label,
-        int value,
-        int minValue,
-        int maxValue,
-        int step,
-        bool restart,
-        const std::string& group
+        const ParameterPath& path,
+        const std::string&   label,
+        int                  value,
+        int                  minValue,
+        int                  maxValue,
+        int                  step,
+        bool                 restart
     );
     FloatParam& addFloat(
-        const std::string& id,
-        const std::string& label,
-        float value,
-        float minValue,
-        float maxValue,
-        float step,
-        bool restart,
-        const std::string& group
+        const ParameterPath& path,
+        const std::string&   label,
+        float                value,
+        float                minValue,
+        float                maxValue,
+        float                step,
+        bool                 restart
     );
     BoolParam& addBool(
-        const std::string& id,
-        const std::string& label,
-        bool value,
-        bool restart,
-        const std::string& group
+        const ParameterPath& path,
+        const std::string&   label,
+        bool                 value,
+        bool                 restart
     );
-    EnumParam& addEnum(
-        const std::string& id,
-        const std::string& label,
-        int value,
-        std::vector<std::string> items,
-        bool restart,
-        const std::string& group
-    );
-
-    bool drawGroup(const std::string& group, bool& restartRequested);
-    int& getInt(const std::string& id);
-    float& getFloat(const std::string& id);
-    bool& getBool(const std::string& id);
-    void setInt(const std::string& id, int value);
-    void setFloat(const std::string& id, float value);
-    void setBool(const std::string& id, bool value);
     template <typename EnumT>
-    EnumT getEnum(const std::string& id) {
-        return static_cast<EnumT>(getParam<EnumParam>(id).get());
+    EnumParam& addEnum(
+        const ParameterPath&     path,
+        const std::string&       label,
+        EnumT                    value,
+        std::vector<std::string> items,
+        bool                     restart
+    ) {
+        auto param = std::make_unique<EnumParam>(path, label, static_cast<int>(value), std::move(items), restart);
+        index[path.generic_string()] = param.get();
+        params.push_back(std::move(param));
+        return static_cast<EnumParam&>(*params.back());
+    }
+
+    bool drawGroup(const ParameterPath& root, bool& restartRequested);
+    void setLabel (const ParameterPath& path, const std::string& label);
+
+    void bindInt  (const ParameterPath& path, int*   ptr);
+    void bindFloat(const ParameterPath& path, float* ptr);
+    void bindBool (const ParameterPath& path, bool*  ptr);
+    void bind     (const ParameterPath& path, std::function<void()> callback);
+
+    int&   getInt  (const ParameterPath& path);
+    float& getFloat(const ParameterPath& path);
+    bool&  getBool (const ParameterPath& path);
+    void   setInt  (const ParameterPath& path, int   value);
+    void   setFloat(const ParameterPath& path, float value);
+    void   setBool (const ParameterPath& path, bool  value);
+
+    template <typename EnumT>
+    EnumT getEnum(const ParameterPath& path) {
+        return static_cast<EnumT>(getParam<EnumParam>(path).get());
     }
     template <typename EnumT>
-    void setEnum(const std::string& id, EnumT value) {
-        getParam<EnumParam>(id).get() = static_cast<int>(value);
+    void setEnum(const ParameterPath& path, EnumT value) {
+        auto& param = getParam<EnumParam>(path);
+        param.get() = static_cast<int>(value);
+        if (param.onSync) param.onSync();
     }
 
 private:
-    std::vector<std::unique_ptr<ParamBase> > params;
+    std::vector<std::unique_ptr<ParamBase>>     params;
     std::unordered_map<std::string, ParamBase*> index;
+    std::unordered_map<std::string, std::string> nodeLabels;
+
+    bool drawNode(const ParameterPath& prefix, bool& restartRequested);
 
     template <typename T>
-    T& getParam(const std::string& id) {
-        auto it = index.find(id);
+    T& getParam(const ParameterPath& path) {
+        auto it = index.find(path.generic_string());
         if (it == index.end())
-            throw std::runtime_error("Parameter not found: " + id);
+            throw std::runtime_error("Parameter not found: " + path.generic_string());
         auto param = dynamic_cast<T*>(it->second);
         if (!param)
-            throw std::runtime_error("Parameter type mismatch: " + id);
+            throw std::runtime_error("Parameter type mismatch: " + path.generic_string());
         return *param;
     }
 };

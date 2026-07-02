@@ -15,7 +15,7 @@ void StatsPanel::draw(AppContext& ctx) {
     {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%u samples", ctx.renderState->sampleCount);
-        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * ctx.parameters->getInt("previewSamples"));
+        ImGui::Text("%.0f samples/sec", ImGui::GetIO().Framerate * ctx.parameters->getInt("pathtracer/sampling/preview_samples"));
     }
     ImGui::End();
 }

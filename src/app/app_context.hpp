@@ -91,21 +91,6 @@ struct PixelInfo {
     uint32_t selectionMask;
 };
 
-struct AovConfig {
-    bool normal        = false;
-    bool normalOpaque  = false;
-    bool albedo        = false;
-    bool albedoOpaque  = false;
-    bool depth         = false;
-    bool depthOpaque   = false;
-    bool skyMask       = false;
-    bool skyMaskOpaque = false;
-
-    bool hasAnyEnabled() const {
-        return normal || normalOpaque || albedo || albedoOpaque
-            || depth || depthOpaque || skyMask || skyMaskOpaque;
-    }
-};
 
 class VkSmol;
 class Scene;
@@ -128,7 +113,6 @@ struct AppContext {
     RenderState* renderState;
     PathtracerUBO* pathtracerUBO;
     DisplayUBO* displayUBO;
-    AovConfig* aovConfig;
 
     bool* restartRender = nullptr;
     Platform* platform = nullptr;

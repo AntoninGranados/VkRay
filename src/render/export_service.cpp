@@ -9,6 +9,7 @@
 #include <nfd.hpp>
 
 #include "app/notification_handler.hpp"
+#include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
 #include "editor/editor_ui.hpp"
 
@@ -227,7 +228,12 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
 }
 
 void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& basePath) {
-    if (!ctx.aovConfig->hasAnyEnabled()) return;
+    auto& p = *ctx.parameters;
+    bool anyEnabled = p.getBool("pathtracer/aov/normal")        || p.getBool("pathtracer/aov/normal_opaque")
+                   || p.getBool("pathtracer/aov/albedo")        || p.getBool("pathtracer/aov/albedo_opaque")
+                   || p.getBool("pathtracer/aov/depth")         || p.getBool("pathtracer/aov/depth_opaque")
+                   || p.getBool("pathtracer/aov/sky_mask")       || p.getBool("pathtracer/aov/sky_mask_opaque");
+    if (!anyEnabled) return;
 
     VkSmol& engine = *ctx.engine;
     engine.copyBuffer(engine.getBuffer(pixelInfoBufferHandle), pixelInfoReadbackBuffer);
@@ -242,7 +248,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         channels.emplace_back(name, std::move(data));
     };
 
-    if (ctx.aovConfig->albedo) {
+    if (p.getBool("pathtracer/aov/albedo")) {
         std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             r[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.x : 0.0f;
@@ -254,7 +260,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("albedo.B", std::move(b));
     }
 
-    if (ctx.aovConfig->albedoOpaque) {
+    if (p.getBool("pathtracer/aov/albedo_opaque")) {
         std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             r[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.x : 0.0f;
@@ -266,7 +272,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("albedoOpaque.B", std::move(b));
     }
 
-    if (ctx.aovConfig->normal) {
+    if (p.getBool("pathtracer/aov/normal")) {
         std::vector<float> x(pixelCount), y(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.hitValid ? pixels[i].aov.camNormal.x : 0.0f;
@@ -276,7 +282,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("normal.Y", std::move(y));
     }
 
-    if (ctx.aovConfig->normalOpaque) {
+    if (p.getBool("pathtracer/aov/normal_opaque")) {
         std::vector<float> x(pixelCount), y(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.camNormalOpaque.x : 0.0f;
@@ -286,21 +292,21 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("normalOpaque.Y", std::move(y));
     }
 
-    if (ctx.aovConfig->depth) {
+    if (p.getBool("pathtracer/aov/depth")) {
         std::vector<float> d(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
             d[i] = pixels[i].aov.hitValid ? pixels[i].aov.depth : -1.0f;
         push("depth.Z", std::move(d));
     }
 
-    if (ctx.aovConfig->depthOpaque) {
+    if (p.getBool("pathtracer/aov/depth_opaque")) {
         std::vector<float> d(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
             d[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.depthOpaque : -1.0f;
         push("depthOpaque.Z", std::move(d));
     }
 
-    if (ctx.aovConfig->skyMask) {
+    if (p.getBool("pathtracer/aov/sky_mask")) {
         std::vector<float> m(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             int c = pixels[i].count;
@@ -309,7 +315,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("skyMask.V", std::move(m));
     }
 
-    if (ctx.aovConfig->skyMaskOpaque) {
+    if (p.getBool("pathtracer/aov/sky_mask_opaque")) {
         std::vector<float> m(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             int c = pixels[i].count;
