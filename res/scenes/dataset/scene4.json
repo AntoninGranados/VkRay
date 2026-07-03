@@ -1,0 +1,120 @@
+{
+    "version": 0,
+
+    "light": "night",
+
+    "camera": {
+        "name":      "Camera",
+        "radius":    { "rand": { "min": 4,    "max": 8   } },
+        "azimuth":   { "rand": { "min": -120, "max": 120 } },
+        "elevation": { "rand": { "min": 3,    "max": 18  } },
+        "target": [0, 1, 0],
+        "fov":       { "rand": { "min": 45,   "max": 70  } }
+    },
+
+    "materials": [
+        {
+            "name": "Floor",
+            "type": "ggx_glossy",
+            "albedo":    { "rand": { "min": [0.04, 0.04, 0.04], "max": [0.14, 0.14, 0.14] } },
+            "roughness": { "rand": { "min": 0.0, "max": 0.08 } },
+            "ior": 1.5
+        },
+        {
+            "name": "RedLight",
+            "type": "emissive",
+            "albedo": [1.0, 0.08, 0.04],
+            "emissionStrength": 180
+        },
+        {
+            "name": "BlueLight",
+            "type": "emissive",
+            "albedo": [0.1, 0.25, 1.0],
+            "emissionStrength": 150
+        },
+        {
+            "name": "GreenLight",
+            "type": "emissive",
+            "albedo": [0.1, 0.9, 0.15],
+            "emissionStrength": 120
+        },
+        {
+            "name": "YellowLight",
+            "type": "emissive",
+            "albedo": [1.0, 0.85, 0.05],
+            "emissionStrength": 100
+        },
+        {
+            "name": "Glass",
+            "type": "dielectric",
+            "albedo":    { "rand": { "min": [0.88, 0.88, 0.88], "max": [1.0, 1.0, 1.0] } },
+            "roughness": 0.0,
+            "ior":       { "rand": { "min": 1.4, "max": 1.9 } }
+        },
+        {
+            "name": "Metal",
+            "type": "ggx_metal",
+            "albedo":    { "rand": { "min": [0.55, 0.55, 0.55], "max": [1.0, 0.95, 0.85] } },
+            "roughness": { "rand": { "min": 0.0, "max": 0.2 } }
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Floor",
+            "type": "plane",
+            "material": "Floor",
+            "point": [0, 0, 0],
+            "normal": [0, 1, 0]
+        },
+        {
+            "name": "RedLight",
+            "type": "sphere",
+            "material": "RedLight",
+            "center": [-3.5, 2.5, -2],
+            "radius": 0.25
+        },
+        {
+            "name": "BlueLight",
+            "type": "sphere",
+            "material": "BlueLight",
+            "center": [3.5, 2, -2],
+            "radius": 0.25
+        },
+        {
+            "name": "GreenLight",
+            "type": "sphere",
+            "material": "GreenLight",
+            "center": [0, 4.5, 2.5],
+            "radius": 0.3
+        },
+        {
+            "name": "YellowLight",
+            "type": "sphere",
+            "material": "YellowLight",
+            "center": [-2, 1.8, 3],
+            "radius": 0.2
+        },
+        {
+            "name": "GlassSphere",
+            "type": "sphere",
+            "material": "Glass",
+            "center": [0, 1, 0],
+            "radius": 1
+        },
+        {
+            "name": "MetalBlock1",
+            "type": "box",
+            "material": "Metal",
+            "min": [-3.2, 0, -0.5],
+            "max": [-1.8, 2, 0.5]
+        },
+        {
+            "name": "MetalBlock2",
+            "type": "box",
+            "material": "Metal",
+            "min": [1.8, 0, -0.5],
+            "max": [3.2, 1.5, 0.5]
+        }
+    ]
+}

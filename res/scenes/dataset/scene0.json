@@ -1,0 +1,107 @@
+{
+    "version": 0,
+
+    "light": "empty",
+
+    "camera": {
+        "name": "Camera",
+        "radius": { "rand": { "min": 10, "max": 20 } },
+        "azimuth":   { "rand": { "min": 0, "max": 360 } },
+        "elevation": { "rand": { "min": -10, "max": 45 } },
+        "target": [0, 0, 0],
+        "fov": { "rand": { "min": 35, "max": 45 } }
+    },
+
+    "materials": [
+        { "name": "Floor",       "type": "programmable", "albedo": [0.32, 0.32, 0.32] },
+        { "name": "Top",         "type": "lambertian",   "albedo": [0.90, 0.90, 0.90] },
+        { "name": "Back",        "type": "ggx_glossy",   "albedo": [0.10, 0.18, 0.72], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Left",        "type": "ggx_glossy",   "albedo": [0.06, 0.65, 0.08], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Right",       "type": "ggx_glossy",   "albedo": [0.82, 0.06, 0.04], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Front",       "type": "lambertian",   "albedo": [0.08, 0.08, 0.08] },
+        { "name": "Light",       "type": "emissive",     "albedo": [1.0, 0.72, 0.38],  "emissionStrength": 400 },
+        { "name": "DragonGlass", "type": "dielectric",   "albedo": [0.88, 0.38, 0.82], "roughness": 0.10, "ior": 1.45 },
+        { "name": "Pedestal",    "type": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.0,  "ior": 12.0 }
+    ],
+
+    "objects": [
+        {
+            "name": "Bottom",
+            "type": "quad",
+            "material": "Floor",
+            "center": [0, -4, 0],
+            "normal": [0, 1, 0],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Top",
+            "type": "quad",
+            "material": "Top",
+            "center": [0, 4, 0],
+            "normal": [0, -1, 0],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Back",
+            "type": "quad",
+            "material": "Back",
+            "center": [0, 0, 4],
+            "normal": [0, 0, -1],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Left",
+            "type": "quad",
+            "material": "Left",
+            "center": [-4, 0, 0],
+            "normal": [1, 0, 0],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Right",
+            "type": "quad",
+            "material": "Right",
+            "center": [4, 0, 0],
+            "normal": [-1, 0, 0],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Front",
+            "type": "quad",
+            "material": "Front",
+            "center": [0, 0, -4],
+            "normal": [0, 0, 1],
+            "scale": [8, 8]
+        },
+        {
+            "name": "Light",
+            "type": "box",
+            "material": "Light",
+            "min": [-0.3, 3.98, -0.3],
+            "max": [ 0.3, 4.0,   0.3]
+        },
+        {
+            "name": "Dragon",
+            "type": "mesh",
+            "material": "DragonGlass",
+            "path": "./res/model/dragon.obj",
+            "position": [0, -1.4, 0.2],
+            "rotation": [0, 205, 0],
+            "scale": [5.2, 5.2, 5.2]
+        },
+        {
+            "name": "Pedestal",
+            "type": "box",
+            "material": "Pedestal",
+            "min": [-3.25, -4.0, -2.4],
+            "max": [ 3.25, -3.1,  2.4]
+        },
+        {
+            "name": "PedestalBorder",
+            "type": "box",
+            "material": "Floor",
+            "min": [-3.29, -4.0,  -2.44],
+            "max": [ 3.29, -3.12,  2.44]
+        }
+    ]
+}

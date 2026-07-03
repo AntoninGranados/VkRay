@@ -21,7 +21,7 @@ void ScenePanel::draw(AppContext& ctx) {
             NFD::Guard guard;
             NFD::UniquePath outPath;
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
-            if (NFD::OpenDialog(outPath, filter, 1, "scenes/") == NFD_OKAY) {
+            if (NFD::OpenDialog(outPath, filter, 1, "res/scenes/") == NFD_OKAY) {
                 LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(*ctx.scene, mode, outPath.get())) {
                     ctx.parameters->setEnum<LightMode>("scene/light_mode", mode);
@@ -37,7 +37,7 @@ void ScenePanel::draw(AppContext& ctx) {
             NFD::Guard guard;
             NFD::UniquePath outPath;
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
-            if (NFD::SaveDialog(outPath, filter, 1, "scenes/", "untitled.json") == NFD_OKAY) {
+            if (NFD::SaveDialog(outPath, filter, 1, "res/scenes/", "untitled.json") == NFD_OKAY) {
                 std::string path = outPath.get();
                 if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
                     path += ".json";

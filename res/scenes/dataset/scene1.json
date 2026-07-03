@@ -1,0 +1,53 @@
+{
+    "version": 0,
+
+    "light": "day",
+
+    "camera": {
+        "name":      "Camera",
+        "radius":    { "rand": { "min": 10,   "max": 15  } },
+        "azimuth":   { "rand": { "min": -20, "max": 20  } },
+        "elevation": { "rand": { "min": -10,  "max": 30  } },
+        "target": [0, 0, -2],
+        "fov":       { "rand": { "min": 40,  "max": 65  } }
+    },
+
+    "materials": [
+        { "name": "Ground",   "type": "programmable", "albedo": [0.72, 0.72, 0.72] },
+        {
+            "name": "Suzanne",
+            "type": "principled",
+            "albedo":     { "rand": { "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0] } },
+            "roughness":  { "rand": { "min": 0.05, "max": 0.75 } },
+            "metalness":  { "rand": { "min": 0.0,  "max": 1.0  } }
+        },
+        {
+            "name": "Glass",
+            "type": "dielectric",
+            "albedo": { "rand": { "min": [0.8, 0.8, 0.8], "max": [1.0, 1.0, 1.0] } },
+            "roughness": 0.0,
+            "ior": { "rand": { "min": 1.2, "max": 1.4 } }
+        }
+    ],
+
+    "objects": [
+        { "name": "Ground", "type": "plane", "material": "Ground", "point": [0, -1, 0], "normal": [0, 1, 0] },
+
+        {
+            "name": "Suzanne",
+            "type": "mesh",
+            "material": "Suzanne",
+            "path": "./res/model/suzanne.obj",
+            "position": [0, 0.5, -2],
+            "scale": [1.5, 1.5, 1.5]
+        },
+
+        {
+            "name": "GlassSphere",
+            "type": "sphere",
+            "material": "Glass",
+            "center": [0, 0.5, 2],
+            "radius": 1.5
+        }
+    ]
+}

@@ -73,7 +73,7 @@ private:
     std::string name;
     std::string path = "";
     float simplifyRatio = 1.0f;
-    bool smoothShading  = true;
+    bool smoothShading  = false;
     bool hasSaved = false;
     std::vector<Vertex> savedVertices;
     std::vector<uint32_t> savedIndices;

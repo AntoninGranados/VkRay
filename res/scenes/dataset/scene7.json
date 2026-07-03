@@ -1,0 +1,142 @@
+{
+    "version": 0,
+
+    "light": "empty",
+
+    "camera": {
+        "name":      "Camera",
+        "radius":    { "rand": { "min": 4,   "max": 8   } },
+        "azimuth":   { "rand": { "min": 0,   "max": 360 } },
+        "elevation": { "rand": { "min": -10, "max": 35  } },
+        "target": [0, 1, 0],
+        "fov":       { "rand": { "min": 60,  "max": 95  } }
+    },
+
+    "materials": [
+        {
+            "name": "MirrorLeft",
+            "type": "ggx_metal",
+            "albedo":    [0.98, 0.98, 0.98],
+            "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
+        },
+        {
+            "name": "MirrorRight",
+            "type": "ggx_metal",
+            "albedo":    [0.98, 0.98, 0.98],
+            "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
+        },
+        {
+            "name": "WallBack",
+            "type": "lambertian",
+            "albedo": [0.88, 0.86, 0.82]
+        },
+        {
+            "name": "WallFront",
+            "type": "lambertian",
+            "albedo": [0.88, 0.86, 0.82]
+        },
+        {
+            "name": "Floor",
+            "type": "lambertian",
+            "albedo": [0.90, 0.88, 0.84]
+        },
+        {
+            "name": "Ceiling",
+            "type": "lambertian",
+            "albedo": [0.92, 0.90, 0.88]
+        },
+        {
+            "name": "CeilLight",
+            "type": "emissive",
+            "albedo": [1.0, 0.97, 0.92],
+            "emissionStrength": 35
+        },
+        {
+            "name": "GlassLarge",
+            "type": "dielectric",
+            "albedo":    { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
+            "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
+            "ior":       { "rand": { "min": 1.4, "max": 1.9  } }
+        },
+        {
+            "name": "GlassSmall",
+            "type": "dielectric",
+            "albedo":    { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
+            "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
+            "ior":       { "rand": { "min": 1.4, "max": 1.9  } }
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Floor",
+            "type": "quad",
+            "material": "Floor",
+            "center": [0, 0, 0],
+            "normal": [0, 1, 0],
+            "scale": [6, 6]
+        },
+        {
+            "name": "Ceiling",
+            "type": "quad",
+            "material": "Ceiling",
+            "center": [0, 4, 0],
+            "normal": [0, -1, 0],
+            "scale": [6, 6]
+        },
+        {
+            "name": "WallBack",
+            "type": "quad",
+            "material": "WallBack",
+            "center": [0, 2, -3],
+            "normal": [0, 0, 1],
+            "scale": [6, 4]
+        },
+        {
+            "name": "WallFront",
+            "type": "quad",
+            "material": "WallFront",
+            "center": [0, 2, 3],
+            "normal": [0, 0, -1],
+            "scale": [6, 4]
+        },
+        {
+            "name": "MirrorLeft",
+            "type": "quad",
+            "material": "MirrorLeft",
+            "center": [-3, 2, 0],
+            "normal": [1, 0, 0],
+            "scale": [6, 4]
+        },
+        {
+            "name": "MirrorRight",
+            "type": "quad",
+            "material": "MirrorRight",
+            "center": [3, 2, 0],
+            "normal": [-1, 0, 0],
+            "scale": [6, 4]
+        },
+        {
+            "name": "CeilLight",
+            "type": "quad",
+            "material": "CeilLight",
+            "center": [1, 3.9, -0.5],
+            "normal": [0, -1, 0],
+            "scale": [1.5, 1.5]
+        },
+        {
+            "name": "GlassBall",
+            "type": "sphere",
+            "material": "GlassLarge",
+            "center": [-0.5, 1.1, 0],
+            "radius": 1.0
+        },
+        {
+            "name": "GlassSmall",
+            "type": "sphere",
+            "material": "GlassSmall",
+            "center": [1.4, 0.6, 0.8],
+            "radius": 0.5
+        }
+    ]
+}

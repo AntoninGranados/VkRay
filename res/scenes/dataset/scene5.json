@@ -1,0 +1,84 @@
+{
+    "version": 0,
+
+    "light": "night",
+
+    "camera": {
+        "name":      "Camera",
+        "radius":    { "rand": { "min": 9,   "max": 14  } },
+        "azimuth":   { "rand": { "min": -20, "max": 20  } },
+        "elevation": { "rand": { "min": 20,  "max": 80  } },
+        "target": [0, 1, 0],
+        "fov":       { "rand": { "min": 55,  "max": 75  } }
+    },
+
+    "materials": [
+        {
+            "name": "Ground",
+            "type": "lambertian",
+            "albedo": [0.35, 0.35, 0.35]
+        },
+        {
+            "name": "KeyLight",
+            "type": "emissive",
+            "albedo": [1.0, 0.97, 0.90],
+            "emissionStrength": 40
+        },
+        {
+            "name": "FillLight",
+            "type": "emissive",
+            "albedo": [0.75, 0.85, 1.0],
+            "emissionStrength": 10
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Ground",
+            "type": "plane",
+            "material": "Ground",
+            "point": [0, 0, 0],
+            "normal": [0, 1, 0]
+        },
+        {
+            "name": "KeyLight",
+            "type": "quad",
+            "material": "KeyLight",
+            "center": [4, 20, -4],
+            "normal": [-0.3, -1, 0.3],
+            "scale": [8, 8]
+        },
+        {
+            "name": "FillLight",
+            "type": "quad",
+            "material": "FillLight",
+            "center": [-5, 6, 0],
+            "normal": [1, -0.5, 0],
+            "scale": [4, 4]
+        },
+        {
+            "name": "Sphere_{row}_{col}",
+            "type": "sphere",
+            "material": {
+                "name": "SphereMat_{row}_{col}",
+                "type": "principled",
+                "albedo":    { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
+                "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
+                "metalness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } },
+                "ior": 1.5,
+                "grid": {
+                    "rows": 4,
+                    "cols": 4
+                }
+            },
+            "radius": 0.65,
+            "grid": {
+                "rows": 4,
+                "cols": 4,
+                "origin": [-3, 0.65, -3],
+                "row_spacing": [0, 0, 2],
+                "col_spacing": [2, 0, 0]
+            }
+        }
+    ]
+}
