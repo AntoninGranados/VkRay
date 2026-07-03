@@ -1,8 +1,7 @@
 #include "scene_serializer.hpp"
 
-#include <cmath>
-#include <cstdio>
 #include <fstream>
+#include <optional>
 #include <random>
 #include <unordered_map>
 
@@ -15,119 +14,76 @@
 
 #include "scene.hpp"
 #include "scene/object/material.hpp"
+#include "utils/json_resolve.hpp"
 
 using json = nlohmann::ordered_json;
 
-struct ResolveCtx {
-    std::mt19937& rng;
-    int n      = 0;
-    int totalN = 1;
-    int row    = 0;
-    int col    = 0;
-    int rows   = 1;
-    int cols   = 1;
-};
-
-static float resolveFloat(const json& v, const ResolveCtx& ctx) {
-    if (v.is_number()) return v.get<float>();
-    if (!v.is_object()) return 0.0f;
-    if (v.contains("rand")) {
-        const auto& r = v["rand"];
-        const float lo = r["min"].get<float>(), hi = r["max"].get<float>();
-        return lo + std::uniform_real_distribution<float>(0.0f, 1.0f)(ctx.rng) * (hi - lo);
-    }
-    if (v.contains("lerp")) {
-        const auto& l = v["lerp"];
-        const float from = l["from"].get<float>(), to = l["to"].get<float>();
-        const std::string axis = l.value("axis", "col");
-        float t = 0.0f;
-        if (axis == "col" && ctx.cols > 1)        t = static_cast<float>(ctx.col) / static_cast<float>(ctx.cols   - 1);
-        else if (axis == "row" && ctx.rows > 1)   t = static_cast<float>(ctx.row) / static_cast<float>(ctx.rows   - 1);
-        else if (axis == "n" && ctx.totalN > 1)   t = static_cast<float>(ctx.n)   / static_cast<float>(ctx.totalN - 1);
-        return from + t * (to - from);
-    }
-    return 0.0f;
-}
-
-static glm::vec3 resolveVec3(const json& v, const ResolveCtx& ctx) {
-    if (v.is_array() && v.size() >= 3)
-        return { resolveFloat(v[0], ctx), resolveFloat(v[1], ctx), resolveFloat(v[2], ctx) };
-    if (v.is_object() && v.contains("rand")) {
-        const auto& r = v["rand"];
-        auto comp = [&](const json& b, int i) -> float {
-            return b.is_array() ? b[i].get<float>() : b.get<float>();
-        };
-        std::uniform_real_distribution<float> d(0.0f, 1.0f);
-        return {
-            comp(r["min"],0) + d(ctx.rng) * (comp(r["max"],0) - comp(r["min"],0)),
-            comp(r["min"],1) + d(ctx.rng) * (comp(r["max"],1) - comp(r["min"],1)),
-            comp(r["min"],2) + d(ctx.rng) * (comp(r["max"],2) - comp(r["min"],2)),
-        };
-    }
-    return {};
-}
-
-static glm::vec2 resolveVec2(const json& v, const ResolveCtx& ctx) {
-    if (v.is_array() && v.size() >= 2)
-        return { resolveFloat(v[0], ctx), resolveFloat(v[1], ctx) };
-    return {};
-}
-
-static std::string resolveName(const std::string& tmpl, const ResolveCtx& ctx) {
-    std::string s = tmpl;
-    auto sub = [&](const std::string& from, const std::string& to) {
-        size_t pos;
-        while ((pos = s.find(from)) != std::string::npos) s.replace(pos, from.size(), to);
-    };
-    sub("{n}",   std::to_string(ctx.n));
-    sub("{row}", std::to_string(ctx.row));
-    sub("{col}", std::to_string(ctx.col));
-    return s;
-}
-
+// Fixes an issue when writing a std::string created from a C string to a JSON file
 static std::string trimmed(const std::string& s) {
     const auto pos = s.find('\0');
     return pos != std::string::npos ? s.substr(0, pos) : s;
 }
 
-static std::string prettify(const json& j) {
-    const std::string s = j.dump(4);
-    std::string out;
-    out.reserve(s.size());
-    for (size_t i = 0; i < s.size(); ) {
-        if (s[i] != '[') { out += s[i++]; continue; }
-        bool hasNested = false;
-        size_t depth = 1, end = i + 1;
-        while (end < s.size() && depth > 0) {
-            char c = s[end];
-            if (c == '[' || c == '{') { hasNested = true; depth++; }
-            else if (c == ']' || c == '}') depth--;
-            end++;
+static bool isVector(const json& j) {
+    return j.is_array() && std::all_of(j.begin(), j.end(), [](const json& v){ return v.is_number(); });
+}
+
+static bool isExpression(const json& j) {
+    return j.is_object() && j.size() == 1 && (j.contains("rand") || j.contains("lerp"));
+}
+
+static std::string inlineJson(const json& j) {
+    if (j.is_object()) {
+        std::string s = "{ ";
+        bool first = true;
+        for (const auto& [k, v] : j.items()) {
+            if (!first) s += ", ";
+            s += '"' + k + "\": " + inlineJson(v);
+            first = false;
         }
-        if (hasNested || depth != 0) { out += s[i++]; continue; }
-        out += '[';
-        bool needSpace = false;
-        for (size_t k = i + 1; k < end - 1; k++) {
-            char c = s[k];
-            if (c == ' ' || c == '\n' || c == '\r' || c == '\t') continue;
-            if (c == ',') { out += ','; needSpace = true; continue; }
-            if (needSpace) { out += ' '; needSpace = false; }
-            out += c;
-        }
-        out += ']';
-        i = end;
+        return s + " }";
     }
-    return out;
+
+    if (j.is_array()) {
+        std::string s = "[";
+        for (size_t i = 0; i < j.size(); i++) {
+            if (i > 0) s += ", ";
+            s += inlineJson(j[i]);
+        }
+        return s + "]";
+    }
+    return j.dump();
 }
 
-static glm::vec3 toVec3(const json& j) {
-    return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() };
-}
+static std::string prettify(const json& j, int indent = 0) {
+    if (isVector(j) || isExpression(j)) return inlineJson(j);
 
-// Not used for now
-// static glm::vec2 toVec2(const json& j) {
-//     return { j[0].get<float>(), j[1].get<float>() };
-// }
+    const std::string pad(indent * 4, ' ');
+    const std::string inner((indent + 1) * 4, ' ');
+
+    if (j.is_array()) {
+        std::string s = "[\n";
+        for (size_t i = 0; i < j.size(); i++) {
+            s += inner + prettify(j[i], indent + 1);
+            if (i + 1 < j.size()) s += ',';
+            s += '\n';
+        }
+        return s + pad + "]";
+    }
+
+    if (j.is_object()) {
+        std::string s = "{\n";
+        size_t i = 0;
+        for (const auto& [k, v] : j.items()) {
+            s += inner + '"' + k + "\": " + prettify(v, indent + 1);
+            if (++i < j.size()) s += ',';
+            s += '\n';
+        }
+        return s + pad + "}";
+    }
+
+    return j.dump();
+}
 
 static json fromVec3(glm::vec3 v) { return { v.x, v.y, v.z }; }
 static json fromVec2(glm::vec2 v) { return { v.x, v.y }; }
@@ -180,7 +136,7 @@ static std::string toString(LightMode m) {
 
 static Material parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName = "Unnamed") {
     Material mat{};
-    mat.name             = resolveName(m.value("name", fallbackName), ctx);
+    mat.name             = resolveTemplate(m.value("name", fallbackName), ctx);
     mat.type             = parseMaterialType(m.value("type", "lambertian"));
     if (m.contains("albedo")) mat.albedo = resolveVec3(m["albedo"], ctx);
     mat.roughness        = m.contains("roughness")        ? resolveFloat(m["roughness"],        ctx) : 0.0f;
@@ -201,7 +157,7 @@ static MaterialHandle resolveMaterial(
     const std::string& fallbackName)
 {
     if (matField.is_string()) {
-        const std::string name = resolveName(matField.get<std::string>(), ctx);
+        const std::string name = resolveTemplate(matField.get<std::string>(), ctx);
         auto it = matMap.find(name);
         if (it == matMap.end()) {
             fprintf(stderr, "[ERROR] Unknown material '%s'\n", name.c_str());
@@ -221,7 +177,7 @@ static void spawnOne(
     const ResolveCtx& ctx,
     const glm::vec3& posOffset = glm::vec3(0.0f))
 {
-    const std::string name = resolveName(obj.value("name", "Object"), ctx);
+    const std::string name = resolveTemplate(obj.value("name", "Object"), ctx);
     const std::string type = obj.value("type", "");
 
     MaterialHandle mat = 0;
@@ -294,7 +250,7 @@ static void spawnOne(
     }
 }
 
-bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path) {
+bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
     if (!file.is_open()) {
         fprintf(stderr, "[ERROR] Cannot open: %s\n", path.c_str());
@@ -310,9 +266,9 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
     scene.clear();
 
-    const uint32_t seed = j.contains("seed")
-        ? j["seed"].get<uint32_t>()
-        : static_cast<uint32_t>(std::random_device{}());
+    const uint32_t seed = forceSeed.value_or(
+        j.contains("seed") ? j["seed"].get<uint32_t>() : static_cast<uint32_t>(std::random_device{}())
+    );
     std::mt19937 rng(seed);
 
     if (j.contains("light"))
@@ -320,11 +276,30 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
     if (j.contains("camera")) {
         const auto& c = j["camera"];
-        const glm::vec3 pos    = c.contains("position") ? toVec3(c["position"]) : glm::vec3(0.0f, 0.0f, -10.0f);
-        const glm::vec3 target = c.contains("target")   ? toVec3(c["target"])   : glm::vec3(0.0f);
-        const float fov        = c.value("fov",        60.0f);
-        const float aperture   = c.value("aperture",   0.0f);
-        const float focusDepth = c.value("focusDepth", 10.0f);
+        ResolveCtx camCtx{ rng, {} };
+
+        const bool hasPosition = c.contains("position");
+        const bool hasOrbital  = c.contains("radius") || c.contains("azimuth") || c.contains("elevation");
+        if (hasPosition && hasOrbital)
+            fprintf(stderr, "[ERROR] Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive\n");
+
+        const glm::vec3 target = c.contains("target") ? resolveVec3(c["target"], camCtx) : glm::vec3(0.0f);
+
+        glm::vec3 pos;
+        if (hasOrbital) {
+            const float radius    = c.contains("radius")    ? resolveFloat(c["radius"],    camCtx) : 5.0f;
+            const float azimuth   = c.contains("azimuth")   ? resolveFloat(c["azimuth"],   camCtx) : 0.0f;
+            const float elevation = c.contains("elevation") ? resolveFloat(c["elevation"], camCtx) : 0.0f;
+            const float az  = glm::radians(azimuth);
+            const float el  = glm::radians(elevation);
+            pos = target + radius * glm::vec3(std::cos(el) * std::sin(az), std::sin(el), std::cos(el) * std::cos(az));
+        } else {
+            pos = hasPosition ? resolveVec3(c["position"], camCtx) : glm::vec3(0.0f, 0.0f, -10.0f);
+        }
+
+        const float fov        = c.contains("fov")        ? resolveFloat(c["fov"],        camCtx) : 60.0f;
+        const float aperture   = c.contains("aperture")   ? resolveFloat(c["aperture"],   camCtx) : 0.0f;
+        const float focusDepth = c.contains("focusDepth") ? resolveFloat(c["focusDepth"], camCtx) : 10.0f;
         const std::string name = c.value("name", "Camera");
 
         Camera& cam = scene.getCamera();
@@ -361,12 +336,12 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
             if (m.contains("repeat")) {
                 const int count = m["repeat"].value("count", 1);
                 for (int n = 0; n < count; n++) {
-                    ResolveCtx ctx{ rng, n, count, 0, 0, 1, 1 };
+                    ResolveCtx ctx{ rng, {{"n", {n, count}}} };
                     Material mat = parseMaterial(m, ctx);
                     matMap[mat.name] = scene.pushMaterial(mat);
                 }
             } else {
-                ResolveCtx ctx{ rng, 0, 1, 0, 0, 1, 1 };
+                ResolveCtx ctx{ rng, {} };
                 Material mat = parseMaterial(m, ctx);
                 matMap[mat.name] = scene.pushMaterial(mat);
             }
@@ -380,13 +355,14 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
             const auto& g  = obj["grid"];
             const int rows = g.value("rows", 1);
             const int cols = g.value("cols", 1);
-            const glm::vec3 origin     = g.contains("origin")      ? toVec3(g["origin"])      : glm::vec3(0.0f);
-            const glm::vec3 rowSpacing = g.contains("row_spacing") ? toVec3(g["row_spacing"]) : glm::vec3(0,0,1);
-            const glm::vec3 colSpacing = g.contains("col_spacing") ? toVec3(g["col_spacing"]) : glm::vec3(1,0,0);
+            ResolveCtx fixedCtx{ rng, {} };
+            const glm::vec3 origin     = g.contains("origin")      ? resolveVec3(g["origin"],      fixedCtx) : glm::vec3(0.0f);
+            const glm::vec3 rowSpacing = g.contains("row_spacing") ? resolveVec3(g["row_spacing"], fixedCtx) : glm::vec3(0,0,1);
+            const glm::vec3 colSpacing = g.contains("col_spacing") ? resolveVec3(g["col_spacing"], fixedCtx) : glm::vec3(1,0,0);
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     const glm::vec3 offset = origin + static_cast<float>(r) * rowSpacing + static_cast<float>(c) * colSpacing;
-                    ResolveCtx ctx{ rng, r * cols + c, rows * cols, r, c, rows, cols };
+                    ResolveCtx ctx{ rng, {{"n", {r * cols + c, rows * cols}}, {"row", {r, rows}}, {"col", {c, cols}}} };
                     spawnOne(obj, scene, matMap, ctx, offset);
                 }
             }
@@ -394,9 +370,10 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         } else if (obj.contains("repeat")) {
             const auto& rep   = obj["repeat"];
             const int count   = rep.value("count", 1);
-            const glm::vec3 step = rep.contains("offset") ? toVec3(rep["offset"]) : glm::vec3(0.0f);
+            ResolveCtx fixedCtx{ rng, {} };
+            const glm::vec3 step = rep.contains("offset") ? resolveVec3(rep["offset"], fixedCtx) : glm::vec3(0.0f);
             for (int n = 0; n < count; n++) {
-                ResolveCtx ctx{ rng, n, count, 0, 0, 1, 1 };
+                ResolveCtx ctx{ rng, {{"n", {n, count}}} };
                 spawnOne(obj, scene, matMap, ctx, static_cast<float>(n) * step);
             }
 
@@ -406,7 +383,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
                 fprintf(stderr, "[WARNING] '%s': missing 'type' field, skipping\n", name.c_str());
                 continue;
             }
-            ResolveCtx ctx{ rng, 0, 1, 0, 0, 1, 1 };
+            ResolveCtx ctx{ rng, {} };
             spawnOne(obj, scene, matMap, ctx);
         }
     }

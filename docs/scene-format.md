@@ -1,6 +1,6 @@
 # Scene Format
 
-Scenes are JSON files in `scenes/`. See existing files there for full examples.
+Scenes are JSON files in `res/scenes/`. See existing files there for full examples.
 
 ## Top-level
 
@@ -33,6 +33,8 @@ Scenes are JSON files in `scenes/`. See existing files there for full examples.
 }
 ```
 
+All numeric fields support [value expressions](expressions.md#value-expressions).
+
 ## Materials
 
 ```json
@@ -44,7 +46,7 @@ Scenes are JSON files in `scenes/`. See existing files there for full examples.
 }
 ```
 
-All types accept `albedo`. All numeric fields support [dynamic values](#dynamic-values).
+All types accept `albedo`. All numeric fields support [value expressions](expressions.md#value-expressions).
 
 | `type` | Description | Extra fields |
 |--------|-------------|--------------|
@@ -68,7 +70,7 @@ All types accept `albedo`. All numeric fields support [dynamic values](#dynamic-
 }
 ```
 
-All objects share `name` (string) and `material` (string).
+All objects share `name` (string) and `material` (string). All numeric fields support [value expressions](expressions.md#value-expressions).
 
 | `type` | Description | Fields |
 |--------|-------------|--------|
@@ -78,23 +80,9 @@ All objects share `name` (string) and `material` (string).
 | `quad` | One-sided rectangle | `center` vec3, default $[0,0,0]$<br>`normal` vec3, default $[0,1,0]$<br>`scale` vec2, default $[1,1]$<br>`rotation` float (radians), default $0$ |
 | `mesh` | OBJ mesh | `path` string (required)<br>`position` vec3, default $[0,0,0]$<br>`rotation` vec3 (degrees), default $[0,0,0]$<br>`scale` vec3, default $[1,1,1]$ |
 
-## Dynamic values
-
-Any numeric field accepts `rand` or `lerp` instead of a literal value.
-
-```json
-"radius": { "rand": { "min": 0.5, "max": 1.5 } }
-
-"center": { "rand": { "min": [-5, 0, -5], "max": [5, 0, 5] } }
-
-"roughness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } }
-```
-
-`lerp` `axis`: `"col"` `"row"` `"n"` — maps the value across the grid or repeat index.
-
 ## Repeat
 
-Spawns multiple instances of an object. `{n}` is substituted in `name` and `material`.
+Spawns multiple instances of an object. `{n}` is substituted in `name` and `material`. See [string tokens](expressions.md#string-tokens).
 
 ```json
 {
