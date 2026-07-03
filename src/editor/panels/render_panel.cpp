@@ -9,6 +9,7 @@
 #include "app/animation_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "editor/ui_constants.hpp"
+#include "utils/progress.hpp"
 
 void RenderPanel::draw(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
@@ -55,10 +56,8 @@ void RenderPanel::draw(AppContext& ctx) {
         if (ctx.renderState->sampleCount < static_cast<uint64_t>(renderSamplesPerPixel)) {
             remaining = static_cast<uint64_t>(renderSamplesPerPixel) - ctx.renderState->sampleCount;
         }
-        float etaSec = static_cast<float>(remaining) / samplesPerSec;
-        int etaMin = static_cast<int>(etaSec / 60.0f);
-        int etaRemSec = static_cast<int>(etaSec) % 60;
-        ImGui::Text("ETA: %dm %02ds", etaMin, etaRemSec);
+        const double etaSec = static_cast<double>(remaining) / samplesPerSec;
+        ImGui::Text("ETA: %s", ProgressTimer::formatTime(etaSec).c_str());
 
         if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
             const int totalFrames = std::max(1, ctx.animation->getEndFrame());
@@ -66,11 +65,8 @@ void RenderPanel::draw(AppContext& ctx) {
             const uint64_t remainingFramesAfterCurrent = static_cast<uint64_t>(std::max(0, totalFrames - currentFrameIdx - 1));
             const uint64_t remainingTotalSamples = remaining + remainingFramesAfterCurrent * static_cast<uint64_t>(renderSamplesPerPixel);
 
-            const float totalEtaSec = static_cast<float>(remainingTotalSamples) / samplesPerSec;
-            const int totalEtaHour = static_cast<int>(totalEtaSec / 3600.0f);
-            const int totalEtaMin = (static_cast<int>(totalEtaSec) % 3600) / 60;
-            const int totalEtaRemSec = static_cast<int>(totalEtaSec) % 60;
-            ImGui::Text("Total ETA: %dh %02dm %02ds", totalEtaHour, totalEtaMin, totalEtaRemSec);
+            const double totalEtaSec = static_cast<double>(remainingTotalSamples) / samplesPerSec;
+            ImGui::Text("Total ETA: %s", ProgressTimer::formatTime(totalEtaSec).c_str());
         }
     } else {
         ImGui::Text("ETA: --");
