@@ -1,0 +1,64 @@
+{
+    "version": 0,
+
+    "light": "empty",
+
+    "camera": {
+        "position": [0, 5, 10],
+        "target": [0, 1, 0],
+        "fov": 35,
+        "aperture": 1.0,
+        "focusDepth": 10.6
+    },
+
+    "materials": [
+        {
+            "name": "Base",
+            "type": "lambertian",
+            "albedo": [1.0, 1.0, 1.0]
+        },
+        {
+            "name": "Fire",
+            "type": "emissive",
+            "albedo": [1.0, 1.0, 1.0],
+            "emissionStrength": 50
+        },
+        {
+            "name": "Fireflies",
+            "type": "emissive",
+            "albedo": [1.0, 1.0, 1.0],
+            "emissionStrength": 5
+        }
+    ],
+
+    "objects": [
+        {
+            "name": "Campsite",
+            "type": "mesh",
+            "material": "Base",
+            "path": "./res/models/campfire/campsite.obj",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "scale": [1, 1, 1]
+        },
+        {
+            "name": "Fire",
+            "type": "mesh",
+            "material": "Fire",
+            "path": "./res/models/campfire/fire.obj",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "scale": [1, 1, 1]
+        },
+        {
+            "name": "Fireflies",
+            "type": "mesh",
+            "material": "Fireflies",
+            "path": "./res/models/campfire/fireflies.obj",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "scale": [1, 1, 1]
+        }
+        
+    ]
+}
