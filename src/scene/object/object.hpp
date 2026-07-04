@@ -61,6 +61,7 @@ struct GpuMesh {
     float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
     uint32_t smoothShading;
+    uint32_t hasVertexColor;
 };
 
 

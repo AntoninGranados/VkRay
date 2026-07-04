@@ -1,7 +1,6 @@
 #include "application.hpp"
 
 #include <chrono>
-#include <iomanip>
 #include <iostream>
 
 #include "imgui/imgui.h"
@@ -122,7 +121,7 @@ void Application::initParameters() {
         "pathtracer/debug_view",
         "Debug View",
         DebugView::None,
-        { "None", "Bounces", "Normal", "Position", "Diffuse", "Selection Mask", "Variance", "Hit Checks" },
+        { "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask" },
         true
     );
     parameters.bind("pathtracer/debug_view", [&]() { r.debugView = d.debugView = static_cast<int>(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
@@ -139,6 +138,7 @@ void Application::initParameters() {
     parameters.addBool("pathtracer/sampling/importance_sampling", "Importance Sampling", true, false);
     parameters.bind("pathtracer/sampling/importance_sampling", [&]() { r.importanceSampling = static_cast<int>(parameters.getBool("pathtracer/sampling/importance_sampling")); });
 
+    // TODO: the clip threshold should be a parameter
     parameters.addBool("pathtracer/sampling/clip_accumulation", "Clip Accumulation", false, true);
     parameters.bind("pathtracer/sampling/clip_accumulation", [&]() { r.clipAccumulation = static_cast<int>(parameters.getBool("pathtracer/sampling/clip_accumulation")); });
 
@@ -154,14 +154,12 @@ void Application::initParameters() {
     parameters.addFloat("pathtracer/resolution/render",  "Render Resolution",  1.0f, 1.0f, 50.0f, 1.0f, false);
 
     parameters.setLabel("pathtracer/aov", "Arbitrary Output Variables");
-    parameters.addBool("pathtracer/aov/normal",         "Normal",            false, false);
-    parameters.addBool("pathtracer/aov/normal_opaque",  "Normal (opaque)",   false, false);
-    parameters.addBool("pathtracer/aov/albedo",         "Albedo",            false, false);
-    parameters.addBool("pathtracer/aov/albedo_opaque",  "Albedo (opaque)",   false, false);
-    parameters.addBool("pathtracer/aov/depth",          "Depth",             false, false);
-    parameters.addBool("pathtracer/aov/depth_opaque",   "Depth (opaque)",    false, false);
-    parameters.addBool("pathtracer/aov/sky_mask",       "Sky mask",          false, false);
-    parameters.addBool("pathtracer/aov/sky_mask_opaque","Sky mask (opaque)", false, false);
+    parameters.addBool("pathtracer/aov/position",  "Position",  false, false);
+    parameters.addBool("pathtracer/aov/normal",    "Normal",    false, false);
+    parameters.addBool("pathtracer/aov/albedo",    "Albedo",    false, false);
+    parameters.addBool("pathtracer/aov/roughness", "Roughness", false, false);
+    parameters.addBool("pathtracer/aov/mat_type",  "Mat Type",  false, false);
+    parameters.addBool("pathtracer/aov/sky_mask",  "Sky mask",  false, false);
 
     parameters.setLabel("scene", "Scene");
     parameters.addEnum<LightMode>(

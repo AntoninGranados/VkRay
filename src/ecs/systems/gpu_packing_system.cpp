@@ -25,8 +25,9 @@ inline void fillBufferWithPadding(AppContext& ctx, const FrameContext& frame, Sc
         ctx.engine->resizeBuffer(entry.handle, required * sizeof(T));
         entry.capacity = required;
     }
-    data.resize(entry.capacity);
-    ctx.engine->fillBuffer(ctx.engine->getBuffer(entry.handle, frame.currentFrame), data.data());
+    Buffer& buf = ctx.engine->getBuffer(entry.handle, frame.currentFrame);
+    data.resize(buf.getSize() / sizeof(T));
+    ctx.engine->fillBuffer(buf, data.data());
 }
 
 void spherePackingSystem(Registry& registry, AppContext& ctx, const FrameContext& frame) {
@@ -173,7 +174,8 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
             .bvhNodeCount  = static_cast<uint32_t>(meshBvhNodes.size()),
             .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
             .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
-            .smoothShading = mesh.getSmoothShading() ? 1u : 0u,
+            .smoothShading   = mesh.getSmoothShading() ? 1u : 0u,
+            .hasVertexColor  = mesh.hasVertexColor()   ? 1u : 0u,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
@@ -222,6 +224,7 @@ void meshPackingSystem(Registry& registry, AppContext& ctx, const FrameContext& 
             .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
             .materialHandle = handle,
             .smoothShading  = meshTemplate.smoothShading,
+            .hasVertexColor = meshTemplate.hasVertexColor,
         });
 
         packingMaps.meshId[e] = meshId++;

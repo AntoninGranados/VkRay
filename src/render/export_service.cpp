@@ -229,10 +229,12 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
 
 void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& basePath) {
     auto& p = *ctx.parameters;
-    bool anyEnabled = p.getBool("pathtracer/aov/normal")        || p.getBool("pathtracer/aov/normal_opaque")
-                   || p.getBool("pathtracer/aov/albedo")        || p.getBool("pathtracer/aov/albedo_opaque")
-                   || p.getBool("pathtracer/aov/depth")         || p.getBool("pathtracer/aov/depth_opaque")
-                   || p.getBool("pathtracer/aov/sky_mask")       || p.getBool("pathtracer/aov/sky_mask_opaque");
+    bool anyEnabled = p.getBool("pathtracer/aov/position")
+                   || p.getBool("pathtracer/aov/normal")
+                   || p.getBool("pathtracer/aov/albedo")
+                   || p.getBool("pathtracer/aov/roughness")
+                   || p.getBool("pathtracer/aov/mat_type")
+                   || p.getBool("pathtracer/aov/sky_mask");
     if (!anyEnabled) return;
 
     VkSmol& engine = *ctx.engine;
@@ -248,6 +250,28 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         channels.emplace_back(name, std::move(data));
     };
 
+    if (p.getBool("pathtracer/aov/position")) {
+        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.x : 0.0f;
+            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.y : 0.0f;
+            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.z : 0.0f;
+        }
+        push("position.X", std::move(x));
+        push("position.Y", std::move(y));
+        push("position.Z", std::move(z));
+    }
+
+    if (p.getBool("pathtracer/aov/normal")) {
+        std::vector<float> x(pixelCount), y(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normal.x : 0.0f;
+            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.normal.y : 0.0f;
+        }
+        push("normal.X", std::move(x));
+        push("normal.Y", std::move(y));
+    }
+
     if (p.getBool("pathtracer/aov/albedo")) {
         std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
@@ -260,50 +284,18 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("albedo.B", std::move(b));
     }
 
-    if (p.getBool("pathtracer/aov/albedo_opaque")) {
-        std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            r[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.x : 0.0f;
-            g[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.y : 0.0f;
-            b[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.albedoOpaque.z : 0.0f;
-        }
-        push("albedoOpaque.R", std::move(r));
-        push("albedoOpaque.G", std::move(g));
-        push("albedoOpaque.B", std::move(b));
-    }
-
-    if (p.getBool("pathtracer/aov/normal")) {
-        std::vector<float> x(pixelCount), y(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.camNormal.x : 0.0f;
-            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.camNormal.y : 0.0f;
-        }
-        push("normal.X", std::move(x));
-        push("normal.Y", std::move(y));
-    }
-
-    if (p.getBool("pathtracer/aov/normal_opaque")) {
-        std::vector<float> x(pixelCount), y(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.camNormalOpaque.x : 0.0f;
-            y[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.camNormalOpaque.y : 0.0f;
-        }
-        push("normalOpaque.X", std::move(x));
-        push("normalOpaque.Y", std::move(y));
-    }
-
-    if (p.getBool("pathtracer/aov/depth")) {
-        std::vector<float> d(pixelCount);
+    if (p.getBool("pathtracer/aov/roughness")) {
+        std::vector<float> v(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
-            d[i] = pixels[i].aov.hitValid ? pixels[i].aov.depth : -1.0f;
-        push("depth.Z", std::move(d));
+            v[i] = pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f;
+        push("roughness.V", std::move(v));
     }
 
-    if (p.getBool("pathtracer/aov/depth_opaque")) {
-        std::vector<float> d(pixelCount);
+    if (p.getBool("pathtracer/aov/mat_type")) {
+        std::vector<float> v(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
-            d[i] = pixels[i].aov.opaqueHitValid ? pixels[i].aov.depthOpaque : -1.0f;
-        push("depthOpaque.Z", std::move(d));
+            v[i] = pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
+        push("matType.V", std::move(v));
     }
 
     if (p.getBool("pathtracer/aov/sky_mask")) {
@@ -313,15 +305,6 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
             m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;
         }
         push("skyMask.V", std::move(m));
-    }
-
-    if (p.getBool("pathtracer/aov/sky_mask_opaque")) {
-        std::vector<float> m(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            int c = pixels[i].count;
-            m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMaskOpaque) / static_cast<float>(c) : 0.0f;
-        }
-        push("skyMaskOpaque.V", std::move(m));
     }
 
     if (channels.empty()) return;

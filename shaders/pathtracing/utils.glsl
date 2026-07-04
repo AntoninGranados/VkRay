@@ -1,7 +1,7 @@
 #ifndef UTILS_GLSL
 #define UTILS_GLSL
 
-#include "../pixel_info.glsl"
+#include "../common.glsl"
 
 #define TRI_EPS 1e-8
 #define EPS 1e-4
@@ -22,15 +22,6 @@
 #define obj_Mesh    Enum(5)
 #define obj_Aabb    Enum(6) // NOTE: only used internally
 
-// ============== DEBUG VIEW ==============
-#define debug_None          Enum(0)
-#define debug_Bounces       Enum(1)
-#define debug_Normal        Enum(2)
-#define debug_Position      Enum(3)
-#define debug_Diffuse       Enum(4)
-#define debug_SelectionMask Enum(5)
-#define debug_Variance      Enum(6)
-#define debug_HitChecks     Enum(7)
 
 struct Object {
     Enum type;
@@ -69,6 +60,7 @@ struct Quad {
 struct Vertex {
     vec3 position;
     vec3 normal;
+    vec3 color;
 };
 
 struct BvhChild {
@@ -95,6 +87,7 @@ struct Mesh {
     float aabbMaxX, aabbMaxY, aabbMaxZ;
     MaterialHandle materialHandle;
     uint smoothShading;
+    uint hasVertexColor;
 };
 
 // ============== PATH-TRACING  ==============
@@ -120,8 +113,9 @@ struct Hit {
     float t;
     bool frontFace;
     Object object;
+    vec3 vertexColor;
 };
-#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE)
+#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE, vec3(1.0))
 #define foundIntersection(h) ((h).object.type != obj_None)
 
 // ============== LIGHTS ==============

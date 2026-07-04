@@ -12,7 +12,7 @@ Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {
         normal = -normal;
         frontFace = false;
     }
-    return Hit(p, normal, t, frontFace, obj);
+    return Hit(p, normal, t, frontFace, obj, vec3(1.0));
 }
 
 // ================ NORMALS ================
@@ -376,7 +376,14 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
     vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);
 
-    return makeHit(ray, obj, tWorld, worldNormal);
+    Hit meshHit = makeHit(ray, obj, tWorld, worldNormal);
+    if (mesh.hasVertexColor == 1u) {
+        vec3 c0 = vertexBuffer.vertices[bestI0].color;
+        vec3 c1 = vertexBuffer.vertices[bestI1].color;
+        vec3 c2 = vertexBuffer.vertices[bestI2].color;
+        meshHit.vertexColor = (1.0 - bestU - bestV) * c0 + bestU * c1 + bestV * c2;
+    }
+    return meshHit;
 }
 
 // ================ SURFACE SAMPLING ================

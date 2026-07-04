@@ -22,7 +22,8 @@ vec3 skyColor(vec3 dir) {
             horizon = vec3(0.05, 0.05, 0.1);
             break;
         case lightMode_Empty:
-            return vec3(0.0);
+            // return vec3(0.0);
+            return vec3(0.005, 0.005, 0.01);
             break;
         default:
             return vec3(1.0, 0.0, 1.0);

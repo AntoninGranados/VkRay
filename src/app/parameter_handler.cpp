@@ -10,7 +10,7 @@ IntParam::IntParam(
     int                  maxValue_,
     int                  step_,
     bool                 restart_
-) : value(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
+) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
     path    = path_;
     label   = label_;
     restart = restart_;
@@ -34,7 +34,7 @@ FloatParam::FloatParam(
     float                maxValue_,
     float                step_,
     bool                 restart_
-) : value(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
+) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
     path    = path_;
     label   = label_;
     restart = restart_;
@@ -55,7 +55,7 @@ BoolParam::BoolParam(
     const std::string&   label_,
     bool                 value_,
     bool                 restart_
-) : value(value_) {
+) : value(value_), defaultValue(value_) {
     path    = path_;
     label   = label_;
     restart = restart_;
@@ -75,7 +75,7 @@ EnumParam::EnumParam(
     int                      value_,
     std::vector<std::string> items_,
     bool                     restart_
-) : value(value_), items(std::move(items_)) {
+) : value(value_), defaultValue(value_), items(std::move(items_)) {
     path    = path_;
     label   = label_;
     restart = restart_;
@@ -232,4 +232,8 @@ void ParameterHandler::setBool(const ParameterPath& path, bool value) {
     auto& param = getParam<BoolParam>(path);
     param.get() = value;
     if (param.onSync) param.onSync();
+}
+
+void ParameterHandler::resetAll() {
+    for (auto& p : params) p->reset();
 }

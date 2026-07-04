@@ -13,7 +13,8 @@ using ParameterPath = std::filesystem::path;
 class ParamBase {
 public:
     virtual ~ParamBase() = default;
-    virtual bool draw() = 0;
+    virtual bool draw()  = 0;
+    virtual void reset() = 0;
 
     ParameterPath         path;
     std::string           label;
@@ -32,14 +33,16 @@ public:
         int                  step_,
         bool                 restart_
     );
-    bool draw() override;
+    bool draw()  override;
+    void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
 
 private:
-    int value    = 0;
-    int minValue = 0;
-    int maxValue = 0;
-    int step     = 1;
+    int value        = 0;
+    int defaultValue = 0;
+    int minValue     = 0;
+    int maxValue     = 0;
+    int step         = 1;
 };
 
 class FloatParam : public ParamBase {
@@ -53,14 +56,16 @@ public:
         float                step_,
         bool                 restart_
     );
-    bool draw() override;
+    bool  draw()  override;
+    void  reset() override { value = defaultValue; if (onSync) onSync(); }
     float& get() { return value; }
 
 private:
-    float value    = 0.0f;
-    float minValue = 0.0f;
-    float maxValue = 0.0f;
-    float step     = 0.1f;
+    float value        = 0.0f;
+    float defaultValue = 0.0f;
+    float minValue     = 0.0f;
+    float maxValue     = 0.0f;
+    float step         = 0.1f;
 };
 
 class BoolParam : public ParamBase {
@@ -71,11 +76,13 @@ public:
         bool                 value_,
         bool                 restart_
     );
-    bool draw() override;
+    bool  draw()  override;
+    void  reset() override { value = defaultValue; if (onSync) onSync(); }
     bool& get() { return value; }
 
 private:
-    bool value = false;
+    bool value        = false;
+    bool defaultValue = false;
 };
 
 class EnumParam : public ParamBase {
@@ -87,11 +94,13 @@ public:
         std::vector<std::string>  items_,
         bool                      restart_
     );
-    bool draw() override;
+    bool draw()  override;
+    void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
 
 private:
-    int                      value = 0;
+    int                      value        = 0;
+    int                      defaultValue = 0;
     std::vector<std::string> items;
     std::vector<const char*> itemsName;
 };
@@ -138,6 +147,7 @@ public:
 
     bool drawGroup(const ParameterPath& root, bool& restartRequested);
     void setLabel (const ParameterPath& path, const std::string& label);
+    void resetAll();
 
     void bindInt  (const ParameterPath& path, int*   ptr);
     void bindFloat(const ParameterPath& path, float* ptr);

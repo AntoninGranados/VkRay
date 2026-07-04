@@ -2,7 +2,7 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-#include "pixel_info.glsl"
+#include "common.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
@@ -80,7 +80,7 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
         float nW = 1.0;
         bool nValid = centerInfo.aov.hitValid != 0u && sampleInfo.aov.hitValid != 0u;
         if (nValid) {
-            vec3 nDelta = centerInfo.aov.normal - sampleInfo.aov.normal;
+            vec3 nDelta = centerInfo.aov.normalW - sampleInfo.aov.normalW;
             float nDist2 = dot(nDelta, nDelta);
             nW = min(exp(-nDist2 / max(n_phi, 1e-6)), 1.0);
         }
@@ -88,7 +88,7 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
         float pW = 1.0;
         bool pValid = centerInfo.aov.hitValid != 0u && sampleInfo.aov.hitValid != 0u;
         if (pValid) {
-            vec3 pDelta = centerInfo.aov.position - sampleInfo.aov.position;
+            vec3 pDelta = centerInfo.aov.positionW - sampleInfo.aov.positionW;
             float pDist2 = dot(pDelta, pDelta) / float(stride * stride);
             pW = min(exp(-pDist2 / max(p_phi, 1e-6)), 1.0);
         }

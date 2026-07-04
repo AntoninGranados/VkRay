@@ -2,7 +2,6 @@
 
 #include <optional>
 #include <string>
-#include <filesystem>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -24,13 +23,18 @@
 
 enum class DebugView : int {
     None = 0,
-    Bounces = 1,
-    Normal = 2,
-    Position = 3,
-    Diffuse = 4,
-    SelectionMask = 5,
-    Variance = 6,
-    HitChecks = 7
+    PositionW = 1,
+    Position = 2,
+    NormalW = 3,
+    Normal = 4,
+    Albedo = 5,
+    Roughness = 6,
+    MatType = 7,
+    Bounces = 8,
+    HitChecks = 9,
+    Variance = 10,
+    SelectionMask = 11,
+    SkyMask = 12,
 };
 
 class Application {
@@ -58,7 +62,19 @@ private:
     DisplayUBO displayUBO{};
     bool restartRender = false;
 
-    AppContext ctx{ &engine, &scene, nullptr, &parameters, &notifications, nullptr, &animation, &renderState, &pathtracerUBO, &displayUBO, &restartRender, &platform };
+    AppContext ctx{
+        .engine        = &engine,
+        .scene         = &scene,
+        .parameters    = &parameters,
+        .notifications = &notifications,
+        .animation     = &animation,
+        .renderer      = &renderer,
+        .renderState   = &renderState,
+        .pathtracerUBO = &pathtracerUBO,
+        .displayUBO    = &displayUBO,
+        .restartRender = &restartRender,
+        .platform      = &platform
+    };
 
     std::optional<InputHandler> inputHandler;
     RenderHandler renderer;
@@ -67,7 +83,7 @@ private:
     bool shouldClose = false;
 
     void initParameters();
-    void initScene(const std::string& sceneFile = "scenes/default.json");
+    void initScene(const std::string& sceneFile = "res/scenes/default.json");
 
     void onFrameStart(float dt);
     void clearRenderingData(RenderMode newRenderMode);

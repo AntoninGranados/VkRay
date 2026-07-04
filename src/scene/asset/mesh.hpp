@@ -17,6 +17,7 @@ typedef int MeshHandle;
 struct Vertex {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
+    alignas(16) glm::vec3 color = glm::vec3(1.0f);
 };
 
 #define DEFAULT_MESH_ASSET MeshAsset( \
@@ -68,12 +69,14 @@ public:
 
     bool getSmoothShading() const { return smoothShading; }
     void setSmoothShading(bool v) { smoothShading = v; }
+    bool hasVertexColor() const { return vertexColorLoaded; }
 
 private:
     std::string name;
     std::string path = "";
     float simplifyRatio = 1.0f;
-    bool smoothShading  = false;
+    bool smoothShading     = false;
+    bool vertexColorLoaded = false;
     bool hasSaved = false;
     std::vector<Vertex> savedVertices;
     std::vector<uint32_t> savedIndices;

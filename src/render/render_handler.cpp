@@ -330,8 +330,13 @@ bool RenderHandler::promptOutputPath() {
     return exportService.promptOutputPath();
 }
 
-void RenderHandler::saveCapture(AppContext& ctx, const std::filesystem::path& path, uint32_t width, uint32_t height) {
+void RenderHandler::saveCapture(AppContext& ctx, const std::filesystem::path& path) {
     exportService.saveCapture(ctx, path);
+}
+
+void RenderHandler::resize(AppContext& ctx, uint32_t width, uint32_t height) {
+    ctx.engine->getExtent() = { width, height };
+    handleResize(ctx, { width, height });
 }
 
 void RenderHandler::uiPass(AppContext& ctx) {

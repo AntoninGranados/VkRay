@@ -25,7 +25,8 @@ public:
     bool promptOutputPath();
 
     void renderHeadless(AppContext& ctx, bool captureOutput = false);
-    void saveCapture(AppContext& ctx, const std::filesystem::path& path, uint32_t width, uint32_t height);
+    void saveCapture(AppContext& ctx, const std::filesystem::path& path);
+    void resize(AppContext& ctx, uint32_t width, uint32_t height);
 
 private:
     const std::vector<ScreenVertex> vertices = {

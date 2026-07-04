@@ -1,6 +1,6 @@
 #version 450
 
-#include "pixel_info.glsl"
+#include "common.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
@@ -19,13 +19,6 @@ layout(location = 0) out vec4 outColor;
 
 const float outlineWidth = 2.0;
 const float feather = 0.4;
-#define debug_None          0
-#define debug_Bounces       1
-#define debug_Normal        2
-#define debug_Position      3
-#define debug_Diffuse       4
-#define debug_SelectionMask 5
-#define debug_Variance      6
 
 float luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -53,19 +46,21 @@ vec3 visualizeSelectionMask(uint mask) {
     return vec3(mask != 0u ? 1.0 : 0.0);
 }
 
-vec3 visualizeNormal(PixelInfo pixelInfo) {
-    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
-    return normalize(pixelInfo.aov.normal) * 0.5 + 0.5;
-}
+vec3 visualize(vec3 v)  { return normalize(v) * 0.5 + 0.5; }
+vec3 visualize(vec2 v)  { float z = sqrt(max(0.0, 1.0 - dot(v, v))); return vec3(v, z) * 0.5 + 0.5; }
+vec3 visualize(float v) { return vec3(v); }
+vec3 visualize(uint v)  { return vec3(v != 0u ? 1.0 : 0.0); }
 
-vec3 visualizePosition(PixelInfo pixelInfo) {
-    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
-    return clamp(pixelInfo.aov.position, 0.0, 1.0);
-}
-
-vec3 visualizeDiffuse(PixelInfo pixelInfo) {
-    if (pixelInfo.aov.hitValid == 0u) return vec3(0.0);
-    return clamp(pixelInfo.aov.albedo, 0.0, 1.0);
+vec3 visualizeMatType(uint t) {
+    if (t == mat_Principled)   return vec3(0.8, 0.8, 0.8);
+    if (t == mat_Emissive)     return vec3(1.0, 1.0, 0.2);
+    if (t == mat_Lambertian)   return vec3(0.9, 0.5, 0.2);
+    if (t == mat_GgxMetal)     return vec3(0.9, 0.8, 0.1);
+    if (t == mat_GgxGlossy)    return vec3(0.2, 0.5, 0.9);
+    if (t == mat_Dielectric)   return vec3(0.2, 0.9, 0.8);
+    if (t == mat_Volume)       return vec3(0.7, 0.2, 0.9);
+    if (t == mat_Programmable) return vec3(0.9, 0.2, 0.7);
+    return vec3(0.0);
 }
 
 const vec3 edgeColor = vec3(1.0, 0.5, 0.062);
@@ -113,30 +108,18 @@ void main() {
     float outline = smoothstep(0.0, feather, edgeAmount);
     color = mix(color, edgeColor, outline);
 
-    if (ubo.debugView == debug_Variance) {
-        outColor = vec4(visualizeVariance(uv, texSize), 1.0);
-        return;
-    }
+#define HIT(expr) (blockPixelInfo.aov.hitValid != 0u ? (expr) : vec3(0.0))
 
-    if (ubo.debugView == debug_Normal) {
-        outColor = vec4(visualizeNormal(blockPixelInfo), 1.0);
-        return;
-    }
-
-    if (ubo.debugView == debug_Position) {
-        outColor = vec4(visualizePosition(blockPixelInfo), 1.0);
-        return;
-    }
-
-    if (ubo.debugView == debug_Diffuse) {
-        outColor = vec4(visualizeDiffuse(blockPixelInfo), 1.0);
-        return;
-    }
-
-    if (ubo.debugView == debug_SelectionMask) {
-        outColor = vec4(visualizeSelectionMask(centerMask), 1.0);
-        return;
-    }
+    if (ubo.debugView == debug_PositionW)     { outColor = vec4(HIT(visualize(blockPixelInfo.aov.positionW)), 1.0); return; }
+    if (ubo.debugView == debug_Position)      { outColor = vec4(HIT(visualize(blockPixelInfo.aov.position)),  1.0); return; }
+    if (ubo.debugView == debug_NormalW)       { outColor = vec4(HIT(visualize(blockPixelInfo.aov.normalW)),   1.0); return; }
+    if (ubo.debugView == debug_Normal)        { outColor = vec4(HIT(visualize(blockPixelInfo.aov.normal)),    1.0); return; }
+    if (ubo.debugView == debug_Albedo)        { outColor = vec4(HIT(clamp(blockPixelInfo.aov.albedo, 0.0, 1.0)), 1.0); return; }
+    if (ubo.debugView == debug_Roughness)     { outColor = vec4(HIT(visualize(blockPixelInfo.aov.roughness)), 1.0); return; }
+    if (ubo.debugView == debug_MatType)       { outColor = vec4(HIT(visualizeMatType(blockPixelInfo.aov.matType)), 1.0); return; }
+    if (ubo.debugView == debug_Variance)      { outColor = vec4(visualizeVariance(uv, texSize), 1.0); return; }
+    if (ubo.debugView == debug_SelectionMask) { outColor = vec4(visualizeSelectionMask(centerMask), 1.0); return; }
+    if (ubo.debugView == debug_SkyMask)       { outColor = vec4(visualize(blockPixelInfo.aov.skyMask), 1.0); return; }
 
     if (ubo.previewBorderEnabled != 0) {
         if (abs(fragPos.x) > 0.8 || abs(fragPos.y) > 0.8) {

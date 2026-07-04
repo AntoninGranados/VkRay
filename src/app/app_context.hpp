@@ -68,18 +68,15 @@ struct DisplayUBO {
 };
 
 struct alignas(16) AOVBuffer {
-    alignas(16) glm::vec3 normal;
+    alignas(16) uint32_t  hitValid;
+    alignas(16) glm::vec3 positionW;
     alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normalW;
+    alignas(8)  glm::vec2 normal;
     alignas(16) glm::vec3 albedo;
-    alignas(16) glm::vec3 albedoOpaque;
-    alignas(8)  glm::vec2 camNormal;
-    alignas(8)  glm::vec2 camNormalOpaque;
-    float      depth;
-    float      depthOpaque;
-    uint32_t   skyMask;
-    uint32_t   skyMaskOpaque;
-    uint32_t   hitValid;
-    uint32_t   opaqueHitValid;
+    float                 roughness;
+    uint32_t              matType;
+    uint32_t              skyMask;
 };
 
 struct PixelInfo {
@@ -100,20 +97,22 @@ class NotificationHandler;
 class EditorUi;
 class AnimationHandler;
 class Platform;
+class RenderHandler;
 
 struct AppContext {
-    VkSmol* engine;
-    Scene* scene;
-    Camera* camera;
-    ParameterHandler* parameters;
-    NotificationHandler* notifications;
-    EditorUi* ui;
-    AnimationHandler* animation;
+    VkSmol*              engine       = nullptr;
+    Scene*               scene        = nullptr;
+    Camera*              camera       = nullptr;
+    ParameterHandler*    parameters   = nullptr;
+    NotificationHandler* notifications = nullptr;
+    EditorUi*            ui           = nullptr;
+    AnimationHandler*    animation    = nullptr;
+    RenderHandler*       renderer     = nullptr;
 
-    RenderState* renderState;
-    PathtracerUBO* pathtracerUBO;
-    DisplayUBO* displayUBO;
+    RenderState*    renderState   = nullptr;
+    PathtracerUBO*  pathtracerUBO = nullptr;
+    DisplayUBO*     displayUBO    = nullptr;
 
-    bool* restartRender = nullptr;
-    Platform* platform = nullptr;
+    bool*     restartRender = nullptr;
+    Platform* platform      = nullptr;
 };

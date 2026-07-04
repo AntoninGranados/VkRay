@@ -54,75 +54,46 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
 }
 
 void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
-    Hit firstHit  = NO_HIT;
-    Hit opaqueHit = NO_HIT;
-    Ray probe     = ray;
-    for (int i = 0; i < 8; i++) {
-        Statistics dummy = Statistics(0u, 0u);
-        Hit h = intersection(probe, false, INFINITY, dummy);
-        if (!foundIntersection(h)) break;
-        if (i == 0) firstHit = h;
-        Material hMat = getMaterial(h.object);
-        if (hMat.type != mat_Dielectric && hMat.type != mat_Volume) {
-            opaqueHit = h;
-            break;
-        }
-        probe = Ray(h.p + probe.dir * EPS, probe.dir);
-    }
+    Statistics dummy = Statistics(0u, 0u);
+    Hit firstHit = intersection(ray, false, INFINITY, dummy);
 
     if (!foundIntersection(firstHit)) {
-        pixelInfo.aov.skyMask       = 1u;
-        pixelInfo.aov.skyMaskOpaque = 1u;
+        pixelInfo.aov.skyMask = 1u;
         return;
     }
 
     Material mat    = resolveMaterial(getMaterial(firstHit.object), firstHit);
+    mat.albedo     *= firstHit.vertexColor;
     float guideMix  = 1.0 / float(pixelInfo.count);
 
     vec3 right = normalize(cross(camera.dir, camera.up));
     vec3 up    = cross(right, camera.dir);
 
-    vec3  currNormal    = normalize(firstHit.normal);
-    vec3  currPosition  = firstHit.p;
-    vec3  currAlbedo    = mat.albedo;
-    vec2  currCamNormal = vec2(dot(currNormal, right), dot(currNormal, up));
-    float currDepth     = dot(currPosition - camera.pos, normalize(camera.dir));
+    vec3 normalW   = normalize(firstHit.normal);
+    vec3 positionW = firstHit.p;
+    vec3 albedo    = mat.albedo;
+    float roughness = mat.type == mat_Lambertian ? 1.0 : mat.roughness;
+    vec3 hitOff    = positionW - camera.pos;
+    vec3 camDir    = normalize(camera.dir);
+    vec2 normal    = vec2(dot(normalW, right), dot(normalW, up));
+    vec3 position  = vec3(dot(hitOff, right), dot(hitOff, up), dot(hitOff, camDir));
 
     if (pixelInfo.aov.hitValid != 0u) {
-        pixelInfo.aov.normal    = normalize(mix(pixelInfo.aov.normal, currNormal, guideMix));
-        pixelInfo.aov.position  = mix(pixelInfo.aov.position, currPosition, guideMix);
-        pixelInfo.aov.albedo    = mix(pixelInfo.aov.albedo, currAlbedo, guideMix);
-        pixelInfo.aov.camNormal = mix(pixelInfo.aov.camNormal, currCamNormal, guideMix);
-        pixelInfo.aov.depth     = mix(pixelInfo.aov.depth, currDepth, guideMix);
+        pixelInfo.aov.positionW = mix(pixelInfo.aov.positionW, positionW, guideMix);
+        pixelInfo.aov.position  = mix(pixelInfo.aov.position,  position,  guideMix);
+        pixelInfo.aov.normalW   = normalize(mix(pixelInfo.aov.normalW, normalW, guideMix));
+        pixelInfo.aov.normal    = mix(pixelInfo.aov.normal,    normal,    guideMix);
+        pixelInfo.aov.albedo    = mix(pixelInfo.aov.albedo,    albedo,    guideMix);
+        pixelInfo.aov.roughness = mix(pixelInfo.aov.roughness, roughness, guideMix);
     } else {
-        pixelInfo.aov.normal    = currNormal;
-        pixelInfo.aov.position  = currPosition;
-        pixelInfo.aov.albedo    = currAlbedo;
-        pixelInfo.aov.camNormal = currCamNormal;
-        pixelInfo.aov.depth     = currDepth;
+        pixelInfo.aov.positionW = positionW;
+        pixelInfo.aov.position  = position;
+        pixelInfo.aov.normalW   = normalW;
+        pixelInfo.aov.normal    = normal;
+        pixelInfo.aov.albedo    = albedo;
+        pixelInfo.aov.roughness = roughness;
+        pixelInfo.aov.matType   = uint(mat.type);
         pixelInfo.aov.hitValid  = 1u;
-    }
-
-    if (foundIntersection(opaqueHit)) {
-        Material opaqueMat    = resolveMaterial(getMaterial(opaqueHit.object), opaqueHit);
-        vec3  oNormal         = normalize(opaqueHit.normal);
-        vec3  oAlbedo         = opaqueMat.albedo;
-        vec3  oPos            = opaqueHit.p;
-        vec2  oCamNormal      = vec2(dot(oNormal, right), dot(oNormal, up));
-        float oDepth          = dot(oPos - camera.pos, normalize(camera.dir));
-
-        if (pixelInfo.aov.opaqueHitValid != 0u) {
-            pixelInfo.aov.albedoOpaque    = mix(pixelInfo.aov.albedoOpaque, oAlbedo, guideMix);
-            pixelInfo.aov.camNormalOpaque = mix(pixelInfo.aov.camNormalOpaque, oCamNormal, guideMix);
-            pixelInfo.aov.depthOpaque     = mix(pixelInfo.aov.depthOpaque, oDepth, guideMix);
-        } else {
-            pixelInfo.aov.albedoOpaque      = oAlbedo;
-            pixelInfo.aov.camNormalOpaque   = oCamNormal;
-            pixelInfo.aov.depthOpaque       = oDepth;
-            pixelInfo.aov.opaqueHitValid    = 1u;
-        }
-    } else {
-        pixelInfo.aov.skyMaskOpaque += 1u;
     }
 }
 
@@ -158,6 +129,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     for (; i < ubo.render.maxBounces; i++) {
         if (foundIntersection(hit)) {
             mat = getMaterial(hit.object);
+            mat.albedo *= hit.vertexColor;
 
             if (mat.emissionStrength > 0) {
                 if (i == 0) {
@@ -215,7 +187,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                     ray.origin += ray.dir * t_scatter;
 
                     if (ubo.render.importanceSampling == 1) {
-                        Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE);
+                        Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
                         LightSample volLight = sampleLight(scatterHit, seed);
                         if (volLight.pdf > EPS) {
                             float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
@@ -302,10 +274,9 @@ void main() {
 
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
         PixelInfo initInfo = pixelInfoBuffer.pixels[varianceIndex];
-        initInfo.aov.skyMask        = 0u;
-        initInfo.aov.skyMaskOpaque  = 0u;
-        initInfo.aov.hitValid       = 0u;
-        initInfo.aov.opaqueHitValid = 0u;
+        initInfo.aov.hitValid = 0u;
+        initInfo.aov.matType  = 0u;
+        initInfo.aov.skyMask  = 0u;
         initInfo.mean                   = 0.0;
         initInfo.m2                     = 0.0;
         initInfo.count                  = 0;

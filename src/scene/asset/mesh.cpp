@@ -30,7 +30,8 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     std::vector<tinyobj::material_t> materials;
     std::string warn;
     std::string err;
-    bool loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), nullptr, true);
+    std::string baseDir = std::filesystem::path(path).parent_path().string() + "/";
+    bool loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), baseDir.c_str(), true);
     if (!warn.empty()) {
         ctx.notifications->pushMessage(NotificationType::Warning, "Failed to load obj: " + warn);
     }
@@ -52,6 +53,8 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     }
 
     indices.clear();
+    vertexColorLoaded = false;
+
     for (const tinyobj::shape_t& shape : shapes) {
         size_t indexOffset = 0;
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
@@ -61,10 +64,23 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
                 continue;
             }
 
-            for (int v = 0; v < fv; v++) {
-                const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
-                if (idx.vertex_index < 0) continue;
-                indices.push_back(static_cast<unsigned int>(idx.vertex_index));
+            int matId = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[f];
+            if (matId >= 0 && matId < (int)materials.size()) {
+                const auto& kd = materials[matId].diffuse;
+                glm::vec3 faceColor(kd[0], kd[1], kd[2]);
+                for (int v = 0; v < fv; v++) {
+                    const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
+                    if (idx.vertex_index < 0) continue;
+                    indices.push_back(static_cast<unsigned int>(idx.vertex_index));
+                    vertices[idx.vertex_index].color = faceColor;
+                }
+                vertexColorLoaded = true;
+            } else {
+                for (int v = 0; v < fv; v++) {
+                    const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
+                    if (idx.vertex_index < 0) continue;
+                    indices.push_back(static_cast<unsigned int>(idx.vertex_index));
+                }
             }
             indexOffset += fv;
         }
