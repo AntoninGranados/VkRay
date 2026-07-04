@@ -37,7 +37,7 @@
             "name": "Suzanne",
             "type": "mesh",
             "material": "Suzanne",
-            "path": "./res/model/suzanne.obj",
+            "path": "./res/models/suzanne.obj",
             "position": [0, 0.5, -2],
             "scale": [1.5, 1.5, 1.5]
         },

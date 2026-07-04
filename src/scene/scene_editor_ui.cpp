@@ -205,7 +205,7 @@ void SceneEditorUI::drawUI(Scene& scene) {
         NFD::Guard guard;
         NFD::UniquePath outPath;
         nfdfilteritem_t filter[1] = { { "OBJ Mesh", "obj" } };
-        if (NFD::OpenDialog(outPath, filter, 1) == NFD_OKAY) {
+        if (NFD::OpenDialog(outPath, filter, 1, "res/models/") == NFD_OKAY) {
             const std::string meshPath = outPath.get();
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*scene.ctx, meshPath)) {

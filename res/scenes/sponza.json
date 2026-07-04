@@ -22,7 +22,7 @@
             "name": "Sponza",
             "type": "mesh",
             "material": "Sponza",
-            "path": "./res/model/sponza.obj",
+            "path": "./res/models/sponza.obj",
             "scale": [0.04, 0.04, 0.04]
         }
     ]

@@ -72,7 +72,7 @@
             "name": "Lucy",
             "type": "mesh",
             "material": "Lucy",
-            "path": "./res/model/lucy-centered.obj",
+            "path": "./res/models/lucy-centered.obj",
             "position": [-1.5, 0, -0.5],
             "rotation": [0, { "rand": { "min": 150, "max": 210 } }, 0],
             "scale": [1.0, 1.0, 1.0]
@@ -81,7 +81,7 @@
             "name": "Bunny",
             "type": "mesh",
             "material": "Bunny",
-            "path": "./res/model/bunny.obj",
+            "path": "./res/models/bunny.obj",
             "position": [1.5, 0.86, 0.5],
             "rotation": [0, { "rand": { "min": -30, "max": 30 } }, 0],
             "scale": [2.0, 2.0, 2.0]

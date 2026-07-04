@@ -71,7 +71,7 @@ public:
     void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle = 0);
     void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle = 0);
     void pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation = 0.0f, MaterialHandle materialHandle = 0);
-    void pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle = 0);
+    void pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle = 0, bool smoothShading = false);
     void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle = 0);
     void pushCamera(std::string name, const glm::mat4& transform);
     

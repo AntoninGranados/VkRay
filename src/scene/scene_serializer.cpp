@@ -212,10 +212,11 @@ static void spawnOne(
         const glm::vec3 pos    = (obj.contains("position") ? resolveVec3(obj["position"], ctx) : glm::vec3(0.0f)) + posOffset;
         const glm::vec3 rotDeg =  obj.contains("rotation") ? resolveVec3(obj["rotation"], ctx) : glm::vec3(0.0f);
         const glm::vec3 scale  =  obj.contains("scale")    ? resolveVec3(obj["scale"],    ctx) : glm::vec3(1.0f);
+        const bool smooth      =  obj.value("smooth", false);
         glm::mat4 t = glm::translate(glm::mat4(1.0f), pos);
         t = t * glm::toMat4(glm::quat(glm::radians(rotDeg)));
         t = glm::scale(t, scale);
-        scene.pushMesh(name, meshPath, t, mat);
+        scene.pushMesh(name, meshPath, t, mat, smooth);
 
     } else {
         fprintf(stderr, "[ERROR] Unknown type '%s'\n", type.c_str());
@@ -524,6 +525,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
             obj["type"]     = "mesh";
             if (!matName.empty()) obj["material"] = matName;
             obj["path"]     = meshPath;
+            obj["smooth"]   = assets[ref.handle].getSmoothShading();
             obj["position"] = fromVec3(t.position);
             obj["rotation"] = fromVec3(glm::degrees(glm::eulerAngles(t.rotation)));
             obj["scale"]    = fromVec3(t.scale);

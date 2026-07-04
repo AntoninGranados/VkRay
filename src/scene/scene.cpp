@@ -136,10 +136,12 @@ void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::
     entities.push_back(e);
 }
 
-void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle) {
+void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle, bool smoothShading) {
     MeshHandle handle = static_cast<MeshHandle>(meshAssets.size());
     meshAssets.emplace_back(MeshAsset(name));
-    if (!meshAssets.back().loadFromObj(*ctx, path)) {
+    MeshAsset& asset = meshAssets.back();
+    asset.setSmoothShading(smoothShading);
+    if (!asset.loadFromObj(*ctx, path)) {
         meshAssets.pop_back();
         return;
     }
