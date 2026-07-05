@@ -11,8 +11,8 @@
 
 typedef int MeshHandle;
 
-#define LEAF_SIZE 16
-#define SAH_K     12    // Number of bins used to find the best split with the SAH 
+static constexpr int LEAF_SIZE = 16;
+static constexpr int SAH_K     = 12;
 
 struct Vertex {
     alignas(16) glm::vec3 position;
@@ -20,27 +20,6 @@ struct Vertex {
     alignas(16) glm::vec3 color = glm::vec3(1.0f);
 };
 
-#define DEFAULT_MESH_ASSET MeshAsset( \
-    "Cube", \
-    std::vector<Vertex>{ \
-        { glm::vec3(-0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f, -0.5f)) }, \
-        { glm::vec3( 0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f, -0.5f)) }, \
-        { glm::vec3( 0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f, -0.5f)) }, \
-        { glm::vec3(-0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f, -0.5f)) }, \
-        { glm::vec3(-0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f,  0.5f)) }, \
-        { glm::vec3( 0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f,  0.5f)) }, \
-        { glm::vec3( 0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f,  0.5f)) }, \
-        { glm::vec3(-0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f,  0.5f)) }, \
-    }, \
-    std::vector<uint32_t>{ \
-        0, 1, 2, 2, 3, 0, \
-        4, 5, 6, 6, 7, 4, \
-        1, 5, 6, 6, 2, 1, \
-        0, 3, 7, 7, 4, 0, \
-        3, 2, 6, 6, 7, 3, \
-        0, 4, 5, 5, 1, 0, \
-    } \
-)
 
 class MeshAsset {
 public:
@@ -99,3 +78,26 @@ private:
 };
 
 bool drawMeshAssetUI(MeshAsset& mesh);
+
+inline MeshAsset makeDefaultMeshAsset() {
+    return MeshAsset("Cube",
+        std::vector<Vertex>{
+            { glm::vec3(-0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f, -0.5f)) },
+            { glm::vec3( 0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f, -0.5f)) },
+            { glm::vec3( 0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f, -0.5f)) },
+            { glm::vec3(-0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f, -0.5f)) },
+            { glm::vec3(-0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f,  0.5f)) },
+            { glm::vec3( 0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f,  0.5f)) },
+            { glm::vec3( 0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f,  0.5f)) },
+            { glm::vec3(-0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f,  0.5f)) },
+        },
+        std::vector<uint32_t>{
+            0, 1, 2, 2, 3, 0,
+            4, 5, 6, 6, 7, 4,
+            1, 5, 6, 6, 2, 1,
+            0, 3, 7, 7, 4, 0,
+            3, 2, 6, 6, 7, 3,
+            0, 4, 5, 5, 1, 0,
+        }
+    );
+}

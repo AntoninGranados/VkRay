@@ -19,7 +19,7 @@
 
 using json = nlohmann::ordered_json;
 
-#define SCENE_VERSION 1
+static constexpr int SCENE_VERSION = 1;
 
 // Fixes an issue when writing a std::string created from a C string to a JSON file
 static std::string trimmed(const std::string& s) {

@@ -11,7 +11,7 @@
 
 using json = nlohmann::json;
 
-#define JOB_VERSION 1
+static constexpr int JOB_VERSION = 1;
 
 static std::unordered_map<std::string, std::filesystem::path> kAovPaths = {
     { "position_w", "pathtracer/aov/position_w" },

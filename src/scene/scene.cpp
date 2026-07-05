@@ -359,5 +359,5 @@ void Scene::resetSceneState() {
 
 void Scene::ensureDefaultAssets() {
     pushMaterial(DEFAULT_MATERIAL);
-    meshAssets.push_back(DEFAULT_MESH_ASSET);
+    meshAssets.push_back(makeDefaultMeshAsset());
 }

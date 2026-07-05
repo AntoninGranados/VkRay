@@ -5,10 +5,10 @@
 #include "VkSmol/engine.hpp"
 #include "app/app_context.hpp"
 
-#define OUTPUT_DIR "outputs"
-#define RENDER_OUTPUT_PATH OUTPUT_DIR "/screenshots"
-#define ANIMATION_FRAMES_DIR OUTPUT_DIR "/frames"
-#define ANIMATION_VIDEO_PATH OUTPUT_DIR "/out.mp4"
+static constexpr const char* OUTPUT_DIR           = "outputs";
+static constexpr const char* RENDER_OUTPUT_PATH   = "outputs/screenshots";
+static constexpr const char* ANIMATION_FRAMES_DIR = "outputs/frames";
+static constexpr const char* ANIMATION_VIDEO_PATH = "outputs/out.mp4";
 
 
 class ExportService {

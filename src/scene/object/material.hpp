@@ -43,7 +43,7 @@ struct Material {
     float anisotropic      = 0.0f;
 };
 
-#define DEFAULT_MATERIAL Material{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f }
+inline const Material DEFAULT_MATERIAL{ .name = "Default", .type = MaterialType::Lambertian, .albedo = glm::vec3(1.0f, 0.0f, 1.0f)*0.6f };
 
 bool drawPrincipledUI(Material& mat);
 bool drawEmissiveUI(Material& mat);
