@@ -18,34 +18,34 @@ This plan will most likely be subjected to heavy modifications.
   - Width/height respected in headless; ignored in windowed until v0.5 decouples renderer from editor
   - Enables batch/scriptable renders without recompiling
 
-## v0.4 Camera & Lens
+## v0.4 Renderer Architecture
 
-- [ ] **[0.4.0] Motion blur**: time-sampled rays in the pathtracing shader
-  - Animation system already in place; needs sub-frame transform interpolation
-  - Add support for multiple animation curves (for now they have to be hardcoded); lerp (already), slerp, ease-in/out/in-out, ...
-- [ ] **[0.4.1] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
-  - Support polygon apertures (square, hex, …) and custom mask textures
-  - Controls bokeh blade count and rotation
-- [ ] **[0.4.2] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
-  - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
-  - Enables oblique focus planes and tilt-shift miniature effects
-
-## v0.5 Renderer Architecture
-
-- [ ] **[0.5.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
+- [ ] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
   - Renderer owns pathtracing and compositing compute passes only; produces `OutputImage`
   - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
   - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer
   - Headless mode runs the renderer loop directly with no display layer
-- [ ] **[0.5.1] Parameter UX**: quality-of-life additions to the parameter system
+- [ ] **[0.4.1] Parameter UX**: quality-of-life additions to the parameter system
   - Tooltips on parameter widgets
   - Conditional visibility (hide/grey out params based on other param values)
   - Reset to default value (right-click or Alt+click or other ?)
-- [ ] **[0.5.2] Multi-descriptor-set layout**: split the pathtracing pass into 3 descriptor sets by update frequency
+- [ ] **[0.4.2] Multi-descriptor-set layout**: split the pathtracing pass into 3 descriptor sets by update frequency
   - Requires VkSmol changes: `set` field in `DescriptorBindingDecl`, multi-layout pipeline creation, N-set `vkCmdBindDescriptorSets`
   - Set 0 (per-frame): `PathtracerUBO`, `prevTex`, `PixelInfoBuffer`, `outputImage`
   - Set 1 (scene): all geometry/material SSBOs — updated only on scene edits
   - Set 2 (textures): bindless sampler array — groundwork for v0.8 texture support
+
+## v0.5 Camera & Lens
+
+- [ ] **[0.5.0] Motion blur**: time-sampled rays in the pathtracing shader
+  - Animation system already in place; needs sub-frame transform interpolation
+  - Add support for multiple animation curves (for now they have to be hardcoded); lerp (already), slerp, ease-in/out/in-out, ...
+- [ ] **[0.5.1] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
+  - Support polygon apertures (square, hex, …) and custom mask textures
+  - Controls bokeh blade count and rotation
+- [ ] **[0.5.2] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
+  - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
+  - Enables oblique focus planes and tilt-shift miniature effects
 
 ## v0.6 Denoising
 

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.3]
+
+### Added
+- Job system for headless batch rendering: declarative JSON files drive multiple renders
+    - Scene, output path, SPP, width/height, parameter overrides, and AOV outputs per job
+    - Multiple sample checkpoints per job with independent AOV control per checkpoint
+- Orbital camera mode for the scene format
+- New AOV channels: `roughness` and `mat_type`
+- Per-vertex color loaded from `.mtl` files
+- Parameter reset to default value
+- Progress bar and timer for headless output
+- `docs/parameters.md` generated automatically from the parameter definitions
+- `README.md`
+
+### Changed
+- Parameter system reworked: hierarchical path-based addressing, `bind`/`onSync` callbacks; AOV toggles migrated in
+- Scene serializer rewritten; JSON fields now snake_case; scene version field (`version: 1`) added
+- AOV buffer restructured; material-type and debug-view constants moved to shared `common.glsl`
+- Scenes moved to `res/scenes/`; `res/model/` renamed to `res/models/`
+- C++23: `std::format`, `std::println`, `std::unreachable`, `std::to_underlying` throughout
+
+---
+
 ## [0.3.2]
 
 ### Added
