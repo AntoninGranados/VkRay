@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(VkRay LANGUAGES C CXX)
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+  project(VkRay LANGUAGES C CXX OBJC)
+else()
+  project(VkRay LANGUAGES C CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,16 +34,13 @@ configure_file(
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 find_package(Vulkan REQUIRED)
-find_package(glfw3 REQUIRED)
 
-if(TARGET glfw)
-  set(VKRAY_GLFW_TARGET glfw)
-elseif(TARGET glfw3)
-  set(VKRAY_GLFW_TARGET glfw3)
-else()
-  find_library(VKRAY_GLFW_LIBRARY glfw)
-  set(VKRAY_GLFW_TARGET ${VKRAY_GLFW_LIBRARY})
-endif()
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory("${CMAKE_SOURCE_DIR}/third_party/glfw" glfw)
+set(VKRAY_GLFW_TARGET glfw)
 
 file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/third_party/imgui/*.cpp")
 add_library(imgui_third_party STATIC ${VKRAY_IMGUI_SOURCES})
@@ -47,6 +48,7 @@ target_include_directories(imgui_third_party PUBLIC
   "${CMAKE_SOURCE_DIR}/third_party/imgui"
 )
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
+target_compile_options(imgui_third_party PRIVATE -Wno-nontrivial-memcall)
 
 add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/third_party/tinyexr/miniz.c")
 target_include_directories(tinyexr_third_party PUBLIC
@@ -76,6 +78,10 @@ target_include_directories(VkRay PRIVATE
 
 target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr_third_party)
 target_compile_options(VkRay PRIVATE -Wall)
+
+set_source_files_properties("${CMAKE_SOURCE_DIR}/src/render/export_service.cpp" PROPERTIES
+  COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-function"
+)
 target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})
   set_property(TARGET VkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")

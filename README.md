@@ -24,12 +24,9 @@ Interactive editor with transform gizmos, material and parameter inspector, orbi
 
 ## Build
 
-Requires CMake and a C++23 compiler, plus the following system dependencies:
-- [Vulkan SDK](https://vulkan.lunarg.com/) — set `VULKAN_SDK` to the SDK root
-- [GLFW3](https://www.glfw.org/)
-- [GLM](https://github.com/g-truc/glm)
+Requires CMake, a C++23 compiler, and the [Vulkan SDK](https://vulkan.lunarg.com/) (set `VULKAN_SDK` to the SDK root).
 
-ImGui, FontAwesome, nfd, nlohmann/json, stb_image, tinyexr, and tinyobjloader are bundled in `third_party/`.
+GLFW, GLM, ImGui, FontAwesome, nfd, nlohmann/json, stb_image, tinyexr, and tinyobjloader are bundled in `third_party/`.
 
 ```bash
 cmake -S . -B build

@@ -2,22 +2,6 @@
 
 This plan will most likely be subjected to heavy modifications.
 
-## v0.3 Scene & Asset System
-
-- [X] **[0.3.0] Scene file (JSON)**: save/load the full scene to/from a JSON file
-  - Covers primitives, materials, camera, and render parameters
-  - Replaces the hard-coded reference scene
-- [X] **[0.3.1] EXR output**: write renders to OpenEXR instead of PNG only
-  - Preserves HDR values for compositing pipelines
-  - Natural container for multi-channel AOV data
-- [X] **[0.3.2] GBuffer / AOV passes**: expose auxiliary render buffers as outputs
-  - Normals, depth, albedo (pixel info buffer already stores these)
-  - Enables external denoising workflows (OIDN, OptiX)
-- [ ] **[0.3.3] Jobs file (JSON)**: declarative render jobs
-  - Scene, output path, SPP, width/height per job
-  - Width/height respected in headless; ignored in windowed until v0.5 decouples renderer from editor
-  - Enables batch/scriptable renders without recompiling
-
 ## v0.4 Renderer Architecture
 
 - [ ] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
@@ -83,3 +67,4 @@ This plan will most likely be subjected to heavy modifications.
 - [ ] **Standard scene import**: USD and glTF interchange formats
 - [ ] **Spectral rendering**: replace RGB with wavelength-sampled radiance; enables dispersion, iridescence, fluorescence
 - [ ] **Stackless BVH traversal**: [Nvidia Paper](https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf)
+- [ ] **Rastirizer**: when in the editor, render the rasterized scene before using the pathtracer for better interactivity

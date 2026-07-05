@@ -6,6 +6,7 @@
 
 bin/
 build/
+logs/
 *.exr
 *.png
 !snapshots/*.png
