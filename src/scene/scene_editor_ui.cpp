@@ -1,10 +1,8 @@
 #include "scene_editor_ui.hpp"
 
-
 #include <algorithm>
 #include <cassert>
-#include <cstdio>
-#include <cstring>
+#include <format>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -129,9 +127,7 @@ void SceneEditorUI::drawUI(Scene& scene) {
         ImGui::NewLine();
         if (ImGui::Button("+##Materials", ImVec2(32, 0))) {
             Material mat = DEFAULT_MATERIAL;
-            char matName[64];
-            std::snprintf(matName, sizeof(matName), "Material-%02d", scene.materialN++);
-            mat.name = matName;
+            mat.name = std::format("Material-{:02d}", scene.materialN++);
             scene.pushMaterial(mat);
             scene.updated = true;
         }
@@ -224,9 +220,7 @@ void SceneEditorUI::drawNewObjectPopUp(Scene& scene) {
     ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
 
-    char nameBuffer[64];
-    std::snprintf(nameBuffer, sizeof(nameBuffer), "Entity-%02d", scene.entityN);
-    std::string name(nameBuffer);
+    std::string name = std::format("Entity-{:02d}", scene.entityN);
 
     if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::kButtonSize)) {
         scene.entities.push_back(scene.registry.createEntity());

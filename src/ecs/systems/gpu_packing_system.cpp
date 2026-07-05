@@ -1,14 +1,16 @@
 #include "gpu_packing_system.hpp"
 
+#include <cstring>
 #include <vector>
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/frame_context.hpp"
-#include "scene/scene.hpp"
-#include "scene/object/object.hpp"
+
 #include "app/app_context.hpp"
+#include "scene/object/object.hpp"
+#include "scene/scene.hpp"
 
 namespace ecs {
 
@@ -319,11 +321,11 @@ void objectPackingSystem(Registry& registry, AppContext& ctx, const FrameContext
 
     std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(ObjectHandle) * objectEntry.capacity, 0);
     size_t offset = 0;
-    memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
+    std::memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
-    memcpy(objectData.data() + offset, &objectSelected, sizeof(objectSelected));
+    std::memcpy(objectData.data() + offset, &objectSelected, sizeof(objectSelected));
     offset += sizeof(objectSelected);
-    memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
+    std::memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
 
     ctx.engine->fillBuffer(ctx.engine->getBuffer(objectEntry.handle, frame.currentFrame), objectData.data());
 }
@@ -417,9 +419,9 @@ void lightPackingSystem(Registry& registry, AppContext& ctx, const FrameContext&
 
     std::vector<char> lightData(sizeof(GpuLightHeader) + sizeof(GpuLight) * lightEntry.capacity, 0);
     size_t offset = 0;
-    memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
+    std::memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
     offset += sizeof(totalArea);
-    memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
+    std::memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
 
     ctx.engine->fillBuffer(ctx.engine->getBuffer(lightEntry.handle, frame.currentFrame), lightData.data());
 }

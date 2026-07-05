@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "sunset",
 
@@ -17,7 +17,7 @@
             "name": "Sun",
             "type": "emissive",
             "albedo": [1.0, 0.75, 0.25],
-            "emissionStrength": 2000
+            "emission_strength": 2000
         },
         {
             "name": "Floor",

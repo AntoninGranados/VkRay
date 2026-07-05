@@ -9,15 +9,16 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
-#include "application.hpp"
-#include "app/app_context.hpp"
-#include "camera.hpp"
-#include "editor/editor_ui.hpp"
-#include "app/parameter_handler.hpp"
-#include "app/animation_handler.hpp"
-#include "scene/scene.hpp"
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
+
+#include "app/animation_handler.hpp"
+#include "app/app_context.hpp"
+#include "app/parameter_handler.hpp"
+#include "application.hpp"
+#include "camera.hpp"
+#include "editor/editor_ui.hpp"
+#include "scene/scene.hpp"
 
 
 void InputHandler::initCallbacks(const AppContext& ctx) {

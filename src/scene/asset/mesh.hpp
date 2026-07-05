@@ -1,10 +1,10 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <vector>
-#include <string>
 
 #include "../object/object.hpp"
 #include "app/app_context.hpp"

@@ -3,10 +3,11 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-#include <stdexcept>
 
 using ParameterPath = std::filesystem::path;
 
@@ -139,7 +140,7 @@ public:
         std::vector<std::string> items,
         bool                     restart
     ) {
-        auto param = std::make_unique<EnumParam>(path, label, static_cast<int>(value), std::move(items), restart);
+        auto param = std::make_unique<EnumParam>(path, label, std::to_underlying(value), std::move(items), restart);
         index[path.generic_string()] = param.get();
         params.push_back(std::move(param));
         return static_cast<EnumParam&>(*params.back());
@@ -168,7 +169,7 @@ public:
     template <typename EnumT>
     void setEnum(const ParameterPath& path, EnumT value) {
         auto& param = getParam<EnumParam>(path);
-        param.get() = static_cast<int>(value);
+        param.get() = std::to_underlying(value);
         if (param.onSync) param.onSync();
     }
 

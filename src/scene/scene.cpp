@@ -1,9 +1,7 @@
 #include "scene.hpp"
 
-#include <utility>
-#include <cstring>
-#include <cstdio>
 #include <cassert>
+#include <utility>
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>

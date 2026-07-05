@@ -1,5 +1,7 @@
 #include "export_service.hpp"
 
+#include <format>
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
 
@@ -119,12 +121,7 @@ void ExportService::saveCapture(AppContext& ctx, const std::filesystem::path& pa
 
 
 std::filesystem::path ExportService::buildAnimationFramePath(int frame) {
-    char buff[64];
-    std::snprintf(buff, sizeof(buff), "frame_%05d.png", frame);
-
-    std::filesystem::path path = ANIMATION_FRAMES_DIR;
-    path /= buff;
-    return path;
+    return std::filesystem::path(ANIMATION_FRAMES_DIR) / std::format("frame_{:05d}.png", frame);
 }
 
 
@@ -229,7 +226,9 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
 
 void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& basePath) {
     auto& p = *ctx.parameters;
-    bool anyEnabled = p.getBool("pathtracer/aov/position")
+    bool anyEnabled = p.getBool("pathtracer/aov/position_w")
+                   || p.getBool("pathtracer/aov/position")
+                   || p.getBool("pathtracer/aov/normal_w")
                    || p.getBool("pathtracer/aov/normal")
                    || p.getBool("pathtracer/aov/albedo")
                    || p.getBool("pathtracer/aov/roughness")
@@ -250,6 +249,18 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         channels.emplace_back(name, std::move(data));
     };
 
+    if (p.getBool("pathtracer/aov/position_w")) {
+        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.x : 0.0f;
+            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.y : 0.0f;
+            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.z : 0.0f;
+        }
+        push("position_w.X", std::move(x));
+        push("position_w.Y", std::move(y));
+        push("position_w.Z", std::move(z));
+    }
+
     if (p.getBool("pathtracer/aov/position")) {
         std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
@@ -260,6 +271,18 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("position.X", std::move(x));
         push("position.Y", std::move(y));
         push("position.Z", std::move(z));
+    }
+
+    if (p.getBool("pathtracer/aov/normal_w")) {
+        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
+        for (size_t i = 0; i < pixelCount; i++) {
+            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.x : 0.0f;
+            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.y : 0.0f;
+            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.z : 0.0f;
+        }
+        push("normal_w.X", std::move(x));
+        push("normal_w.Y", std::move(y));
+        push("normal_w.Z", std::move(z));
     }
 
     if (p.getBool("pathtracer/aov/normal")) {
@@ -295,7 +318,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         std::vector<float> v(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
             v[i] = pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
-        push("matType.V", std::move(v));
+        push("mat_type.V", std::move(v));
     }
 
     if (p.getBool("pathtracer/aov/sky_mask")) {
@@ -304,7 +327,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
             int c = pixels[i].count;
             m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;
         }
-        push("skyMask.V", std::move(m));
+        push("sky_mask.V", std::move(m));
     }
 
     if (channels.empty()) return;

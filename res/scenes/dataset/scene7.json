@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "empty",
 
@@ -49,7 +49,7 @@
             "name": "CeilLight",
             "type": "emissive",
             "albedo": [1.0, 0.97, 0.92],
-            "emissionStrength": 35
+            "emission_strength": 35
         },
         {
             "name": "GlassLarge",

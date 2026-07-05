@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "empty",
 
@@ -41,7 +41,7 @@
             "name": "Light",
             "type": "emissive",
             "albedo": [1.0, 0.7, 0.5],
-            "emissionStrength": 30
+            "emission_strength": 30
         }
     ],
 

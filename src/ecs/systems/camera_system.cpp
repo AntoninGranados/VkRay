@@ -1,16 +1,16 @@
 #include "camera_system.hpp"
 
-#include "VkSmol/platform/glfw_platform.hpp"
-#include "app/app_context.hpp"
-
 #include <algorithm>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "VkSmol/engine.hpp"
+#include "VkSmol/platform/glfw_platform.hpp"
+
+#include "app/app_context.hpp"
 #include "camera.hpp"
 #include "scene/scene.hpp"
-#include "VkSmol/engine.hpp"
 
 namespace ecs {
 

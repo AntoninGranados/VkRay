@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "empty",
 
@@ -44,13 +44,13 @@
             "name": "Window",
             "type": "emissive",
             "albedo": [0.82, 0.88, 1.0],
-            "emissionStrength": 30
+            "emission_strength": 30
         },
         {
             "name": "Lamp",
             "type": "emissive",
             "albedo": [1.0, 0.65, 0.25],
-            "emissionStrength": 600
+            "emission_strength": 600
         },
         {
             "name": "Glass",

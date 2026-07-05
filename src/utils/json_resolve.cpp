@@ -1,6 +1,6 @@
 #include "utils/json_resolve.hpp"
 
-#include <cstdio>
+#include <format>
 #include <sstream>
 #include <vector>
 
@@ -103,9 +103,7 @@ static std::string substituteToken(std::string s, const std::string& token, int 
         if (index < static_cast<int>(labels.size())) {
             replacement = labels[index];
         } else {
-            char buf[32];
-            std::snprintf(buf, sizeof(buf), "%0*d", width, index);
-            replacement = buf;
+            replacement = std::format("{:0{}d}", index, width);
         }
         s.replace(pos, closePos - pos + 1, replacement);
         pos = s.find(labelPrefix, pos + replacement.size());
@@ -114,9 +112,7 @@ static std::string substituteToken(std::string s, const std::string& token, int 
     // Numerical field (ex: `{TOKEN}` -> `01`)
     const std::string plain = "{" + token + "}";
     while ((pos = s.find(plain)) != std::string::npos) {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%0*d", width, index);
-        s.replace(pos, plain.size(), buf);
+        s.replace(pos, plain.size(), std::format("{:0{}d}", index, width));
     }
 
     return s;

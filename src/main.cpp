@@ -1,6 +1,6 @@
 #include <cstdlib>
-#include <string_view>
 #include <filesystem>
+#include <string_view>
 
 #include "VkSmol/platform/glfw_platform.hpp"
 #include "VkSmol/platform/headless_platform.hpp"

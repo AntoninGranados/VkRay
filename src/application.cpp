@@ -124,7 +124,7 @@ void Application::initParameters() {
         { "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask" },
         true
     );
-    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = d.debugView = static_cast<int>(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
+    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = d.debugView = std::to_underlying(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
 
     parameters.setLabel("pathtracer/sampling", "Sampling");
     parameters.addInt("pathtracer/sampling/max_bounces", "Max Bounces", 8, 1, 20, 1, false);
@@ -154,12 +154,14 @@ void Application::initParameters() {
     parameters.addFloat("pathtracer/resolution/render",  "Render Resolution",  1.0f, 1.0f, 50.0f, 1.0f, false);
 
     parameters.setLabel("pathtracer/aov", "Arbitrary Output Variables");
-    parameters.addBool("pathtracer/aov/position",  "Position",  false, false);
-    parameters.addBool("pathtracer/aov/normal",    "Normal",    false, false);
-    parameters.addBool("pathtracer/aov/albedo",    "Albedo",    false, false);
-    parameters.addBool("pathtracer/aov/roughness", "Roughness", false, false);
-    parameters.addBool("pathtracer/aov/mat_type",  "Mat Type",  false, false);
-    parameters.addBool("pathtracer/aov/sky_mask",  "Sky mask",  false, false);
+    parameters.addBool("pathtracer/aov/position_w", "Position W", false, false);
+    parameters.addBool("pathtracer/aov/position",   "Position",   false, false);
+    parameters.addBool("pathtracer/aov/normal_w",   "Normal W",   false, false);
+    parameters.addBool("pathtracer/aov/normal",     "Normal",     false, false);
+    parameters.addBool("pathtracer/aov/albedo",     "Albedo",     false, false);
+    parameters.addBool("pathtracer/aov/roughness",  "Roughness",  false, false);
+    parameters.addBool("pathtracer/aov/mat_type",   "Mat Type",   false, false);
+    parameters.addBool("pathtracer/aov/sky_mask",   "Sky mask",   false, false);
 
     parameters.setLabel("scene", "Scene");
     parameters.addEnum<LightMode>(
@@ -169,7 +171,7 @@ void Application::initParameters() {
         { "Day", "Sunset", "Night", "Empty" },
         true
     );
-    parameters.bind("scene/light_mode", [&]() { r.lightMode = static_cast<int>(parameters.getEnum<LightMode>("scene/light_mode")); });
+    parameters.bind("scene/light_mode", [&]() { r.lightMode = std::to_underlying(parameters.getEnum<LightMode>("scene/light_mode")); });
 }
 
 void Application::initScene(const std::string& sceneFile) {

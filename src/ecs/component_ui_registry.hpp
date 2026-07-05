@@ -7,9 +7,8 @@
 #include "imgui/imgui.h"
 
 #include "app/app_context.hpp"
-
-#include "./registry.hpp"
 #include "./components.hpp"
+#include "./registry.hpp"
 
 class MeshAsset;
 

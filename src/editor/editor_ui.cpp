@@ -8,12 +8,12 @@
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/ImGuizmo.h"
 
-#include "scene/scene.hpp"
-#include "./ui_constants.hpp"
-
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/glfw_platform.hpp"
+
 #include "app/app_context.hpp"
+#include "scene/scene.hpp"
+#include "./ui_constants.hpp"
 
 
 void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {

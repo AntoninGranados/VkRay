@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "empty",
 
@@ -19,7 +19,7 @@
             "name": "Light",
             "type": "emissive",
             "albedo": [1, 1, 1],
-            "emissionStrength": 15
+            "emission_strength": 15
         },
         {
             "name": "SphereMatteMat_{n}",

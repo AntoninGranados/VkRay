@@ -2,14 +2,15 @@
 
 #include <fstream>
 #include <optional>
+#include <print>
 #include <random>
 #include <unordered_map>
+#include <utility>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
-
 #include "nlohmann/json.hpp"
 
 #include "scene.hpp"
@@ -17,6 +18,8 @@
 #include "utils/json_resolve.hpp"
 
 using json = nlohmann::ordered_json;
+
+#define SCENE_VERSION 1
 
 // Fixes an issue when writing a std::string created from a C string to a JSON file
 static std::string trimmed(const std::string& s) {
@@ -97,7 +100,7 @@ static MaterialType parseMaterialType(const std::string& s) {
     if (s == "dielectric")   return MaterialType::Dielectric;
     if (s == "volume")       return MaterialType::Volume;
     if (s == "programmable") return MaterialType::Programmable;
-    fprintf(stderr, "[WARNING] Unknown material type '%s', defaulting to lambertian\n", s.c_str());
+    std::println(stderr, "[WARNING] Unknown material type '{}', defaulting to lambertian", s);
     return MaterialType::Lambertian;
 }
 
@@ -112,7 +115,7 @@ static std::string toString(MaterialType t) {
         case MaterialType::Volume:       return "volume";
         case MaterialType::Programmable: return "programmable";
     }
-    return "lambertian";
+    std::unreachable();
 }
 
 static LightMode parseLightMode(const std::string& s) {
@@ -120,7 +123,7 @@ static LightMode parseLightMode(const std::string& s) {
     if (s == "sunset") return LightMode::Sunset;
     if (s == "night")  return LightMode::Night;
     if (s == "empty")  return LightMode::Empty;
-    fprintf(stderr, "[WARNING] Unknown light mode '%s', defaulting to day\n", s.c_str());
+    std::println(stderr, "[WARNING] Unknown light mode '{}', defaulting to day", s);
     return LightMode::Day;
 }
 
@@ -131,7 +134,7 @@ static std::string toString(LightMode m) {
         case LightMode::Night:  return "night";
         case LightMode::Empty:  return "empty";
     }
-    return "day";
+    std::unreachable();
 }
 
 static Material parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName = "Unnamed") {
@@ -143,7 +146,7 @@ static Material parseMaterial(const json& m, const ResolveCtx& ctx, const std::s
     mat.metalness        = m.contains("metalness")        ? resolveFloat(m["metalness"],        ctx) : 0.0f;
     mat.ior              = m.contains("ior")              ? resolveFloat(m["ior"],              ctx) : 0.0f;
     mat.transmission     = m.contains("transmission")     ? resolveFloat(m["transmission"],     ctx) : 0.0f;
-    mat.emissionStrength = m.contains("emissionStrength") ? resolveFloat(m["emissionStrength"], ctx) : 0.0f;
+    mat.emissionStrength = m.contains("emission_strength") ? resolveFloat(m["emission_strength"], ctx) : 0.0f;
     mat.density          = m.contains("density")          ? resolveFloat(m["density"],          ctx) : 1.0f;
     mat.anisotropic      = m.contains("anisotropic")      ? resolveFloat(m["anisotropic"],      ctx) : 0.0f;
     return mat;
@@ -160,7 +163,7 @@ static MaterialHandle resolveMaterial(
         const std::string name = resolveTemplate(matField.get<std::string>(), ctx);
         auto it = matMap.find(name);
         if (it == matMap.end()) {
-            fprintf(stderr, "[ERROR] Unknown material '%s'\n", name.c_str());
+            std::println(stderr, "[ERROR] Unknown material '{}'", name);
             return 0;
         }
         return it->second;
@@ -208,7 +211,7 @@ static void spawnOne(
 
     } else if (type == "mesh") {
         const std::string meshPath = obj.value("path", "");
-        if (meshPath.empty()) { fprintf(stderr, "[ERROR] '%s': missing 'path'\n", name.c_str()); return; }
+        if (meshPath.empty()) { std::println(stderr, "[ERROR] '{}': missing 'path'", name); return; }
         const glm::vec3 pos    = (obj.contains("position") ? resolveVec3(obj["position"], ctx) : glm::vec3(0.0f)) + posOffset;
         const glm::vec3 rotDeg =  obj.contains("rotation") ? resolveVec3(obj["rotation"], ctx) : glm::vec3(0.0f);
         const glm::vec3 scale  =  obj.contains("scale")    ? resolveVec3(obj["scale"],    ctx) : glm::vec3(1.0f);
@@ -219,7 +222,7 @@ static void spawnOne(
         scene.pushMesh(name, meshPath, t, mat, smooth);
 
     } else {
-        fprintf(stderr, "[ERROR] Unknown type '%s'\n", type.c_str());
+        std::println(stderr, "[ERROR] Unknown type '{}'", type);
         return;
     }
 
@@ -254,18 +257,24 @@ static void spawnOne(
 bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        fprintf(stderr, "[ERROR] Cannot open: %s\n", path.c_str());
+        std::println(stderr, "[ERROR] Cannot open: {}", path);
         return false;
     }
 
     json j;
     try { j = json::parse(file, nullptr, true, true); }
     catch (const json::parse_error& e) {
-        fprintf(stderr, "[ERROR] Parse error: %s\n", e.what());
+        std::println(stderr, "[ERROR] Parse error: {}", e.what());
         return false;
     }
 
     scene.clear();
+
+    const int version = j.value("version", -1);
+    if (version != SCENE_VERSION) {
+        std::println(stderr, "[ERROR] Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version);
+        return false;
+    }
 
     const uint32_t seed = forceSeed.value_or(
         j.contains("seed") ? j["seed"].get<uint32_t>() : static_cast<uint32_t>(std::random_device{}())
@@ -282,7 +291,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         const bool hasPosition = c.contains("position");
         const bool hasOrbital  = c.contains("radius") || c.contains("azimuth") || c.contains("elevation");
         if (hasPosition && hasOrbital)
-            fprintf(stderr, "[ERROR] Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive\n");
+            std::println(stderr, "[ERROR] Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive");
 
         const glm::vec3 target = c.contains("target") ? resolveVec3(c["target"], camCtx) : glm::vec3(0.0f);
 
@@ -300,7 +309,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
         const float fov        = c.contains("fov")        ? resolveFloat(c["fov"],        camCtx) : 60.0f;
         const float aperture   = c.contains("aperture")   ? resolveFloat(c["aperture"],   camCtx) : 0.0f;
-        const float focusDepth = c.contains("focusDepth") ? resolveFloat(c["focusDepth"], camCtx) : 10.0f;
+        const float focusDepth = c.contains("focus_depth") ? resolveFloat(c["focus_depth"], camCtx) : 10.0f;
         const std::string name = c.value("name", "Camera");
 
         Camera& cam = scene.getCamera();
@@ -381,7 +390,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         } else {
             const std::string name = obj.value("name", "Object");
             if (!obj.contains("type")) {
-                fprintf(stderr, "[WARNING] '%s': missing 'type' field, skipping\n", name.c_str());
+                std::println(stderr, "[WARNING] '{}': missing 'type' field, skipping", name);
                 continue;
             }
             ResolveCtx ctx{ rng, {} };
@@ -394,7 +403,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
 bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string& path) {
     json j;
-    j["version"] = 0;
+    j["version"] = SCENE_VERSION;
     j["light"]   = toString(lightMode);
 
     auto& reg        = scene.getRegistry();
@@ -418,7 +427,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         cam["target"]     = fromVec3(target);
         cam["fov"]        = c.fov;
         cam["aperture"]   = c.aperture;
-        cam["focusDepth"] = c.focusDepth;
+        cam["focus_depth"] = c.focusDepth;
         j["camera"]       = cam;
         savedCameraEntity = true;
         break;
@@ -430,7 +439,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         c["target"]     = fromVec3(cam.getTarget());
         c["fov"]        = cam.getFov();
         c["aperture"]   = cam.getAperture();
-        c["focusDepth"] = cam.getFocusDepth();
+        c["focus_depth"] = cam.getFocusDepth();
         j["camera"]     = c;
     }
 
@@ -446,7 +455,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         if (m.metalness        != 0.0f) mj["metalness"]        = m.metalness;
         if (m.ior              != 0.0f) mj["ior"]              = m.ior;
         if (m.transmission     != 0.0f) mj["transmission"]     = m.transmission;
-        if (m.emissionStrength != 0.0f) mj["emissionStrength"] = m.emissionStrength;
+        if (m.emissionStrength != 0.0f) mj["emission_strength"] = m.emissionStrength;
         if (m.density          != 1.0f) mj["density"]          = m.density;
         if (m.anisotropic      != 0.0f) mj["anisotropic"]      = m.anisotropic;
         matsJson.push_back(mj);
@@ -558,7 +567,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
 
     std::ofstream out(path);
     if (!out.is_open()) {
-        fprintf(stderr, "[ERROR] Cannot write: %s\n", path.c_str());
+        std::println(stderr, "[ERROR] Cannot write: {}", path);
         return false;
     }
     out << prettify(j);

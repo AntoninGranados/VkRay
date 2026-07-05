@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "sunset",
 
@@ -11,7 +11,7 @@
     },
 
     "materials": [
-        { "name": "Sun",          "type": "emissive",   "albedo": [1.0, 0.8, 0.8], "emissionStrength": 50 },
+        { "name": "Sun",          "type": "emissive",   "albedo": [1.0, 0.8, 0.8], "emission_strength": 50 },
         { "name": "Floor",        "type": "ggx_glossy",     "albedo": [0.75, 0.70, 0.62], "roughness": 0.1, "ior": 1.5 },
         { "name": "BunnyMat",      "type": "dielectric", "albedo": [0.30, 0.62, 1.0], "roughness": 0.1, "ior": 1.5, "density": 3.5 },
         { "name": "LucyMat",     "type": "lambertian",  "albedo": [0.15, 0.52, 0.22] },

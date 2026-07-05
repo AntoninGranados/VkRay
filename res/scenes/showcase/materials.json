@@ -1,12 +1,12 @@
 {
-    "version": 0,
+    "version": 1,
     "light": "empty",
     "camera": {
         "position": [0, 4, 11],
         "target": [0, 0.65, 0],
         "fov": 20,
         "aperture": 0.0,
-        "focusDepth": 10.0
+        "focus_depth": 10.0
     },
     "materials": [
         {
@@ -20,7 +20,7 @@
             "name": "Light",
             "type": "emissive",
             "albedo": [0.75, 0.85, 1.0],
-            "emissionStrength": 100
+            "emission_strength": 100
         },
         {
             "name": "Matte",

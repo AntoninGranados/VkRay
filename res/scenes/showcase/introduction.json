@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
     "light": "night",
     "camera": {
         "name": "Camera",
@@ -7,14 +7,14 @@
         "target": [0, 1.5, -4],
         "fov": 40,
         "aperture": 0.2,
-        "focusDepth": 14
+        "focus_depth": 14
     },
     "materials": [
         {
             "name": "Light",
             "type": "emissive",
             "albedo": [0.75, 0.85, 1.0],
-            "emissionStrength": 10.0
+            "emission_strength": 10.0
         },
         {
             "name": "Floor",

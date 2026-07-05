@@ -3,8 +3,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "editor/panels/camera_panel.hpp"
 #include "VkSmol/platform/platform.hpp"
+
+#include "editor/panels/camera_panel.hpp"
 
 struct GLFWwindow;
 

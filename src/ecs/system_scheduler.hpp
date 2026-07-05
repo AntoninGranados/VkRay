@@ -1,11 +1,11 @@
 #pragma once
 
-#include "./registry.hpp"
-#include "app/app_context.hpp"
-
 #include <functional>
 #include <utility>
 #include <vector>
+
+#include "./registry.hpp"
+#include "app/app_context.hpp"
 
 namespace ecs {
 

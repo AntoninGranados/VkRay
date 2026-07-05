@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "empty",
 
@@ -8,7 +8,7 @@
         "target": [0, 1, 0],
         "fov": 35,
         "aperture": 1.0,
-        "focusDepth": 10.6
+        "focus_depth": 10.6
     },
 
     "materials": [
@@ -21,13 +21,13 @@
             "name": "Fire",
             "type": "emissive",
             "albedo": [1.0, 1.0, 1.0],
-            "emissionStrength": 50
+            "emission_strength": 50
         },
         {
             "name": "Fireflies",
             "type": "emissive",
             "albedo": [1.0, 1.0, 1.0],
-            "emissionStrength": 5
+            "emission_strength": 5
         }
     ],
 

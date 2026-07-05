@@ -1,6 +1,6 @@
 #include "utils/progress.hpp"
 
-#include <cstdio>
+#include <format>
 #include <iomanip>
 #include <iostream>
 
@@ -25,9 +25,7 @@ std::string ProgressTimer::formatTime(double seconds) {
     const int h = total / 3600;
     const int m = (total % 3600) / 60;
     const int s = total % 60;
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d:%02d:%02d", h, m, s);
-    return buf;
+    return std::format("{}:{:02d}:{:02d}", h, m, s);
 }
 
 // =========================== ProgressBar ===========================

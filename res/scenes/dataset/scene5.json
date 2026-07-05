@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "night",
 
@@ -22,13 +22,13 @@
             "name": "KeyLight",
             "type": "emissive",
             "albedo": [1.0, 0.97, 0.90],
-            "emissionStrength": 40
+            "emission_strength": 40
         },
         {
             "name": "FillLight",
             "type": "emissive",
             "albedo": [0.75, 0.85, 1.0],
-            "emissionStrength": 10
+            "emission_strength": 10
         }
     ],
 

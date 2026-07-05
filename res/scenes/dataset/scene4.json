@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
 
     "light": "night",
 
@@ -24,25 +24,25 @@
             "name": "RedLight",
             "type": "emissive",
             "albedo": [1.0, 0.08, 0.04],
-            "emissionStrength": 180
+            "emission_strength": 180
         },
         {
             "name": "BlueLight",
             "type": "emissive",
             "albedo": [0.1, 0.25, 1.0],
-            "emissionStrength": 150
+            "emission_strength": 150
         },
         {
             "name": "GreenLight",
             "type": "emissive",
             "albedo": [0.1, 0.9, 0.15],
-            "emissionStrength": 120
+            "emission_strength": 120
         },
         {
             "name": "YellowLight",
             "type": "emissive",
             "albedo": [1.0, 0.85, 0.05],
-            "emissionStrength": 100
+            "emission_strength": 100
         },
         {
             "name": "Glass",

@@ -5,9 +5,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "imgui/imgui.h"
+
 #include "material.hpp"
 #include "../raycast.hpp"
-#include "imgui/imgui.h"
 
 class Camera;
 

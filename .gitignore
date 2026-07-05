@@ -6,9 +6,10 @@
 
 bin/
 build/
-snapshots/
 *.exr
 *.png
+!snapshots/*.png
+!snapshots/showcase/*.png
 
 imgui.ini
 outputs/

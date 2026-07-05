@@ -1,13 +1,13 @@
 #pragma once
 
-#include "./entity.hpp"
-#include "./component_storage.hpp"
-
 #include <cassert>
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
 #include <vector>
+
+#include "./component_storage.hpp"
+#include "./entity.hpp"
 
 namespace ecs {
 

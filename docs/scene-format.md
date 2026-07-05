@@ -1,12 +1,15 @@
 # Scene Format
 
+> [!WARNING]
+> This format is under active development. The version number will be bumped on breaking changes with no backward compatibility guarantee.
+
 Scenes are JSON files in `res/scenes/`. See existing files there for full examples.
 
 ## Top-level
 
 ```json
 {
-    "version": 0,
+    "version": 1,
     "seed": 42,
     "light": "day",
     "camera": { ... },
@@ -29,7 +32,7 @@ Scenes are JSON files in `res/scenes/`. See existing files there for full exampl
     "target": [0, 0, 0],
     "fov": 60,
     "aperture": 0.05,
-    "focusDepth": 10
+    "focus_depth": 10
 }
 ```
 
@@ -51,7 +54,7 @@ All types accept `albedo`. All numeric fields support [value expressions](expres
 | `type` | Description | Extra fields |
 |--------|-------------|--------------|
 | `principled` | General-purpose | `roughness` $\in [0, 1]$, default $0$<br>`metalness` $\in [0, 1]$, default $0$<br>`transmission` $\in [0, 1]$, default $0$<br>`anisotropic` $\in [0, 1]$, default $0$ |
-| `emissive` | Light source | `emissionStrength` $\ge 0$, default $0$ |
+| `emissive` | Light source | `emission_strength` $\ge 0$, default $0$ |
 | `lambertian` | Diffuse | |
 | `ggx_metal` | Metallic | `roughness` $\in [0, 1]$, default $0$ |
 | `ggx_glossy` | Glossy dielectric | `ior` $> 1$, default $0$<br>`roughness` $\in [0, 1]$, default $0$ |

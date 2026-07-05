@@ -1,5 +1,5 @@
 {
-    "version": 0,
+    "version": 1,
     "light": "empty",
     "camera": {
         "name": "Camera",
@@ -7,7 +7,7 @@
         "target": [0.0, -2.0, 49.0],
         "fov": 28.0,
         "aperture": 0.0,
-        "focusDepth": 1.0
+        "focus_depth": 1.0
     },
     "materials": [
         {
@@ -20,7 +20,7 @@
             "name": "Light",
             "type": "emissive",
             "albedo": [1.0, 1.0, 1.0],
-            "emissionStrength": 4000.0
+            "emission_strength": 4000.0
         },
         {
             "name": "Glass",
