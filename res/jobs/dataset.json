@@ -1,0 +1,141 @@
+{
+    "version": 1,
+    "jobs": [
+        {
+            "scene": "res/scenes/dataset/scene0.json",
+            // "output": "outputs/dataset/out_0_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_0_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene1.json",
+            // "output": "outputs/dataset/out_1_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_1_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene2.json",
+            // "output": "outputs/dataset/out_2_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_2_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene3.json",
+            // "output": "outputs/dataset/out_3_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_3_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene4.json",
+            // "output": "outputs/dataset/out_4_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_4_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene5.json",
+            // "output": "outputs/dataset/out_5_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_5_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene6.json",
+            // "output": "outputs/dataset/out_6_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_6_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } },
+        {
+            "scene": "res/scenes/dataset/scene7.json",
+            // "output": "outputs/dataset/out_7_{n}_{spp:raw02,raw08,clean}.exr",
+            "output": "outputs/dataset/out_7_{n}_{spp:raw02,raw08}.exr",
+            "samples": [
+                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
+                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                // 2048
+            ],
+            "width": 1024,
+            "height": 1024,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   512,
+                "pathtracer/sampling/clip_accumulation": true
+            },
+            "repeat": { "count": 16 } }
+    ]
+}

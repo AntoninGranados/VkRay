@@ -9,6 +9,7 @@
 #include "VkSmol/render/shader.hpp"
 
 #include "version.hpp"
+#include "utils/progress.hpp"
 
 // Public
 Application::Application(Platform& p) : platform(p) {
@@ -66,46 +67,60 @@ void Application::run() {
     }
 }
 
-void Application::runHeadless(const std::filesystem::path& sceneFile, uint32_t targetSamples, const std::filesystem::path& outputPath) {
-    constexpr int kBarWidth = 40;
+void Application::runJobs(JobQueue& queue) {
+    const int totalJobs = static_cast<int>(queue.entries().size());
+    int jobIndex = 0;
 
-    LightMode lightMode = LightMode::Day;
-    SceneSerializer::load(scene, lightMode, sceneFile);
-    ctx.camera = &scene.getCamera();
+    while (Job* job = queue.nextPending()) {
+        jobIndex++;
 
-    engine.waitIdle();
-    restartRender = true;
+        // TODO: add support for enums
+        // Set the parameters for the current job
+        parameters.resetAll();
+        for (const auto& paramOverride : job->parameterOverrides) {
+            std::visit([&](auto&& v) {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr      (std::is_same_v<T, bool>)  parameters.setBool(paramOverride.key, v);
+                else if constexpr (std::is_same_v<T, int>)   parameters.setInt(paramOverride.key, v);
+                else if constexpr (std::is_same_v<T, float>) parameters.setFloat(paramOverride.key, v);
+            }, paramOverride.value);
+        }
 
-    const auto startTime = std::chrono::steady_clock::now();
+        const uint32_t totalSamples = job->samples;
+        ProgressBar bar(
+            "[" + std::to_string(jobIndex) + "/" + std::to_string(totalJobs) + "]",
+            totalSamples,
+            "spp"
+        );
 
-    for (uint32_t i = 0; i < targetSamples; ++i) {
-        fillHeadlessUBOs(static_cast<int>(i), targetSamples, lightMode);
-        renderer.renderHeadless(ctx, i == targetSamples - 1);
+        const VkExtent2D extent = engine.getExtent();
+        if (job->width != extent.width || job->height != extent.height)
+            renderer.resize(ctx, job->width, job->height);
 
-        const float progress = static_cast<float>(i + 1) / static_cast<float>(targetSamples);
-        const int filled = static_cast<int>(progress * kBarWidth);
+        LightMode lightMode = LightMode::Day;
+        if (!SceneSerializer::load(scene, lightMode, job->scene.string(), job->seed)) {
+            std::cerr << "\n[" << jobIndex << "/" << totalJobs << "] Failed to load scene: " << job->scene << '\n';
+            queue.fail();
+            continue;
+        }
+        ctx.camera = &scene.getCamera();
+        parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
-        const double elapsedSec = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
-        const double etaSec  = elapsedSec / progress - elapsedSec;
-        const int etaTotal   = static_cast<int>(etaSec);
-        const int etaHours   = etaTotal / 3600;
-        const int etaMins    = (etaTotal % 3600) / 60;
-        const int etaSeconds = etaTotal % 60;
+        engine.waitIdle();
+        restartRender = true;
 
-        std::cout << "\r[";
-        for (int j = 0; j < kBarWidth; ++j)
-            std::cout << (j < filled ? '=' : ' ');
-        std::cout << "] " << static_cast<int>(progress * 100.0f)
-                  << "% (" << (i + 1) << "/" << targetSamples << " spp)"
-                  << "  ETA " << etaHours << ":"
-                  << std::setw(2) << std::setfill('0') << etaMins << ":"
-                  << std::setw(2) << std::setfill('0') << etaSeconds << "  ";
-        std::cout.flush();
+        for (uint32_t i = 0; i < totalSamples; i++) {
+            fillJobUBOs(i);
+            renderer.renderHeadless(ctx, i == totalSamples - 1);
+            queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
+            bar.step();
+        }
+        bar.close();
+
+        renderer.saveCapture(ctx, job->output);
+
+        queue.complete();
     }
-    std::cout << '\n';
-
-    VkExtent2D ext = engine.getExtent();
-    renderer.saveCapture(ctx, outputPath, ext.width, ext.height);
 }
 
 // Private
@@ -269,7 +284,7 @@ void Application::fillUBOs() {
     display.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
 }
 
-void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode) {
+void Application::fillJobUBOs(uint32_t sampleIndex) {
     auto& pathtracer = *ctx.pathtracerUBO;
     auto& display    = *ctx.displayUBO;
 

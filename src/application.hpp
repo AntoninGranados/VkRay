@@ -18,6 +18,7 @@
 #include "app/app_context.hpp"
 #include "editor/editor_ui.hpp"
 #include "app/animation_handler.hpp"
+#include "render/job_queue.hpp"
 #include "render/render_handler.hpp"
 
 #include "app/input_handler.hpp"
@@ -44,7 +45,7 @@ public:
     ~Application();
 
     void run();
-    void runHeadless(const std::filesystem::path& sceneFile, uint32_t targetSamples, const std::filesystem::path& outputPath);
+    void runJobs(JobQueue& queue);
 
     friend void InputHandler::initCallbacks(const AppContext& ctx);
 
@@ -90,6 +91,6 @@ private:
     void clearRenderingData(RenderMode newRenderMode);
     void handleCommands();
     void fillUBOs();
-    void fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, LightMode lightMode);
+    void fillJobUBOs(uint32_t sampleIndex);
     float lastTime = 0.0f;
 };

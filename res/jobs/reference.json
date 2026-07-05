@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "jobs": [
+        {
+            "scene":   "res/scenes/reference.json",
+            "output":  "snapshots/reference.png",
+            "samples": 8192,
+            "width":   1080,
+            "height":  1080
+        }
+    ]
+}

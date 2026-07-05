@@ -22,6 +22,7 @@ This plan will most likely be subjected to heavy modifications.
 
 - [ ] **[0.4.0] Motion blur**: time-sampled rays in the pathtracing shader
   - Animation system already in place; needs sub-frame transform interpolation
+  - Add support for multiple animation curves (for now they have to be hardcoded); lerp (already), slerp, ease-in/out/in-out, ...
 - [ ] **[0.4.1] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
   - Support polygon apertures (square, hex, …) and custom mask textures
   - Controls bokeh blade count and rotation
@@ -81,3 +82,4 @@ This plan will most likely be subjected to heavy modifications.
 - [ ] **Photon mapping**: store and gather photon hits; spatial hash for lookup; handles caustics and SDS paths
 - [ ] **Standard scene import**: USD and glTF interchange formats
 - [ ] **Spectral rendering**: replace RGB with wavelength-sampled radiance; enables dispersion, iridescence, fluorescence
+- [ ] **Stackless BVH traversal**: [Nvidia Paper](https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf)
