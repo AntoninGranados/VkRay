@@ -161,7 +161,7 @@ void Application::initParameters() {
     parameters.addBool("pathtracer/aov/albedo",     "Albedo",     false, false);
     parameters.addBool("pathtracer/aov/roughness",  "Roughness",  false, false);
     parameters.addBool("pathtracer/aov/mat_type",   "Mat Type",   false, false);
-    parameters.addBool("pathtracer/aov/sky_mask",   "Sky mask",   false, false);
+    parameters.addBool("pathtracer/aov/sky_mask",   "Sky Mask",   false, false);
 
     parameters.setLabel("scene", "Scene");
     parameters.addEnum<LightMode>(
@@ -172,6 +172,8 @@ void Application::initParameters() {
         true
     );
     parameters.bind("scene/light_mode", [&]() { r.lightMode = std::to_underlying(parameters.getEnum<LightMode>("scene/light_mode")); });
+
+    parameters.saveDocumentation();
 }
 
 void Application::initScene(const std::string& sceneFile) {
@@ -286,18 +288,7 @@ void Application::fillHeadlessUBOs(int sampleIndex, uint32_t targetSamples, Ligh
     pathtracer.frame.count = sampleIndex;
     pathtracer.frame.time  = 0.0f;
 
-    pathtracer.render.lightMode             = static_cast<int>(lightMode);
-    pathtracer.render.maxBounces            = 16;
-    pathtracer.render.samplesPerPixel       = 1;
-    pathtracer.render.importanceSampling    = 1;
-    pathtracer.render.varianceSampling      = 0;
-    pathtracer.render.varianceWarmupSamples = static_cast<int>(targetSamples / 2);
-    pathtracer.render.clipAccumulation      = 1;
-    pathtracer.render.debugView             = 0;
-
     display.frameCount           = sampleIndex;
     display.resolution           = 1.0f;
-    display.debugView            = 0;
     display.previewBorderEnabled = 0;
-    display.denoisingEnabled     = 0;
 }

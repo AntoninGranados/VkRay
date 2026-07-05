@@ -16,6 +16,7 @@ public:
     virtual ~ParamBase() = default;
     virtual bool draw()  = 0;
     virtual void reset() = 0;
+    virtual std::string print() = 0;
 
     ParameterPath         path;
     std::string           label;
@@ -34,6 +35,7 @@ public:
         int                  step_,
         bool                 restart_
     );
+    std::string print() override;
     bool draw()  override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
@@ -57,6 +59,7 @@ public:
         float                step_,
         bool                 restart_
     );
+    std::string print() override;
     bool  draw()  override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
     float& get() { return value; }
@@ -77,6 +80,7 @@ public:
         bool                 value_,
         bool                 restart_
     );
+    std::string print() override;
     bool  draw()  override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
     bool& get() { return value; }
@@ -95,6 +99,7 @@ public:
         std::vector<std::string>  items_,
         bool                      restart_
     );
+    std::string print() override;
     bool draw()  override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
@@ -106,8 +111,11 @@ private:
     std::vector<const char*> itemsName;
 };
 
+// TODO: add parameter descripions
+// TODO: define the parameters in a separate file so we can "preprocess" (e.g. build the doc) at build time
 class ParameterHandler {
 public:
+
     IntParam& addInt(
         const ParameterPath& path,
         const std::string&   label,
@@ -146,6 +154,8 @@ public:
         return static_cast<EnumParam&>(*params.back());
     }
 
+    // Save the parameter in a Markdown file
+    void saveDocumentation(std::filesystem::path path = "./docs/parameters.md");
     bool drawGroup(const ParameterPath& root, bool& restartRequested);
     void setLabel (const ParameterPath& path, const std::string& label);
     void resetAll();
@@ -178,6 +188,7 @@ private:
     std::unordered_map<std::string, ParamBase*> index;
     std::unordered_map<std::string, std::string> nodeLabels;
 
+    void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0);
     bool drawNode(const ParameterPath& prefix, bool& restartRequested);
 
     template <typename T>

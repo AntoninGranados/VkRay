@@ -1,5 +1,10 @@
 #include "app/parameter_handler.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <iostream>
+#include <fstream>
+
 #include "imgui/imgui.h"
 
 IntParam::IntParam(
@@ -14,6 +19,10 @@ IntParam::IntParam(
     path    = path_;
     label   = label_;
     restart = restart_;
+}
+
+std::string IntParam::print() {
+    return std::format("| `{}` | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
 }
 
 bool IntParam::draw() {
@@ -40,6 +49,11 @@ FloatParam::FloatParam(
     restart = restart_;
 }
 
+// TODO: fix the hardcoded 1 decimal precision
+std::string FloatParam::print() {
+    return std::format("| `{}` | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
+}
+
 bool FloatParam::draw() {
     ImGui::PushID(path.generic_string().c_str());
     ImGui::Text("%s", label.c_str());
@@ -61,6 +75,10 @@ BoolParam::BoolParam(
     restart = restart_;
 }
 
+std::string BoolParam::print() {
+    return std::format("| `{}` | {} | Boolean | {} | - | {} |", path.c_str(), label, defaultValue, restart ? "✓" : "-");
+}
+
 bool BoolParam::draw() {
     ImGui::PushID(path.generic_string().c_str());
     bool changed = ImGui::Checkbox(label.c_str(), &value);
@@ -79,6 +97,15 @@ EnumParam::EnumParam(
     path    = path_;
     label   = label_;
     restart = restart_;
+}
+
+std::string EnumParam::print() {
+    std::string list = "";
+    for (const auto& item : items) {
+        if (list.empty()) list = std::format("`{}`", item);
+        else list = std::format("{} • `{}`", list, item);
+    }
+    return std::format("| `{}` | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, items[defaultValue], list, restart ? "✓" : "-");
 }
 
 bool EnumParam::draw() {
@@ -137,6 +164,67 @@ BoolParam& ParameterHandler::addBool(
     return static_cast<BoolParam&>(*params.back());
 }
 
+void ParameterHandler::serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth) {
+    for (const auto& param : params) {
+        if (param->path.parent_path() != prefix) continue;
+        file << param->print() << std::endl;
+    }
+
+    std::vector<std::string> seen;
+    for (const auto& param : params) {
+        auto rel = param->path.lexically_relative(prefix);
+        if (rel.empty()) continue;
+        auto it = rel.begin();
+        std::string seg = it->string();
+        if (seg == "..") continue;
+        it++;
+        if (it == rel.end()) continue;
+        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
+        seen.push_back(seg);
+
+        auto labelIt = nodeLabels.find((prefix / seg).generic_string());
+        const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
+        file << std::endl << std::string(depth+2, '#') << ' ' << displayLabel << std::endl;
+        file << "| Path | Label | Type | Default | Constraints | Restart |" << std::endl;
+        file << "|------|-------|------|---------|-------------|---------|" << std::endl;
+        
+        serializeParameterPath(file, prefix / seg, depth+1);
+    }
+}
+
+void ParameterHandler::saveDocumentation(std::filesystem::path path) {
+    std::ofstream file;
+    file.open(path);
+    file.clear();
+
+    file << "# Parameters" << std::endl;
+
+    serializeParameterPath(file, "");
+
+    /*
+    std::vector<std::string> seen;
+    std::filesystem::path prefix = "";
+    for (const auto& param : params) {
+        auto rel = param->path.lexically_relative(prefix);
+        auto it = rel.begin();
+        std::string seg = it->string();
+        if (seg == "..") continue;
+        it++;
+        if (it == rel.end()) continue;
+        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
+        seen.push_back(seg);
+        
+        auto labelIt = nodeLabels.find((prefix / seg).generic_string());
+        const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
+        file << param->path << " - " << displayLabel << std::endl;
+        
+        file << "---" << std::endl;
+    }
+    */
+
+    file.close();
+}
+
 bool ParameterHandler::drawNode(const ParameterPath& prefix, bool& restartRequested) {
     bool changed = false;
 
@@ -155,7 +243,7 @@ bool ParameterHandler::drawNode(const ParameterPath& prefix, bool& restartReques
         auto it = rel.begin();
         std::string seg = it->string();
         if (seg == "..") continue;
-        ++it;
+        it++;
         if (it == rel.end()) continue;
         if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
         seen.push_back(seg);
