@@ -119,8 +119,8 @@ private:
     ScenePackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler<> preUpdateScheduler, onUiScheduler, postUpdateScheduler;
-    ecs::SystemScheduler<const FrameContext&> onRenderScheduler;
+    ecs::SystemScheduler<AppContext&> preUpdateScheduler, onUiScheduler, postUpdateScheduler;
+    ecs::SystemScheduler<AppContext&, const FrameContext&> onRenderScheduler;
     
     int selectedEntity = -1;
     std::vector<ecs::Entity> entities;

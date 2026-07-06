@@ -13,7 +13,6 @@
 #include "app/log.hpp"
 #include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
-#include "editor/editor_ui.hpp"
 
 void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height, BufferHandle pixelInfoHandle) {
     width  = _width;
@@ -82,7 +81,7 @@ void ExportService::handleSave(AppContext& ctx) {
     }
 
     if (ctx.renderState->pendingExit) {
-        ctx.ui->restoreToggledState();
+        if (onRenderComplete) onRenderComplete();
         ctx.renderState->renderMode                = RenderMode::Preview;
         ctx.renderState->pendingExit               = false;
         ctx.renderState->samplesPerSecEMA          = 0.0;

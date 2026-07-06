@@ -6,6 +6,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
+#include "imgui/imgui_internal.h"
 #include "imgui/ImGuizmo.h"
 
 #include "VkSmol/engine.hpp"
@@ -55,6 +56,17 @@ void EditorUi::drawPreview(AppContext& ctx) {
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
     ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(), dockspaceFlags);
+
+    if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr) {
+        ImGuiViewport* vp = ImGui::GetMainViewport();
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_PassthruCentralNode);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, vp->Size);
+
+        ImGuiID dock_bottom;
+        ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.15f, &dock_bottom, &dockspace_id);
+        ImGui::DockBuilderDockWindow("Animation", dock_bottom);
+        ImGui::DockBuilderFinish(dockspace_id);
+    }
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);

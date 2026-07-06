@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 
 #include "VkSmol/graph/builder_resource.hpp"
 
@@ -27,6 +28,8 @@ public:
     void renderHeadless(AppContext& ctx, bool captureOutput = false);
     void saveCapture(AppContext& ctx, const std::filesystem::path& path);
     void resize(AppContext& ctx, uint32_t width, uint32_t height);
+
+    void setOnRenderComplete(std::function<void()> fn) { exportService.onRenderComplete = std::move(fn); }
 
 private:
     const std::vector<ScreenVertex> vertices = {
@@ -61,6 +64,7 @@ private:
     ComputePipelineHandle pathtracingPipelineHandle, compositingPipelineHandle;
 
     BufferHandle pathtracingUBOHandle;
+    BufferHandle compositingUBOHandle;
     BufferHandle displayUBOHandle;
     BufferHandle pixelInfoBufferHandle;
 

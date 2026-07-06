@@ -4,16 +4,17 @@
 #include <cstdio>
 
 #include "imgui/imgui.h"
-#include "imgui/imgui_internal.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "editor/ui_constants.hpp"
 
-constexpr float kToastMaxMessageHeight = 56.f;
-constexpr float kToastTTL     = 15.0f;
-constexpr float kToastFadeOut = 0.2f;
-constexpr float kToastWidth   = 400.0f;
-constexpr float kToastPadding = 12.0f;
+constexpr float kToastTTL            = 15.0f;
+constexpr float kToastFadeOut        = 0.2f;
+constexpr float kToastWidth          = 400.0f;
+constexpr float kToastPadding        = 12.0f;
+constexpr float kToastMaxMessageHeight = 55.f;
+constexpr float kToastWindowPadX     = 10.f;
+constexpr float kToastWindowPadY     = 7.f;
 
 ToastPanel::ToastPanel() {
     Log::setConsumer([this](const LogEntry& e) { push(e); });
@@ -63,20 +64,22 @@ void ToastPanel::draw() {
         char id[32];
         snprintf(id, sizeof(id), "##toast%d", i);
 
-        float cachedH = 36.f;
-        if (ImGuiWindow* win = ImGui::FindWindowByName(id)) cachedH = win->Size.y;
-        y -= cachedH;
+        float wrapWidth = kToastWidth - kToastWindowPadX * 2.f;
+        float textH  = ImGui::CalcTextSize(t.entry.message.c_str(), nullptr, false, wrapWidth).y;
+        float childH = std::min(textH, kToastMaxMessageHeight);
+        float toastH = kToastWindowPadY * 2.f + ImGui::GetTextLineHeightWithSpacing() + childH;
+        y -= toastH;
 
         ImGui::SetNextWindowPos({ x, y }, ImGuiCond_Always);
         ImGui::SetNextWindowSize({ kToastWidth, 0 }, ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(alpha * ui::kWindowBgAlpha);
         ImGui::PushStyleColor(ImGuiCol_Border, accent);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 10.f, 7.f });
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { kToastWindowPadX, kToastWindowPadY });
 
         ImGui::Begin(id, nullptr, kFlags);
 
-        // Header row: icon · source · close button
+        // Header row: icon / log level / source / close button
         float btnW = ImGui::CalcTextSize(ICON_FA_XMARK).x + ImGui::GetStyle().FramePadding.x * 2.f;
         ImGui::TextColored(accent, "%s %s", icon, label);
         ImGui::SameLine();
@@ -95,9 +98,9 @@ void ToastPanel::draw() {
         if (ImGui::SmallButton(closeId)) t.timeLeft = 0.f;
         ImGui::PopStyleColor(3);
 
-        // Message below — scrollable, clipped to max height
+        // Message
         ImGui::PushStyleColor(ImGuiCol_ChildBg, { 0.f, 0.f, 0.f, 0.f });
-        ImGui::BeginChild("##msg", { 0.f, kToastMaxMessageHeight });
+        ImGui::BeginChild("##msg", { 0.f, childH });
         ImGui::PushTextWrapPos(0.f);
         ImGui::PushStyleColor(ImGuiCol_Text, { 1.f, 1.f, 1.f, alpha });
         ImGui::TextUnformatted(t.entry.message.c_str());

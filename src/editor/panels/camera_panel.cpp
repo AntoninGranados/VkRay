@@ -10,6 +10,7 @@
 void CameraPanel::draw(AppContext& ctx) {
     Camera& camera = *ctx.camera;
 
+    ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_VIDEO " Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {

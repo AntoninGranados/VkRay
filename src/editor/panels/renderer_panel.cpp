@@ -8,6 +8,7 @@
 #include "editor/ui_constants.hpp"
 
 void RendererPanel::draw(AppContext& ctx) {
+    ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_CAMERA " Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {

@@ -49,6 +49,10 @@ Application::Application(Platform& p) : platform(p) {
         }
     };
 
+    if (ui) {
+        renderer.setOnRenderComplete([this]{ ui->restoreToggledState(); });
+    }
+
     initParameters();
     initScene();
     renderer.init(ctx);
@@ -142,11 +146,10 @@ void Application::runJobs(JobQueue& queue) {
 // Private
 void Application::initParameters() {
     auto& r = pathtracerUBO.render;
-    auto& d = displayUBO;
 
     parameters.setLabel("pathtracer", "Pathtracer");
     parameters.addBool("pathtracer/denoising", "Denoising", false, false);
-    parameters.bind("pathtracer/denoising", [&]() { d.denoisingEnabled = static_cast<int>(parameters.getBool("pathtracer/denoising")); });
+    parameters.bind("pathtracer/denoising", [&]() { compositingUBO.denoisingEnabled = static_cast<int>(parameters.getBool("pathtracer/denoising")); });
 
     parameters.addEnum<DebugView>(
         "pathtracer/debug_view",
@@ -155,7 +158,7 @@ void Application::initParameters() {
         { "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask" },
         true
     );
-    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = d.debugView = std::to_underlying(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
+    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = displayUBO.debugView = std::to_underlying(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
 
     parameters.setLabel("pathtracer/sampling", "Sampling");
     parameters.addInt("pathtracer/sampling/max_bounces", "Max Bounces", 8, 1, 20, 1, false);
@@ -257,32 +260,34 @@ void Application::clearRenderingData(RenderMode newRenderMode) {
 
 void Application::fillUBOs() {
     auto& pathtracer = *ctx.pathtracerUBO;
-    auto& display    = *ctx.displayUBO;
+    auto& compositing = *ctx.compositingUBO;
+    auto& display = *ctx.displayUBO;
 
-    pathtracer.camera.pos       = ctx.camera->getPosition();
-    pathtracer.camera.dir       = ctx.camera->getDirection();
-    pathtracer.camera.tanHFov   = ctx.camera->getTanHFov();
-    pathtracer.camera.aperture  = ctx.camera->getAperture();
+    pathtracer.camera.pos        = ctx.camera->getPosition();
+    pathtracer.camera.dir        = ctx.camera->getDirection();
+    pathtracer.camera.tanHFov    = ctx.camera->getTanHFov();
+    pathtracer.camera.aperture   = ctx.camera->getAperture();
     pathtracer.camera.focusDepth = ctx.camera->getFocusDepth();
 
     VkExtent2D extent = engine.getExtent();
-    pathtracer.screen.size         = { (float)extent.width, (float)extent.height };
-    pathtracer.screen.aspect       = pathtracer.screen.size.x / pathtracer.screen.size.y;
-    pathtracer.screen.resolution   = renderState.resolution;
+    pathtracer.screen.size           = { (float)extent.width, (float)extent.height };
+    pathtracer.screen.aspect         = pathtracer.screen.size.x / pathtracer.screen.size.y;
+    pathtracer.screen.resolution     = renderState.resolution;
     pathtracer.screen.prevResolution = renderState.prevResolution;
 
     if (frameCount <= 1) lastTime = (float)platform.getTime();
     pathtracer.frame.count = frameCount;
     pathtracer.frame.time  = (float)platform.getTime() - lastTime;
 
-    display.frameCount           = frameCount;
+    compositing.resolution           = renderState.resolution;
+
     display.resolution           = renderState.resolution;
     display.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
 }
 
 void Application::fillJobUBOs(uint32_t sampleIndex) {
-    auto& pathtracer = *ctx.pathtracerUBO;
-    auto& display    = *ctx.displayUBO;
+    auto& pathtracer  = *ctx.pathtracerUBO;
+    auto& compositing = *ctx.compositingUBO;
 
     pathtracer.camera.pos        = ctx.camera->getPosition();
     pathtracer.camera.dir        = ctx.camera->getDirection();
@@ -299,7 +304,5 @@ void Application::fillJobUBOs(uint32_t sampleIndex) {
     pathtracer.frame.count = sampleIndex;
     pathtracer.frame.time  = 0.0f;
 
-    display.frameCount           = sampleIndex;
-    display.resolution           = 1.0f;
-    display.previewBorderEnabled = 0;
+    compositing.resolution = 1.0f;
 }

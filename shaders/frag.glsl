@@ -4,11 +4,9 @@
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
-    int frameCount;
     float resolution;
-    int debugView;
-    int previewBorderEnabled;
-    int denoisingEnabled;
+    int   debugView;
+    int   previewBorderEnabled;
 } ubo;
 layout(set = 0, binding = 2) buffer PixelInfoBuffer {
     PixelInfo pixels[];

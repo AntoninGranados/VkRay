@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 
 #include "VkSmol/engine.hpp"
 #include "app/app_context.hpp"
@@ -17,6 +18,8 @@ public:
     void destroy(VkSmol& engine);
     void requestSave() { renderRequested = true; }
     bool promptOutputPath();
+
+    std::function<void()> onRenderComplete;
 
     void handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image);
     void handleSave(AppContext& ctx);

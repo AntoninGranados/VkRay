@@ -2,7 +2,6 @@
 
 #include <optional>
 #include <string>
-#include <utility>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -24,18 +23,18 @@
 
 enum class DebugView : int {
     None = 0,
-    PositionW = 1,
-    Position = 2,
-    NormalW = 3,
-    Normal = 4,
-    Albedo = 5,
-    Roughness = 6,
-    MatType = 7,
-    Bounces = 8,
-    HitChecks = 9,
-    Variance = 10,
-    SelectionMask = 11,
-    SkyMask = 12,
+    PositionW,
+    Position,
+    NormalW,
+    Normal,
+    Albedo,
+    Roughness,
+    MatType,
+    Bounces,
+    HitChecks,
+    Variance,
+    SelectionMask,
+    SkyMask,
 };
 
 class Application {
@@ -59,24 +58,25 @@ private:
 
     RenderState renderState;
     PathtracerUBO pathtracerUBO{};
+    CompositingUBO compositingUBO{};
     DisplayUBO displayUBO{};
     bool restartRender = false;
 
-    AppContext ctx{
-        .engine        = &engine,
-        .scene         = &scene,
-        .parameters    = &parameters,
-        .animation     = &animation,
-        .renderer      = &renderer,
-        .renderState   = &renderState,
-        .pathtracerUBO = &pathtracerUBO,
-        .displayUBO    = &displayUBO,
-        .restartRender = &restartRender,
-        .platform      = &platform
-    };
-
     std::optional<InputHandler> inputHandler;
     RenderHandler renderer;
+
+    AppContext ctx{
+        .engine         = &engine,
+        .scene          = &scene,
+        .parameters     = &parameters,
+        .animation      = &animation,
+        .renderState    = &renderState,
+        .pathtracerUBO  = &pathtracerUBO,
+        .compositingUBO = &compositingUBO,
+        .displayUBO     = &displayUBO,
+        .restartRender  = &restartRender,
+        .platform       = &platform
+    };
 
     int frameCount = 0;
     void initParameters();

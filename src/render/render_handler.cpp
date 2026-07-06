@@ -66,8 +66,9 @@ void RenderHandler::init(AppContext& ctx) {
     }
 
     VkExtent2D ext        = engine.getExtent();
-    pathtracingUBOHandle  = builder.createPerFrameBuffer("PathtracingUBO", sizeof(PathtracerUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    displayUBOHandle      = builder.createPerFrameBuffer("DisplayUBO",     sizeof(DisplayUBO),    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    pathtracingUBOHandle  = builder.createPerFrameBuffer("PathtracingUBO",  sizeof(PathtracerUBO),  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    compositingUBOHandle  = builder.createPerFrameBuffer("CompositingUBO",  sizeof(CompositingUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    displayUBOHandle      = builder.createPerFrameBuffer("DisplayUBO",      sizeof(DisplayUBO),     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     pixelInfoBufferHandle = builder.createBuffer(
         "PixelInfoBuffer",
         static_cast<size_t>(ext.width) * ext.height * sizeof(PixelInfo),
@@ -114,9 +115,9 @@ void RenderHandler::init(AppContext& ctx) {
     compositePassHandle = composite.getHandle();
     composite.setGroup(mainGroupHandle);
     composite.readImage (0, currentPathtracingImageHandle, ImageUsageType::Sampled);
-    composite.readBuffer(1, displayUBOHandle,              BufferUsageType::Uniform);
-    composite.readBuffer(2, pixelInfoBufferHandle,         BufferUsageType::Storage);
-    composite.writeImage(3, outputImageHandle,             ImageUsageType::Storage);
+    composite.readBuffer(1, compositingUBOHandle, BufferUsageType::Uniform);
+    composite.readBuffer(2, pixelInfoBufferHandle, BufferUsageType::Storage);
+    composite.writeImage(3, outputImageHandle, ImageUsageType::Storage);
     compositingPipelineHandle = composite.setPipeline("./shaders/compositing.glsl");
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
@@ -209,8 +210,9 @@ void RenderHandler::render(AppContext& ctx) {
     ctx.scene->runOnRender(ctx, *frameContext);
     engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
-    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.displayUBO);
+    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle,  frameContext->currentFrame), ctx.pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(compositingUBOHandle,  frameContext->currentFrame), ctx.compositingUBO);
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle,      frameContext->currentFrame), ctx.displayUBO);
 
     engine.bindImage(
         swapchainImageHandle,
@@ -312,8 +314,8 @@ void RenderHandler::renderHeadless(AppContext& ctx, bool captureOutput) {
     ctx.scene->runOnRender(ctx, *frameContext);
     engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
-    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext->currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle,     frameContext->currentFrame), ctx.displayUBO);
+    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle,  frameContext->currentFrame), ctx.pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(compositingUBOHandle,  frameContext->currentFrame), ctx.compositingUBO);
 
     pathtracingPass(ctx, *frameContext, captureOutput);
 

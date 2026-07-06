@@ -11,17 +11,9 @@
 void AnimationPanel::draw(AppContext& ctx) {
     Scene& scene = *ctx.scene;
 
-    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    ImVec2 animPos(
-        mainViewport->Pos.x + mainViewport->Size.x * 0.5f,
-        mainViewport->Pos.y + mainViewport->Size.y - 10.0f
-    );
-    ImGui::SetNextWindowPos(animPos, ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+    ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
-    ImGui::Begin("Animation",
-        nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration
-    );
+    ImGui::Begin("Animation");
     {
         bool paused = ctx.animation->isPaused();
         if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {

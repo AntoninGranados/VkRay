@@ -61,12 +61,15 @@ struct PathtracerUBO {
     RenderUBO render;
 };
 
-struct DisplayUBO {
-    int frameCount;
+struct CompositingUBO {
     float resolution;
-    int debugView;
-    int previewBorderEnabled;
-    int denoisingEnabled;
+    int   denoisingEnabled;
+};
+
+struct DisplayUBO {
+    float resolution;
+    int   debugView;
+    int   previewBorderEnabled;
 };
 
 struct alignas(16) AOVBuffer {
@@ -98,7 +101,6 @@ class ParameterHandler;
 class EditorUi;
 class AnimationHandler;
 class Platform;
-class RenderHandler;
 
 struct AppContext {
     VkSmol*           engine       = nullptr;
@@ -107,11 +109,11 @@ struct AppContext {
     ParameterHandler* parameters   = nullptr;
     EditorUi*         ui           = nullptr;
     AnimationHandler* animation    = nullptr;
-    RenderHandler*    renderer     = nullptr;
 
-    RenderState*   renderState   = nullptr;
-    PathtracerUBO* pathtracerUBO = nullptr;
-    DisplayUBO*    displayUBO    = nullptr;
+    RenderState*    renderState    = nullptr;
+    PathtracerUBO*  pathtracerUBO  = nullptr;
+    CompositingUBO* compositingUBO = nullptr;
+    DisplayUBO*     displayUBO     = nullptr;
 
     bool*     restartRender = nullptr;
     Platform* platform      = nullptr;

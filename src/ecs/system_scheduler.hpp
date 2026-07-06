@@ -5,21 +5,19 @@
 #include <vector>
 
 #include "./registry.hpp"
-#include "app/app_context.hpp"
 
 namespace ecs {
 
-template <typename... ExtraArgs>
+template <typename... Args>
 class SystemScheduler {
 public:
-    using SystemFn = std::function<void(Registry&, AppContext&, ExtraArgs...)>;
+    using SystemFn = std::function<void(Registry&, Args...)>;
 
     void add(SystemFn fn) { systems.push_back(std::move(fn)); }
     void clear() { systems.clear(); }
 
-    void run(Registry& registry, AppContext& ctx, ExtraArgs... extraArgs) {
-        for (SystemFn& sys : systems)
-            sys(registry, ctx, extraArgs...);
+    void run(Registry& registry, Args... args) {
+        for (SystemFn& sys : systems) sys(registry, args...);
     }
 
 private:

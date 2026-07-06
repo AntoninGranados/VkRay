@@ -16,6 +16,7 @@
 
 
 void ScenePanel::draw(AppContext& ctx) {
+    ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_CUBES " Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
