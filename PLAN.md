@@ -30,6 +30,11 @@ This plan will most likely be subjected to heavy modifications.
 - [ ] **[0.5.2] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
   - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
   - Enables oblique focus planes and tilt-shift miniature effects
+- [ ] **[0.5.3] Spectral rendering**: replace RGB with wavelength-sampled radiance
+  - Sample a hero wavelength per ray; carry a small spectral packet (e.g. 4 wavelengths) through the path
+  - Spectral sensitivity curves (CIE XYZ or camera RGB primaries) used at accumulation time to convert to display RGB
+  - Enables wavelength-dependent effects: dispersion (glass prisms, caustic rainbows), iridescence (thin-film interference), fluorescence
+  - Materials need spectral reflectance curves; start with fitted Cauchy/Sellmeier coefficients for dielectrics
 
 ## v0.6 Denoising
 
@@ -65,6 +70,5 @@ This plan will most likely be subjected to heavy modifications.
 
 - [ ] **Photon mapping**: store and gather photon hits; spatial hash for lookup; handles caustics and SDS paths
 - [ ] **Standard scene import**: USD and glTF interchange formats
-- [ ] **Spectral rendering**: replace RGB with wavelength-sampled radiance; enables dispersion, iridescence, fluorescence
 - [ ] **Stackless BVH traversal**: [Nvidia Paper](https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf)
 - [ ] **Rastirizer**: when in the editor, render the rasterized scene before using the pathtracer for better interactivity

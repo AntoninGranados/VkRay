@@ -80,7 +80,7 @@ private:
 
     int frameCount = 0;
     void initParameters();
-    void initScene(const std::string& sceneFile = "res/scenes/default.json");
+    void initScene(const std::string& sceneFile = "assets/scenes/default.json");
 
     void onFrameStart(float dt);
     void clearRenderingData(RenderMode newRenderMode);

@@ -36,7 +36,7 @@
             "name": "Campsite",
             "type": "mesh",
             "material": "Base",
-            "path": "./res/models/campfire/campsite.obj",
+            "path": "./assets/models/campfire/campsite.obj",
             "position": [0, 0, 0],
             "rotation": [0, 0, 0],
             "scale": [1, 1, 1]
@@ -45,7 +45,7 @@
             "name": "Fire",
             "type": "mesh",
             "material": "Fire",
-            "path": "./res/models/campfire/fire.obj",
+            "path": "./assets/models/campfire/fire.obj",
             "position": [0, 0, 0],
             "rotation": [0, 0, 0],
             "scale": [1, 1, 1]
@@ -54,7 +54,7 @@
             "name": "Fireflies",
             "type": "mesh",
             "material": "Fireflies",
-            "path": "./res/models/campfire/fireflies.obj",
+            "path": "./assets/models/campfire/fireflies.obj",
             "position": [0, 0, 0],
             "rotation": [0, 0, 0],
             "scale": [1, 1, 1]

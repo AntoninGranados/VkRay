@@ -50,7 +50,7 @@
             "name": "Object",
             "type": "mesh",
             "material": "Object",
-            "path": "./res/models/dragon.obj",
+            "path": "./assets/models/dragon.obj",
             "position": [0, -2.2, 0],
             "rotation": [0, 200, 0],
             "scale": [5, 5, 5]

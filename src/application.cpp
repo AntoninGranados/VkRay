@@ -31,7 +31,7 @@ Application::Application(Platform& p) : platform(p) {
         iconConfig.PixelSnapH = true;
         iconConfig.GlyphOffset = ImVec2(0.0f, 1.0f);
         static const ImWchar iconRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-        io.Fonts->AddFontFromFileTTF("res/fonts/fa-solid-900.otf", 12.0f, &iconConfig, iconRanges);
+        io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 12.0f, &iconConfig, iconRanges);
     }
 
     ctx.reloadShaders = [this]() {

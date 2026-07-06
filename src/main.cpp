@@ -10,7 +10,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc >= 2 && std::string_view(argv[1]) == "--reference") {
-        JobQueue queue = JobQueue::fromFile("res/jobs/reference.json");
+        JobQueue queue = JobQueue::fromFile("assets/jobs/reference.json");
         if (queue.isEmpty()) return EXIT_SUCCESS;
         HeadlessPlatform platform(queue.entries().front().width, queue.entries().front().height);
         Application app(platform);

@@ -65,7 +65,7 @@
             "name": "MetalArmadillo",
             "type": "mesh",
             "material": "Metal",
-            "path": "./res/models/armadillo.obj",
+            "path": "./assets/models/armadillo.obj",
             "position": [-2.5, 1.1, 0],
             "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
             "scale": [0.02, 0.02, 0.02]
@@ -74,7 +74,7 @@
             "name": "MatteArmadillo",
             "type": "mesh",
             "material": "Matte",
-            "path": "./res/models/armadillo.obj",
+            "path": "./assets/models/armadillo.obj",
             "position": [0, 1.1, 0],
             "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
             "scale": [0.02, 0.02, 0.02]
@@ -83,7 +83,7 @@
             "name": "GlassArmadillo",
             "type": "mesh",
             "material": "Glass",
-            "path": "./res/models/armadillo.obj",
+            "path": "./assets/models/armadillo.obj",
             "position": [2.5, 1.1, 0],
             "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
             "scale": [0.02, 0.02, 0.02]

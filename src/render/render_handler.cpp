@@ -108,7 +108,7 @@ void RenderHandler::init(AppContext& ctx) {
     pathtrace.readBuffer(12, sceneHandles.light.handle,      BufferUsageType::Storage);
     pathtrace.readBuffer(13, sceneHandles.quad.handle,       BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle,  ImageUsageType::Storage);
-    pathtracingPipelineHandle = pathtrace.setPipeline("./shaders/pathtracing/pathtracing.glsl");
+    pathtracingPipelineHandle = pathtrace.setPipeline("./src/shaders/pathtracing/pathtracing.glsl");
 
     // Compositing pass
     ComputePassBuilder composite = builder.addComputePass("CompositionPass");
@@ -118,7 +118,7 @@ void RenderHandler::init(AppContext& ctx) {
     composite.readBuffer(1, compositingUBOHandle, BufferUsageType::Uniform);
     composite.readBuffer(2, pixelInfoBufferHandle, BufferUsageType::Storage);
     composite.writeImage(3, outputImageHandle, ImageUsageType::Storage);
-    compositingPipelineHandle = composite.setPipeline("./shaders/compositing.glsl");
+    compositingPipelineHandle = composite.setPipeline("./src/shaders/compositing.glsl");
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
     exportPassHandle = exportPass.getHandle();
@@ -140,8 +140,8 @@ void RenderHandler::init(AppContext& ctx) {
         displayPipelineHandle = display.setPipeline(
             vertexInput.get(),
             {
-                { VK_SHADER_STAGE_VERTEX_BIT,   "./shaders/vert.glsl" },
-                { VK_SHADER_STAGE_FRAGMENT_BIT, "./shaders/frag.glsl" }
+                { VK_SHADER_STAGE_VERTEX_BIT,   "./src/shaders/vert.glsl" },
+                { VK_SHADER_STAGE_FRAGMENT_BIT, "./src/shaders/frag.glsl" }
             }
         );
 

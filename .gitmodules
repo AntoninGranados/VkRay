@@ -1,12 +1,12 @@
-[submodule "libs/VkSmol"]
-	path = libs/VkSmol
+[submodule "external/VkSmol"]
+	path = external/VkSmol
 	url = https://github.com/AntoninGranados/VkSmol.git
-[submodule "third_party/nfd"]
-	path = third_party/nfd
+[submodule "external/nfd"]
+	path = external/nfd
 	url = https://github.com/btzy/nativefiledialog-extended.git
-[submodule "third_party/glm"]
-	path = third_party/glm
+[submodule "external/glm"]
+	path = external/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "third_party/glfw"]
-	path = third_party/glfw
+[submodule "external/glfw"]
+	path = external/glfw
 	url = https://github.com/glfw/glfw.git

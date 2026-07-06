@@ -39,28 +39,28 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory("${CMAKE_SOURCE_DIR}/third_party/glfw" glfw)
+add_subdirectory("${CMAKE_SOURCE_DIR}/external/glfw" glfw)
 set(VKRAY_GLFW_TARGET glfw)
 
-file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/third_party/imgui/*.cpp")
+file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/external/imgui/*.cpp")
 add_library(imgui_third_party STATIC ${VKRAY_IMGUI_SOURCES})
 target_include_directories(imgui_third_party PUBLIC
-  "${CMAKE_SOURCE_DIR}/third_party/imgui"
+  "${CMAKE_SOURCE_DIR}/external/imgui"
 )
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
 target_compile_options(imgui_third_party PRIVATE -Wno-nontrivial-memcall)
 
-add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/third_party/tinyexr/miniz.c")
+add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
 target_include_directories(tinyexr_third_party PUBLIC
-  "${CMAKE_SOURCE_DIR}/third_party/tinyexr"
+  "${CMAKE_SOURCE_DIR}/external/tinyexr"
 )
 
 # ── Engine submodule ──────────────────────────────────────────────────────────
-set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/imgui;${CMAKE_SOURCE_DIR}/third_party")
-add_subdirectory("${CMAKE_SOURCE_DIR}/libs/VkSmol" engine)
+set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/imgui;${CMAKE_SOURCE_DIR}/external")
+add_subdirectory("${CMAKE_SOURCE_DIR}/external/VkSmol" engine)
 
 # ── NFD (Native File Dialog Extended) ────────────────────────────────────────
-add_subdirectory("${CMAKE_SOURCE_DIR}/third_party/nfd")
+add_subdirectory("${CMAKE_SOURCE_DIR}/external/nfd")
 
 # ── Sources ───────────────────────────────────────────────────────────────────
 file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
@@ -71,8 +71,7 @@ add_executable(VkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 target_include_directories(VkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/libs"
-  "${CMAKE_SOURCE_DIR}/third_party"
+  "${CMAKE_SOURCE_DIR}/external"
   "${CMAKE_BINARY_DIR}"
 )
 
@@ -93,8 +92,8 @@ if(VKRAY_COPY_RESOURCES)
   add_custom_command(
     TARGET VkRay POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/res"
-            "$<TARGET_FILE_DIR:VkRay>/res"
+            "${CMAKE_SOURCE_DIR}/assets"
+            "$<TARGET_FILE_DIR:VkRay>/assets"
   )
 endif()
 

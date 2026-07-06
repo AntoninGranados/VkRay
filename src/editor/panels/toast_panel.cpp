@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "editor/ui_constants.hpp"
@@ -78,6 +79,7 @@ void ToastPanel::draw() {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { kToastWindowPadX, kToastWindowPadY });
 
         ImGui::Begin(id, nullptr, kFlags);
+        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
         // Header row: icon / log level / source / close button
         float btnW = ImGui::CalcTextSize(ICON_FA_XMARK).x + ImGui::GetStyle().FramePadding.x * 2.f;

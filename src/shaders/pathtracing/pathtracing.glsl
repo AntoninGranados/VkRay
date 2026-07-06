@@ -29,6 +29,7 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
     vec3 offset = vec3(0.0);
     if (enableFocus) {
         vec2 p = randomInDisk(seed);
+        // vec2 p = vec2(rand(seed), rand(seed)) * 2.0 - 1.0;
         float lens_r = ubo.camera.aperture * 0.5;
         offset = lens_r * (right * p.x + up * p.y);
     }
