@@ -1,4 +1,4 @@
-#include "render_panel.hpp"
+#include "render_progress_panel.hpp"
 
 #include <algorithm>
 
@@ -11,7 +11,7 @@
 #include "editor/ui_constants.hpp"
 #include "utils/progress.hpp"
 
-void RenderPanel::draw(AppContext& ctx) {
+void RenderProgressPanel::draw(AppContext& ctx) {
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_STOPWATCH " Loading",

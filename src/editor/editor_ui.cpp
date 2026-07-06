@@ -93,7 +93,7 @@ void EditorUi::drawPreview(AppContext& ctx) {
     renderParameterPanel.draw(ctx);
     scenePanel.draw(ctx);
     inspectorPanel.draw(ctx);
-    notificationPanel.draw(ctx);
+    toastPanel.draw();
 }
 
 void EditorUi::drawRender(AppContext& ctx) {

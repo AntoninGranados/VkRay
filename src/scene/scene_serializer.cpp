@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <optional>
-#include <print>
 #include <random>
 #include <unordered_map>
 #include <utility>
@@ -16,6 +15,7 @@
 #include "scene.hpp"
 #include "scene/object/material.hpp"
 #include "utils/json_resolve.hpp"
+#include "app/log.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -100,8 +100,9 @@ static MaterialType parseMaterialType(const std::string& s) {
     if (s == "dielectric")   return MaterialType::Dielectric;
     if (s == "volume")       return MaterialType::Volume;
     if (s == "programmable") return MaterialType::Programmable;
-    std::println(stderr, "[WARNING] Unknown material type '{}', defaulting to lambertian", s);
-    return MaterialType::Lambertian;
+    
+            Log::error("SceneSerializer", std::format("Unknown material type '{}'", s));
+    std::unreachable();
 }
 
 static std::string toString(MaterialType t) {
@@ -123,8 +124,9 @@ static LightMode parseLightMode(const std::string& s) {
     if (s == "sunset") return LightMode::Sunset;
     if (s == "night")  return LightMode::Night;
     if (s == "empty")  return LightMode::Empty;
-    std::println(stderr, "[WARNING] Unknown light mode '{}', defaulting to day", s);
-    return LightMode::Day;
+    
+            Log::error("SceneSerializer", std::format("Unknown light mode '{}'", s));
+    std::unreachable();
 }
 
 static std::string toString(LightMode m) {
@@ -163,7 +165,8 @@ static MaterialHandle resolveMaterial(
         const std::string name = resolveTemplate(matField.get<std::string>(), ctx);
         auto it = matMap.find(name);
         if (it == matMap.end()) {
-            std::println(stderr, "[ERROR] Unknown material '{}'", name);
+            
+            Log::error("SceneSerializer", std::format("Material '{}' is referenced but not defined", name));
             return 0;
         }
         return it->second;
@@ -211,7 +214,8 @@ static void spawnOne(
 
     } else if (type == "mesh") {
         const std::string meshPath = obj.value("path", "");
-        if (meshPath.empty()) { std::println(stderr, "[ERROR] '{}': missing 'path'", name); return; }
+        if (meshPath.empty()) { 
+            Log::error("SceneSerializer", std::format("'{}': missing 'path'", name));  return; }
         const glm::vec3 pos    = (obj.contains("position") ? resolveVec3(obj["position"], ctx) : glm::vec3(0.0f)) + posOffset;
         const glm::vec3 rotDeg =  obj.contains("rotation") ? resolveVec3(obj["rotation"], ctx) : glm::vec3(0.0f);
         const glm::vec3 scale  =  obj.contains("scale")    ? resolveVec3(obj["scale"],    ctx) : glm::vec3(1.0f);
@@ -222,7 +226,8 @@ static void spawnOne(
         scene.pushMesh(name, meshPath, t, mat, smooth);
 
     } else {
-        std::println(stderr, "[ERROR] Unknown type '{}'", type);
+        
+            Log::error("SceneSerializer", std::format("Unknown object type '{}'", type));
         return;
     }
 
@@ -257,14 +262,16 @@ static void spawnOne(
 bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        std::println(stderr, "[ERROR] Cannot open: {}", path);
+        
+            Log::error("SceneSerializer", std::format("Cannot open scene: {}", path));
         return false;
     }
 
     json j;
     try { j = json::parse(file, nullptr, true, true); }
     catch (const json::parse_error& e) {
-        std::println(stderr, "[ERROR] Parse error: {}", e.what());
+        
+            Log::error("SceneSerializer", std::format("Scene parse error: {}", e.what()));
         return false;
     }
 
@@ -272,7 +279,8 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
     const int version = j.value("version", -1);
     if (version != SCENE_VERSION) {
-        std::println(stderr, "[ERROR] Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version);
+        
+            Log::error("SceneSerializer", std::format("Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version));
         return false;
     }
 
@@ -291,7 +299,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         const bool hasPosition = c.contains("position");
         const bool hasOrbital  = c.contains("radius") || c.contains("azimuth") || c.contains("elevation");
         if (hasPosition && hasOrbital)
-            std::println(stderr, "[ERROR] Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive");
+            Log::error("SceneSerializer", "Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive");
 
         const glm::vec3 target = c.contains("target") ? resolveVec3(c["target"], camCtx) : glm::vec3(0.0f);
 
@@ -390,7 +398,8 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         } else {
             const std::string name = obj.value("name", "Object");
             if (!obj.contains("type")) {
-                std::println(stderr, "[WARNING] '{}': missing 'type' field, skipping", name);
+                
+            Log::warn("SceneSerializer", std::format("'{}': missing 'type' field, skipping", name));
                 continue;
             }
             ResolveCtx ctx{ rng, {} };
@@ -567,7 +576,8 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
 
     std::ofstream out(path);
     if (!out.is_open()) {
-        std::println(stderr, "[ERROR] Cannot write: {}", path);
+        
+            Log::error("SceneSerializer", std::format("Failed to write scene: {}", path));
         return false;
     }
     out << prettify(j);

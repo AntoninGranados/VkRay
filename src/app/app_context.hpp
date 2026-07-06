@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <glm/glm.hpp>
 
 enum class RenderMode {
@@ -93,26 +95,28 @@ class VkSmol;
 class Scene;
 class Camera;
 class ParameterHandler;
-class NotificationHandler;
 class EditorUi;
 class AnimationHandler;
 class Platform;
 class RenderHandler;
 
 struct AppContext {
-    VkSmol*              engine       = nullptr;
-    Scene*               scene        = nullptr;
-    Camera*              camera       = nullptr;
-    ParameterHandler*    parameters   = nullptr;
-    NotificationHandler* notifications = nullptr;
-    EditorUi*            ui           = nullptr;
-    AnimationHandler*    animation    = nullptr;
-    RenderHandler*       renderer     = nullptr;
+    VkSmol*           engine       = nullptr;
+    Scene*            scene        = nullptr;
+    Camera*           camera       = nullptr;
+    ParameterHandler* parameters   = nullptr;
+    EditorUi*         ui           = nullptr;
+    AnimationHandler* animation    = nullptr;
+    RenderHandler*    renderer     = nullptr;
 
-    RenderState*    renderState   = nullptr;
-    PathtracerUBO*  pathtracerUBO = nullptr;
-    DisplayUBO*     displayUBO    = nullptr;
+    RenderState*   renderState   = nullptr;
+    PathtracerUBO* pathtracerUBO = nullptr;
+    DisplayUBO*    displayUBO    = nullptr;
 
     bool*     restartRender = nullptr;
     Platform* platform      = nullptr;
+
+    std::function<void()> reloadShaders;
+    std::function<void()> startRender;
+    std::function<void()> startRenderAnim;
 };

@@ -2,14 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <numeric>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader/tiny_obj_loader.h"
 
+#include "app/log.hpp"
 #include "mesh_simplify.hpp"
-#include "app/notification_handler.hpp"
 
 // Public
 MeshAsset::MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
@@ -32,14 +33,10 @@ bool MeshAsset::loadFromObj(const AppContext& ctx, const std::string& _path) {
     std::string err;
     std::string baseDir = std::filesystem::path(path).parent_path().string() + "/";
     bool loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), baseDir.c_str(), true);
-    if (!warn.empty()) {
-        ctx.notifications->pushMessage(NotificationType::Warning, "Failed to load obj: " + warn);
-    }
-    if (!err.empty()) {
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to load obj: " + err);
-    }
+    if (!warn.empty()) Log::warn("Mesh", std::format("Issue when loading .obj: {}", warn));
+    if (!err.empty())  Log::error("Mesh", std::format("Failed to load .obj: {}", err));
     if (!loaded) {
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to load obj [" + path + "]");
+        Log::error("Mesh", std::format("Failed to load .obj: {}", path));
         return false;
     }
 

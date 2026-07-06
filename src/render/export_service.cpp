@@ -10,7 +10,7 @@
 
 #include <nfd.hpp>
 
-#include "app/notification_handler.hpp"
+#include "app/log.hpp"
 #include "app/parameter_handler.hpp"
 #include "app/animation_handler.hpp"
 #include "editor/editor_ui.hpp"
@@ -151,9 +151,9 @@ void ExportService::saveBufferToPNG(AppContext& ctx, const std::filesystem::path
     }
 
     if (stbi_write_png(path.c_str(), static_cast<int>(width), static_cast<int>(height), 4, pixels.data(), static_cast<int>(width) * 4) != 0) {
-        ctx.notifications->pushMessage(NotificationType::Info, "Saved screenshot to " + path.string());
+        Log::success("ExportService", std::format("Saved screenshot to {}", path.string()));
     } else {
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to write screenshot");
+        Log::error("ExportService", "Failed to write screenshot");
     }
 }
 
@@ -214,9 +214,9 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
     int ret = SaveEXRImageToFile(&image, &header, path.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         FreeEXRErrorMessage(err);
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to write EXR");
+        Log::error("ExportService", "Failed to write EXR");
     } else {
-        ctx.notifications->pushMessage(NotificationType::Info, "Saved screenshot to " + path.string());
+        Log::success("ExportService", std::format("Saved screenshot to {}", path.string()));
     }
 
     free(header.channels);
@@ -364,9 +364,9 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
     int ret = SaveEXRImageToFile(&image, &header, aovPath.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         FreeEXRErrorMessage(err);
-        ctx.notifications->pushMessage(NotificationType::Error, "Failed to write AOV EXR");
+        Log::error("ExportService", "Failed to write AOV EXR");
     } else {
-        ctx.notifications->pushMessage(NotificationType::Info, "Saved AOVs to " + aovPath);
+        Log::success("ExportService", std::format("Saved AOVs to {}", aovPath));
     }
 
     free(header.channels);
@@ -380,5 +380,9 @@ void ExportService::convertFramesToVideo() {
 
     char cmd[128];
     std::snprintf(cmd, 128, "ffmpeg -framerate 24 -i %s -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p %s", path.c_str(), ANIMATION_VIDEO_PATH);
-    std::system(cmd);
+    int ret = std::system(cmd);
+    if (ret == 0)
+        Log::success("ExportService", std::format("Video saved to {}", ANIMATION_VIDEO_PATH));
+    else
+        Log::error("ExportService", std::format("ffmpeg exited with code {}", ret));
 }

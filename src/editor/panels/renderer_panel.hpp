@@ -4,7 +4,7 @@
 
 #include "app/app_context.hpp"
 
-class RenderParameterPanel: IPanel {
+class RendererPanel: IPanel {
 public:
     void draw(AppContext& ctx) override;
 };

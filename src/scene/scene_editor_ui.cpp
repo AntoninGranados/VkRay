@@ -11,7 +11,7 @@
 #include "imgui/ImGuizmo.h"
 #include <nfd.hpp>
 
-#include "app/notification_handler.hpp"
+#include "app/log.hpp"
 #include "editor/ui_constants.hpp"
 #include "./scene.hpp"
 
@@ -205,6 +205,7 @@ void SceneEditorUI::drawUI(Scene& scene) {
             const std::string meshPath = outPath.get();
             MeshAsset asset(MeshAsset::nameFromPath(meshPath));
             if (asset.loadFromObj(*scene.ctx, meshPath)) {
+                Log::success("SceneEditor", std::format("Loaded mesh: {}", asset.getName()));
                 scene.meshAssets.push_back(std::move(asset));
                 scene.updated = true;
             }
@@ -332,19 +333,17 @@ void SceneEditorUI::drawSelectedEntityUI(Scene& scene) {
                 for (auto& requirement : restrictions.requirements) {
                     if (!funcsMap.at(requirement).has(scene.registry, e)) {
                         verifyRestrictions = false;
-                        scene.ctx->notifications->pushMessage(NotificationType::Warning, "Missing component " + componentLabel(requirement));
+                        Log::warn("SceneEditor", std::format("Missing component {}", componentLabel(requirement)));
                     }
                 }
                 for (auto& conflict : restrictions.conflicts) {
                     if (funcsMap.at(conflict).has(scene.registry, e)) {
                         verifyRestrictions = false;
-                        scene.ctx->notifications->pushMessage(NotificationType::Warning, "Conflicting component " + componentLabel(conflict));
+                        Log::warn("SceneEditor", std::format("Conflicting component {}", componentLabel(conflict)));
                     }
                 }
 
-                if (!verifyRestrictions) {
-                    scene.ctx->notifications->pushMessage(NotificationType::Error, "Failed to add component, not all restrictions met");
-                } else {
+                if (verifyRestrictions) {
                     funcs.add(scene.registry, e);
                     *scene.ctx->restartRender = true;
                 }

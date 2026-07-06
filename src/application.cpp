@@ -1,8 +1,9 @@
 #include "application.hpp"
 
 #include <chrono>
-#include <iostream>
+#include <format>
 
+#include "app/log.hpp"
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -33,6 +34,21 @@ Application::Application(Platform& p) : platform(p) {
         io.Fonts->AddFontFromFileTTF("res/fonts/fa-solid-900.otf", 12.0f, &iconConfig, iconRanges);
     }
 
+    ctx.reloadShaders = [this]() {
+        renderer.buildPipelines(ctx);
+        restartRender = true;
+    };
+    ctx.startRender = [this]() {
+        if (renderState.renderMode == RenderMode::Preview && renderer.promptOutputPath())
+            clearRenderingData(RenderMode::RenderSingle);
+    };
+    ctx.startRenderAnim = [this]() {
+        if (renderState.renderMode == RenderMode::Preview) {
+            clearRenderingData(RenderMode::RenderAnimation);
+            animation.reset(0);
+        }
+    };
+
     initParameters();
     initScene();
     renderer.init(ctx);
@@ -51,7 +67,7 @@ Application::~Application() {
 void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    while(!engine.shouldTerminate() && !shouldClose) {
+    while(!engine.shouldTerminate()) {
         auto currentTime = std::chrono::high_resolution_clock::now();
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
@@ -99,10 +115,10 @@ void Application::runJobs(JobQueue& queue) {
 
         LightMode lightMode = LightMode::Day;
         if (!SceneSerializer::load(scene, lightMode, job->scene.string(), job->seed)) {
-            std::cerr << "\n[" << jobIndex << "/" << totalJobs << "] Failed to load scene: " << job->scene << '\n';
             queue.fail();
             continue;
         }
+        Log::success("Application", std::format("[{}/{}] Loaded: {}", jobIndex, totalJobs, job->scene.string()));
         ctx.camera = &scene.getCamera();
         parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
@@ -210,8 +226,6 @@ void Application::onFrameStart(float dt) {
         inputHandler->handle(ctx, dt);
     }
 
-    handleCommands();
-
     if (restartRender) {
         frameCount = 1;
         renderState.sampleCount = 0;
@@ -240,24 +254,6 @@ void Application::clearRenderingData(RenderMode newRenderMode) {
     restartRender = true;
 }
 
-void Application::handleCommands() {
-    if (notifications.isCommandRequested(Command::Exit)) {
-        shouldClose = true;
-    } if (notifications.isCommandRequested(Command::Render)) {
-        if (renderState.renderMode == RenderMode::Preview) {
-            if (renderer.promptOutputPath())
-                clearRenderingData(RenderMode::RenderSingle);
-        }
-    } if (notifications.isCommandRequested(Command::RenderAnim)) {
-        if (renderState.renderMode == RenderMode::Preview) {
-            clearRenderingData(RenderMode::RenderAnimation);
-            animation.reset(0);
-        }
-    } if (notifications.isCommandRequested(Command::Reload)) {
-        renderer.buildPipelines(ctx);
-        restartRender = true;
-    }
-}
 
 void Application::fillUBOs() {
     auto& pathtracer = *ctx.pathtracerUBO;

@@ -1,6 +1,7 @@
 #include "scene.hpp"
 
 #include <cassert>
+#include <format>
 #include <utility>
 
 #include <glm/gtc/constants.hpp>
@@ -8,6 +9,7 @@
 
 #include "imgui/ImGuizmo.h"
 
+#include "app/log.hpp"
 #include "scene/object/material.hpp"
 #include "scene_editor_ui.hpp"
 
@@ -144,6 +146,7 @@ void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4&
         return;
     }
 
+    Log::success("Scene", std::format("Loaded mesh: {}", name));
     pushMesh(name, handle, transform, materialHandle);
 }
 

@@ -10,7 +10,6 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
 
-#include "app/notification_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
 #include "scene/scene_serializer.hpp"
@@ -55,7 +54,6 @@ private:
     VkSmol engine;
     Scene scene;
     ParameterHandler parameters;
-    NotificationHandler notifications;
     std::optional<EditorUi> ui;
     AnimationHandler animation = AnimationHandler(24.0f * 5, 24.0f);
 
@@ -68,7 +66,6 @@ private:
         .engine        = &engine,
         .scene         = &scene,
         .parameters    = &parameters,
-        .notifications = &notifications,
         .animation     = &animation,
         .renderer      = &renderer,
         .renderState   = &renderState,
@@ -82,14 +79,11 @@ private:
     RenderHandler renderer;
 
     int frameCount = 0;
-    bool shouldClose = false;
-
     void initParameters();
     void initScene(const std::string& sceneFile = "res/scenes/default.json");
 
     void onFrameStart(float dt);
     void clearRenderingData(RenderMode newRenderMode);
-    void handleCommands();
     void fillUBOs();
     void fillJobUBOs(uint32_t sampleIndex);
     float lastTime = 0.0f;

@@ -5,12 +5,12 @@
 #include "VkSmol/command/command_buffer.hpp"
 #include "panels/stats_panel.hpp"
 #include "panels/animation_panel.hpp"
-#include "panels/render_panel.hpp"
-#include "panels/notification_panel.hpp"
+#include "panels/render_progress_panel.hpp"
 #include "panels/inspector_panel.hpp"
 #include "panels/camera_panel.hpp"
-#include "panels/render_parameter_panel.hpp"
+#include "panels/renderer_panel.hpp"
 #include "panels/scene_panel.hpp"
+#include "panels/toast_panel.hpp"
 
 class CommandBuffer;
 
@@ -30,12 +30,12 @@ public:
 private:
     StatsPanel statsPanel;
     AnimationPanel animationPanel;
-    RenderPanel renderPanel;
-    NotificationPanel notificationPanel;
+    RenderProgressPanel renderPanel;
     InspectorPanel inspectorPanel;
     CameraPanel cameraPanel;
-    RenderParameterPanel renderParameterPanel;
+    RendererPanel renderParameterPanel;
     ScenePanel scenePanel;
+    ToastPanel toastPanel;
     
     bool toggled = true;
     bool toggleState = true;

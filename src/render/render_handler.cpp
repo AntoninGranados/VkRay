@@ -1,6 +1,5 @@
 #include "render_handler.hpp"
 
-#include <iostream>
 #include <vector>
 
 #include "imgui/imgui.h"
@@ -18,7 +17,7 @@
 #include "VkSmol/render/pipeline/vertex_input.hpp"
 
 #include "app/app_context.hpp"
-#include "app/notification_handler.hpp"
+#include "app/log.hpp"
 #include "app/parameter_handler.hpp"
 #include "editor/editor_ui.hpp"
 #include "scene/scene.hpp"
@@ -175,20 +174,17 @@ void RenderHandler::destroy(AppContext& ctx) {
 
 void RenderHandler::buildPipelines(AppContext& ctx) {
     VkSmol& engine = *ctx.engine;
-    NotificationHandler& notifications = *ctx.notifications;
 
     engine.waitIdle();
 
     try {
         engine.reloadPipelines();
     } catch (const std::exception& e) {
-        std::cerr << "[ERROR] " << e.what() << std::endl;
-        notifications.pushMessage(NotificationType::Error, e.what());
+        Log::error(e.what());
         return;
     }
 
-    std::cout << "[INFO] Built pipelines" << std::endl;
-    notifications.pushMessage(NotificationType::Info, "(Re)Built the pipelines");
+    Log::success("RenderHandler", "(Re)Built the pipelines");
 }
 
 void RenderHandler::render(AppContext& ctx) {
