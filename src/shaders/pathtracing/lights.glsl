@@ -35,6 +35,7 @@ struct LightSample {
     vec3 wi;
     float pdf;
     vec3 Le;
+    bool skip;
 };
 
 float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in vec3 wi) {
@@ -48,6 +49,7 @@ float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in v
 
 LightSample sampleLight(in Hit hit, inout uint seed) {
     LightSample light;
+    light.skip = false;
     int lightId = getRandomLightId(seed);
     if (lightId < 0) {
         light.pdf = -1.0;
@@ -69,41 +71,21 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
 
     Statistics shadowStats = Statistics(0, 0);
     vec3 shadowOrigin = hit.p + hit.normal * EPS;
-    float remaining = dist - EPS;
-    vec3 transmission = vec3(1.0);
 
-    for (int i = 0; i < 8 && remaining > 0.0; i++) {
-        Hit shadowHit = intersection(Ray(shadowOrigin, light.wi), true, remaining, shadowStats);
-        if (!foundIntersection(shadowHit)) break;
-
-        // Reached the light object itself
-        if (shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type) break;
-
+    Hit shadowHit = intersection(Ray(shadowOrigin, light.wi), false, dist - EPS, shadowStats);
+    if (foundIntersection(shadowHit) &&
+        !(shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type)) {
         Material shadowMat = getMaterial(shadowHit.object);
-
-        // Transmissive surfaces (glass, principled glass) block NEE: shadow rays don't refract.
-        if (isTransmissive(shadowMat)) { light.pdf = -1.0; return light; }
-
-        // Opaque surfaces block NEE.
-        if (shadowMat.type != mat_Volume) { light.pdf = -1.0; return light; }
-
-        // Volume boundary: transparent, apply Beer-Lambert attenuation.
-        if (shadowMat.density > EPS) {
-            transmission *= pow(max(shadowMat.albedo, vec3(1e-4)), vec3(shadowHit.t * shadowMat.density));
+        if (shadowMat.type == mat_Volume || isTransmissive(shadowMat)) {
+            light.skip = true;
         }
-
-        remaining -= shadowHit.t + EPS;
-        shadowOrigin = shadowHit.p + light.wi * EPS;
-    }
-
-    if (max(transmission.r, max(transmission.g, transmission.b)) < EPS) {
         light.pdf = -1.0;
         return light;
     }
 
     light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
     Material lightMat = getMaterial(lightObj);
-    light.Le = lightMat.albedo * lightMat.emissionStrength * transmission;
+    light.Le = lightMat.albedo * lightMat.emissionStrength;
     return light;
 }
 

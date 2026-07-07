@@ -126,96 +126,104 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     );
     Hit prevHit;
     BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
+    bool prevIsSkipped = false;
 
     for (; i < ubo.render.maxBounces; i++) {
-        if (foundIntersection(hit)) {
-            mat = getMaterial(hit.object);
-            mat.albedo *= hit.vertexColor;
-
-            if (mat.emissionStrength > 0) {
-                if (i == 0) {
-                    radiance = mat.albedo * mat.emissionStrength;
-                    break;
-                }
-
-                vec3 Le = mat.albedo * mat.emissionStrength;
-                float w = 1.0;
-                if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta) {
-                    float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
-                    w = powerHeuristic(prevBsdf.pdf, pdfL);
-                }
-
-                radiance += throughput * w * Le;
-                break;
-            }
-
-            bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
-            if (bsdf.pdf < EPS && !bsdf.isDelta) {
-                break;
-            }
-            if (mat.type == mat_Volume) {
-                currentMedium = hit.frontFace ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
-            }
-            if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
-                lightSample = sampleLight(hit, seed);
-                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
-                if (lightSample.pdf > EPS) {
-                    float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
-                    float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
-                    radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
-                }
-            }
-
-            throughput *= bsdf.weight;
-
-            // Russian Roulette
-            if (i >= 2 && !bsdf.isDelta) {
-                float p = clamp(luma(throughput), 0.1, 1.0);
-                if (rand(seed) > p) break;
-                throughput /= p;
-            }
-            prevBsdf = bsdf;
-            prevHit = hit;
-
-            ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
-            hit = intersection(ray, false, INFINITY, stats);
-
-            // Might not be the best place, but we can use the new `hit` here
-            if (currentMedium.isVolume) {
-                float sigma_t = currentMedium.density;
-                float t_scatter = -log(rand(seed)) / sigma_t;
-                if (t_scatter < hit.t) {
-                    ray.origin += ray.dir * t_scatter;
-
-                    if (ubo.render.importanceSampling == 1) {
-                        Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
-                        LightSample volLight = sampleLight(scatterHit, seed);
-                        if (volLight.pdf > EPS) {
-                            float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
-                            float wMIS = powerHeuristic(volLight.pdf, phase);
-                            radiance += throughput * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
-                        }
-                    }
-
-                    vec3 incomingDir = ray.dir;
-                    ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
-                    throughput *= currentMedium.absorption;
-
-                    prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
-                    prevBsdf.isDelta = false;
-                    prevHit.p = ray.origin;
-
-                    hit = intersection(ray, false, INFINITY, stats);
-                    continue;
-                }
-            }
-            if (prevBsdf.medium.isDielectric) {
-                throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
-            }
-            
-        } else {
+        if (!foundIntersection(hit)) {
             radiance += throughput * skyColor(ray.dir);
             break;
+        }
+
+        if (currentMedium.isVolume) {
+            float sigma_t = currentMedium.density;
+            float t_scatter = -log(rand(seed)) / sigma_t;
+            if (t_scatter < hit.t) {
+                ray.origin += ray.dir * t_scatter;
+
+                if (ubo.render.importanceSampling == 1) {
+                    Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
+                    LightSample volLight = sampleLight(scatterHit, seed);
+                    prevIsSkipped = volLight.skip;
+                    if (volLight.pdf > EPS) {
+                        float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
+                        float wMIS = powerHeuristic(volLight.pdf, phase);
+                        radiance += throughput * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
+                    }
+                } else {
+                    prevIsSkipped = false;
+                }
+
+                vec3 incomingDir = ray.dir;
+                ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
+                throughput *= currentMedium.absorption;
+
+                prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
+                prevBsdf.isDelta = false;
+                prevHit.p = ray.origin;
+
+                hit = intersection(ray, false, INFINITY, stats);
+                continue;
+            }
+        }
+
+        mat = getMaterial(hit.object);
+        mat.albedo *= hit.vertexColor;
+
+        // Light hit
+        if (mat.emissionStrength > 0) {
+            if (i == 0) {
+                radiance = mat.albedo * mat.emissionStrength;
+                break;
+            }
+
+            vec3 Le = mat.albedo * mat.emissionStrength;
+            float w = 1.0;
+            if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
+                float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
+                w = powerHeuristic(prevBsdf.pdf, pdfL);
+            }
+
+            radiance += throughput * w * Le;
+            break;
+        }
+
+        bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
+        if (bsdf.pdf < EPS && !bsdf.isDelta) {
+            break;
+        }
+        if (mat.type == mat_Volume) {
+            currentMedium = hit.frontFace ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
+        }
+        bool isSkipped = false;
+        if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
+            lightSample = sampleLight(hit, seed);
+            isSkipped = lightSample.skip;
+            if (lightSample.pdf > EPS) {
+                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
+                float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
+                float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
+                radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
+            }
+        }
+
+        throughput *= bsdf.weight;
+
+        // Russian Roulette
+        if (i >= 2 && !bsdf.isDelta) {
+            float p = clamp(luma(throughput), 0.1, 1.0);
+            if (rand(seed) > p) break;
+            throughput /= p;
+        }
+        if (mat.type != mat_Volume) {
+            prevBsdf = bsdf;
+            prevHit = hit;
+            prevIsSkipped = isSkipped;
+        }
+
+        ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
+        hit = intersection(ray, false, INFINITY, stats);
+        if (prevBsdf.medium.isDielectric) {
+            throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
         }
     }
     if (i == ubo.render.maxBounces) radiance = vec3(0.0);
