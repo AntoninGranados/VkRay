@@ -1,9 +1,8 @@
 #pragma once
 
 #include <filesystem>
-#include <vector>
 
-#include "render/job.hpp"
+#include "job.hpp"
 
 class JobQueue {
 public:

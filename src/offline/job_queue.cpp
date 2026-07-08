@@ -1,4 +1,4 @@
-#include "render/job_queue.hpp"
+#include "job_queue.hpp"
 
 #include <fstream>
 #include <random>

@@ -8,18 +8,15 @@
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr/tinyexr.h"
 
-#include <nfd.hpp>
-
 #include "app/log.hpp"
-#include "app/parameter_handler.hpp"
-#include "app/animation_handler.hpp"
+#include "app/structures.hpp"
 
-void ExportService::init(VkSmol& engine, const uint32_t& _width, const uint32_t& _height, BufferHandle pixelInfoHandle) {
+void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
     width  = _width;
     height = _height;
     buffer                  = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
     pixelInfoBufferHandle   = pixelInfoHandle;
-    pixelInfoReadbackBuffer = engine.createReadbackBuffer(engine.getBuffer(pixelInfoHandle).getSize());
+    pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
 void ExportService::destroy(VkSmol& engine) {
@@ -27,110 +24,32 @@ void ExportService::destroy(VkSmol& engine) {
     engine.destroyBuffer(pixelInfoReadbackBuffer);
 }
 
-void ExportService::handleCopy(AppContext& ctx, CommandBuffer& commandBuffer, Image& image) {
-    if (!renderRequested) return;
-    renderRequested   = false;
-    renderPendingSave = true;
-
-    copyImageToBuffer(commandBuffer, image);
+void ExportService::resize(VkSmol& engine, uint32_t _width, uint32_t _height) {
+    engine.destroyBuffer(buffer);
+    engine.destroyBuffer(pixelInfoReadbackBuffer);
+    width  = _width;
+    height = _height;
+    buffer                  = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
-bool ExportService::promptOutputPath() {
-    NFD::Guard guard;
-    NFD::UniquePath outPath;
-    nfdfilteritem_t filters[2] = {
-        { "PNG Image",     "png" },
-        { "OpenEXR Image", "exr" }
-    };
-    if (NFD::SaveDialog(outPath, filters, 2, RENDER_OUTPUT_PATH, "render") != NFD_OKAY)
-        return false;
-    pendingOutputPath = outPath.get();
-    if (!pendingOutputPath.has_extension())
-        pendingOutputPath.replace_extension(".png");
-    return true;
-}
-
-void ExportService::handleSave(AppContext& ctx) {
-    if (!renderPendingSave) return;
-    renderPendingSave = false;
-
-    ctx.engine->waitIdle();
-
-    bool toVideo = false;
-    bool doSave  = false;
-    std::filesystem::path path;
-
-    if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
-        path   = buildAnimationFramePath(ctx.animation->getFrame());
-        doSave = true;
-
-        ctx.renderState->samplesPerSecEMA          = 0.0;
-        ctx.renderState->samplesPerSecInitialized  = false;
-        ctx.renderState->samplesPerSecAccumTime    = 0.0;
-        ctx.renderState->samplesPerSecAccumSamples = 0.0;
-
-        ctx.animation->stepFixed();
-        if (ctx.animation->getFrame() == 0) {
-            ctx.renderState->pendingExit = true;
-            toVideo = true;
-        }
-    } else if (!pendingOutputPath.empty()) {
-        path   = pendingOutputPath;
-        doSave = true;
-        pendingOutputPath.clear();
-    }
-
-    if (ctx.renderState->pendingExit) {
-        if (onRenderComplete) onRenderComplete();
-        ctx.renderState->renderMode                = RenderMode::Preview;
-        ctx.renderState->pendingExit               = false;
-        ctx.renderState->samplesPerSecEMA          = 0.0;
-        ctx.renderState->samplesPerSecInitialized  = false;
-        ctx.renderState->samplesPerSecAccumTime    = 0.0;
-        ctx.renderState->samplesPerSecAccumSamples = 0.0;
-    }
-
-    *ctx.restartRender = true;
-
-    if (doSave) {
-        if (path.extension() == ".exr") {
-            saveBufferToEXR(ctx, path);
-        } else {
-            saveBufferToPNG(ctx, path);
-        }
-        saveAOVs(ctx, path);
-    }
-
-    if (toVideo) convertFramesToVideo();
-}
-
-void ExportService::captureImage(CommandBuffer& commandBuffer, Image& image) {
-    copyImageToBuffer(commandBuffer, image);
-}
-
-void ExportService::saveCapture(AppContext& ctx, const std::filesystem::path& path) {
-    ctx.engine->waitIdle();
+void ExportService::save(VkSmol& engine, Image& image,
+                         const std::filesystem::path& path, const AOVFlags& aovFlags) {
+    engine.waitIdle();
+    engine.copyImageToBuffer(image, buffer);
     if (path.extension() == ".exr") {
-        saveBufferToEXR(ctx, path);
+        saveBufferToEXR(engine, path);
     } else {
-        saveBufferToPNG(ctx, path);
+        saveBufferToPNG(engine, path);
     }
-    saveAOVs(ctx, path);
+    saveAOVs(engine, path, aovFlags);
 }
-
 
 std::filesystem::path ExportService::buildAnimationFramePath(int frame) {
-    return std::filesystem::path(ANIMATION_FRAMES_DIR) / std::format("frame_{:05d}.png", frame);
+    return std::filesystem::path(kAnimationCacheDir) / std::format("frame_{:05d}.png", frame);
 }
 
-
-void ExportService::copyImageToBuffer(CommandBuffer& commandBuffer, Image& image) {
-    image.copyToBuffer(commandBuffer, buffer);
-}
-
-void ExportService::saveBufferToPNG(AppContext& ctx, const std::filesystem::path& path) {
-    VkSmol& engine = *ctx.engine;
-
+void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path& path) {
     size_t floatCount = static_cast<size_t>(width) * height * 4;
     size_t byteCount  = floatCount * sizeof(float);
     std::vector<float> floatPixels(floatCount);
@@ -156,9 +75,7 @@ void ExportService::saveBufferToPNG(AppContext& ctx, const std::filesystem::path
     }
 }
 
-void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path& path) {
-    VkSmol& engine = *ctx.engine;
-
+void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path& path) {
     size_t floatCount = static_cast<size_t>(width) * height * 4;
     size_t byteCount  = floatCount * sizeof(float);
     std::vector<float> floatPixels(floatCount);
@@ -223,19 +140,11 @@ void ExportService::saveBufferToEXR(AppContext& ctx, const std::filesystem::path
     free(header.requested_pixel_types);
 }
 
-void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& basePath) {
-    auto& p = *ctx.parameters;
-    bool anyEnabled = p.getBool("pathtracer/aov/position_w")
-                   || p.getBool("pathtracer/aov/position")
-                   || p.getBool("pathtracer/aov/normal_w")
-                   || p.getBool("pathtracer/aov/normal")
-                   || p.getBool("pathtracer/aov/albedo")
-                   || p.getBool("pathtracer/aov/roughness")
-                   || p.getBool("pathtracer/aov/mat_type")
-                   || p.getBool("pathtracer/aov/sky_mask");
+void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
+    bool anyEnabled = f.positionW || f.position || f.normalW || f.normal
+                   || f.albedo   || f.roughness || f.matType || f.skyMask;
     if (!anyEnabled) return;
 
-    VkSmol& engine = *ctx.engine;
     engine.copyBuffer(engine.getBuffer(pixelInfoBufferHandle), pixelInfoReadbackBuffer);
 
     size_t pixelCount = static_cast<size_t>(width) * height;
@@ -248,7 +157,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         channels.emplace_back(name, std::move(data));
     };
 
-    if (p.getBool("pathtracer/aov/position_w")) {
+    if (f.positionW) {
         std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.x : 0.0f;
@@ -260,7 +169,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("position_w.Z", std::move(z));
     }
 
-    if (p.getBool("pathtracer/aov/position")) {
+    if (f.position) {
         std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.x : 0.0f;
@@ -272,7 +181,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("position.Z", std::move(z));
     }
 
-    if (p.getBool("pathtracer/aov/normal_w")) {
+    if (f.normalW) {
         std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.x : 0.0f;
@@ -284,7 +193,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("normal_w.Z", std::move(z));
     }
 
-    if (p.getBool("pathtracer/aov/normal")) {
+    if (f.normal) {
         std::vector<float> x(pixelCount), y(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normal.x : 0.0f;
@@ -294,7 +203,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("normal.Y", std::move(y));
     }
 
-    if (p.getBool("pathtracer/aov/albedo")) {
+    if (f.albedo) {
         std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             r[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.x : 0.0f;
@@ -306,21 +215,21 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
         push("albedo.B", std::move(b));
     }
 
-    if (p.getBool("pathtracer/aov/roughness")) {
+    if (f.roughness) {
         std::vector<float> v(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
             v[i] = pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f;
         push("roughness.V", std::move(v));
     }
 
-    if (p.getBool("pathtracer/aov/mat_type")) {
+    if (f.matType) {
         std::vector<float> v(pixelCount);
         for (size_t i = 0; i < pixelCount; i++)
             v[i] = pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
         push("mat_type.V", std::move(v));
     }
 
-    if (p.getBool("pathtracer/aov/sky_mask")) {
+    if (f.skyMask) {
         std::vector<float> m(pixelCount);
         for (size_t i = 0; i < pixelCount; i++) {
             int c = pixels[i].count;
@@ -337,14 +246,14 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
     int nch = static_cast<int>(channels.size());
 
     EXRHeader header; InitEXRHeader(&header);
-    EXRImage  image;  InitEXRImage(&image);
+    EXRImage  exrImage;  InitEXRImage(&exrImage);
 
     std::vector<float*> ptrs(nch);
     for (int i = 0; i < nch; i++) ptrs[i] = channels[i].second.data();
-    image.images = (unsigned char**)ptrs.data();
-    image.width  = width;
-    image.height = height;
-    image.num_channels = nch;
+    exrImage.images = (unsigned char**)ptrs.data();
+    exrImage.width  = width;
+    exrImage.height = height;
+    exrImage.num_channels = nch;
 
     header.num_channels = nch;
     header.channels     = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * nch);
@@ -360,7 +269,7 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
     auto aovPath = (basePath.parent_path() / (stem + "_aovs.exr")).string();
 
     const char* err = nullptr;
-    int ret = SaveEXRImageToFile(&image, &header, aovPath.c_str(), &err);
+    int ret = SaveEXRImageToFile(&exrImage, &header, aovPath.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         FreeEXRErrorMessage(err);
         Log::error("ExportService", "Failed to write AOV EXR");
@@ -373,15 +282,16 @@ void ExportService::saveAOVs(AppContext& ctx, const std::filesystem::path& baseP
     free(header.requested_pixel_types);
 }
 
-void ExportService::convertFramesToVideo() {
-    std::filesystem::path path = ANIMATION_FRAMES_DIR;
-    path /= "frame_%05d.png";
+void ExportService::convertFramesToVideo(const std::filesystem::path& path) {
+    std::filesystem::path framesPath = kAnimationCacheDir;
+    framesPath /= "frame_%05d.png";
 
-    char cmd[128];
-    std::snprintf(cmd, 128, "ffmpeg -framerate 24 -i %s -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p %s", path.c_str(), ANIMATION_VIDEO_PATH);
-    int ret = std::system(cmd);
+    std::string cmd = std::format(
+        "ffmpeg -framerate 24 -i {} -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p {}", framesPath.c_str(), path.c_str()
+    );
+    int ret = std::system(cmd.c_str());
     if (ret == 0)
-        Log::success("ExportService", std::format("Video saved to {}", ANIMATION_VIDEO_PATH));
+        Log::success("ExportService", std::format("Video saved to {}", path.c_str()));
     else
         Log::error("ExportService", std::format("ffmpeg exited with code {}", ret));
 }

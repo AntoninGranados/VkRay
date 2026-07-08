@@ -3,7 +3,9 @@
 #include <chrono>
 #include <format>
 
+#include "VkSmol/graph/render_graph_builder.hpp"
 #include "app/log.hpp"
+#include "core/core_renderer.hpp"
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -35,11 +37,11 @@ Application::Application(Platform& p) : platform(p) {
     }
 
     ctx.reloadShaders = [this]() {
-        renderer.buildPipelines(ctx);
+        coreRenderer.buildPipelines(ctx);
         restartRender = true;
     };
     ctx.startRender = [this]() {
-        if (renderState.renderMode == RenderMode::Preview && renderer.promptOutputPath())
+        if (renderState.renderMode == RenderMode::Preview)
             clearRenderingData(RenderMode::RenderSingle);
     };
     ctx.startRenderAnim = [this]() {
@@ -50,19 +52,25 @@ Application::Application(Platform& p) : platform(p) {
     };
 
     if (ui) {
-        renderer.setOnRenderComplete([this]{ ui->restoreToggledState(); });
+        coreRenderer.setOnRenderComplete([this]{ ui->restoreToggledState(); });
     }
 
     initParameters();
     initScene();
-    renderer.init(ctx);
+    RenderGraphBuilder builder;
+    CoreResources resources = coreRenderer.initGraph(engine, builder);
+    editorRenderer.initGraph(engine, builder, resources);
+    engine.setGraph(builder);
+    engine.initGraph();
+    scene.setGpuBufferHandles(resources.sceneHandles);
 }
 
 
 Application::~Application() {
     engine.waitIdle();
 
-    renderer.destroy(ctx);
+    coreRenderer.destroy(ctx);
+    engine.destroyGraph();
 
     scene.destroy();
     engine.terminate();
@@ -81,8 +89,26 @@ void Application::run() {
         if (!animation.isPaused()) animation.step(deltaTime);
 
         onFrameStart(deltaTime);
-        renderer.render(ctx);
 
+        auto frameContext = engine.beginFrame();
+        if (!frameContext) {
+            engine.advanceFrame();
+            scene.runPostUpdate(ctx);
+            continue;
+        }
+
+        if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
+            lastSwapchainGeneration = frameContext->swapchainGeneration;
+            VkExtent2D extent = engine.getExtent();
+            coreRenderer.resize(ctx, extent.width, extent.height);
+            restartRender = true;
+        }
+
+        coreRenderer.render(ctx, *frameContext);
+        editorRenderer.render(ctx, *frameContext);
+
+        engine.present();
+        engine.advanceFrame();
         scene.runPostUpdate(ctx);
     }
 }
@@ -115,7 +141,7 @@ void Application::runJobs(JobQueue& queue) {
 
         const VkExtent2D extent = engine.getExtent();
         if (job->width != extent.width || job->height != extent.height)
-            renderer.resize(ctx, job->width, job->height);
+            coreRenderer.resize(ctx, job->width, job->height);
 
         LightMode lightMode = LightMode::Day;
         if (!SceneSerializer::load(scene, lightMode, job->scene.string(), job->seed)) {
@@ -131,13 +157,13 @@ void Application::runJobs(JobQueue& queue) {
 
         for (uint32_t i = 0; i < totalSamples; i++) {
             fillJobUBOs(i);
-            renderer.renderHeadless(ctx, i == totalSamples - 1);
+            coreRenderer.renderHeadless(ctx, i == totalSamples - 1);
             queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
             bar.step();
         }
         bar.close();
 
-        renderer.saveCapture(ctx, job->output);
+        coreRenderer.saveCapture(ctx, job->output);
 
         queue.complete();
     }

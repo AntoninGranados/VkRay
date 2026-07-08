@@ -5,8 +5,8 @@
 #include "VkSmol/platform/glfw_platform.hpp"
 #include "VkSmol/platform/headless_platform.hpp"
 
+#include "offline/job_queue.hpp"
 #include "application.hpp"
-#include "render/job_queue.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc >= 2 && std::string_view(argv[1]) == "--reference") {

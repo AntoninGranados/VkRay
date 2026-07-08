@@ -10,14 +10,15 @@
 #include "VkSmol/platform/platform.hpp"
 
 #include "app/parameter_handler.hpp"
+#include "editor/editor_renderer.hpp"
 #include "scene/scene.hpp"
 #include "scene/scene_serializer.hpp"
 
 #include "app/app_context.hpp"
 #include "editor/editor_ui.hpp"
 #include "app/animation_handler.hpp"
-#include "render/job_queue.hpp"
-#include "render/render_handler.hpp"
+#include "core/core_renderer.hpp"
+#include "offline/job_queue.hpp"
 
 #include "app/input_handler.hpp"
 
@@ -63,7 +64,8 @@ private:
     bool restartRender = false;
 
     std::optional<InputHandler> inputHandler;
-    RenderHandler renderer;
+    CoreRenderer coreRenderer;
+    EditorRenderer editorRenderer;
 
     AppContext ctx{
         .engine         = &engine,
@@ -79,6 +81,7 @@ private:
     };
 
     int frameCount = 0;
+    uint64_t lastSwapchainGeneration = 0;
     void initParameters();
     void initScene(const std::string& sceneFile = "assets/scenes/default.json");
 

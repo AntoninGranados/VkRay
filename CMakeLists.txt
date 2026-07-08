@@ -78,7 +78,7 @@ target_include_directories(VkRay PRIVATE
 target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr_third_party)
 target_compile_options(VkRay PRIVATE -Wall)
 
-set_source_files_properties("${CMAKE_SOURCE_DIR}/src/render/export_service.cpp" PROPERTIES
+set_source_files_properties("${CMAKE_SOURCE_DIR}/src/core/export_service.cpp" PROPERTIES
   COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-function"
 )
 target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")

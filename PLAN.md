@@ -36,19 +36,19 @@ This plan will most likely be subjected to heavy modifications.
   - Enables wavelength-dependent effects: dispersion (glass prisms, caustic rainbows), iridescence (thin-film interference), fluorescence
   - Materials need spectral reflectance curves; start with fitted Cauchy/Sellmeier coefficients for dielectrics
 
-## v0.6 Denoising
+## v0.6 Light Tracing
 
-- [ ] **[0.6.0] Dataset generation**: render and export training pairs (noisy / converged) via the jobs system
-  - AOV outputs (normals, albedo, depth) as auxiliary features
-  - Scriptable from the jobs file
-- [ ] **[0.6.1] Denoiser integration**: run inference on `OutputImage` as a post-process pass
-  - Likely OIDN (CPU) or a custom lightweight model trained on the generated dataset
-
-## v0.7 Light Tracing
-
-- [ ] **[0.7.0] Light tracing**: trace paths from emitters and connect to the camera
+- [ ] **[0.6.0] Light tracing**: trace paths from emitters and connect to the camera
   - First step toward bidirectional PT
   - Reuses the existing NEE / MIS framework
+
+## v0.7 Denoising
+
+- [ ] **[0.7.0] Dataset generation**: render and export training pairs (noisy / converged) via the jobs system
+  - AOV outputs (normals, albedo, depth) as auxiliary features
+  - Scriptable from the jobs file
+- [ ] **[0.7.1] Denoiser integration**: run inference on `OutputImage` as a post-process pass
+  - Likely OIDN (CPU) or a custom lightweight model trained on the generated dataset
 
 ## v0.8 Textures & Environment
 
