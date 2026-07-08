@@ -2,7 +2,6 @@
 
 #include <format>
 #include <iomanip>
-#include <iostream>
 
 // =========================== ProgressTimer ===========================
 
@@ -30,8 +29,8 @@ std::string ProgressTimer::formatTime(double seconds) {
 
 // =========================== ProgressBar ===========================
 
-ProgressBar::ProgressBar(std::string_view prefix, uint32_t total, std::string_view unit, int width)
-    : prefix(prefix), total(total), unit(unit), width(width) {
+ProgressBar::ProgressBar(std::string_view prefix, uint32_t total, std::string_view unit, int width, std::ostream& out)
+    : prefix(prefix), total(total), unit(unit), width(width), out(out) {
     timer.start();
 }
 
@@ -48,16 +47,16 @@ void ProgressBar::step(uint32_t n) {
     redraw();
 }
 
-static void drawBlocks(int width, float progress) {
+static void drawBlocks(std::ostream& out, int width, float progress) {
     const char* blocks[] = { "▏", "▎", "▍", "▌", "▋", "▊", "▉" };
     const float filledF = progress * static_cast<float>(width);
     const int   full    = static_cast<int>(filledF);
     const int   partial = static_cast<int>((filledF - static_cast<float>(full)) * 8.0f);
 
-    for (int i = 0; i < full; i++) std::cout << "█";
+    for (int i = 0; i < full; i++) out << "█";
     if (full < width) {
-        std::cout << (partial > 0 ? blocks[partial - 1] : " ");
-        for (int i = full + 1; i < width; i++) std::cout << ' ';
+        out << (partial > 0 ? blocks[partial - 1] : " ");
+        for (int i = full + 1; i < width; i++) out << ' ';
     }
 }
 
@@ -66,19 +65,19 @@ void ProgressBar::close() {
     const double elapsed = timer.elapsed();
     const double rate    = elapsed > 0.0 ? static_cast<double>(total) / elapsed : 0.0;
 
-    std::cout << '\r';
-    if (!prefix.empty())  std::cout << prefix << ' ';
+    out << '\r';
+    if (!prefix.empty())  out << prefix << ' ';
     
-    std::cout << "100%";
-    std::cout << '|'; drawBlocks(width, 1.0f); std::cout << "| ";
+    out << "100%";
+    out << '|'; drawBlocks(out, width, 1.0f); out << "| ";
 
-    std::cout << total << '/' << total << unit << ' ';
+    out << total << '/' << total << unit << ' ';
 
-    std::cout << '[' << ProgressTimer::formatTime(elapsed) << ", "
+    out << '[' << ProgressTimer::formatTime(elapsed) << ", "
               << std::fixed << std::setprecision(1) << rate << unit << "/s]";
     
-    if (!postfix.empty()) std::cout << ' ' << postfix;
-    std::cout << "\033[K\n";
+    if (!postfix.empty()) out << ' ' << postfix;
+    out << "\033[K\n";
 }
 
 void ProgressBar::redraw() {
@@ -87,19 +86,19 @@ void ProgressBar::redraw() {
     const double rate     = elapsed > 0.0 ? static_cast<double>(current) / elapsed : 0.0;
     const int    digits   = static_cast<int>(std::to_string(total).size());
 
-    std::cout << '\r';
-    if (!prefix.empty())  std::cout << prefix << ' ';
+    out << '\r';
+    if (!prefix.empty())  out << prefix << ' ';
     
-    std::cout << std::setw(3) << static_cast<int>(progress * 100.0f) << '%';
-    std::cout << '|'; drawBlocks(width, progress); std::cout << "| ";
+    out << std::setw(3) << static_cast<int>(progress * 100.0f) << '%';
+    out << '|'; drawBlocks(out, width, progress); out << "| ";
 
-    std::cout << std::setw(digits) << current << '/' << total << unit << ' ';
+    out << std::setw(digits) << current << '/' << total << unit << ' ';
 
-    std::cout << '[' << ProgressTimer::formatTime(elapsed)
+    out << '[' << ProgressTimer::formatTime(elapsed)
               << '<' << ProgressTimer::formatTime(timer.eta(progress)) << ", "
               << std::fixed << std::setprecision(1) << rate << unit << "/s]";
     
-    if (!postfix.empty()) std::cout << "  " << postfix;
-    std::cout << "\033[K";
-    std::cout.flush();
+    if (!postfix.empty()) out << "  " << postfix;
+    out << "\033[K";
+    out.flush();
 }

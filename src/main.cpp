@@ -7,6 +7,7 @@
 
 #include "offline/job_queue.hpp"
 #include "application.hpp"
+#include "bot/bot_mode.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc >= 2 && std::string_view(argv[1]) == "--reference") {
@@ -23,6 +24,9 @@ int main(int argc, char* argv[]) {
         Application app(platform);
         app.runJobs(queue);
     
+    } else if (argc >= 3 && std::string_view(argv[1]) == "--bot") {
+        runBotMode(argv[2]);
+
     } else {
         GLFWPlatform platform("VkRay", 1280, 720);
         Application app(platform);

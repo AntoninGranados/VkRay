@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 
 #include "job.hpp"
 
@@ -24,6 +25,8 @@ public:
     void setProgress(float progress);
     void complete();
     void fail();
+
+    std::function<void(float, const Job&)> onProgress;
 
 private:
     std::vector<Job> jobs;

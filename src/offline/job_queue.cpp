@@ -161,6 +161,7 @@ const Job* JobQueue::running() const {
 void JobQueue::setProgress(float progress) {
     if (runningIndex < 0) return;
     jobs[runningIndex].progress = progress;
+    if (onProgress) onProgress(progress, jobs[runningIndex]);
 }
 
 void JobQueue::complete() {

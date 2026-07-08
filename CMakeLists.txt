@@ -50,17 +50,26 @@ target_include_directories(imgui_third_party PUBLIC
 target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
 target_compile_options(imgui_third_party PRIVATE -Wno-nontrivial-memcall)
 
-add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
-target_include_directories(tinyexr_third_party PUBLIC
+add_library(tinyexr STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
+target_include_directories(tinyexr PUBLIC
   "${CMAKE_SOURCE_DIR}/external/tinyexr"
 )
 
 # ── Engine submodule ──────────────────────────────────────────────────────────
-set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/imgui;${CMAKE_SOURCE_DIR}/external")
+set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/imgui_third_party;${CMAKE_SOURCE_DIR}/external")
 add_subdirectory("${CMAKE_SOURCE_DIR}/external/VkSmol" engine)
 
 # ── NFD (Native File Dialog Extended) ────────────────────────────────────────
 add_subdirectory("${CMAKE_SOURCE_DIR}/external/nfd")
+
+# ── D++ (Discord bot library) ─────────────────────────────────────────────────
+set(BUILD_VOICE_SUPPORT OFF CACHE BOOL "" FORCE)
+set(DPP_BUILD_TEST      OFF CACHE BOOL "" FORCE)
+set(OPENSSL_ROOT_DIR        "/opt/homebrew/opt/openssl"                    CACHE PATH     "" FORCE)
+set(OPENSSL_CRYPTO_LIBRARY  "/opt/homebrew/opt/openssl/lib/libcrypto.dylib" CACHE FILEPATH "" FORCE)
+set(OPENSSL_SSL_LIBRARY     "/opt/homebrew/opt/openssl/lib/libssl.dylib"    CACHE FILEPATH "" FORCE)
+find_package(OpenSSL REQUIRED)
+add_subdirectory("${CMAKE_SOURCE_DIR}/external/dpp")
 
 # ── Sources ───────────────────────────────────────────────────────────────────
 file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
@@ -75,7 +84,7 @@ target_include_directories(VkRay PRIVATE
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr_third_party)
+target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr dpp OpenSSL::SSL OpenSSL::Crypto)
 target_compile_options(VkRay PRIVATE -Wall)
 
 set_source_files_properties("${CMAKE_SOURCE_DIR}/src/core/export_service.cpp" PROPERTIES

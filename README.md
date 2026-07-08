@@ -1,5 +1,8 @@
 # VkRay
 
+> [!WARNING]
+> This branch is currently a very very early experimental test and should not be used.
+
 A Vulkan path tracer with an interactive scene editor.
 
 ![](snapshots/showcase/introduction.png)
