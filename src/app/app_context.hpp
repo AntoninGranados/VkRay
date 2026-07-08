@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 
+#include "core/core_structures.hpp"
 #include "structures.hpp"
 
 class VkSmol;

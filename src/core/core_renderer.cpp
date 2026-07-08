@@ -13,6 +13,7 @@
 #include "app/animation_handler.hpp"
 #include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
+#include "core_structures.hpp"
 
 static AOVFlags buildAOVFlags(ParameterHandler& p) {
     return AOVFlags{
@@ -116,14 +117,11 @@ CoreResources CoreRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builde
     return resources;
 }
 
-void CoreRenderer::destroy(AppContext& ctx) {
-    VkSmol& engine = *ctx.engine;
+void CoreRenderer::destroy(VkSmol& engine) {
     exportService.destroy(engine);
 }
 
-void CoreRenderer::buildPipelines(AppContext& ctx) {
-    VkSmol& engine = *ctx.engine;
-
+void CoreRenderer::buildPipelines(VkSmol& engine) {
     engine.waitIdle();
 
     try {

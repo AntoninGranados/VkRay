@@ -21,8 +21,9 @@ struct CoreResources {
 class CoreRenderer {
 public:
     CoreResources initGraph(VkSmol& engine, RenderGraphBuilder& builder);
-    void destroy(AppContext& ctx);
-    void buildPipelines(AppContext& ctx);
+    void destroy(VkSmol& engine);
+    // TODO: make it non blocking (compile/build in the background and replace when finished)
+    void buildPipelines(VkSmol& engine);
 
     void render(AppContext& ctx, const FrameContext& frameContext);
     void renderHeadless(AppContext& ctx, bool captureOutput = false);

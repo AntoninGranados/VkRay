@@ -5,8 +5,8 @@
 
     "camera": {
         "position": [0, 5, -15],
-        "target": [0, 0, 0],
-        "fov": 50
+        "target": [0, 1, 0],
+        "fov": 35
     },
 
     "materials": [
@@ -85,7 +85,7 @@
             "name": "Floor",
             "type": "plane",
             "material": "Floor",
-            "point": [0, -3, 0],
+            "point": [0, -2, 0],
             "normal": [0, 1, 0]
         }
     ]

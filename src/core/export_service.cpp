@@ -9,7 +9,7 @@
 #include "tinyexr/tinyexr.h"
 
 #include "app/log.hpp"
-#include "app/structures.hpp"
+#include "core_structures.hpp"
 
 void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
     width  = _width;

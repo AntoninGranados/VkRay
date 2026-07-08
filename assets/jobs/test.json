@@ -1,0 +1,17 @@
+{
+    "version": 1,
+    "jobs": [
+        {
+            "scene":   "assets/scenes/showcase/campfire.json",
+            "output":  "outputs/campfire.png",
+            "samples": 2048,
+            "width":   540,
+            "height":  540,
+            "parameters": {
+                "pathtracer/sampling/variance_sampling": true,
+                "pathtracer/sampling/variance_warmup":   128,
+                "pathtracer/sampling/clip_accumulation": true
+            }
+        }
+    ]
+}

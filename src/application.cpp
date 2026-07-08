@@ -37,7 +37,7 @@ Application::Application(Platform& p) : platform(p) {
     }
 
     ctx.reloadShaders = [this]() {
-        coreRenderer.buildPipelines(ctx);
+        coreRenderer.buildPipelines(engine);
         restartRender = true;
     };
     ctx.startRender = [this]() {
@@ -59,7 +59,8 @@ Application::Application(Platform& p) : platform(p) {
     initScene();
     RenderGraphBuilder builder;
     CoreResources resources = coreRenderer.initGraph(engine, builder);
-    editorRenderer.initGraph(engine, builder, resources);
+    if (!platform.isHeadless())
+        editorRenderer.initGraph(engine, builder, resources);
     engine.setGraph(builder);
     engine.initGraph();
     scene.setGpuBufferHandles(resources.sceneHandles);
@@ -69,7 +70,7 @@ Application::Application(Platform& p) : platform(p) {
 Application::~Application() {
     engine.waitIdle();
 
-    coreRenderer.destroy(ctx);
+    coreRenderer.destroy(engine);
     engine.destroyGraph();
 
     scene.destroy();
