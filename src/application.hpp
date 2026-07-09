@@ -57,10 +57,6 @@ private:
     std::optional<EditorUi> ui;
     AnimationHandler animation = AnimationHandler(24.0f * 5, 24.0f);
 
-    RenderState renderState;
-    PathtracerUBO pathtracerUBO{};
-    CompositingUBO compositingUBO{};
-    DisplayUBO displayUBO{};
     bool restartRender = false;
 
     std::optional<InputHandler> inputHandler;
@@ -68,19 +64,14 @@ private:
     EditorRenderer editorRenderer;
 
     AppContext ctx{
-        .engine         = &engine,
-        .scene          = &scene,
-        .parameters     = &parameters,
-        .animation      = &animation,
-        .renderState    = &renderState,
-        .pathtracerUBO  = &pathtracerUBO,
-        .compositingUBO = &compositingUBO,
-        .displayUBO     = &displayUBO,
-        .restartRender  = &restartRender,
-        .platform       = &platform
+        .engine        = &engine,
+        .scene         = &scene,
+        .parameters    = &parameters,
+        .animation     = &animation,
+        .restartRender = &restartRender,
+        .platform      = &platform
     };
 
-    int frameCount = 0;
     uint64_t lastSwapchainGeneration = 0;
     void initParameters();
     void initScene(const std::string& sceneFile = "assets/scenes/default.json");
@@ -88,6 +79,4 @@ private:
     void onFrameStart(float dt);
     void clearRenderingData(RenderMode newRenderMode);
     void fillUBOs();
-    void fillJobUBOs(uint32_t sampleIndex);
-    float lastTime = 0.0f;
 };

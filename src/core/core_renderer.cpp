@@ -8,25 +8,9 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "VkSmol/image/image.hpp"
 
-#include "app/app_context.hpp"
 #include "app/log.hpp"
-#include "app/animation_handler.hpp"
-#include "app/parameter_handler.hpp"
 #include "scene/scene.hpp"
 #include "core_structures.hpp"
-
-static AOVFlags buildAOVFlags(ParameterHandler& p) {
-    return AOVFlags{
-        .positionW = p.getBool("pathtracer/aov/position_w"),
-        .position  = p.getBool("pathtracer/aov/position"),
-        .normalW   = p.getBool("pathtracer/aov/normal_w"),
-        .normal    = p.getBool("pathtracer/aov/normal"),
-        .albedo    = p.getBool("pathtracer/aov/albedo"),
-        .roughness = p.getBool("pathtracer/aov/roughness"),
-        .matType   = p.getBool("pathtracer/aov/mat_type"),
-        .skyMask   = p.getBool("pathtracer/aov/sky_mask"),
-    };
-}
 
 CoreResources CoreRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder) {
     coreGroupHandle = builder.addSubmissionGroup("Core");
@@ -134,100 +118,27 @@ void CoreRenderer::buildPipelines(VkSmol& engine) {
     Log::success("CoreRenderer", "(Re)Built the pipelines");
 }
 
-void CoreRenderer::render(AppContext& ctx, const FrameContext& frameContext) {
-    VkSmol& engine = *ctx.engine;
+void CoreRenderer::setCamera(const Camera& camera) {
+    pathtracerUBO.camera.pos        = camera.getPosition();
+    pathtracerUBO.camera.dir        = camera.getDirection();
+    pathtracerUBO.camera.tanHFov    = camera.getTanHFov();
+    pathtracerUBO.camera.aperture   = camera.getAperture();
+    pathtracerUBO.camera.focusDepth = camera.getFocusDepth();
+}
 
-    bool shouldSave = false;
-    std::filesystem::path savePath;
-    bool toVideo = false;
+void CoreRenderer::render(VkSmol& engine, const FrameContext& frameContext) {
+    pathtracerUBO.sampleCount = ++sampleCount;
 
-    uint64_t renderSamplesPerPixel = ctx.parameters->getInt("pathtracer/sampling/render_samples");
-    if (ctx.renderState->renderMode != RenderMode::Preview && renderSamplesPerPixel > 0 && !ctx.renderState->pendingExit && !(*ctx.restartRender)) {
-        if (ctx.renderState->sampleCount >= renderSamplesPerPixel) {
-            shouldSave = true;
+    const VkExtent2D extent = frameContext.extent;
+    pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
+    pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
 
-            if (ctx.renderState->renderMode == RenderMode::RenderAnimation) {
-                savePath = exportService.buildAnimationFramePath(ctx.animation->getFrame());
-
-                ctx.renderState->samplesPerSecEMA          = 0.0;
-                ctx.renderState->samplesPerSecInitialized  = false;
-                ctx.renderState->samplesPerSecAccumTime    = 0.0;
-                ctx.renderState->samplesPerSecAccumSamples = 0.0;
-
-                ctx.animation->stepFixed();
-                if (ctx.animation->getFrame() == 0) {
-                    ctx.renderState->pendingExit = true;
-                    toVideo = true;
-                }
-            } else {
-                savePath = ctx.outputPath;
-                ctx.renderState->pendingExit = ctx.renderState->renderMode == RenderMode::RenderSingle;
-            }
-
-            if (ctx.renderState->pendingExit) {
-                if (onRenderComplete) onRenderComplete();
-                ctx.renderState->renderMode                = RenderMode::Preview;
-                ctx.renderState->pendingExit               = false;
-                ctx.renderState->samplesPerSecEMA          = 0.0;
-                ctx.renderState->samplesPerSecInitialized  = false;
-                ctx.renderState->samplesPerSecAccumTime    = 0.0;
-                ctx.renderState->samplesPerSecAccumSamples = 0.0;
-            }
-
-            *ctx.restartRender = true;
-        }
-    }
-
-    ctx.scene->runOnRender(ctx, frameContext);
     engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
-    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), ctx.compositingUBO);
-
-    pathtracingPass(ctx, frameContext);
-
-    if (shouldSave) {
-        AOVFlags aovFlags = buildAOVFlags(*ctx.parameters);
-        exportService.save(engine, engine.getImage(resources.outputImageHandle), savePath, aovFlags);
-        if (toVideo) exportService.convertFramesToVideo(ctx.outputPath);
-    }
-}
-
-void CoreRenderer::renderHeadless(AppContext& ctx, bool captureOutput) {
-    VkSmol& engine = *ctx.engine;
-
-    auto frameContext = engine.beginFrame();
-    if (!frameContext) return;
-
-    ctx.scene->runPreUpdate(ctx);
-    ctx.scene->runOnRender(ctx, *frameContext);
-    engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
-
-    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle,  frameContext->currentFrame), ctx.pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(compositingUBOHandle,  frameContext->currentFrame), ctx.compositingUBO);
-
-    pathtracingPass(ctx, *frameContext, captureOutput);
-
-    engine.advanceFrame();
-}
-
-void CoreRenderer::handleResize(AppContext& ctx, const VkExtent2D& extent) {
-    VkSmol& engine = *ctx.engine;
-    engine.waitIdle();
-
-    engine.resizeImage(previousPathtracingImageHandle, extent.width, extent.height);
-    engine.resizeImage(currentPathtracingImageHandle, extent.width, extent.height);
-    engine.resizeImage(resources.outputImageHandle, extent.width, extent.height);
-    engine.resizeBuffer(resources.pixelInfoBufferHandle, static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo));
-    exportService.resize(engine, extent.width, extent.height);
-}
-
-void CoreRenderer::pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput) {
-    VkSmol& engine = *ctx.engine;
+    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
+    engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);
 
     CommandBuffer& commandBuffer = engine.beginRecording(coreGroupHandle);
-
-    VkExtent2D extent = frameContext.extent;
 
     {   // Pathtrace (compute)
         ComputePipeline& ptPipeline = engine.getComputePipeline(pathtracingPipelineHandle);
@@ -250,12 +161,47 @@ void CoreRenderer::pathtracingPass(AppContext& ctx, const FrameContext& frameCon
     engine.endRecording(coreGroupHandle);
 }
 
-void CoreRenderer::saveCapture(AppContext& ctx, const std::filesystem::path& path) {
-    AOVFlags aovFlags = buildAOVFlags(*ctx.parameters);
-    exportService.save(*ctx.engine, ctx.engine->getImage(resources.outputImageHandle), path, aovFlags);
+void CoreRenderer::saveCapture(VkSmol& engine, const std::filesystem::path& path) {
+    exportService.save(engine, engine.getImage(resources.outputImageHandle), path, aovFlags);
 }
 
-void CoreRenderer::resize(AppContext& ctx, uint32_t width, uint32_t height) {
-    ctx.engine->getExtent() = { width, height };
-    handleResize(ctx, { width, height });
+void CoreRenderer::resize(VkSmol& engine, uint32_t width, uint32_t height) {
+    engine.waitIdle();
+    engine.getExtent() = { width, height };
+
+    engine.resizeImage(previousPathtracingImageHandle, width, height);
+    engine.resizeImage(currentPathtracingImageHandle, width, height);
+    engine.resizeImage(resources.outputImageHandle, width, height);
+    engine.resizeBuffer(resources.pixelInfoBufferHandle, static_cast<size_t>(width) * height * sizeof(PixelInfo));
+    exportService.resize(engine, width, height);
+}
+
+void CoreRenderer::bindParameters(ParameterHandler& params) {
+    params.bindBool("pathtracer/denoising", [this](bool v) {
+        compositingUBO.denoisingEnabled = static_cast<int>(v);
+    });
+
+    params.bindInt("pathtracer/sampling/max_bounces",     &pathtracerUBO.render.maxBounces);
+    params.bindInt("pathtracer/sampling/variance_warmup", &pathtracerUBO.render.varianceWarmupSamples);
+
+    params.bindBool("pathtracer/sampling/importance_sampling", [this](bool v) {
+        pathtracerUBO.render.importanceSampling = static_cast<int>(v);
+    });
+    params.bindBool("pathtracer/sampling/clip_accumulation", [this](bool v) {
+        pathtracerUBO.render.clipAccumulation = static_cast<int>(v);
+    });
+    params.bindBool("pathtracer/sampling/variance_sampling", [this](bool v) {
+        pathtracerUBO.render.varianceSampling = static_cast<int>(v);
+    });
+
+    params.bindEnum("scene/light_mode", &pathtracerUBO.render.lightMode);
+
+    params.bindBool("pathtracer/aov/position_w", &aovFlags.positionW);
+    params.bindBool("pathtracer/aov/position",   &aovFlags.position);
+    params.bindBool("pathtracer/aov/normal_w",   &aovFlags.normalW);
+    params.bindBool("pathtracer/aov/normal",     &aovFlags.normal);
+    params.bindBool("pathtracer/aov/albedo",     &aovFlags.albedo);
+    params.bindBool("pathtracer/aov/roughness",  &aovFlags.roughness);
+    params.bindBool("pathtracer/aov/mat_type",   &aovFlags.matType);
+    params.bindBool("pathtracer/aov/sky_mask",   &aovFlags.skyMask);
 }

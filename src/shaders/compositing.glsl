@@ -6,8 +6,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
-    float resolution;
-    int   denoisingEnabled;
+    int denoisingEnabled;
 } ubo;
 layout(set = 0, binding = 2) buffer PixelInfoBuffer {
     PixelInfo pixels[];
@@ -16,20 +15,6 @@ layout(rgba32f, set = 0, binding = 3) writeonly uniform image2D outputTex;
 
 float luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
-}
-
-ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
-    ivec2 blockCoord = pixelCoord;
-    if (resolution > 1.0) {
-        blockCoord = ivec2(floor(screenCoord / resolution) * resolution);
-    }
-    return clamp(blockCoord, ivec2(0), texSize - ivec2(1));
-}
-
-ivec2 snapToBlockGrid(ivec2 coord, ivec2 texSize) {
-    float res = max(ubo.resolution, 1.0);
-    ivec2 block = ivec2(floor(vec2(coord) / res) * res);
-    return clamp(block, ivec2(0), texSize - ivec2(1));
 }
 
 PixelInfo fetchPixelInfoAt(ivec2 coord, ivec2 texSize) {
@@ -57,7 +42,7 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
         ivec2(-2, 2), ivec2(-1, 2), ivec2( 0, 2), ivec2( 1, 2), ivec2( 2, 2)
     );
 
-    int stride = max(int(round(max(ubo.resolution, 1.0))), 1);
+    int stride = 1;
     vec3 cVal = texelFetch(tex, centerBlockCoord, 0).rgb;
     PixelInfo centerInfo = fetchPixelInfoAt(centerBlockCoord, texSize);
 
@@ -65,7 +50,7 @@ vec3 applyATrousDenoise(ivec2 centerBlockCoord, ivec2 texSize) {
     float cumW = 0.0;
     for (int i = 0; i < 25; i++) {
         ivec2 sampleCoord = centerBlockCoord + offsets[i] * stride;
-        sampleCoord = snapToBlockGrid(sampleCoord, texSize);
+        sampleCoord = clamp(sampleCoord, ivec2(0), texSize - ivec2(1));
 
         vec3 cTmp = texelFetch(tex, sampleCoord, 0).rgb;
         vec3 cDelta = cVal - cTmp;
@@ -106,7 +91,7 @@ void main() {
     if (pixelCoord.x >= texSize.x || pixelCoord.y >= texSize.y) return;
 
     vec2 screenCoord = vec2(pixelCoord) + vec2(0.5);
-    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.resolution);
+    ivec2 blockCoord = pixelCoord;
 
     vec3 color = texelFetch(tex, blockCoord, 0).rgb;
     if (ubo.denoisingEnabled != 0) {

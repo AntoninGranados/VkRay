@@ -9,14 +9,6 @@ uint varianceIndexFromCoord(ivec2 coord, ivec2 texSize) {
     return uint(coord.y * texSize.x + coord.x);
 }
 
-ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
-    ivec2 blockCoord = pixelCoord;
-    if (resolution > 1.0f) {
-        blockCoord = ivec2(floor(screenCoord / resolution) * resolution);
-    }
-    return clamp(blockCoord, ivec2(0), texSize - ivec2(1));
-}
-
 void updateVariance(in float value, inout PixelInfo pixelInfo) {
     float delta = value - pixelInfo.mean;
     pixelInfo.mean += delta / pixelInfo.count;
@@ -29,10 +21,9 @@ float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
     float mean = 0.0;
     float meanSq = 0.0;
     int samples = 0;
-    float stepSize = max(ubo.screen.resolution, 1.0);
     for (int y = -radius; y <= radius; y++) {
         for (int x = -radius; x <= radius; x++) {
-            ivec2 p = blockCoord + ivec2(x, y) * int(stepSize);
+            ivec2 p = blockCoord + ivec2(x, y);
             p = clamp(p, ivec2(0), ivec2(texSize) - ivec2(1));
             vec3 c = texelFetch(prevTex, p, 0).rgb;
             float lum = luma(c);
@@ -46,7 +37,7 @@ float computeSpatialVariance(ivec2 blockCoord, vec2 texSize) {
     return sqrt(max(meanSq - mean * mean, 0.0));
 }
 
-float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec2 texSize, float resolution) {
+float computeSampleProbability(inout PixelInfo pixelInfo, ivec2 blockCoord, ivec2 texSize) {
     float temporalVariance = (pixelInfo.count > 1.0) ? (pixelInfo.m2 / (pixelInfo.count - 1.0)) : 0.0;
     float spatialSigma = computeSpatialVariance(blockCoord, texSize);
 

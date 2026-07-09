@@ -6,6 +6,7 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "app/log.hpp"
 #include "core/core_renderer.hpp"
+#include "core/export_service.hpp"
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -41,19 +42,16 @@ Application::Application(Platform& p) : platform(p) {
         restartRender = true;
     };
     ctx.startRender = [this]() {
-        if (renderState.renderMode == RenderMode::Preview)
+        if (ctx.renderMode == RenderMode::Preview)
             clearRenderingData(RenderMode::RenderSingle);
     };
     ctx.startRenderAnim = [this]() {
-        if (renderState.renderMode == RenderMode::Preview) {
+        if (ctx.renderMode == RenderMode::Preview) {
             clearRenderingData(RenderMode::RenderAnimation);
             animation.reset(0);
         }
     };
-
-    if (ui) {
-        coreRenderer.setOnRenderComplete([this]{ ui->restoreToggledState(); });
-    }
+    ctx.getSampleCount = [this]() { return coreRenderer.getSampleCount(); };
 
     initParameters();
     initScene();
@@ -101,12 +99,48 @@ void Application::run() {
         if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
             lastSwapchainGeneration = frameContext->swapchainGeneration;
             VkExtent2D extent = engine.getExtent();
-            coreRenderer.resize(ctx, extent.width, extent.height);
+            coreRenderer.resize(engine, extent.width, extent.height);
             restartRender = true;
         }
 
-        coreRenderer.render(ctx, *frameContext);
-        editorRenderer.render(ctx, *frameContext);
+        bool shouldSave = false;
+        std::filesystem::path savePath;
+        bool toVideo = false;
+
+        if (ctx.renderMode != RenderMode::Preview && !(*ctx.restartRender)) {
+            if (coreRenderer.isRenderFinished()) {
+                shouldSave = true;
+
+                if (ctx.renderMode == RenderMode::RenderAnimation) {
+                    savePath = ExportService::buildAnimationFramePath(ctx.animation->getFrame());
+
+                    ctx.animation->stepFixed();
+                    if (ctx.animation->getFrame() == 0) {
+                        toVideo = true;
+                        ui->restoreToggledState();
+                        ctx.renderMode = RenderMode::Preview;
+                    }
+                } else {
+                    savePath = ctx.outputPath;
+                    ui->restoreToggledState();
+                    ctx.renderMode = RenderMode::Preview;
+                }
+
+                *ctx.restartRender = true;
+            }
+        }
+        
+        scene.runOnRender(ctx, *frameContext);
+
+        coreRenderer.render(engine, *frameContext);
+        editorRenderer.render(engine, *frameContext, [&](CommandBuffer& cmd) {
+            ui->draw(cmd, ctx);
+        });
+
+        if (shouldSave) {
+            coreRenderer.saveCapture(engine, savePath);
+            if (toVideo) ExportService::convertFramesToVideo(ctx.outputPath);
+        }
 
         engine.present();
         engine.advanceFrame();
@@ -121,15 +155,14 @@ void Application::runJobs(JobQueue& queue) {
     while (Job* job = queue.nextPending()) {
         jobIndex++;
 
-        // TODO: add support for enums
-        // Set the parameters for the current job
         parameters.resetAll();
         for (const auto& paramOverride : job->parameterOverrides) {
             std::visit([&](auto&& v) {
                 using T = std::decay_t<decltype(v)>;
-                if constexpr      (std::is_same_v<T, bool>)  parameters.setBool(paramOverride.key, v);
-                else if constexpr (std::is_same_v<T, int>)   parameters.setInt(paramOverride.key, v);
-                else if constexpr (std::is_same_v<T, float>) parameters.setFloat(paramOverride.key, v);
+                if constexpr      (std::is_same_v<T, bool>)        parameters.setBool(paramOverride.key, v);
+                else if constexpr (std::is_same_v<T, int>)         parameters.setInt(paramOverride.key, v);
+                else if constexpr (std::is_same_v<T, float>)       parameters.setFloat(paramOverride.key, v);
+                else if constexpr (std::is_same_v<T, std::string>) parameters.setEnumByName(paramOverride.key, v);
             }, paramOverride.value);
         }
 
@@ -142,7 +175,7 @@ void Application::runJobs(JobQueue& queue) {
 
         const VkExtent2D extent = engine.getExtent();
         if (job->width != extent.width || job->height != extent.height)
-            coreRenderer.resize(ctx, job->width, job->height);
+            coreRenderer.resize(engine, job->width, job->height);
 
         LightMode lightMode = LightMode::Day;
         if (!SceneSerializer::load(scene, lightMode, job->scene.string(), job->seed)) {
@@ -154,17 +187,24 @@ void Application::runJobs(JobQueue& queue) {
         parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
         engine.waitIdle();
-        restartRender = true;
+        coreRenderer.reset();
 
         for (uint32_t i = 0; i < totalSamples; i++) {
-            fillJobUBOs(i);
-            coreRenderer.renderHeadless(ctx, i == totalSamples - 1);
+            auto frameContext = engine.beginFrame();
+            if (!frameContext) {
+                engine.advanceFrame();
+                scene.runPostUpdate(ctx);
+                continue;
+            }
+            
+            fillUBOs();
+            coreRenderer.render(engine, *frameContext);
             queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
             bar.step();
         }
         bar.close();
 
-        coreRenderer.saveCapture(ctx, job->output);
+        coreRenderer.saveCapture(engine, job->output);
 
         queue.complete();
     }
@@ -172,11 +212,8 @@ void Application::runJobs(JobQueue& queue) {
 
 // Private
 void Application::initParameters() {
-    auto& r = pathtracerUBO.render;
-
     parameters.setLabel("pathtracer", "Pathtracer");
     parameters.addBool("pathtracer/denoising", "Denoising", false, false);
-    parameters.bind("pathtracer/denoising", [&]() { compositingUBO.denoisingEnabled = static_cast<int>(parameters.getBool("pathtracer/denoising")); });
 
     parameters.addEnum<DebugView>(
         "pathtracer/debug_view",
@@ -185,34 +222,15 @@ void Application::initParameters() {
         { "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask" },
         true
     );
-    parameters.bind("pathtracer/debug_view", [&]() { r.debugView = displayUBO.debugView = std::to_underlying(parameters.getEnum<DebugView>("pathtracer/debug_view")); });
 
     parameters.setLabel("pathtracer/sampling", "Sampling");
     parameters.addInt("pathtracer/sampling/max_bounces", "Max Bounces", 8, 1, 20, 1, false);
-    parameters.bindInt("pathtracer/sampling/max_bounces", &r.maxBounces);
-
-    parameters.addInt("pathtracer/sampling/preview_samples", "Preview Samples", 1, 1, 10, 1, false);
-    parameters.bindInt("pathtracer/sampling/preview_samples", &r.samplesPerPixel);
-
     parameters.addInt("pathtracer/sampling/render_samples", "Render Samples", 2048, 1, 4096, 1, false);
-
     parameters.addBool("pathtracer/sampling/importance_sampling", "Importance Sampling", true, false);
-    parameters.bind("pathtracer/sampling/importance_sampling", [&]() { r.importanceSampling = static_cast<int>(parameters.getBool("pathtracer/sampling/importance_sampling")); });
-
     // TODO: the clip threshold should be a parameter
     parameters.addBool("pathtracer/sampling/clip_accumulation", "Clip Accumulation", false, true);
-    parameters.bind("pathtracer/sampling/clip_accumulation", [&]() { r.clipAccumulation = static_cast<int>(parameters.getBool("pathtracer/sampling/clip_accumulation")); });
-
     parameters.addBool("pathtracer/sampling/variance_sampling", "Variance Sampling", true, false);
-    parameters.bind("pathtracer/sampling/variance_sampling", [&]() { r.varianceSampling = static_cast<int>(parameters.getBool("pathtracer/sampling/variance_sampling")); });
-
     parameters.addInt("pathtracer/sampling/variance_warmup", "Variance Warmup Samples", 64, 0, 2048, 1, false);
-    parameters.bindInt("pathtracer/sampling/variance_warmup", &r.varianceWarmupSamples);
-
-    parameters.setLabel("pathtracer/resolution", "Resolution");
-    parameters.addFloat("pathtracer/resolution/moving",  "Moving Resolution",  8.0f, 1.0f, 50.0f, 1.0f, false);
-    parameters.addFloat("pathtracer/resolution/preview", "Preview Resolution", 4.0f, 1.0f, 50.0f, 1.0f, true);
-    parameters.addFloat("pathtracer/resolution/render",  "Render Resolution",  1.0f, 1.0f, 50.0f, 1.0f, false);
 
     parameters.setLabel("pathtracer/aov", "Arbitrary Output Variables");
     parameters.addBool("pathtracer/aov/position_w", "Position W", false, false);
@@ -232,7 +250,16 @@ void Application::initParameters() {
         { "Day", "Sunset", "Night", "Empty" },
         true
     );
-    parameters.bind("scene/light_mode", [&]() { r.lightMode = std::to_underlying(parameters.getEnum<LightMode>("scene/light_mode")); });
+
+    coreRenderer.bindParameters(parameters);
+
+    parameters.bindEnum(
+        "pathtracer/debug_view",
+        [&](int v) {
+            coreRenderer.setDebugView(v);
+            editorRenderer.setDebugView(v);
+        }
+    );
 
     parameters.saveDocumentation();
 }
@@ -249,24 +276,17 @@ void Application::initScene(const std::string& sceneFile) {
 }
 
 void Application::onFrameStart(float dt) {
-    renderState.prevResolution = renderState.resolution;
-
     if (inputHandler) {
         inputHandler->pollEvents(ctx);
         inputHandler->handle(ctx, dt);
     }
 
     if (restartRender) {
-        frameCount = 1;
-        renderState.sampleCount = 0;
+        coreRenderer.reset();
         restartRender = false;
-        if (renderState.renderMode == RenderMode::Preview) renderState.resolution = parameters.getFloat("pathtracer/resolution/moving");
     }
 
     fillUBOs();
-
-    frameCount++;
-    renderState.sampleCount += static_cast<uint64_t>(parameters.getInt("pathtracer/sampling/preview_samples"));
 }
 
 void Application::clearRenderingData(RenderMode newRenderMode) {
@@ -275,61 +295,15 @@ void Application::clearRenderingData(RenderMode newRenderMode) {
         ui->saveToggledState();
         ui->setToggle(false);
     }
-    renderState.renderMode = newRenderMode;
-    renderState.pendingExit = false;
-    renderState.samplesPerSecEMA = 0.0;
-    renderState.samplesPerSecInitialized = false;
-    renderState.samplesPerSecAccumTime = 0.0;
-    renderState.samplesPerSecAccumSamples = 0.0;
+    ctx.renderMode = newRenderMode;
+    coreRenderer.setTargetSampleCount(parameters.getInt("pathtracer/sampling/render_samples"));
     restartRender = true;
 }
 
 
 void Application::fillUBOs() {
-    auto& pathtracer = *ctx.pathtracerUBO;
-    auto& compositing = *ctx.compositingUBO;
-    auto& display = *ctx.displayUBO;
+    coreRenderer.setCamera(*ctx.camera);
 
-    pathtracer.camera.pos        = ctx.camera->getPosition();
-    pathtracer.camera.dir        = ctx.camera->getDirection();
-    pathtracer.camera.tanHFov    = ctx.camera->getTanHFov();
-    pathtracer.camera.aperture   = ctx.camera->getAperture();
-    pathtracer.camera.focusDepth = ctx.camera->getFocusDepth();
-
-    VkExtent2D extent = engine.getExtent();
-    pathtracer.screen.size           = { (float)extent.width, (float)extent.height };
-    pathtracer.screen.aspect         = pathtracer.screen.size.x / pathtracer.screen.size.y;
-    pathtracer.screen.resolution     = renderState.resolution;
-    pathtracer.screen.prevResolution = renderState.prevResolution;
-
-    if (frameCount <= 1) lastTime = (float)platform.getTime();
-    pathtracer.frame.count = frameCount;
-    pathtracer.frame.time  = (float)platform.getTime() - lastTime;
-
-    compositing.resolution           = renderState.resolution;
-
-    display.resolution           = renderState.resolution;
-    display.previewBorderEnabled = scene.isPreviewingCamera() ? 1 : 0;
-}
-
-void Application::fillJobUBOs(uint32_t sampleIndex) {
-    auto& pathtracer  = *ctx.pathtracerUBO;
-    auto& compositing = *ctx.compositingUBO;
-
-    pathtracer.camera.pos        = ctx.camera->getPosition();
-    pathtracer.camera.dir        = ctx.camera->getDirection();
-    pathtracer.camera.tanHFov    = ctx.camera->getTanHFov();
-    pathtracer.camera.aperture   = ctx.camera->getAperture();
-    pathtracer.camera.focusDepth = ctx.camera->getFocusDepth();
-
-    VkExtent2D extent = engine.getExtent();
-    pathtracer.screen.size           = { (float)extent.width, (float)extent.height };
-    pathtracer.screen.aspect         = pathtracer.screen.size.x / pathtracer.screen.size.y;
-    pathtracer.screen.resolution     = 1.0f;
-    pathtracer.screen.prevResolution = 1.0f;
-
-    pathtracer.frame.count = sampleIndex;
-    pathtracer.frame.time  = 0.0f;
-
-    compositing.resolution = 1.0f;
+    if (!platform.isHeadless())
+        editorRenderer.setPreviewBorder(scene.isPreviewingCamera());
 }

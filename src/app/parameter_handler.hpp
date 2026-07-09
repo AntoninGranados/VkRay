@@ -103,6 +103,11 @@ public:
     bool draw()  override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
+    bool setByName(const std::string& name) {
+        for (size_t i = 0; i < items.size(); i++)
+            if (items[i] == name) { value = static_cast<int>(i); return true; }
+        return false;
+    }
 
 private:
     int                      value        = 0;
@@ -163,14 +168,19 @@ public:
     void bindInt  (const ParameterPath& path, int*   ptr);
     void bindFloat(const ParameterPath& path, float* ptr);
     void bindBool (const ParameterPath& path, bool*  ptr);
-    void bind     (const ParameterPath& path, std::function<void()> callback);
+    void bindEnum (const ParameterPath& path, int*   ptr);
+    void bindInt  (const ParameterPath& path, std::function<void(int)>   callback);
+    void bindFloat(const ParameterPath& path, std::function<void(float)> callback);
+    void bindBool (const ParameterPath& path, std::function<void(bool)>  callback);
+    void bindEnum (const ParameterPath& path, std::function<void(int)>   callback);
 
     int&   getInt  (const ParameterPath& path);
     float& getFloat(const ParameterPath& path);
     bool&  getBool (const ParameterPath& path);
-    void   setInt  (const ParameterPath& path, int   value);
-    void   setFloat(const ParameterPath& path, float value);
-    void   setBool (const ParameterPath& path, bool  value);
+    void setInt       (const ParameterPath& path, int   value);
+    void setFloat     (const ParameterPath& path, float value);
+    void setBool      (const ParameterPath& path, bool  value);
+    void setEnumByName(const ParameterPath& path, const std::string& name);
 
     template <typename EnumT>
     EnumT getEnum(const ParameterPath& path) {
@@ -184,8 +194,8 @@ public:
     }
 
 private:
-    std::vector<std::unique_ptr<ParamBase>>     params;
-    std::unordered_map<std::string, ParamBase*> index;
+    std::vector<std::unique_ptr<ParamBase>>      params;
+    std::unordered_map<std::string, ParamBase*>  index;
     std::unordered_map<std::string, std::string> nodeLabels;
 
     void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0);

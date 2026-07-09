@@ -7,7 +7,7 @@
 
 enum class JobStatus { Pending, Running, Done, Failed };
 
-using ParamValue = std::variant<bool, int, float>;
+using ParamValue = std::variant<bool, int, float, std::string>;
 
 struct ParamOverride {
     std::string key;

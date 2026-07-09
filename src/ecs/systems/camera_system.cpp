@@ -15,7 +15,7 @@
 namespace ecs {
 
 void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
-    if (ctx.renderState->renderMode != RenderMode::Preview) return;    // don't draw the cameras when rendering
+    if (ctx.renderMode != RenderMode::Preview) return;    // don't draw the cameras when rendering
 
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -156,7 +156,7 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
         if (!transforms.has(e)) continue;
         
         ecs::CameraObject& c = cameras.get(e);
-        if (ctx.renderState->renderMode != RenderMode::Preview && !c.isPreview) {
+        if (ctx.renderMode != RenderMode::Preview && !c.isPreview) {
             c.setPreview(true);
             c.setPreviewJustSet(true);
             *ctx.restartRender = true;
@@ -173,7 +173,7 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
         camera.setPosition(t.position);
         camera.setTarget(t.position + dir * dist);
         float fov = c.fov;
-        if (ctx.renderState->renderMode == RenderMode::Preview) {
+        if (ctx.renderMode == RenderMode::Preview) {
             const float baseFovRad = glm::radians(c.fov);
             const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
             fov = glm::degrees(previewFovRad);
@@ -210,7 +210,7 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
 
         if (c.updated) {
             float fov = c.fov;
-            if (ctx.renderState->renderMode == RenderMode::Preview) {
+            if (ctx.renderMode == RenderMode::Preview) {
                 const float baseFovRad = glm::radians(c.fov);
                 const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
                 fov = glm::degrees(previewFovRad);
@@ -235,7 +235,7 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
         }
 
         float fov = camera.getFov();
-        if (ctx.renderState->renderMode == RenderMode::Preview) {
+        if (ctx.renderMode == RenderMode::Preview) {
             const float previewFovRad = glm::radians(camera.getFov());
             const float baseFovRad = 2.0f * atanf(tanf(previewFovRad * 0.5f) * previewViewportScale);
             fov = glm::degrees(baseFovRad);

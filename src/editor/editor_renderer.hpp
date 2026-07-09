@@ -1,9 +1,10 @@
 #pragma once
 
+#include <functional>
+
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
-#include "app/app_context.hpp"
 #include "core/core_renderer.hpp"
 
 struct FrameContext;
@@ -12,20 +13,28 @@ class EditorRenderer {
 public:
     void initGraph(VkSmol& engine, RenderGraphBuilder& builder, CoreResources& coreResources);
 
-    void render(AppContext& ctx, const FrameContext& frameContext);
+    void render(VkSmol& engine, const FrameContext& frameContext, const std::function<void(CommandBuffer&)>& uiDraw = {});
+    void setPreviewBorder(bool enabled) { displayUBO.previewBorderEnabled = enabled ? 1 : 0; }
+    void setDebugView(int v)            { displayUBO.debugView = v; }
 
 private:
+    struct DisplayUBO {
+        int debugView            = 0;
+        int previewBorderEnabled = 0;
+    };
 
-ImageHandle swapchainImageHandle;
-BufferHandle vertexBufferHandle, indexBufferHandle;
-BufferHandle displayUBOHandle;
+    DisplayUBO displayUBO{};
 
-PassHandle displayPassHandle, uiPassHandle, presentPassHandle;
-GraphicsPipelineHandle displayPipelineHandle;
+    ImageHandle swapchainImageHandle;
+    BufferHandle vertexBufferHandle, indexBufferHandle;
+    BufferHandle displayUBOHandle;
 
-SubmissionGroupHandle editorGroupHandle = {};
-SubmissionGroupHandle uiGroupHandle = {};
+    PassHandle displayPassHandle, uiPassHandle, presentPassHandle;
+    GraphicsPipelineHandle displayPipelineHandle;
 
-    void displayPass(AppContext& ctx, const FrameContext& frameContext);
-    void uiPass(AppContext& ctx);
+    SubmissionGroupHandle editorGroupHandle = {};
+    SubmissionGroupHandle uiGroupHandle = {};
+
+    void displayPass(VkSmol& engine, const FrameContext& frameContext);
+    void uiPass(VkSmol& engine, const std::function<void(CommandBuffer&)>& uiDraw);
 };

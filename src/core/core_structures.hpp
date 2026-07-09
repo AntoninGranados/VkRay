@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 
+// ===================== Uniform Buffers =====================
 struct alignas(16) CameraUBO {
     alignas(16) glm::vec3 pos;
     alignas(16) glm::vec3 dir;
@@ -13,19 +14,11 @@ struct alignas(16) CameraUBO {
 struct alignas(16) ScreenUBO {
     alignas(8) glm::vec2 size;
     float aspect;
-    float resolution;
-    float prevResolution;
-};
-
-struct alignas(16) FrameUBO {
-    int count;
-    float time;
 };
 
 struct alignas(16) RenderUBO {
     int lightMode;
     int maxBounces;
-    int samplesPerPixel;
     int importanceSampling;
     int varianceSampling;
     int varianceWarmupSamples;
@@ -34,15 +27,26 @@ struct alignas(16) RenderUBO {
 };
 
 struct PathtracerUBO {
+    uint32_t  sampleCount;
     CameraUBO camera;
     ScreenUBO screen;
-    FrameUBO frame;
     RenderUBO render;
 };
 
 struct CompositingUBO {
-    float resolution;
-    int   denoisingEnabled;
+    int denoisingEnabled;
+};
+
+// ===================== Arbitrary Outputs Variables =====================
+struct AOVFlags {
+    bool positionW = false;
+    bool position  = false;
+    bool normalW   = false;
+    bool normal    = false;
+    bool albedo    = false;
+    bool roughness = false;
+    bool matType   = false;
+    bool skyMask   = false;
 };
 
 struct alignas(16) AOVBuffer {

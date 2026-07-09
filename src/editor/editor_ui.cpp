@@ -18,7 +18,7 @@
 
 
 void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
-    if (!toggled && ctx.renderState->renderMode == RenderMode::Preview) return;
+    if (!toggled && ctx.renderMode == RenderMode::Preview) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -30,12 +30,11 @@ void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
     style.WindowRounding = ui::kWidgetRounding;
     style.FrameRounding = ui::kWidgetRounding;
 
-    if (ctx.renderState->renderMode != RenderMode::Preview) drawRender(ctx);
+    if (ctx.renderMode != RenderMode::Preview) drawRender(ctx);
     else drawPreview(ctx);
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
-
 }
 
 void EditorUi::updateState() {

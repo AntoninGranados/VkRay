@@ -33,8 +33,7 @@ void ExportService::resize(VkSmol& engine, uint32_t _width, uint32_t _height) {
     pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
-void ExportService::save(VkSmol& engine, Image& image,
-                         const std::filesystem::path& path, const AOVFlags& aovFlags) {
+void ExportService::save(VkSmol& engine, Image& image, const std::filesystem::path& path, const AOVFlags& aovFlags) {
     engine.waitIdle();
     engine.copyImageToBuffer(image, buffer);
     if (path.extension() == ".exr") {
@@ -282,9 +281,8 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
     free(header.requested_pixel_types);
 }
 
-void ExportService::convertFramesToVideo(const std::filesystem::path& path) {
-    std::filesystem::path framesPath = kAnimationCacheDir;
-    framesPath /= "frame_%05d.png";
+void ExportService::convertFramesToVideo(const std::filesystem::path& path, const std::filesystem::path& framePath) {
+    std::filesystem::path framesPath = framePath / "frame_%05d.png";
 
     std::string cmd = std::format(
         "ffmpeg -framerate 24 -i {} -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p {}", framesPath.c_str(), path.c_str()

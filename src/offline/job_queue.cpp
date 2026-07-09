@@ -61,6 +61,7 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                 if      (val.is_boolean())        paramOverrides.push_back({key, val.get<bool>()});
                 else if (val.is_number_integer()) paramOverrides.push_back({key, val.get<int32_t>()});
                 else if (val.is_number_float())   paramOverrides.push_back({key, val.get<float>()});
+                else if (val.is_string())         paramOverrides.push_back({key, val.get<std::string>()});
             }
         }
 

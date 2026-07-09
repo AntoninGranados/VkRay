@@ -9,7 +9,6 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
-#include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
 
 #include "app/animation_handler.hpp"
@@ -31,7 +30,7 @@ void InputHandler::initCallbacks(const AppContext& ctx) {
 
     ctx.platform->setScrollCallback([&ctx](double xoffset, double yoffset){
         if (ImGui::GetIO().WantCaptureMouse || ctx.ui->isMouseCaptured()) return;
-        if (ctx.renderState->renderMode != RenderMode::Preview) return;
+        if (ctx.renderMode != RenderMode::Preview) return;
         *ctx.restartRender |= ctx.camera->scrollCallback(xoffset, yoffset);
     });
 }
@@ -40,17 +39,15 @@ void InputHandler::pollEvents(const AppContext& ctx) {
     ctx.platform->pollEvents();
 }
 
-void InputHandler::handle(const AppContext& ctx, float dt) {
-    switch (ctx.renderState->renderMode) {
+void InputHandler::handle(AppContext& ctx, float dt) {
+    switch (ctx.renderMode) {
         case RenderMode::Preview:           handlePreview(ctx, dt); break;
         case RenderMode::RenderSingle:
         case RenderMode::RenderAnimation:   handleRender(ctx, dt);  break;
     }
 }
 
-void InputHandler::handlePreview(const AppContext& ctx, float dt) {
-    ctx.renderState->resolution = ctx.parameters->getFloat("pathtracer/resolution/preview");
-
+void InputHandler::handlePreview(AppContext& ctx, float dt) {
     const bool blockMouseInput = ImGuizmo::IsUsing() || (ctx.camera->isLocked() && (ctx.ui->isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
     const bool blockKeyboardInput = ctx.ui->isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
@@ -108,41 +105,14 @@ void InputHandler::handlePreview(const AppContext& ctx, float dt) {
     }
 }
 
-void InputHandler::handleRender(const AppContext& ctx, float dt) {
-    ctx.renderState->resolution = ctx.parameters->getFloat("pathtracer/resolution/render");
-    updateRenderSamplesPerSecond(ctx, dt);
-
+void InputHandler::handleRender(AppContext& ctx, float dt) {
     ctx.platform->setCursorMode(GLFW_CURSOR_NORMAL);
     if (ctx.platform->getKey(GLFW_KEY_ESCAPE)) {
         returnToPreview(ctx);
     }
 }
 
-void InputHandler::updateRenderSamplesPerSecond(const AppContext& ctx, float dt) {
-    const double dtSafe = std::max(static_cast<double>(dt), 0.0);
-    ctx.renderState->samplesPerSecAccumTime += dtSafe;
-    ctx.renderState->samplesPerSecAccumSamples += static_cast<double>(ctx.parameters->getInt("pathtracer/sampling/preview_samples"));
-
-    if (ctx.renderState->samplesPerSecAccumTime >= 1.0) {
-        const double instant = ctx.renderState->samplesPerSecAccumSamples / std::max(ctx.renderState->samplesPerSecAccumTime, 1e-6);
-        const double alpha = 1.0 - std::exp(-ctx.renderState->samplesPerSecAccumTime / 5.0);
-        if (!ctx.renderState->samplesPerSecInitialized) {
-            ctx.renderState->samplesPerSecEMA = instant;
-            ctx.renderState->samplesPerSecInitialized = true;
-        } else {
-            ctx.renderState->samplesPerSecEMA += alpha * (instant - ctx.renderState->samplesPerSecEMA);
-        }
-        ctx.renderState->samplesPerSecAccumTime = 0.0;
-        ctx.renderState->samplesPerSecAccumSamples = 0.0;
-    }
-}
-
-void InputHandler::returnToPreview(const AppContext& ctx) {
+void InputHandler::returnToPreview(AppContext& ctx) {
     ctx.ui->restoreToggledState();
-    ctx.renderState->renderMode = RenderMode::Preview;
-    ctx.renderState->pendingExit = false;
-    ctx.renderState->samplesPerSecEMA = 0.0;
-    ctx.renderState->samplesPerSecInitialized = false;
-    ctx.renderState->samplesPerSecAccumTime = 0.0;
-    ctx.renderState->samplesPerSecAccumSamples = 0.0;
+    ctx.renderMode = RenderMode::Preview;
 }

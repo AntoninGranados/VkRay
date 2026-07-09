@@ -5,7 +5,6 @@
 
 #include <glm/glm.hpp>
 
-#include "core/core_structures.hpp"
 #include "structures.hpp"
 
 class VkSmol;
@@ -25,16 +24,14 @@ struct AppContext {
     EditorUi*         ui           = nullptr;
     AnimationHandler* animation    = nullptr;
 
-    RenderState*    renderState    = nullptr;
-    PathtracerUBO*  pathtracerUBO  = nullptr;
-    CompositingUBO* compositingUBO = nullptr;
-    DisplayUBO*     displayUBO     = nullptr;
+    RenderMode  renderMode = RenderMode::Preview;
 
     std::filesystem::path outputPath;
     bool*     restartRender = nullptr;
     Platform* platform      = nullptr;
 
-    std::function<void()> reloadShaders;
-    std::function<void()> startRender;
-    std::function<void()> startRenderAnim;
+    std::function<void()>     reloadShaders;
+    std::function<void()>     startRender;
+    std::function<void()>     startRenderAnim;
+    std::function<uint32_t()> getSampleCount;
 };

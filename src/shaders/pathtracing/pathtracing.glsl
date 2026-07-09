@@ -237,22 +237,19 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
-    for (int i = 0; i < ubo.render.samplesPerPixel; i++) {
-        if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
-            pixelInfo.count += 1;
-            vec2 offset = ubo.screen.resolution * vec2(rand(seed), rand(seed)) / ubo.screen.size;
-            Ray ray = getRay(camera, fragPos + offset, true, seed);
-            collectGBuffer(ray, camera, pixelInfo);
-            vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
-            if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
-                pixelInfo.count -= 1;
-                continue;
-            }
-
+    if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
+        pixelInfo.count++;
+        vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screen.size;
+        Ray ray = getRay(camera, fragPos + offset, true, seed);
+        collectGBuffer(ray, camera, pixelInfo);
+        vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
+        if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
+            pixelInfo.count--;
+        } else {
             if (ubo.render.clipAccumulation == 1) rayColor = min(rayColor, vec3(100.0));
             colorSum.rgb += rayColor.rgb;
 
-            takenSamples += 1.0;
+            takenSamples = 1.0;
             updateVariance(luma(rayColor.rgb), pixelInfo);
         }
     }
@@ -270,15 +267,8 @@ void main() {
     vec2 uv = screenCoord / vec2(texSize);
     vec2 fragPos = uv * 2.0 - 1.0;
 
-    float prevScale = max(ubo.screen.prevResolution, 1.0);
-    ivec2 prevBlockCoord = pixelCoord;
-    if (prevScale > 1.0) {
-        prevBlockCoord = ivec2(floor(screenCoord / prevScale) * prevScale);
-        prevBlockCoord = clamp(prevBlockCoord, ivec2(0), texSize - ivec2(1));
-    }
-
-    vec3 prevColor = texelFetch(prevTex, prevBlockCoord, 0).rgb;
-    if (ubo.frame.count <= 1) {
+    vec3 prevColor = texelFetch(prevTex, pixelCoord, 0).rgb;
+    if (ubo.sampleCount <= 1) {
         prevColor = vec3(0);
 
         uint varianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
@@ -295,32 +285,25 @@ void main() {
     }
 
     Camera camera = Camera(ubo.camera.pos, ubo.camera.dir, vec3(0, 1, 0));
-    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.frame.count));
+    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.sampleCount));
 
-    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, texSize, ubo.screen.resolution);
-    uint blockVarianceIndex = varianceIndexFromCoord(blockCoord, texSize);
+    uint blockVarianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
     float prevCount = max(pixelInfo.count, 0.0);
 
     float sampleProb = 1.0;
     if (ubo.render.varianceSampling != 0)
-        sampleProb = computeSampleProbability(pixelInfo, blockCoord, texSize, ubo.screen.prevResolution);
+        sampleProb = computeSampleProbability(pixelInfo, pixelCoord, texSize);
 
     float takenSamples = 0.0;
-    vec3 colorSum = vec3(0);
-    bool isCenterPixel = ubo.screen.resolution == 1.0f || pixelCoord == blockCoord;
-    if (isCenterPixel) {
-        colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
-        PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
-        updatedInfo.aov = pixelInfo.aov;
-        updatedInfo.mean = pixelInfo.mean;
-        updatedInfo.m2 = pixelInfo.m2;
-        updatedInfo.count = pixelInfo.count;
-        updatedInfo.varianceProba = pixelInfo.varianceProba;
-        pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
-    }
-
-    if (ubo.screen.resolution < ubo.screen.prevResolution) prevColor = colorSum / max(takenSamples, 1.0);
+    vec3 colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
+    PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
+    updatedInfo.aov = pixelInfo.aov;
+    updatedInfo.mean = pixelInfo.mean;
+    updatedInfo.m2 = pixelInfo.m2;
+    updatedInfo.count = pixelInfo.count;
+    updatedInfo.varianceProba = pixelInfo.varianceProba;
+    pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
 
     Ray primaryRay = getRay(camera, fragPos, false, seed);
     Hit selectedHit = NO_HIT;

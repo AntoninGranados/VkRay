@@ -10,19 +10,11 @@
 | Path | Label | Type | Default | Constraints | Restart |
 |------|-------|------|---------|-------------|---------|
 | `pathtracer/sampling/max_bounces` | Max Bounces | Integer | 8 | 1 ... 20 | - |
-| `pathtracer/sampling/preview_samples` | Preview Samples | Integer | 1 | 1 ... 10 | - |
 | `pathtracer/sampling/render_samples` | Render Samples | Integer | 2048 | 1 ... 4096 | - |
 | `pathtracer/sampling/importance_sampling` | Importance Sampling | Boolean | true | - | - |
 | `pathtracer/sampling/clip_accumulation` | Clip Accumulation | Boolean | false | - | ✓ |
 | `pathtracer/sampling/variance_sampling` | Variance Sampling | Boolean | true | - | - |
 | `pathtracer/sampling/variance_warmup` | Variance Warmup Samples | Integer | 64 | 0 ... 2048 | - |
-
-### Resolution
-| Path | Label | Type | Default | Constraints | Restart |
-|------|-------|------|---------|-------------|---------|
-| `pathtracer/resolution/moving` | Moving Resolution | Float | 8 | 1.0 ... 50.0 | - |
-| `pathtracer/resolution/preview` | Preview Resolution | Float | 4 | 1.0 ... 50.0 | ✓ |
-| `pathtracer/resolution/render` | Render Resolution | Float | 1 | 1.0 ... 50.0 | - |
 
 ### Arbitrary Output Variables
 | Path | Label | Type | Default | Constraints | Restart |

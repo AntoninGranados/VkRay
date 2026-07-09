@@ -4,9 +4,8 @@
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(set = 0, binding = 1) uniform UBO {
-    float resolution;
-    int   debugView;
-    int   previewBorderEnabled;
+    int debugView;
+    int previewBorderEnabled;
 } ubo;
 layout(set = 0, binding = 2) buffer PixelInfoBuffer {
     PixelInfo pixels[];
@@ -22,19 +21,9 @@ float luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
-ivec2 blockCoordFromResolution(ivec2 pixelCoord, vec2 screenCoord, ivec2 texSize, float resolution) {
-    ivec2 blockCoord = pixelCoord;
-    if (resolution > 1.0) {
-        blockCoord = ivec2(floor(screenCoord / resolution) * resolution);
-    }
-    return clamp(blockCoord, ivec2(0), texSize - ivec2(1));
-}
-
 vec3 visualizeVariance(vec2 uv, vec2 texSize) {
-    vec2 screenCoord = uv * texSize;
-    ivec2 pixelCoord = ivec2(screenCoord);
-    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, ivec2(texSize), ubo.resolution);
-    uint index = uint(blockCoord.y * int(texSize.x) + blockCoord.x);
+    ivec2 pixelCoord = ivec2(uv * texSize);
+    uint index = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[index];
     
     return vec3(pixelInfo.varianceProba);
@@ -67,21 +56,16 @@ void main() {
     vec2 uv = fragPos * 0.5 + 0.5;
 
     vec2 texSize = vec2(textureSize(tex, 0));
-    vec2 texelSize = 1.0 / texSize;
 
-    vec2 screenCoord = uv * texSize;
-    ivec2 pixelCoord = ivec2(screenCoord);
-    ivec2 blockCoord = blockCoordFromResolution(pixelCoord, screenCoord, ivec2(texSize), ubo.resolution);
+    ivec2 pixelCoord = ivec2(uv * texSize);
     vec3 color = texelFetch(tex, pixelCoord, 0).rgb;
 
     float targetMin = 0.5;
     float targetMax = 1.5;
 
-    uint blockIndex = uint(blockCoord.y * int(texSize.x) + blockCoord.x);
-    PixelInfo blockPixelInfo = pixelInfoBuffer.pixels[blockIndex];
-
-    uint centerIndex = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
-    PixelInfo centerPixelInfo = pixelInfoBuffer.pixels[centerIndex];
+    uint pixelIndex = uint(pixelCoord.y * int(texSize.x) + pixelCoord.x);
+    PixelInfo blockPixelInfo = pixelInfoBuffer.pixels[pixelIndex];
+    PixelInfo centerPixelInfo = blockPixelInfo;
     uint centerMask = centerPixelInfo.selectionMask;
     int stepPx = int(outlineWidth);
 

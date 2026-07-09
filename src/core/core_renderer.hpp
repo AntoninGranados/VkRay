@@ -1,14 +1,14 @@
 #pragma once
 
 #include <filesystem>
-#include <functional>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
-#include "app/app_context.hpp"
 #include "scene/scene.hpp"
 #include "export_service.hpp"
+#include "camera.hpp"
+#include "app/parameter_handler.hpp"
 
 struct FrameContext;
 
@@ -25,25 +25,32 @@ public:
     // TODO: make it non blocking (compile/build in the background and replace when finished)
     void buildPipelines(VkSmol& engine);
 
-    void render(AppContext& ctx, const FrameContext& frameContext);
-    void renderHeadless(AppContext& ctx, bool captureOutput = false);
+    bool     isRenderFinished()          { return targetSampleCount >= 0 && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
+    uint32_t getSampleCount()            { return sampleCount; }
+    void     setTargetSampleCount(int n) { targetSampleCount = n; }
+    void     reset()                     { sampleCount = 0; }
+    void     setCamera(const Camera& camera);
+    void render(VkSmol& engine, const FrameContext& frameContext);
     
-    void saveCapture(AppContext& ctx, const std::filesystem::path& path);
-    void resize(AppContext& ctx, uint32_t width, uint32_t height);
+    void saveCapture(VkSmol& engine, const std::filesystem::path& path);
+    void resize(VkSmol& engine, uint32_t width, uint32_t height);
 
-    void setOnRenderComplete(std::function<void()> fn) { onRenderComplete = std::move(fn); }
+    void bindParameters(ParameterHandler& params);
+    void setDebugView(int v) { pathtracerUBO.render.debugView = v; }
     
 private:
-    std::function<void()> onRenderComplete;
-
     CoreResources resources = {};
 
     ExportService exportService;
 
     ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
     
+    PathtracerUBO  pathtracerUBO;
+    CompositingUBO compositingUBO;
     BufferHandle pathtracingUBOHandle;
     BufferHandle compositingUBOHandle;
+    
+    AOVFlags aovFlags = {};
 
     PassHandle pathtracePassHandle;
     PassHandle compositePassHandle;
@@ -54,7 +61,6 @@ private:
 
     SubmissionGroupHandle coreGroupHandle = {};
 
-
-    void handleResize(AppContext& ctx, const VkExtent2D& extent);
-    void pathtracingPass(AppContext& ctx, const FrameContext& frameContext, bool captureOutput = false);
+    uint32_t sampleCount = 0;
+    int      targetSampleCount = -1;
 };

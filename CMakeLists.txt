@@ -43,15 +43,15 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/external/glfw" glfw)
 set(VKRAY_GLFW_TARGET glfw)
 
 file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/external/imgui/*.cpp")
-add_library(imgui_third_party STATIC ${VKRAY_IMGUI_SOURCES})
-target_include_directories(imgui_third_party PUBLIC
+add_library(imgui STATIC ${VKRAY_IMGUI_SOURCES})
+target_include_directories(imgui PUBLIC
   "${CMAKE_SOURCE_DIR}/external/imgui"
 )
-target_link_libraries(imgui_third_party PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
-target_compile_options(imgui_third_party PRIVATE -Wno-nontrivial-memcall)
+target_link_libraries(imgui PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
+target_compile_options(imgui PRIVATE -Wno-nontrivial-memcall)
 
-add_library(tinyexr_third_party STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
-target_include_directories(tinyexr_third_party PUBLIC
+add_library(tinyexr STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
+target_include_directories(tinyexr PUBLIC
   "${CMAKE_SOURCE_DIR}/external/tinyexr"
 )
 
@@ -75,7 +75,7 @@ target_include_directories(VkRay PRIVATE
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr_third_party)
+target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr)
 target_compile_options(VkRay PRIVATE -Wall)
 
 set_source_files_properties("${CMAKE_SOURCE_DIR}/src/core/export_service.cpp" PROPERTIES

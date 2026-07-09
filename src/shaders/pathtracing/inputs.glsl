@@ -15,19 +15,11 @@ struct CameraUBO {
 struct ScreenUBO {
     vec2 size;
     float aspect;
-    float resolution;
-    float prevResolution;
-};
-
-struct FrameUBO {
-    int count;
-    float time;
 };
 
 struct RenderUBO {
     Enum lightMode;
     int maxBounces;
-    int samplesPerPixel;
     int importanceSampling;
     int varianceSampling;
     int varianceWarmupSamples;
@@ -36,9 +28,9 @@ struct RenderUBO {
 };
 
 layout(std140, set = 0, binding = 0) uniform UBO {
+    int       sampleCount;
     CameraUBO camera;
     ScreenUBO screen;
-    FrameUBO  frame;
     RenderUBO render;
 } ubo;
 

@@ -80,10 +80,8 @@ void EditorRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder, Core
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 }
 
-void EditorRenderer::render(AppContext& ctx, const FrameContext& frameContext) {
-    VkSmol& engine = *ctx.engine;
-
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), ctx.displayUBO);
+void EditorRenderer::render(VkSmol& engine, const FrameContext& frameContext, const std::function<void(CommandBuffer&)>& uiDraw) {
+    engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
 
     engine.bindImage(
         swapchainImageHandle,
@@ -91,12 +89,11 @@ void EditorRenderer::render(AppContext& ctx, const FrameContext& frameContext) {
         engine.getSwapchainImageView(frameContext.imageIndex).get()
     );
 
-    displayPass(ctx, frameContext);
-    uiPass(ctx);
+    displayPass(engine, frameContext);
+    uiPass(engine, uiDraw);
 }
 
-void EditorRenderer::displayPass(AppContext& ctx, const FrameContext& frameContext) {
-    VkSmol& engine = *ctx.engine;
+void EditorRenderer::displayPass(VkSmol& engine, const FrameContext& frameContext) {
 
     CommandBuffer& commandBuffer = engine.beginRecording(editorGroupHandle);
     
@@ -132,9 +129,7 @@ void EditorRenderer::displayPass(AppContext& ctx, const FrameContext& frameConte
     engine.endRecording(editorGroupHandle);
 }
 
-void EditorRenderer::uiPass(AppContext& ctx) {
-    VkSmol& engine = *ctx.engine;
-
+void EditorRenderer::uiPass(VkSmol& engine, const std::function<void(CommandBuffer&)>& uiDraw) {
     CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
 
     engine.emitBarriers(commandBuffer, uiPassHandle);
@@ -147,7 +142,7 @@ void EditorRenderer::uiPass(AppContext& ctx) {
         {{ 0.0f, 0.0f, 0.0f, 1.0f }}
     );
 
-    ctx.ui->draw(commandBuffer, ctx);
+    if (uiDraw) uiDraw(commandBuffer);
 
     engine.endDynamicRenderer(commandBuffer);
 

@@ -284,12 +284,34 @@ void ParameterHandler::bindBool(const ParameterPath& path, bool* ptr) {
     param.onSync();
 }
 
-void ParameterHandler::bind(const ParameterPath& path, std::function<void()> callback) {
-    auto it = index.find(path.generic_string());
-    if (it == index.end())
-        throw std::runtime_error("Parameter not found: " + path.generic_string());
-    it->second->onSync = std::move(callback);
-    it->second->onSync();
+void ParameterHandler::bindEnum(const ParameterPath& path, int* ptr) {
+    auto& param = getParam<EnumParam>(path);
+    param.onSync = [ptr, &param]() { *ptr = param.get(); };
+    param.onSync();
+}
+
+void ParameterHandler::bindInt(const ParameterPath& path, std::function<void(int)> callback) {
+    auto& param = getParam<IntParam>(path);
+    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
+    param.onSync();
+}
+
+void ParameterHandler::bindFloat(const ParameterPath& path, std::function<void(float)> callback) {
+    auto& param = getParam<FloatParam>(path);
+    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
+    param.onSync();
+}
+
+void ParameterHandler::bindBool(const ParameterPath& path, std::function<void(bool)> callback) {
+    auto& param = getParam<BoolParam>(path);
+    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
+    param.onSync();
+}
+
+void ParameterHandler::bindEnum(const ParameterPath& path, std::function<void(int)> callback) {
+    auto& param = getParam<EnumParam>(path);
+    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
+    param.onSync();
 }
 
 int& ParameterHandler::getInt(const ParameterPath& path) {
@@ -319,6 +341,14 @@ void ParameterHandler::setFloat(const ParameterPath& path, float value) {
 void ParameterHandler::setBool(const ParameterPath& path, bool value) {
     auto& param = getParam<BoolParam>(path);
     param.get() = value;
+    if (param.onSync) param.onSync();
+}
+
+// TODO: should probably not crash and only log the issue
+void ParameterHandler::setEnumByName(const ParameterPath& path, const std::string& name) {
+    auto& param = getParam<EnumParam>(path);
+    if (!param.setByName(name))
+        throw std::runtime_error("Unknown enum value '" + name + "' for parameter: " + path.generic_string());
     if (param.onSync) param.onSync();
 }
 
