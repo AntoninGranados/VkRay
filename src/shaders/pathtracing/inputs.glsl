@@ -21,9 +21,10 @@ struct RenderUBO {
     Enum lightMode;
     int maxBounces;
     int importanceSampling;
+    int clipAccumulation;
+    float clipValue;
     int varianceSampling;
     int varianceWarmupSamples;
-    int clipAccumulation;
     int debugView;
 };
 

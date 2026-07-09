@@ -13,6 +13,7 @@
 | `pathtracer/sampling/render_samples` | Render Samples | Integer | 2048 | 1 ... 4096 | - |
 | `pathtracer/sampling/importance_sampling` | Importance Sampling | Boolean | true | - | - |
 | `pathtracer/sampling/clip_accumulation` | Clip Accumulation | Boolean | false | - | ✓ |
+| `pathtracer/sampling/clip_value` | Clip Value | Float | 50 | 0.0 ... 1000.0 | ✓ |
 | `pathtracer/sampling/variance_sampling` | Variance Sampling | Boolean | true | - | - |
 | `pathtracer/sampling/variance_warmup` | Variance Warmup Samples | Integer | 64 | 0 ... 2048 | - |
 

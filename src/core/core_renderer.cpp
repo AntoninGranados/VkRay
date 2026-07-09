@@ -187,9 +187,12 @@ void CoreRenderer::bindParameters(ParameterHandler& params) {
     params.bindBool("pathtracer/sampling/importance_sampling", [this](bool v) {
         pathtracerUBO.render.importanceSampling = static_cast<int>(v);
     });
+    
     params.bindBool("pathtracer/sampling/clip_accumulation", [this](bool v) {
         pathtracerUBO.render.clipAccumulation = static_cast<int>(v);
     });
+    params.bindFloat("pathtracer/sampling/clip_value", &pathtracerUBO.render.clipValue);
+
     params.bindBool("pathtracer/sampling/variance_sampling", [this](bool v) {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
     });

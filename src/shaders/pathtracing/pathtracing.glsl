@@ -246,7 +246,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
         if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
             pixelInfo.count--;
         } else {
-            if (ubo.render.clipAccumulation == 1) rayColor = min(rayColor, vec3(100.0));
+            if (ubo.render.clipAccumulation == 1) rayColor = min(rayColor, vec3(ubo.render.clipValue));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples = 1.0;

@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 namespace {
@@ -174,11 +173,6 @@ bool Camera::processInput(Platform& platform, float deltaTime) {
     return change;
 }
 
-glm::mat4 Camera::getProjection(GLFWwindow* window) const {
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    const float aspect = static_cast<float>(width) / static_cast<float>(height);
-    const float fovY = glm::radians(fov);
-
-    return glm::perspective(fovY, aspect, 1e-4f, 1e4f);
+glm::mat4 Camera::getProjection(float aspect) const {
+    return glm::perspective(glm::radians(fov), aspect, 1e-4f, 1e4f);
 }

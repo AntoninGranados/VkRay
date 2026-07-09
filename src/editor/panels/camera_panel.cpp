@@ -17,9 +17,11 @@ void CameraPanel::draw(AppContext& ctx) {
          bool updated = false;
 
         glm::vec3 dir = camera.getDirection();
-        ImGui::Text("Camera Position :\n (%4.1f, %4.1f, %4.1f)", camera.position.x, camera.position.y, camera.position.z);
+        const glm::vec3 pos = camera.getPosition();
+        const glm::vec3 tgt = camera.getTarget();
+        ImGui::Text("Camera Position :\n (%4.1f, %4.1f, %4.1f)", pos.x, pos.y, pos.z);
         ImGui::Text("Camera Direction:\n (%4.1f, %4.1f, %4.1f)", dir.x, dir.y, dir.z);
-        ImGui::Text("Camera Target   :\n (%4.1f, %4.1f, %4.1f)", camera.target.x, camera.target.y, camera.target.z);
+        ImGui::Text("Camera Target   :\n (%4.1f, %4.1f, %4.1f)", tgt.x, tgt.y, tgt.z);
         ImGui::Text("Camera Fov:\n %4.1f°", camera.getFov());
         
         ImGui::Text("Camera Aperture:");

@@ -93,7 +93,7 @@ void main() {
 #define HIT(expr) (blockPixelInfo.aov.hitValid != 0u ? (expr) : vec3(0.0))
 
     if (ubo.debugView == debug_PositionW)     { outColor = vec4(HIT(visualize(blockPixelInfo.aov.positionW)), 1.0); return; }
-    if (ubo.debugView == debug_Position)      { outColor = vec4(HIT(visualize(blockPixelInfo.aov.position)),  1.0); return; }
+    if (ubo.debugView == debug_Position)      { vec3 p = blockPixelInfo.aov.position; vec3 vis; vis.xy = p.xy / (1.0 + abs(p.xy)) * 0.5 + 0.5; vis.z = p.z / (1.0 + p.z); outColor = vec4(HIT(vis), 1.0); return; }
     if (ubo.debugView == debug_NormalW)       { outColor = vec4(HIT(visualize(blockPixelInfo.aov.normalW)),   1.0); return; }
     if (ubo.debugView == debug_Normal)        { outColor = vec4(HIT(visualize(blockPixelInfo.aov.normal)),    1.0); return; }
     if (ubo.debugView == debug_Albedo)        { outColor = vec4(HIT(clamp(blockPixelInfo.aov.albedo, 0.0, 1.0)), 1.0); return; }

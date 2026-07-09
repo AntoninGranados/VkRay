@@ -90,9 +90,10 @@ void EditorUi::drawPreview(AppContext& ctx) {
 
         scene.runOnUi(ctx);
 
+        const float aspect = windowSize.y > 0.0f ? windowSize.x / windowSize.y : 1.0f;
         scene.drawGuizmo(
             camera.getView(),
-            camera.getProjection(static_cast<GLFWPlatform*>(ctx.platform)->getWindow())
+            camera.getProjection(aspect)
         );
     }
     ImGui::End();

@@ -29,7 +29,7 @@ public:
     uint32_t getSampleCount()            { return sampleCount; }
     void     setTargetSampleCount(int n) { targetSampleCount = n; }
     void     reset()                     { sampleCount = 0; }
-    void     setCamera(const Camera& camera);
+    void setCamera(const Camera& camera);
     void render(VkSmol& engine, const FrameContext& frameContext);
     
     void saveCapture(VkSmol& engine, const std::filesystem::path& path);

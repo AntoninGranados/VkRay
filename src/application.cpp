@@ -4,16 +4,15 @@
 #include <format>
 
 #include "VkSmol/graph/render_graph_builder.hpp"
-#include "app/log.hpp"
-#include "core/core_renderer.hpp"
-#include "core/export_service.hpp"
+#include "VkSmol/render/shader.hpp"
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "VkSmol/render/shader.hpp"
-
-#include "version.hpp"
+#include "app/log.hpp"
+#include "core/core_renderer.hpp"
+#include "core/export_service.hpp"
 #include "utils/progress.hpp"
+#include "version.hpp"
 
 // Public
 Application::Application(Platform& p) : platform(p) {
@@ -229,6 +228,7 @@ void Application::initParameters() {
     parameters.addBool("pathtracer/sampling/importance_sampling", "Importance Sampling", true, false);
     // TODO: the clip threshold should be a parameter
     parameters.addBool("pathtracer/sampling/clip_accumulation", "Clip Accumulation", false, true);
+    parameters.addFloat("pathtracer/sampling/clip_value", "Clip Value", 50.0, 0.0, 1000.0, 0.01, true);
     parameters.addBool("pathtracer/sampling/variance_sampling", "Variance Sampling", true, false);
     parameters.addInt("pathtracer/sampling/variance_warmup", "Variance Warmup Samples", 64, 0, 2048, 1, false);
 
