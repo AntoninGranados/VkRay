@@ -2,21 +2,20 @@
 
 #include <format>
 
+#include <nfd.hpp>
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
-#include <nfd.hpp>
 
-#include "app_context.hpp"
 #include "utils/log.hpp"
-#include "core/parameter_handler.hpp"
-#include "editor/ui_constants.hpp"
-
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
+#include "editor/parameter_ui.hpp"
+#include "editor/ui_constants.hpp"
 
 
-void ScenePanel::draw(AppContext& ctx) {
-    Scene& scene = *ctx.scene;
+void ScenePanel::draw() {
+    Scene& scene = Core::getScene();
 
     ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
@@ -27,10 +26,10 @@ void ScenePanel::draw(AppContext& ctx) {
             NFD::UniquePath outPath;
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
             if (NFD::OpenDialog(outPath, filter, 1, "assets/scenes/") == NFD_OKAY) {
-                LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
-                if (SceneSerializer::load(scene, *ctx.engine, mode, outPath.get())) {
-                    ctx.parameters->setEnum<LightMode>("scene/light_mode", mode);
-                    *ctx.restartRender = true;
+                LightMode mode = Core::getParameters().getEnum<LightMode>("scene/light_mode");
+                if (SceneSerializer::load(scene, mode, outPath.get())) {
+                    Core::getParameters().setEnum<LightMode>("scene/light_mode", mode);
+                    Core::restartAccumulation();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
                 }
             }
@@ -44,14 +43,14 @@ void ScenePanel::draw(AppContext& ctx) {
                 std::string path = outPath.get();
                 if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
                     path += ".json";
-                LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
+                LightMode mode = Core::getParameters().getEnum<LightMode>("scene/light_mode");
                 if (SceneSerializer::save(scene, mode, path)) {
                     Log::success("ScenePanel", std::format("Scene saved: {}", path));
                 }
             }
         }
 
-        ctx.parameters->drawGroup("scene", *ctx.restartRender);
+        ParameterUI::drawGroup(Core::getParameters(), "scene");
 
         bool openNewObjectPopup = false;
         bool openNewMeshAssetPopup = false;

@@ -5,7 +5,6 @@
 #include "VkSmol/command/command_buffer.hpp"
 
 #include "core/ecs/system_scheduler.hpp"
-#include "app_context.hpp"
 #include "panels/stats_panel.hpp"
 #include "panels/animation_panel.hpp"
 #include "panels/render_progress_panel.hpp"
@@ -21,7 +20,7 @@ class CommandBuffer;
 class EditorUi {
 public:
     EditorUi();
-    void draw(const CommandBuffer& commandBuffer, AppContext& ctx);
+    void draw(const CommandBuffer& commandBuffer);
 
     bool isToggled() { return toggled; }
     void toggle() { toggled = !toggled; }
@@ -36,8 +35,10 @@ public:
     bool focusDepthAt(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist);
     void clearEntitySelection();
 
+    const SceneSelection& getSelection() const { return selection; }
+
 private:
-    ecs::SystemScheduler<AppContext&> uiScheduler;
+    ecs::SystemScheduler<> uiScheduler;
 
     SceneSelection selection;
 
@@ -57,6 +58,6 @@ private:
 
     void updateState();
 
-    void drawPreview(AppContext& ctx);
-    void drawRender(AppContext& ctx);
+    void drawPreview();
+    void drawRender();
 };

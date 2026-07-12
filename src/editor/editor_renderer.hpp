@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
@@ -11,11 +9,10 @@ struct FrameContext;
 
 class EditorRenderer {
 public:
-    void initGraph(VkSmol& engine, RenderGraphBuilder& builder, CoreResources& coreResources);
+    void initGraph(RenderGraphBuilder& builder, CoreResources& coreResources);
 
-    void render(VkSmol& engine, const FrameContext& frameContext, const std::function<void(CommandBuffer&)>& uiDraw = {});
-    void setPreviewBorder(bool enabled) { displayUBO.previewBorderEnabled = enabled ? 1 : 0; }
-    void setDebugView(int v)            { displayUBO.debugView = v; }
+    void render(const FrameContext& frameContext);
+    void setDebugView(int v) { displayUBO.debugView = v; }
 
 private:
     struct DisplayUBO {
@@ -35,6 +32,6 @@ private:
     SubmissionGroupHandle editorGroupHandle = {};
     SubmissionGroupHandle uiGroupHandle = {};
 
-    void displayPass(VkSmol& engine, const FrameContext& frameContext);
-    void uiPass(VkSmol& engine, const std::function<void(CommandBuffer&)>& uiDraw);
+    void displayPass(const FrameContext& frameContext);
+    void uiPass();
 };

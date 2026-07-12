@@ -2,13 +2,11 @@
 
 #include "panel.hpp"
 
-#include "app_context.hpp"
-
 class RendererPanel: IPanel {
 public:
-    void draw(AppContext& ctx) override;
+    void draw() override;
 
 private:
-    bool promptImagePath(AppContext& ctx);
-    bool promptVideoPath(AppContext& ctx);
+    bool promptImagePath();
+    bool promptVideoPath();
 };

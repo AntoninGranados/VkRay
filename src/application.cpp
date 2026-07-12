@@ -9,23 +9,22 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "utils/log.hpp"
-#include "core/core_renderer.hpp"
-#include "editor/ecs/component_ui_registry.hpp"
-#include "core/export_service.hpp"
 #include "utils/progress.hpp"
 #include "version.hpp"
+#include "core/export_service.hpp"
+#include "core/scene/scene_serializer.hpp"
+#include "editor/ecs/component_ui_registry.hpp"
+#include "editor/editor.hpp"
 
 // Public
 Application::Application(Platform& p) : platform(p) {
     Shader::setSpvOutputDir(BUILD_DIR);
     engine.init("VkRay", VK_RAY_VERSION, platform);
 
-    if (!platform.isHeadless()) {
-        ui.emplace();
-        ctx.ui = &(*ui);
+    Core::init(engine, platform, parameters);
 
-        inputHandler.emplace();
-        inputHandler->initCallbacks(ctx);
+    if (!platform.isHeadless()) {
+        Editor::init();
 
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->AddFontDefault();
@@ -37,41 +36,25 @@ Application::Application(Platform& p) : platform(p) {
         io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 12.0f, &iconConfig, iconRanges);
     }
 
-    ctx.reloadShaders = [this]() {
-        coreRenderer.buildPipelines(engine);
-        restartRender = true;
-    };
-    ctx.startRender = [this]() {
-        if (ctx.renderMode == RenderMode::Preview)
-            clearRenderingData(RenderMode::RenderSingle);
-    };
-    ctx.startRenderAnim = [this]() {
-        if (ctx.renderMode == RenderMode::Preview) {
-            clearRenderingData(RenderMode::RenderAnimation);
-            animation.reset(0);
-        }
-    };
-    ctx.getSampleCount = [this]() { return coreRenderer.getSampleCount(); };
-
     initParameters();
     initScene();
     RenderGraphBuilder builder;
-    CoreResources resources = coreRenderer.initGraph(engine, builder);
+    CoreResources resources = Core::getCoreRenderer().initGraph(builder);
     if (!platform.isHeadless())
-        editorRenderer.initGraph(engine, builder, resources);
+        Editor::getEditorRenderer().initGraph(builder, resources);
     engine.setGraph(builder);
     engine.initGraph();
-    scene.setGpuBufferHandles(resources.sceneHandles);
+    Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
 
 
 Application::~Application() {
     engine.waitIdle();
 
-    coreRenderer.destroy(engine);
+    Core::getCoreRenderer().destroy();
     engine.destroyGraph();
 
-    scene.destroy();
+    Core::getScene().destroy();
     engine.terminate();
 }
 
@@ -83,68 +66,88 @@ void Application::run() {
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
 
-        scene.runPreUpdate(ctx);
+        Core::getScene().runPreUpdate();
 
-        if (!animation.isPaused()) animation.step(deltaTime);
+        if (!Core::getAnimation().isPaused()) Core::getAnimation().step(deltaTime);
 
         onFrameStart(deltaTime);
 
         auto frameContext = engine.beginFrame();
         if (!frameContext) {
             engine.advanceFrame();
-            scene.runPostUpdate(ctx);
+            Core::getScene().runPostUpdate();
             continue;
         }
 
         if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
             lastSwapchainGeneration = frameContext->swapchainGeneration;
             VkExtent2D extent = engine.getExtent();
-            coreRenderer.resize(engine, extent.width, extent.height);
-            restartRender = true;
+            Core::getCoreRenderer().resize(extent.width, extent.height);
+            Core::restartAccumulation();
         }
 
         bool shouldSave = false;
         std::filesystem::path savePath;
         bool toVideo = false;
 
-        if (ctx.renderMode != RenderMode::Preview && !(*ctx.restartRender)) {
-            if (coreRenderer.isRenderFinished()) {
+        if (Core::getRenderMode() != RenderMode::Preview && !Core::isAccumulationPending()) {
+            if (Core::getCoreRenderer().isRenderFinished()) {
                 shouldSave = true;
 
-                if (ctx.renderMode == RenderMode::RenderAnimation) {
-                    savePath = ExportService::buildAnimationFramePath(ctx.animation->getFrame());
+                if (Core::getRenderMode() == RenderMode::RenderAnimation) {
+                    savePath = ExportService::buildAnimationFramePath(Core::getAnimation().getFrame());
 
-                    ctx.animation->stepFixed();
-                    if (ctx.animation->getFrame() == 0) {
+                    Core::getAnimation().stepFixed();
+                    if (Core::getAnimation().getFrame() == 0) {
                         toVideo = true;
-                        ui->restoreToggledState();
-                        ctx.renderMode = RenderMode::Preview;
+                        Editor::getUi().restoreToggledState();
+                        Core::setRenderMode(RenderMode::Preview);
                     }
                 } else {
-                    savePath = ctx.outputPath;
-                    ui->restoreToggledState();
-                    ctx.renderMode = RenderMode::Preview;
+                    savePath = Core::getOutputPath();
+                    Editor::getUi().restoreToggledState();
+                    Core::setRenderMode(RenderMode::Preview);
                 }
 
-                *ctx.restartRender = true;
+                Core::restartAccumulation();
             }
         }
-        
-        scene.runOnRender(ctx, *frameContext);
 
-        coreRenderer.render(engine, *frameContext);
-        editorRenderer.render(engine, *frameContext, [&](CommandBuffer& cmd) {
-            ui->draw(cmd, ctx);
-        });
+        Core::getScene().runOnRender(*frameContext);
+
+        if (!platform.isHeadless()) {
+            const SceneSelection& sel = Editor::getUi().getSelection();
+            int flatIdx = -1;
+            if (sel.entity >= 0) {
+                const ecs::Entity e = Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
+                const ScenePackingMaps& maps = Core::getScene().getPackingMaps();
+                int i = 0;
+                auto check = [&](const std::unordered_map<ecs::Entity, int>& m) {
+                    for (const auto& [ent, _] : m) {
+                        if (ent == e) { flatIdx = i; return; }
+                        i++;
+                    }
+                };
+                check(maps.sphereId);
+                if (flatIdx < 0) check(maps.planeId);
+                if (flatIdx < 0) check(maps.boxId);
+                if (flatIdx < 0) check(maps.quadId);
+                if (flatIdx < 0) check(maps.meshId);
+            }
+            Core::getCoreRenderer().setSelectedObjectId(flatIdx);
+        }
+
+        Core::getCoreRenderer().render(*frameContext);
+        Editor::getEditorRenderer().render(*frameContext);
 
         if (shouldSave) {
-            coreRenderer.saveCapture(engine, savePath);
-            if (toVideo) ExportService::convertFramesToVideo(ctx.outputPath);
+            Core::getCoreRenderer().saveCapture(savePath);
+            if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath());
         }
 
         engine.present();
         engine.advanceFrame();
-        scene.runPostUpdate(ctx);
+        Core::getScene().runPostUpdate();
     }
 }
 
@@ -175,20 +178,19 @@ void Application::runJobs(JobQueue& queue) {
 
         const VkExtent2D extent = engine.getExtent();
         if (job->width != extent.width || job->height != extent.height)
-            coreRenderer.resize(engine, job->width, job->height);
+            Core::getCoreRenderer().resize(job->width, job->height);
 
         LightMode lightMode = LightMode::Day;
-        if (!SceneSerializer::load(scene, engine, lightMode, job->scene.string(), job->seed)) {
+        if (!SceneSerializer::load(Core::getScene(), lightMode, job->scene.string(), job->seed)) {
             queue.fail();
             continue;
         }
         Log::success("Application", std::format("[{}/{}] Loaded: {}", jobIndex, totalJobs, job->scene.string()));
-        ctx.camera = &scene.getCamera();
-        ctx.renderMode = RenderMode::RenderSingle;
+        Core::setRenderMode(RenderMode::RenderSingle);
         parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
         engine.waitIdle();
-        coreRenderer.reset();
+        Core::getCoreRenderer().reset();
 
         for (uint32_t i = 0; i < totalSamples; i++) {
             auto frameContext = engine.beginFrame();
@@ -197,17 +199,16 @@ void Application::runJobs(JobQueue& queue) {
                 continue;
             }
 
-            scene.runPreUpdate(ctx);
-            scene.runOnRender(ctx, *frameContext);
-            fillUBOs();
-            coreRenderer.render(engine, *frameContext);
+            Core::getScene().runPreUpdate();
+            Core::getScene().runOnRender(*frameContext);
+            Core::getCoreRenderer().render(*frameContext);
             queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
             bar.step();
         }
         bar.close();
 
-        coreRenderer.saveCapture(engine, job->output);
-        ctx.renderMode = RenderMode::Preview;
+        Core::getCoreRenderer().saveCapture(job->output);
+        Core::setRenderMode(RenderMode::Preview);
 
         queue.complete();
     }
@@ -255,13 +256,13 @@ void Application::initParameters() {
         true
     );
 
-    coreRenderer.bindParameters(parameters);
+    Core::getCoreRenderer().bindParameters();
 
     parameters.bindEnum(
         "pathtracer/debug_view",
-        [&](int v) {
-            coreRenderer.setDebugView(v);
-            editorRenderer.setDebugView(v);
+        [](int v) {
+            Core::getCoreRenderer().setDebugView(v);
+            Editor::getEditorRenderer().setDebugView(v);
         }
     );
 
@@ -269,49 +270,28 @@ void Application::initParameters() {
 }
 
 void Application::initScene(const std::string& sceneFile) {
-    scene.init();
+    Core::getScene().init();
 
     auto& uiReg = ecs::ComponentUiRegistry::get();
-    uiReg.setMaterials(&scene.getMaterials());
-    uiReg.setMeshAssets(&scene.getMeshAssets());
+    uiReg.setMaterials(&Core::getScene().getMaterials());
+    uiReg.setMeshAssets(&Core::getScene().getMeshAssets());
     ecs::ComponentUiRegistry::init();
 
     LightMode mode = LightMode::Day;
-    SceneSerializer::load(scene, engine, mode, sceneFile);
+    SceneSerializer::load(Core::getScene(), mode, sceneFile);
 
     parameters.setEnum<LightMode>("scene/light_mode", mode);
-    ctx.camera = &scene.getCamera();
 }
 
 void Application::onFrameStart(float dt) {
-    if (inputHandler) {
-        inputHandler->pollEvents(ctx);
-        inputHandler->handle(ctx, dt);
+    if (!platform.isHeadless()) {
+        Editor::getInputHandler().pollEvents();
+        Editor::getInputHandler().handle(dt);
     }
 
-    if (restartRender) {
-        coreRenderer.reset();
-        restartRender = false;
+    if (Core::consumeAccumulationRestart()) {
+        Core::getCoreRenderer().reset();
     }
-
-    fillUBOs();
-}
-
-void Application::clearRenderingData(RenderMode newRenderMode) {
-    if (ui) {
-        ui->clearEntitySelection();
-        ui->saveToggledState();
-        ui->setToggle(false);
-    }
-    ctx.renderMode = newRenderMode;
-    coreRenderer.setTargetSampleCount(parameters.getInt("pathtracer/sampling/render_samples"));
-    restartRender = true;
 }
 
 
-void Application::fillUBOs() {
-    coreRenderer.setCamera(*ctx.camera);
-
-    if (!platform.isHeadless())
-        editorRenderer.setPreviewBorder(scene.isPreviewingCamera(ctx.renderMode));
-}

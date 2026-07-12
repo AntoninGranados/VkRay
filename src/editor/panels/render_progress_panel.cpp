@@ -5,12 +5,12 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app_context.hpp"
+#include "core/core.hpp"
 #include "core/animation_handler.hpp"
 #include "core/parameter_handler.hpp"
 #include "editor/ui_constants.hpp"
 
-void RenderProgressPanel::draw(AppContext& ctx) {
+void RenderProgressPanel::draw() {
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_STOPWATCH " Loading",
@@ -18,8 +18,8 @@ void RenderProgressPanel::draw(AppContext& ctx) {
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
 
-    uint32_t sampleCount = ctx.getSampleCount();
-    int renderSamplesPerPixel = ctx.parameters->getInt("pathtracer/sampling/render_samples");
+    uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
+    int renderSamplesPerPixel = Core::getParameters().getInt("pathtracer/sampling/render_samples");
 
     if (sampleCount == 1) timer.start();
 
@@ -45,23 +45,23 @@ void RenderProgressPanel::draw(AppContext& ctx) {
         if (progress > 0.0f) {
             ImGui::Text("ETA: %s", ProgressTimer::formatTime(timer.eta(progress)).c_str());
 
-            if (ctx.renderMode == RenderMode::RenderAnimation) {
-                int totalFrames = std::max(1, ctx.animation->getEndFrame());
-                int currentFrameIdx = std::clamp(ctx.animation->getFrame(), 0, totalFrames - 1);
+            if (Core::getRenderMode() == RenderMode::RenderAnimation) {
+                int totalFrames = std::max(1, Core::getAnimation().getEndFrame());
+                int currentFrameIdx = std::clamp(Core::getAnimation().getFrame(), 0, totalFrames - 1);
                 int remainingFrames = totalFrames - currentFrameIdx - 1;
                 double totalEta = timer.eta(progress) + remainingFrames * (timer.elapsed() / progress);
                 ImGui::Text("Total ETA: %s", ProgressTimer::formatTime(totalEta).c_str());
             }
         } else {
             ImGui::Text("ETA: --");
-            if (ctx.renderMode == RenderMode::RenderAnimation)
+            if (Core::getRenderMode() == RenderMode::RenderAnimation)
                 ImGui::Text("Total ETA: --");
         }
     }
 
-    if (ctx.renderMode == RenderMode::RenderAnimation) {
-        int totalFrames = std::max(1, ctx.animation->getEndFrame());
-        int currentFrame = std::clamp(ctx.animation->getFrame(), 0, totalFrames - 1) + 1;
+    if (Core::getRenderMode() == RenderMode::RenderAnimation) {
+        int totalFrames = std::max(1, Core::getAnimation().getEndFrame());
+        int currentFrame = std::clamp(Core::getAnimation().getFrame(), 0, totalFrames - 1) + 1;
         ImGui::Text("Frame: %d / %d", currentFrame, totalFrames);
     }
 

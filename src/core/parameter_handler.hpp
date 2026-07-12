@@ -14,7 +14,6 @@ using ParameterPath = std::filesystem::path;
 class ParamBase {
 public:
     virtual ~ParamBase() = default;
-    virtual bool draw()  = 0;
     virtual void reset() = 0;
     virtual std::string print() = 0;
 
@@ -36,9 +35,11 @@ public:
         bool                 restart_
     );
     std::string print() override;
-    bool draw()  override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
+    int getMin()  const { return minValue; }
+    int getMax()  const { return maxValue; }
+    int getStep() const { return step; }
 
 private:
     int value        = 0;
@@ -60,9 +61,11 @@ public:
         bool                 restart_
     );
     std::string print() override;
-    bool  draw()  override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
     float& get() { return value; }
+    float getMin()  const { return minValue; }
+    float getMax()  const { return maxValue; }
+    float getStep() const { return step; }
 
 private:
     float value        = 0.0f;
@@ -81,7 +84,6 @@ public:
         bool                 restart_
     );
     std::string print() override;
-    bool  draw()  override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
     bool& get() { return value; }
 
@@ -100,9 +102,9 @@ public:
         bool                      restart_
     );
     std::string print() override;
-    bool draw()  override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
     int& get() { return value; }
+    const std::vector<std::string>& getItems() const { return items; }
     bool setByName(const std::string& name) {
         for (size_t i = 0; i < items.size(); i++)
             if (items[i] == name) { value = static_cast<int>(i); return true; }
@@ -113,10 +115,9 @@ private:
     int                      value        = 0;
     int                      defaultValue = 0;
     std::vector<std::string> items;
-    std::vector<const char*> itemsName;
 };
 
-// TODO: add parameter descripions
+// TODO: add parameter descriptions
 // TODO: define the parameters in a separate file so we can "preprocess" (e.g. build the doc) at build time
 class ParameterHandler {
 public:
@@ -159,9 +160,7 @@ public:
         return static_cast<EnumParam&>(*params.back());
     }
 
-    // Save the parameter in a Markdown file
     void saveDocumentation(std::filesystem::path path = "./docs/parameters.md");
-    bool drawGroup(const ParameterPath& root, bool& restartRequested);
     void setLabel (const ParameterPath& path, const std::string& label);
     void resetAll();
 
@@ -193,13 +192,15 @@ public:
         if (param.onSync) param.onSync();
     }
 
+    const std::vector<std::unique_ptr<ParamBase>>&     getParamList()   const { return params; }
+    const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
+
 private:
     std::vector<std::unique_ptr<ParamBase>>      params;
     std::unordered_map<std::string, ParamBase*>  index;
     std::unordered_map<std::string, std::string> nodeLabels;
 
     void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0);
-    bool drawNode(const ParameterPath& prefix, bool& restartRequested);
 
     template <typename T>
     T& getParam(const ParameterPath& path) {

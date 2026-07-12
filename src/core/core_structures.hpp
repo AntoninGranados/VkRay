@@ -29,6 +29,7 @@ struct alignas(16) RenderUBO {
 
 struct PathtracerUBO {
     uint32_t  sampleCount;
+    int32_t   selectedObjectId = -1;
     CameraUBO camera;
     ScreenUBO screen;
     RenderUBO render;

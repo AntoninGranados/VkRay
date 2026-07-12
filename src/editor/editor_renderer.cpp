@@ -1,7 +1,5 @@
 #include "editor_renderer.hpp"
 
-#include "imgui/imgui.h"
-
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/graph_utils.hpp"
@@ -11,7 +9,10 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "VkSmol/render/pipeline/vertex_input.hpp"
 
-#include "editor_ui.hpp"
+#include "imgui/imgui.h"
+
+#include "core/core.hpp"
+#include "editor.hpp"
 
 typedef uint16_t index_t;
 
@@ -30,7 +31,8 @@ const std::vector<index_t> indices = {
     0, 1, 2, 2, 3, 0
 };
 
-void EditorRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder, CoreResources& coreResources) {
+void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreResources) {
+    VkSmol& engine = Core::getEngine();
     editorGroupHandle = builder.addSubmissionGroup("Editor");
     uiGroupHandle = builder.addSubmissionGroup("Ui");
 
@@ -80,7 +82,9 @@ void EditorRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder, Core
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 }
 
-void EditorRenderer::render(VkSmol& engine, const FrameContext& frameContext, const std::function<void(CommandBuffer&)>& uiDraw) {
+void EditorRenderer::render(const FrameContext& frameContext) {
+    VkSmol& engine = Core::getEngine();
+    displayUBO.previewBorderEnabled = Core::getScene().isPreviewingCamera(Core::getRenderMode()) ? 1 : 0;
     engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
 
     engine.bindImage(
@@ -89,11 +93,12 @@ void EditorRenderer::render(VkSmol& engine, const FrameContext& frameContext, co
         engine.getSwapchainImageView(frameContext.imageIndex).get()
     );
 
-    displayPass(engine, frameContext);
-    uiPass(engine, uiDraw);
+    displayPass(frameContext);
+    uiPass();
 }
 
-void EditorRenderer::displayPass(VkSmol& engine, const FrameContext& frameContext) {
+void EditorRenderer::displayPass(const FrameContext& frameContext) {
+    VkSmol& engine = Core::getEngine();
 
     CommandBuffer& commandBuffer = engine.beginRecording(editorGroupHandle);
     
@@ -129,7 +134,8 @@ void EditorRenderer::displayPass(VkSmol& engine, const FrameContext& frameContex
     engine.endRecording(editorGroupHandle);
 }
 
-void EditorRenderer::uiPass(VkSmol& engine, const std::function<void(CommandBuffer&)>& uiDraw) {
+void EditorRenderer::uiPass() {
+    VkSmol& engine = Core::getEngine();
     CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
 
     engine.emitBarriers(commandBuffer, uiPassHandle);
@@ -142,7 +148,7 @@ void EditorRenderer::uiPass(VkSmol& engine, const std::function<void(CommandBuff
         {{ 0.0f, 0.0f, 0.0f, 1.0f }}
     );
 
-    if (uiDraw) uiDraw(commandBuffer);
+    Editor::getUi().draw(commandBuffer);
 
     engine.endDynamicRenderer(commandBuffer);
 

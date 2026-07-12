@@ -9,7 +9,7 @@
 #include "imgui/imgui_internal.h"
 #include "imgui/ImGuizmo.h"
 
-#include "app_context.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "ui_constants.hpp"
@@ -19,12 +19,12 @@ EditorUi::EditorUi() {
     uiScheduler.add(ecs::cameraDrawingSystem);
 }
 
-void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
-    if (!toggled && ctx.renderMode == RenderMode::Preview) return;
+void EditorUi::draw(const CommandBuffer& commandBuffer) {
+    if (!toggled && Core::getRenderMode() == RenderMode::Preview) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
-    
+
     ImGui::NewFrame();
     updateState();
 
@@ -32,8 +32,8 @@ void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
     style.WindowRounding = ui::kWidgetRounding;
     style.FrameRounding = ui::kWidgetRounding;
 
-    if (ctx.renderMode != RenderMode::Preview) drawRender(ctx);
-    else drawPreview(ctx);
+    if (Core::getRenderMode() != RenderMode::Preview) drawRender();
+    else drawPreview();
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
@@ -45,9 +45,9 @@ void EditorUi::updateState() {
     capturesKeyboard = io.WantCaptureKeyboard;
 }
 
-void EditorUi::drawPreview(AppContext& ctx) {
-    Camera& camera = *ctx.camera;
-    Scene& scene = *ctx.scene;
+void EditorUi::drawPreview() {
+    Camera& camera = Core::getScene().getCamera();
+    Scene& scene = Core::getScene();
 
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::AllowAxisFlip(false);
@@ -90,7 +90,7 @@ void EditorUi::drawPreview(AppContext& ctx) {
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
-        uiScheduler.run(scene.getRegistry(), ctx);
+        uiScheduler.run(scene.getRegistry());
 
         const float aspect = windowSize.y > 0.0f ? windowSize.x / windowSize.y : 1.0f;
         sceneUI.drawGuizmo(
@@ -103,17 +103,17 @@ void EditorUi::drawPreview(AppContext& ctx) {
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    statsPanel.draw(ctx);
-    animationPanel.draw(ctx);
-    cameraPanel.draw(ctx);
-    renderParameterPanel.draw(ctx);
-    scenePanel.draw(ctx);
-    sceneUI.drawInspectors(scene, selection, ctx);
+    statsPanel.draw();
+    animationPanel.draw();
+    cameraPanel.draw();
+    renderParameterPanel.draw();
+    scenePanel.draw();
+    sceneUI.drawInspectors(scene, selection);
     toastNotifications.draw();
 }
 
-void EditorUi::drawRender(AppContext& ctx) {
-    renderPanel.draw(ctx);
+void EditorUi::drawRender() {
+    renderPanel.draw();
 }
 
 void EditorUi::pickEntity(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize) {

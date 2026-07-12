@@ -6,7 +6,7 @@
 
 #include "imgui/imgui.h"
 
-#include "app_context.hpp"
+#include "core/core.hpp"
 #include "core/ecs/components.hpp"
 #include "core/ecs/registry.hpp"
 
@@ -16,15 +16,15 @@ namespace ecs {
 
 class ComponentUiRegistry {
 public:
-    using Drawer = std::function<bool(AppContext& ctx, Registry&, Entity)>;
+    using Drawer = std::function<bool(Registry&, Entity)>;
 
     void addDrawer(Drawer drawer) {
         drawers.push_back(std::move(drawer));
     }
 
     template<typename T>
-    void add(std::function<bool(T& t, AppContext& ctx, Registry& registry, Entity e)> func) {
-        drawers.emplace_back([func](AppContext& ctx, Registry& registry, Entity e) {
+    void add(std::function<bool(T& t, Registry& registry, Entity e)> func) {
+        drawers.emplace_back([func](Registry& registry, Entity e) {
             if (!registry.has<T>(e)) return false;
 
             T& t = registry.get<T>(e);
@@ -33,14 +33,14 @@ public:
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
             ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-            
+
             if (ImGui::Button("-##Remove", { 32, 0 })) {
                 registry.remove<T>(e);
-                *ctx.restartRender = true;
+                Core::restartAccumulation();
             }
             ImGui::SameLine();
-            bool update = func(t, ctx, registry, e);
-            
+            bool update = func(t, registry, e);
+
             ImGui::EndChild();
             ImGui::PopStyleColor(3);
             ImGui::PopID();
@@ -48,10 +48,10 @@ public:
         });
     }
 
-    bool draw(AppContext& ctx, Registry& registry, Entity e) const {
+    bool draw(Registry& registry, Entity e) const {
         bool changed = false;
         for (const Drawer& drawer : drawers)
-            changed |= drawer(ctx, registry, e);
+            changed |= drawer(registry, e);
         return changed;
     }
 

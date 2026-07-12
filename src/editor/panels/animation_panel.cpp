@@ -3,21 +3,22 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app_context.hpp"
 #include "core/animation_handler.hpp"
-#include "editor/ui_constants.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/editor.hpp"
+#include "editor/ui_constants.hpp"
 
-void AnimationPanel::draw(AppContext& ctx) {
-    Scene& scene = *ctx.scene;
+void AnimationPanel::draw() {
+    Scene& scene = Core::getScene();
 
     ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin("Animation");
     {
-        bool paused = ctx.animation->isPaused();
+        bool paused = Core::getAnimation().isPaused();
         if (ImGui::Button((paused ? ICON_FA_PLAY : ICON_FA_PAUSE), { 20, 0 })) {
-            ctx.animation->toggle();
+            Core::getAnimation().toggle();
         }
         ImGui::SameLine();
         const bool bakingPhysics = scene.isPhysicsBakeInProgress();
@@ -41,8 +42,7 @@ void AnimationPanel::draw(AppContext& ctx) {
             );
             ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
         } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
-            scene.bakePhysics(ctx.animation, *ctx.restartRender);
-            *ctx.restartRender = true;
+            scene.bakePhysics();
         }
         ImGui::SameLine();
 
@@ -60,8 +60,8 @@ void AnimationPanel::draw(AppContext& ctx) {
         if (hovered && ImGui::IsMouseDown(0)) {
             float t = (ImGui::GetIO().MousePos.x - p.x) / barWidth;
             t = std::clamp(t, 0.0f, 1.0f);
-            ctx.animation->reset(static_cast<int>(t * ctx.animation->getEndFrame()));
-            ctx.animation->pause();
+            Core::getAnimation().reset(static_cast<int>(t * Core::getAnimation().getEndFrame()));
+            Core::getAnimation().pause();
         }
 
         // Draw bar
@@ -72,24 +72,27 @@ void AnimationPanel::draw(AppContext& ctx) {
         dl->AddRectFilled(barMin, barMax, barCol, 3.0f);
 
         // Draw current time fill
-        float tNorm = (ctx.animation->getFrame() > 0.0f) ? (float(ctx.animation->getFrame()) / ctx.animation->getEndFrame()) : 0.0f;
+        float tNorm = (Core::getAnimation().getFrame() > 0.0f) ? (float(Core::getAnimation().getFrame()) / Core::getAnimation().getEndFrame()) : 0.0f;
         tNorm = std::clamp(tNorm, 0.0f, 1.0f);
         dl->AddRectFilled(ImVec2(barMin.x + barWidth * tNorm - 4.0f, barMin.y), ImVec2(barMin.x + barWidth * tNorm + 4.0f, barMax.y), fillCol, 3.0f);
         
         // Draw keyframes
-        // const ecs::Entity* e = selectedEntity;
-        // if (e && ctx.scene->getRegistry().has<ecs::TransformAnim>(*e)) {
-        //     auto& anim = ctx.scene->getRegistry().get<ecs::TransformAnim>(*e);
-        //     for (auto& k : anim.positionKeys) {
-        //         float x = barMin.x + (float(k.frame) / ctx.animation->getEndFrame()) * barWidth;
-        //         ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
-        //         dl->AddCircleFilled(c, ui::kWidgetRounding*1.5f, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOffColor));
-        //         dl->AddCircleFilled(c, ui::kWidgetRounding, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor));
-        //     }
-        // }
+        const SceneSelection& sel = Editor::getUi().getSelection();
+        if (sel.entity >= 0) {
+            const ecs::Entity e = Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
+            if (Core::getScene().getRegistry().has<ecs::TransformAnim>(e)) {
+                auto& anim = Core::getScene().getRegistry().get<ecs::TransformAnim>(e);
+                for (auto& k : anim.positionKeys) {
+                    float x = barMin.x + (float(k.frame) / Core::getAnimation().getEndFrame()) * barWidth;
+                    ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
+                    dl->AddCircleFilled(c, ui::kWidgetRounding*1.5f, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOffColor));
+                    dl->AddCircleFilled(c, ui::kWidgetRounding, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor));
+                }
+            }
+        }
 
         // Draw current frame
-        std::string frameLabel = std::to_string(ctx.animation->getFrame());
+        std::string frameLabel = std::to_string(Core::getAnimation().getFrame());
         ImVec2 frameLabelSize = ImGui::CalcTextSize(frameLabel.c_str());
         ImVec2 frameLabelPos(
             (barMin.x + barMax.x - frameLabelSize.x) * 0.5f,
@@ -100,10 +103,10 @@ void AnimationPanel::draw(AppContext& ctx) {
         ImGui::SameLine();
         
         ImGui::PushItemWidth(40);
-        int endFrame = ctx.animation->getEndFrame();
+        int endFrame = Core::getAnimation().getEndFrame();
         if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1)) {
-            ctx.animation->pause();
-            ctx.animation->setEndFrame(endFrame);
+            Core::getAnimation().pause();
+            Core::getAnimation().setEndFrame(endFrame);
         }
         ImGui::PopItemWidth();
     }

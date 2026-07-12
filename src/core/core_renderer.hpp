@@ -7,8 +7,6 @@
 
 #include "core/scene/scene.hpp"
 #include "export_service.hpp"
-#include "core/camera.hpp"
-#include "core/parameter_handler.hpp"
 
 struct FrameContext;
 
@@ -20,24 +18,24 @@ struct CoreResources {
 
 class CoreRenderer {
 public:
-    CoreResources initGraph(VkSmol& engine, RenderGraphBuilder& builder);
-    void destroy(VkSmol& engine);
+    CoreResources initGraph(RenderGraphBuilder& builder);
+    void destroy();
     // TODO: make it non blocking (compile/build in the background and replace when finished)
-    void buildPipelines(VkSmol& engine);
+    void buildPipelines();
 
     bool     isRenderFinished()          { return targetSampleCount >= 0 && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
     uint32_t getSampleCount()            { return sampleCount; }
     void     setTargetSampleCount(int n) { targetSampleCount = n; }
     void     reset()                     { sampleCount = 0; }
-    void setCamera(const Camera& camera);
-    void render(VkSmol& engine, const FrameContext& frameContext);
-    
-    void saveCapture(VkSmol& engine, const std::filesystem::path& path);
-    void resize(VkSmol& engine, uint32_t width, uint32_t height);
+    void render(const FrameContext& frameContext);
 
-    void bindParameters(ParameterHandler& params);
+    void saveCapture(const std::filesystem::path& path);
+    void resize(uint32_t width, uint32_t height);
+
+    void bindParameters();
     void setDebugView(int v) { pathtracerUBO.render.debugView = v; }
-    
+    void setSelectedObjectId(int i) { selectedObjectId = i; }
+
 private:
     CoreResources resources = {};
 
@@ -63,4 +61,5 @@ private:
 
     uint32_t sampleCount = 0;
     int      targetSampleCount = -1;
+    int      selectedObjectId = -1;
 };

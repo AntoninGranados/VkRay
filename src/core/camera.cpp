@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <GLFW/glfw3.h>
+#include "core/core.hpp"
 
 namespace {
 
@@ -98,7 +98,8 @@ bool Camera::scrollCallback(double xoffset, double yoffset) {
     return yoffset != 0;
 }
 
-bool Camera::processInput(Platform& platform, float deltaTime) {
+bool Camera::processInput(float deltaTime) {
+    Platform& platform = Core::getPlatform();
     float velocity = speed * deltaTime;
     if (platform.getKey(GLFW_KEY_LEFT_CONTROL)) {
         velocity /= 8.0f;

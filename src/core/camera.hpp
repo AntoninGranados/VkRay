@@ -3,7 +3,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "VkSmol/platform/platform.hpp"
 
 class Camera {
 public:
@@ -11,7 +10,7 @@ public:
 
     bool cursorPosCallback(double x, double y);
     bool scrollCallback(double xoffset, double yoffset);
-    bool processInput(Platform& platform, float deltaTime);
+    bool processInput(float deltaTime);
 
     float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
     glm::vec3 getDirection() const { return glm::normalize(target - position); };

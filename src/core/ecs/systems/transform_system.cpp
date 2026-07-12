@@ -4,9 +4,7 @@
 
 namespace ecs {
 
-void transformSystem(Registry& registry, AppContext& ctx) {
-    (void)ctx;
-
+void transformSystem(Registry& registry) {
     auto& transforms = registry.storage<ecs::Transform>();
     for (const auto& e : transforms.entities()) {
         Transform& t = transforms.get(e);

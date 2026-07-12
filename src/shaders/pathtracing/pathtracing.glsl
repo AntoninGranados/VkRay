@@ -316,9 +316,9 @@ void main() {
     Ray primaryRay = getRay(camera, fragPos, false, seed);
     Hit selectedHit = NO_HIT;
     int selectedIntersection = 0;
-    if (objectBuffer.selectedObjectId >= 0) {
+    if (ubo.selectedObjectId >= 0) {
         Statistics selectionStats = Statistics(0, 0);
-        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[objectBuffer.selectedObjectId], false, INFINITY, selectionStats);
+        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[ubo.selectedObjectId], false, INFINITY, selectionStats);
         if (foundIntersection(selectedHit)) {
             selectedIntersection = 1;
         }

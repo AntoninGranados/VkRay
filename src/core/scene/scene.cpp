@@ -10,7 +10,7 @@
 #include <glm/gtx/matrix_decompose.hpp>
 
 #include "utils/log.hpp"
-#include "object/material.hpp"
+#include "core/scene/object/material.hpp"
 #include "core/ecs/systems/transform_system.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/camera_system.hpp"
@@ -29,9 +29,7 @@ void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
     gpuBuffers = handles;
 }
 
-void Scene::clear(VkSmol& engine) {
-    engine.waitIdle();
-
+void Scene::clear() {
     // Reset capacity so the next frame resizes buffers down to their initial size
     gpuBuffers.sphere.capacity   = 0;
     gpuBuffers.plane.capacity    = 0;
@@ -168,8 +166,8 @@ void Scene::pushCamera(std::string name, const glm::mat4& transform) {
 }
 
 
-void Scene::bakePhysics(AnimationHandler* animation, bool& restartRender) {
-    ecs::bakePhysicsSimulation(registry, animation, restartRender);
+void Scene::bakePhysics() {
+    ecs::bakePhysicsSimulation(registry);
 }
 
 bool Scene::isPhysicsBakeInProgress() const {
@@ -219,8 +217,8 @@ void Scene::initSystems() {
     onRenderScheduler.add(ecs::boxPackingSystem);
     onRenderScheduler.add(ecs::quadPackingSystem);
     onRenderScheduler.add(ecs::meshPackingSystem);
-    onRenderScheduler.add(ecs::materialPackingSystem);
     onRenderScheduler.add(ecs::objectPackingSystem);
+    onRenderScheduler.add(ecs::materialPackingSystem);
     onRenderScheduler.add(ecs::lightPackingSystem);
 
     postUpdateScheduler.clear();

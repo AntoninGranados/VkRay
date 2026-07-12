@@ -1,17 +1,14 @@
 #pragma once
 
 #include "../../registry.hpp"
-#include "app_context.hpp"
-
-class AnimationHandler;
 
 namespace ecs {
 
-void physicsSolverSystem(Registry& registry, AppContext& ctx);
-void bakePhysicsSimulation(Registry& registry, AnimationHandler* animation, bool& restartRender);
+void physicsSolverSystem(Registry& registry);
+void bakePhysicsSimulation(Registry& registry);
 bool isPhysicsBakeInProgress();
 int getPhysicsBakeCurrentFrame();
 int getPhysicsBakeTotalFrames();
-void physicsSystem(Registry& registry, AppContext& ctx);
+void physicsSystem(Registry& registry);
 
 } // namespace ecs

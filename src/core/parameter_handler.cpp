@@ -5,8 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-#include "imgui/imgui.h"
-
 IntParam::IntParam(
     const ParameterPath& path_,
     const std::string&   label_,
@@ -23,16 +21,6 @@ IntParam::IntParam(
 
 std::string IntParam::print() {
     return std::format("| `{}` | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
-}
-
-bool IntParam::draw() {
-    ImGui::PushID(path.generic_string().c_str());
-    ImGui::Text("%s", label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    bool changed = ImGui::DragInt("##value", &value, static_cast<float>(step), minValue, maxValue);
-    ImGui::PopID();
-    if (changed && onSync) onSync();
-    return changed;
 }
 
 FloatParam::FloatParam(
@@ -54,16 +42,6 @@ std::string FloatParam::print() {
     return std::format("| `{}` | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
 }
 
-bool FloatParam::draw() {
-    ImGui::PushID(path.generic_string().c_str());
-    ImGui::Text("%s", label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    bool changed = ImGui::DragFloat("##value", &value, step, minValue, maxValue);
-    ImGui::PopID();
-    if (changed && onSync) onSync();
-    return changed;
-}
-
 BoolParam::BoolParam(
     const ParameterPath& path_,
     const std::string&   label_,
@@ -77,14 +55,6 @@ BoolParam::BoolParam(
 
 std::string BoolParam::print() {
     return std::format("| `{}` | {} | Boolean | {} | - | {} |", path.c_str(), label, defaultValue, restart ? "✓" : "-");
-}
-
-bool BoolParam::draw() {
-    ImGui::PushID(path.generic_string().c_str());
-    bool changed = ImGui::Checkbox(label.c_str(), &value);
-    ImGui::PopID();
-    if (changed && onSync) onSync();
-    return changed;
 }
 
 EnumParam::EnumParam(
@@ -106,20 +76,6 @@ std::string EnumParam::print() {
         else list = std::format("{} • `{}`", list, item);
     }
     return std::format("| `{}` | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, items[defaultValue], list, restart ? "✓" : "-");
-}
-
-bool EnumParam::draw() {
-    itemsName.clear();
-    itemsName.reserve(items.size());
-    for (const std::string& item : items)
-        itemsName.push_back(item.c_str());
-    ImGui::PushID(path.generic_string().c_str());
-    ImGui::Text("%s", label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    bool changed = ImGui::Combo("##value", &value, itemsName.data(), static_cast<int>(itemsName.size()));
-    ImGui::PopID();
-    if (changed && onSync) onSync();
-    return changed;
 }
 
 IntParam& ParameterHandler::addInt(
@@ -187,7 +143,7 @@ void ParameterHandler::serializeParameterPath(std::ofstream& file, const Paramet
         file << std::endl << std::string(depth+2, '#') << ' ' << displayLabel << std::endl;
         file << "| Path | Label | Type | Default | Constraints | Restart |" << std::endl;
         file << "|------|-------|------|---------|-------------|---------|" << std::endl;
-        
+
         serializeParameterPath(file, prefix / seg, depth+1);
     }
 }
@@ -201,65 +157,7 @@ void ParameterHandler::saveDocumentation(std::filesystem::path path) {
 
     serializeParameterPath(file, "");
 
-    /*
-    std::vector<std::string> seen;
-    std::filesystem::path prefix = "";
-    for (const auto& param : params) {
-        auto rel = param->path.lexically_relative(prefix);
-        auto it = rel.begin();
-        std::string seg = it->string();
-        if (seg == "..") continue;
-        it++;
-        if (it == rel.end()) continue;
-        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
-        seen.push_back(seg);
-        
-        auto labelIt = nodeLabels.find((prefix / seg).generic_string());
-        const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
-        file << param->path << " - " << displayLabel << std::endl;
-        
-        file << "---" << std::endl;
-    }
-    */
-
     file.close();
-}
-
-bool ParameterHandler::drawNode(const ParameterPath& prefix, bool& restartRequested) {
-    bool changed = false;
-
-    for (const auto& param : params) {
-        if (param->path.parent_path() != prefix) continue;
-        if (param->draw()) {
-            changed = true;
-            if (param->restart) restartRequested = true;
-        }
-    }
-
-    std::vector<std::string> seen;
-    for (const auto& param : params) {
-        auto rel = param->path.lexically_relative(prefix);
-        if (rel.empty()) continue;
-        auto it = rel.begin();
-        std::string seg = it->string();
-        if (seg == "..") continue;
-        it++;
-        if (it == rel.end()) continue;
-        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
-        seen.push_back(seg);
-
-        auto labelIt = nodeLabels.find((prefix / seg).generic_string());
-        const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
-        if (ImGui::CollapsingHeader(displayLabel.c_str())) {
-            changed |= drawNode(prefix / seg, restartRequested);
-        }
-    }
-
-    return changed;
-}
-
-bool ParameterHandler::drawGroup(const ParameterPath& root, bool& restartRequested) {
-    return drawNode(root, restartRequested);
 }
 
 void ParameterHandler::setLabel(const ParameterPath& path, const std::string& label) {

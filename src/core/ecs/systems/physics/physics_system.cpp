@@ -8,6 +8,7 @@
 
 #include "../animation_system.hpp"
 #include "../transform_system.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/animation_handler.hpp"
 
@@ -120,10 +121,8 @@ void applyFrameSnapshot(
 
 } // namespace physics_detail
 
-void physicsSolverSystem(Registry& registry, AppContext& ctx) {
+void physicsSolverSystem(Registry& registry) {
     using namespace ecs::physics_detail;
-
-    if (!ctx.animation) return;
 
     auto& rigidBodies = registry.storage<ecs::RigidBody>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -131,7 +130,7 @@ void physicsSolverSystem(Registry& registry, AppContext& ctx) {
     auto& boxes = registry.storage<ecs::Box>();
     auto& spheres = registry.storage<ecs::Sphere>();
     auto& colliders = registry.storage<ecs::Collider>();
-    auto& meshAssets = ctx.scene->getMeshAssets();
+    auto& meshAssets = Core::getScene().getMeshAssets();
 
     for (auto it = gStates.begin(); it != gStates.end();) {
         if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshRefs.has(it->first) && !boxes.has(it->first) && !spheres.has(it->first))) {
@@ -141,8 +140,8 @@ void physicsSolverSystem(Registry& registry, AppContext& ctx) {
         }
     }
 
-    const int currFrame = ctx.animation->getFrame();
-    const float dt = static_cast<float>(ctx.animation->getFixedDt());
+    const int currFrame = Core::getAnimation().getFrame();
+    const float dt = static_cast<float>(Core::getAnimation().getFixedDt());
     const bool frameChanged = (currFrame != gPrevSolverFrame);
     gPrevSolverFrame = currFrame;
 
@@ -290,7 +289,7 @@ void physicsSolverSystem(Registry& registry, AppContext& ctx) {
     }
 
     if (changed) {
-        *ctx.restartRender = true;
+        Core::restartAccumulation();
     }
 
     if (gIsBaking) {
@@ -301,11 +300,11 @@ void physicsSolverSystem(Registry& registry, AppContext& ctx) {
     }
 }
 
-void bakePhysicsSimulation(Registry& registry, AnimationHandler* animation, bool& restartRender) {
-    if (!animation) return;
+void bakePhysicsSimulation(Registry& registry) {
     if (physics_detail::gBakeState.inProgress) return;
 
-    const int endFrame = std::max(1, animation->getEndFrame());
+    AnimationHandler& animation = Core::getAnimation();
+    const int endFrame = std::max(1, animation.getEndFrame());
 
     physics_detail::gStates.clear();
     physics_detail::gPrevColliderTransforms.clear();
@@ -315,11 +314,11 @@ void bakePhysicsSimulation(Registry& registry, AnimationHandler* animation, bool
     physics_detail::gBakeState.inProgress = true;
     physics_detail::gBakeState.nextFrame = 0;
     physics_detail::gBakeState.totalFrames = endFrame;
-    physics_detail::gBakeState.savedFrame = animation->getFrame();
-    physics_detail::gBakeState.wasPaused = animation->isPaused();
+    physics_detail::gBakeState.savedFrame = animation.getFrame();
+    physics_detail::gBakeState.wasPaused = animation.isPaused();
 
-    animation->pause();
-    restartRender = true;
+    animation.pause();
+    Core::restartAccumulation();
 }
 
 bool isPhysicsBakeInProgress() {
@@ -334,33 +333,31 @@ int getPhysicsBakeTotalFrames() {
     return physics_detail::gBakeState.totalFrames;
 }
 
-void physicsSystem(Registry& registry, AppContext& ctx) {
+void physicsSystem(Registry& registry) {
     using namespace ecs::physics_detail;
 
     if (gBakeState.inProgress) {
-        ctx.animation->reset(gBakeState.nextFrame);
-        transformAnimationSystem(registry, ctx);
-        transformSystem(registry, ctx);
-        physicsSolverSystem(registry, ctx);
-        *ctx.restartRender = true;
+        Core::getAnimation().reset(gBakeState.nextFrame);
+        transformAnimationSystem(registry);
+        transformSystem(registry);
+        physicsSolverSystem(registry);
+        Core::restartAccumulation();
 
         gBakeState.nextFrame++;
         if (gBakeState.nextFrame >= gBakeState.totalFrames) {
             gIsBaking = false;
             gBakeState.inProgress = false;
-            ctx.animation->reset(gBakeState.savedFrame);
-            if (!gBakeState.wasPaused) ctx.animation->play();
+            Core::getAnimation().reset(gBakeState.savedFrame);
+            if (!gBakeState.wasPaused) Core::getAnimation().play();
         } else {
-            ctx.animation->reset(gBakeState.savedFrame);
+            Core::getAnimation().reset(gBakeState.savedFrame);
         }
         return;
     }
 
     static int prevFrame = 0;
-    if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame() && !*ctx.restartRender) return;
-    prevFrame = ctx.animation->getFrame();
-
-    if (!ctx.animation) return;
+    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationPending()) return;
+    prevFrame = Core::getAnimation().getFrame();
 
     auto& rigidBodies = registry.storage<ecs::RigidBody>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -379,7 +376,7 @@ void physicsSystem(Registry& registry, AppContext& ctx) {
         }
     }
 
-    const int currFrame = ctx.animation->getFrame();
+    const int currFrame = Core::getAnimation().getFrame();
     const bool frameChanged = (currFrame != gPrevSystemFrame);
     gPrevSystemFrame = currFrame;
 
@@ -401,7 +398,7 @@ void physicsSystem(Registry& registry, AppContext& ctx) {
     }
 
     if (changed) {
-        *ctx.restartRender = true;
+        Core::restartAccumulation();
     }
 }
 

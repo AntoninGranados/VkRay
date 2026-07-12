@@ -3,12 +3,12 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app_context.hpp"
+#include "core/core.hpp"
 #include "editor/ui_constants.hpp"
 #include "core/camera.hpp"
 
-void CameraPanel::draw(AppContext& ctx) {
-    Camera& camera = *ctx.camera;
+void CameraPanel::draw() {
+    Camera& camera = Core::getScene().getCamera();
 
     ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
@@ -40,7 +40,7 @@ void CameraPanel::draw(AppContext& ctx) {
             updated = true;
         }
 
-        if (updated) *ctx.restartRender = true;
+        if (updated) Core::restartAccumulation();
     }
     ImGui::End();
 }

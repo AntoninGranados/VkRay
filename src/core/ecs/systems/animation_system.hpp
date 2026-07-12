@@ -1,11 +1,10 @@
 #pragma once
 
 #include "../registry.hpp"
-#include "app_context.hpp"
 
 namespace ecs {
 
-void transformAnimationSystem(Registry& registry, AppContext& ctx);
-void materialAnimationSystem(Registry& registry, AppContext& ctx);
+void transformAnimationSystem(Registry& registry);
+void materialAnimationSystem(Registry& registry);
 
 } // namespace ecs

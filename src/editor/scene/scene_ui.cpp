@@ -9,11 +9,11 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
-#include "app_context.hpp"
 #include "utils/log.hpp"
-#include "editor/ui_constants.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/component_ui_registry.hpp"
+#include "editor/ui_constants.hpp"
 #include "raycast.hpp"
 #include "material_ui.hpp"
 
@@ -59,13 +59,13 @@ void SceneUI::drawGuizmo(Scene& scene, SceneSelection& selection, const glm::mat
     ImGuizmo::PopID();
 }
 
-void SceneUI::drawInspectors(Scene& scene, SceneSelection& selection, AppContext& ctx) {
-    drawSelectedEntityUI(scene, selection, ctx);
+void SceneUI::drawInspectors(Scene& scene, SceneSelection& selection) {
+    drawSelectedEntityUI(scene, selection);
     drawSelectedMaterialUI(scene, selection);
     drawSelectedMeshAssetUI(scene, selection);
 }
 
-void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection, AppContext& ctx) {
+void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
     if (selection.entity < 0) return;
     ecs::Entity& e = scene.getEntities()[static_cast<size_t>(selection.entity)];
     bool openNewComponentPopup = false;
@@ -85,7 +85,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection, AppC
         }
 
         auto& uiReg = ecs::ComponentUiRegistry::get();
-        if (uiReg.draw(ctx, scene.getRegistry(), e)) scene.update();
+        if (uiReg.draw(scene.getRegistry(), e)) scene.update();
     }
     ImGui::End();
 
@@ -143,7 +143,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection, AppC
 
                 if (verifyRestrictions) {
                     funcs.add(scene.getRegistry(), e);
-                    *ctx.restartRender = true;
+                    Core::restartAccumulation();
                 }
                 ImGui::CloseCurrentPopup();
             }

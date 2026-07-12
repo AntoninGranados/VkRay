@@ -5,13 +5,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "app_context.hpp"
 #include "core/camera.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
 namespace ecs {
 
-void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
+void cameraPreUpdateSystem(Registry& registry) {
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
     constexpr float previewViewportScale = 0.8f;
@@ -20,16 +20,16 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
         if (!transforms.has(e)) continue;
         
         ecs::CameraObject& c = cameras.get(e);
-        if (ctx.renderMode != RenderMode::Preview && !c.isPreview) {
+        if (Core::getRenderMode() != RenderMode::Preview && !c.isPreview) {
             c.setPreview(true);
             c.setPreviewJustSet(true);
-            *ctx.restartRender = true;
+            Core::restartAccumulation();
         }
 
         if (!c.isPreview) continue;
 
         ecs::Transform& t = transforms.get(e);
-        Camera& camera = *ctx.camera;
+        Camera& camera = Core::getScene().getCamera();
 
         const float dist = glm::max(0.1f, glm::length(camera.getTarget() - camera.getPosition()));
         const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
@@ -37,7 +37,7 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
         camera.setPosition(t.position);
         camera.setTarget(t.position + dir * dist);
         float fov = c.fov;
-        if (ctx.renderMode == RenderMode::Preview) {
+        if (Core::getRenderMode() == RenderMode::Preview) {
             const float baseFovRad = glm::radians(c.fov);
             const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
             fov = glm::degrees(previewFovRad);
@@ -49,11 +49,11 @@ void cameraPreUpdateSystem(Registry& registry, AppContext& ctx) {
     }
 }
 
-void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
+void cameraPostUpdateSystem(Registry& registry) {
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
-    bool escapePressed = glfwGetKey(static_cast<GLFWwindow*>(ctx.platform->getNativeWindowHandle()), GLFW_KEY_ESCAPE);
-    Camera& camera = *ctx.camera;
+    bool escapePressed = glfwGetKey(static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), GLFW_KEY_ESCAPE);
+    Camera& camera = Core::getScene().getCamera();
     constexpr float previewViewportScale = 0.8f;
 
     for (const auto& e : cameras.entities()) {
@@ -62,8 +62,8 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
 
         if (escapePressed) {
             c.setPreview(false);
-            *ctx.restartRender = true;
-            ctx.camera->setAperture(0.0f);
+            Core::restartAccumulation();
+            Core::getScene().getCamera().setAperture(0.0f);
             continue;
         }
 
@@ -74,7 +74,7 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
 
         if (c.updated) {
             float fov = c.fov;
-            if (ctx.renderMode == RenderMode::Preview) {
+            if (Core::getRenderMode() == RenderMode::Preview) {
                 const float baseFovRad = glm::radians(c.fov);
                 const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
                 fov = glm::degrees(previewFovRad);
@@ -99,7 +99,7 @@ void cameraPostUpdateSystem(Registry& registry, AppContext& ctx) {
         }
 
         float fov = camera.getFov();
-        if (ctx.renderMode == RenderMode::Preview) {
+        if (Core::getRenderMode() == RenderMode::Preview) {
             const float previewFovRad = glm::radians(camera.getFov());
             const float baseFovRad = 2.0f * atanf(tanf(previewFovRad * 0.5f) * previewViewportScale);
             fov = glm::degrees(baseFovRad);

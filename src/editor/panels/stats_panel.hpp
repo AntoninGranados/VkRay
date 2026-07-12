@@ -2,9 +2,7 @@
 
 #include "panel.hpp"
 
-#include "app_context.hpp"
-
 class StatsPanel: IPanel {
 public:
-    void draw(AppContext& ctx) override;
+    void draw() override;
 };

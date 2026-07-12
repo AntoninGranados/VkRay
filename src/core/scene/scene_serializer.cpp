@@ -12,11 +12,11 @@
 #include <glm/gtx/quaternion.hpp>
 #include "nlohmann/json.hpp"
 
-#include "scene.hpp"
-#include "VkSmol/engine.hpp"
-#include "core/scene/object/material.hpp"
 #include "utils/json_resolve.hpp"
 #include "utils/log.hpp"
+#include "scene.hpp"
+#include "core/core.hpp"
+#include "core/scene/object/material.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -260,7 +260,7 @@ static void spawnOne(
     }
 }
 
-bool SceneSerializer::load(Scene& scene, VkSmol& engine, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
+bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
     if (!file.is_open()) {
         
@@ -276,7 +276,8 @@ bool SceneSerializer::load(Scene& scene, VkSmol& engine, LightMode& lightMode, c
         return false;
     }
 
-    scene.clear(engine);
+    Core::getEngine().waitIdle();
+    scene.clear();
 
     const int version = j.value("version", -1);
     if (version != SCENE_VERSION) {

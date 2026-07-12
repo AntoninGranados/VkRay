@@ -3,7 +3,6 @@
 #include <cmath>
 #include <unordered_map>
 
-#include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -38,17 +37,17 @@ ComponentUiRegistry& ComponentUiRegistry::get() {
 }
 
 
-void keyframeButton(AppContext& ctx, ecs::Registry& r, ecs::Entity& e, ecs::TransformAnim& anim, const TransformKeyframeType& type, std::function<void(const bool&)> func) {
+void keyframeButton(ecs::Registry& r, ecs::Entity& e, ecs::TransformAnim& anim, const TransformKeyframeType& type, std::function<void(const bool&)> func) {
     bool hasKeyframe;
     switch (type) {
-        case TransformKeyframeType::Position:   hasKeyframe = anim.hasPositionKeyframe(ctx.animation->getFrame());  break;
-        case TransformKeyframeType::Rotation:   hasKeyframe = anim.hasRotationKeyframe(ctx.animation->getFrame());  break;
-        case TransformKeyframeType::Scale:      hasKeyframe = anim.hasScaleKeyframe(ctx.animation->getFrame());     break;
+        case TransformKeyframeType::Position:   hasKeyframe = anim.hasPositionKeyframe(Core::getAnimation().getFrame());  break;
+        case TransformKeyframeType::Rotation:   hasKeyframe = anim.hasRotationKeyframe(Core::getAnimation().getFrame());  break;
+        case TransformKeyframeType::Scale:      hasKeyframe = anim.hasScaleKeyframe(Core::getAnimation().getFrame());     break;
     }
-    
+
     if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOnColor);
     else ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOffColor);
-    
+
     ImGui::PushID((long)&type + (long)&e);
     ui::PushTransparentStyleColor();
     if (ImGui::Button(ICON_FA_SQUARE "##KeyframePos")) {
@@ -68,7 +67,7 @@ void ComponentUiRegistry::init() {
 
     auto& ui_reg = ComponentUiRegistry::get();
 
-    ui_reg.add<ecs::Name>([](ecs::Name& n, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Name>([](ecs::Name& n, ecs::Registry& r, ecs::Entity e){
         if (!ImGui::CollapsingHeader(ICON_FA_TAG " Name")) return false;
 
         n.value.resize(128);
@@ -83,9 +82,9 @@ void ComponentUiRegistry::init() {
         return false;
     });
 
-    ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Sphere>([](ecs::Sphere& s, ecs::Registry& r, ecs::Entity e){
         bool update = false;
-        
+
         if (!ImGui::CollapsingHeader(ICON_FA_CIRCLE " Sphere")) return false;
 
         ImGui::PushItemWidth(-FLT_MIN);
@@ -95,13 +94,13 @@ void ComponentUiRegistry::init() {
 
         return update;
     });
-    
-    ui_reg.add<ecs::Plane>([](ecs::Plane& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+
+    ui_reg.add<ecs::Plane>([](ecs::Plane& p, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_SQUARE " Plane", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
 
-    ui_reg.add<ecs::Collider>([](ecs::Collider& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Collider>([](ecs::Collider& c, ecs::Registry& r, ecs::Entity e){
         bool update = false;
         if (!ImGui::CollapsingHeader(ICON_FA_SQUARE " Collider")) return false;
 
@@ -114,13 +113,13 @@ void ComponentUiRegistry::init() {
 
         return update;
     });
-    
-    ui_reg.add<ecs::Box>([](ecs::Box& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+
+    ui_reg.add<ecs::Box>([](ecs::Box& p, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_BOX " Box", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
 
-    ui_reg.add<ecs::RigidBody>([](ecs::RigidBody& rb, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::RigidBody>([](ecs::RigidBody& rb, ecs::Registry& r, ecs::Entity e){
         bool update = false;
         if (!ImGui::CollapsingHeader(ICON_FA_CUBES_STACKED " Rigid Body")) return false;
 
@@ -136,14 +135,14 @@ void ComponentUiRegistry::init() {
 
         return update;
     });
-    
-    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+
+    ui_reg.add<ecs::MeshRef>([](ecs::MeshRef& ref, ecs::Registry& r, ecs::Entity e){
         auto* meshes = ComponentUiRegistry::get().meshAssets;
         if (!meshes || meshes->empty()) return false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh")) return false;
         ImGui::PushItemWidth(-FLT_MIN);
-        
+
         bool update = false;
         int current = ref.handle;
         const std::string& currentName = (*meshes)[current].getName();
@@ -171,7 +170,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::CameraObject>([](ecs::CameraObject& c, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) return false;
@@ -183,7 +182,7 @@ void ComponentUiRegistry::init() {
         update |= ImGui::DragFloat("##Aperture", &c.aperture, 0.01f, 0.0f, 10.0f);
         ImGui::Text("Focus Depth:");
         update |= ImGui::DragFloat("##FocusDepth", &c.focusDepth, 0.01f, 0.0f, FLT_MAX);
-        
+
         if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
             c.isPreview = true;
             c.previewJustSet = true;
@@ -196,7 +195,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add<ecs::Transform>([](ecs::Transform& t, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::Transform>([](ecs::Transform& t, ecs::Registry& r, ecs::Entity e){
         bool update = false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform")) return false;
@@ -208,10 +207,10 @@ void ComponentUiRegistry::init() {
         if (isAnimated) {
             auto& anim = r.get<ecs::TransformAnim>(e);
             keyframeButton(
-                ctx, r, e, anim, TransformKeyframeType::Position,
+                r, e, anim, TransformKeyframeType::Position,
                 [&](const bool& hasKeyframe) -> void {
-                    if (!hasKeyframe) anim.insertPositionKeyframe(ctx.animation->getFrame(), t.position);
-                    else anim.removePositionKeyframe(ctx.animation->getFrame());
+                    if (!hasKeyframe) anim.insertPositionKeyframe(Core::getAnimation().getFrame(), t.position);
+                    else anim.removePositionKeyframe(Core::getAnimation().getFrame());
                 }
             );
         }
@@ -224,10 +223,10 @@ void ComponentUiRegistry::init() {
         if (isAnimated) {
             auto& anim = r.get<ecs::TransformAnim>(e);
             keyframeButton(
-                ctx, r, e, anim, TransformKeyframeType::Rotation,
+                r, e, anim, TransformKeyframeType::Rotation,
                 [&](const bool& hasKeyframe) -> void {
-                    if (!hasKeyframe) anim.insertRotationKeyframe(ctx.animation->getFrame(), t.rotation);
-                    else anim.removeRotationKeyframe(ctx.animation->getFrame());
+                    if (!hasKeyframe) anim.insertRotationKeyframe(Core::getAnimation().getFrame(), t.rotation);
+                    else anim.removeRotationKeyframe(Core::getAnimation().getFrame());
                 }
             );
         }
@@ -257,10 +256,10 @@ void ComponentUiRegistry::init() {
         if (isAnimated) {
             auto& anim = r.get<ecs::TransformAnim>(e);
             keyframeButton(
-                ctx, r, e, anim, TransformKeyframeType::Scale,
+                r, e, anim, TransformKeyframeType::Scale,
                 [&](const bool& hasKeyframe) -> void {
-                    if (!hasKeyframe) anim.insertScaleKeyframe(ctx.animation->getFrame(), t.scale);
-                    else anim.removeScaleKeyframe(ctx.animation->getFrame());
+                    if (!hasKeyframe) anim.insertScaleKeyframe(Core::getAnimation().getFrame(), t.scale);
+                    else anim.removeScaleKeyframe(Core::getAnimation().getFrame());
                 }
             );
         }
@@ -270,18 +269,18 @@ void ComponentUiRegistry::init() {
             t.updated = true;
             update = true;
         }
-        
+
         ImGui::PopItemWidth();
 
         return update;
     });
 
-    ui_reg.add<ecs::TransformAnim>([](ecs::TransformAnim& p, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::TransformAnim>([](ecs::TransformAnim& p, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT " Transform Anim", ImGuiTreeNodeFlags_Bullet);
         return false;
     });
 
-    ui_reg.add<ecs::MaterialAnim>([](ecs::MaterialAnim& anim, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::MaterialAnim>([](ecs::MaterialAnim& anim, ecs::Registry& r, ecs::Entity e){
         ImGui::CollapsingHeader(ICON_FA_PALETTE " Material Anim", ImGuiTreeNodeFlags_Bullet);
 
         auto* mats = ComponentUiRegistry::get().materials;
@@ -289,7 +288,7 @@ void ComponentUiRegistry::init() {
         if (!mats || mats->empty() || !matRefs.has(e)) return false;
 
         const Material& mat = (*mats)[matRefs.get(e).handle];
-        const int frame = ctx.animation->getFrame();
+        const int frame = Core::getAnimation().getFrame();
         const bool hasKeyframe = anim.hasKeyframe(frame);
 
         if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOnColor);
@@ -309,13 +308,13 @@ void ComponentUiRegistry::init() {
         return false;
     });
 
-    ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, AppContext& ctx, ecs::Registry& r, ecs::Entity e){
+    ui_reg.add<ecs::MaterialRef>([](ecs::MaterialRef& ref, ecs::Registry& r, ecs::Entity e){
         auto* mats = ComponentUiRegistry::get().materials;
         if (!mats || mats->empty()) return false;
 
         if (!ImGui::CollapsingHeader(ICON_FA_PALETTE " Material")) return false;
         ImGui::PushItemWidth(-FLT_MIN);
-        
+
         bool update = false;
         int current = ref.handle;
         const char* preview = (*mats)[current].name.empty() ? "Material" : (*mats)[current].name.c_str();

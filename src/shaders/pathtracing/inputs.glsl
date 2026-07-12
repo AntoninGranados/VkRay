@@ -30,6 +30,7 @@ struct RenderUBO {
 
 layout(std140, set = 0, binding = 0) uniform UBO {
     int       sampleCount;
+    int       selectedObjectId;
     CameraUBO camera;
     ScreenUBO screen;
     RenderUBO render;
@@ -66,7 +67,6 @@ layout(set = 0, binding = 10) buffer readonly MaterialBuffer {
 } materialBuffer;
 layout(set = 0, binding = 11) buffer readonly ObjectBuffer {
     uint objectCount;
-    int selectedObjectId;
     Object objects[];
 } objectBuffer;
 layout(set = 0, binding = 12) buffer readonly LightBuffer {

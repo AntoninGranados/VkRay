@@ -1,7 +1,6 @@
 #pragma once
 
 #include "panel.hpp"
-#include "app_context.hpp"
 #include "editor/scene/scene_ui.hpp"
 
 class Scene;
@@ -9,7 +8,7 @@ class Scene;
 class ScenePanel: IPanel {
 public:
     ScenePanel(SceneSelection& selection) : selection(selection) {}
-    void draw(AppContext& ctx) override;
+    void draw() override;
 
 private:
     void drawNewObjectPopUp(Scene& scene);

@@ -6,14 +6,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui/imgui.h"
-#include "app_context.hpp"
 #include "core/camera.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/editor.hpp"
 
 namespace ecs {
 
-void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
-    if (ctx.renderMode != RenderMode::Preview) return;    // don't draw the cameras when rendering
+void cameraDrawingSystem(Registry& registry) {
+    if (Core::getRenderMode() != RenderMode::Preview) return;    // don't draw the cameras when rendering
 
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -36,7 +37,7 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
         const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
         const float fov = glm::radians(c.fov);
 
-        const Camera& activeCamera = ctx.scene->getCamera();
+        const Camera& activeCamera = Core::getScene().getCamera();
         const glm::mat4 view = activeCamera.getView();
         const glm::mat4 proj = activeCamera.getProjection(aspect);
         const glm::mat4 viewProj = proj * view;
@@ -109,8 +110,9 @@ void cameraDrawingSystem(Registry& registry, AppContext& ctx) {
         };
 
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        // const ImU32 lineColor = (selectedEntity && e == *selectedEntity) ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
-        const ImU32 lineColor = IM_COL32(0, 0, 0, 255);
+        const SceneSelection& sel = Editor::getUi().getSelection();
+        const bool isSelected = sel.entity >= 0 && e == Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
+        const ImU32 lineColor = isSelected ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
         const float distToCamera = glm::length(activeCamera.getPosition() - camPos);
         const float thickness = std::clamp(4.0f / (0.15f * distToCamera + 1.0f), 0.75f, 4.0f);
 

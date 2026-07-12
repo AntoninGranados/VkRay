@@ -106,7 +106,6 @@ struct ObjectHandle {
 
 struct GpuObjectHeader {
     uint32_t objectCount;
-    int selectedObject;
 };
 
 struct GpuLight {

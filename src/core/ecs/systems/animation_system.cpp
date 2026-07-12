@@ -8,16 +8,17 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "core/animation_handler.hpp"
+#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
 #include "../components.hpp"
 
 namespace ecs {
 
-void transformAnimationSystem(Registry& registry, AppContext& ctx) {
+void transformAnimationSystem(Registry& registry) {
     static int prevFrame = 0;
-    if (ctx.animation->isPaused() && prevFrame == ctx.animation->getFrame() && !*ctx.restartRender) return;
-    prevFrame = ctx.animation->getFrame();
+    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationPending()) return;
+    prevFrame = Core::getAnimation().getFrame();
 
     auto& transformAnims = registry.storage<ecs::TransformAnim>();
     auto& transforms = registry.storage<ecs::Transform>();
@@ -25,7 +26,7 @@ void transformAnimationSystem(Registry& registry, AppContext& ctx) {
     for (const auto& e : transformAnims.entities()) {
         if (!transforms.has(e)) continue;
         auto& transform = transforms.get(e);
-        const int currFrame = ctx.animation->getFrame();
+        const int currFrame = Core::getAnimation().getFrame();
 
         auto& anim = transformAnims.get(e);
         bool changed = false;
@@ -100,21 +101,21 @@ void transformAnimationSystem(Registry& registry, AppContext& ctx) {
         }
 
         if (changed) {
-            *ctx.restartRender = true;
+            Core::restartAccumulation();
         }
     }
 }
 
-void materialAnimationSystem(Registry& registry, AppContext& ctx) {
+void materialAnimationSystem(Registry& registry) {
     static int prevFrame = -1;
-    const int currFrame = ctx.animation->getFrame();
-    if (currFrame == prevFrame && !*ctx.restartRender) return;
+    const int currFrame = Core::getAnimation().getFrame();
+    if (currFrame == prevFrame && !Core::isAccumulationPending()) return;
     const bool frameChanged = (currFrame != prevFrame);
     prevFrame = currFrame;
 
     auto& materialAnims = registry.storage<ecs::MaterialAnim>();
     auto& materialRefs  = registry.storage<ecs::MaterialRef>();
-    auto& materials     = ctx.scene->getMaterials();
+    auto& materials     = Core::getScene().getMaterials();
 
     for (const auto& e : materialAnims.entities()) {
         if (!materialRefs.has(e)) continue;
@@ -134,7 +135,7 @@ void materialAnimationSystem(Registry& registry, AppContext& ctx) {
         mat.emissionStrength = kf.emissionStrength;
     }
 
-    if (frameChanged) *ctx.restartRender = true;
+    if (frameChanged) Core::restartAccumulation();
 }
 
 } // namespace ecs

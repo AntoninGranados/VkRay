@@ -9,16 +9,13 @@
 #include "VkSmol/engine.hpp"
 
 #include "core/camera.hpp"
-#include "asset/mesh.hpp"
+#include "core/scene/asset/mesh.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/ecs/components.hpp"
 #include "core/ecs/system_scheduler.hpp"
 #include "core/structures.hpp"
-#include "object/material.hpp"
-
-struct AppContext;
-class AnimationHandler;
+#include "core/scene/object/material.hpp"
 
 enum LightMode : int {
     Day,
@@ -58,7 +55,7 @@ class Scene {
 public:
     void init();
     void destroy();
-    void clear(VkSmol& engine);
+    void clear();
 
     MaterialHandle pushMaterial(const Material& mat);
     void pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle = 0);
@@ -69,14 +66,14 @@ public:
     void pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle = 0);
     void pushCamera(std::string name, const glm::mat4& transform);
     
-    void bakePhysics(AnimationHandler* animation, bool& restartRender);
+    void bakePhysics();
     bool isPhysicsBakeInProgress() const;
     int getPhysicsBakeCurrentFrame() const;
     int getPhysicsBakeTotalFrames() const;
     
-    void runPreUpdate(AppContext& ctx) { preUpdateScheduler.run(registry, ctx); }
-    void runOnRender(AppContext& ctx, const FrameContext& frame) { onRenderScheduler.run(registry, ctx, frame); }
-    void runPostUpdate(AppContext& ctx) { postUpdateScheduler.run(registry, ctx); }
+    void runPreUpdate() { preUpdateScheduler.run(registry); }
+    void runOnRender(const FrameContext& frame) { onRenderScheduler.run(registry, frame); }
+    void runPostUpdate() { postUpdateScheduler.run(registry); }
     
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
@@ -104,8 +101,8 @@ private:
     ScenePackingMaps packingMaps;
     
     ecs::Registry registry;
-    ecs::SystemScheduler<AppContext&> preUpdateScheduler, postUpdateScheduler;
-    ecs::SystemScheduler<AppContext&, const FrameContext&> onRenderScheduler;
+    ecs::SystemScheduler<> preUpdateScheduler, postUpdateScheduler;
+    ecs::SystemScheduler<const FrameContext&> onRenderScheduler;
     
     std::vector<ecs::Entity> entities;
     std::vector<Material> materials;

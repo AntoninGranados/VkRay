@@ -9,10 +9,12 @@
 #include "VkSmol/image/image.hpp"
 
 #include "utils/log.hpp"
-#include "core/scene/scene.hpp"
+#include "core/core.hpp"
+#include "core/parameter_handler.hpp"
 #include "core_structures.hpp"
 
-CoreResources CoreRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder) {
+CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
+    VkSmol& engine = Core::getEngine();
     coreGroupHandle = builder.addSubmissionGroup("Core");
 
     previousPathtracingImageHandle = builder.createImage(
@@ -101,11 +103,13 @@ CoreResources CoreRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builde
     return resources;
 }
 
-void CoreRenderer::destroy(VkSmol& engine) {
+void CoreRenderer::destroy() {
+    VkSmol& engine = Core::getEngine();
     exportService.destroy(engine);
 }
 
-void CoreRenderer::buildPipelines(VkSmol& engine) {
+void CoreRenderer::buildPipelines() {
+    VkSmol& engine = Core::getEngine();
     engine.waitIdle();
 
     try {
@@ -118,16 +122,17 @@ void CoreRenderer::buildPipelines(VkSmol& engine) {
     Log::success("CoreRenderer", "(Re)Built the pipelines");
 }
 
-void CoreRenderer::setCamera(const Camera& camera) {
+void CoreRenderer::render(const FrameContext& frameContext) {
+    VkSmol& engine = Core::getEngine();
+    const Camera& camera = Core::getScene().getCamera();
     pathtracerUBO.camera.pos        = camera.getPosition();
     pathtracerUBO.camera.dir        = camera.getDirection();
     pathtracerUBO.camera.tanHFov    = camera.getTanHFov();
     pathtracerUBO.camera.aperture   = camera.getAperture();
     pathtracerUBO.camera.focusDepth = camera.getFocusDepth();
-}
 
-void CoreRenderer::render(VkSmol& engine, const FrameContext& frameContext) {
     pathtracerUBO.sampleCount = ++sampleCount;
+    pathtracerUBO.selectedObjectId = selectedObjectId;
 
     const VkExtent2D extent = frameContext.extent;
     pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
@@ -161,11 +166,13 @@ void CoreRenderer::render(VkSmol& engine, const FrameContext& frameContext) {
     engine.endRecording(coreGroupHandle);
 }
 
-void CoreRenderer::saveCapture(VkSmol& engine, const std::filesystem::path& path) {
+void CoreRenderer::saveCapture(const std::filesystem::path& path) {
+    VkSmol& engine = Core::getEngine();
     exportService.save(engine, engine.getImage(resources.outputImageHandle), path, aovFlags);
 }
 
-void CoreRenderer::resize(VkSmol& engine, uint32_t width, uint32_t height) {
+void CoreRenderer::resize(uint32_t width, uint32_t height) {
+    VkSmol& engine = Core::getEngine();
     engine.waitIdle();
     engine.getExtent() = { width, height };
 
@@ -176,7 +183,8 @@ void CoreRenderer::resize(VkSmol& engine, uint32_t width, uint32_t height) {
     exportService.resize(engine, width, height);
 }
 
-void CoreRenderer::bindParameters(ParameterHandler& params) {
+void CoreRenderer::bindParameters() {
+    ParameterHandler& params = Core::getParameters();
     params.bindBool("pathtracer/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
     });
