@@ -3,9 +3,9 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app/app_context.hpp"
+#include "app_context.hpp"
 #include "editor/ui_constants.hpp"
-#include "camera.hpp"
+#include "core/camera.hpp"
 
 void CameraPanel::draw(AppContext& ctx) {
     Camera& camera = *ctx.camera;

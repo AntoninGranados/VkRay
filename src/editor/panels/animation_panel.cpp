@@ -3,10 +3,10 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app/app_context.hpp"
-#include "app/animation_handler.hpp"
+#include "app_context.hpp"
+#include "core/animation_handler.hpp"
 #include "editor/ui_constants.hpp"
-#include "scene/scene.hpp"
+#include "core/scene/scene.hpp"
 
 void AnimationPanel::draw(AppContext& ctx) {
     Scene& scene = *ctx.scene;
@@ -41,7 +41,7 @@ void AnimationPanel::draw(AppContext& ctx) {
             );
             ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
         } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
-            scene.bakePhysics();
+            scene.bakePhysics(ctx.animation, *ctx.restartRender);
             *ctx.restartRender = true;
         }
         ImGui::SameLine();
@@ -77,16 +77,16 @@ void AnimationPanel::draw(AppContext& ctx) {
         dl->AddRectFilled(ImVec2(barMin.x + barWidth * tNorm - 4.0f, barMin.y), ImVec2(barMin.x + barWidth * tNorm + 4.0f, barMax.y), fillCol, 3.0f);
         
         // Draw keyframes
-        const ecs::Entity* e = ctx.scene->getSelectedEntity();
-        if (e && ctx.scene->getRegistry().has<ecs::TransformAnim>(*e)) {
-            auto& anim = ctx.scene->getRegistry().get<ecs::TransformAnim>(*e);
-            for (auto& k : anim.positionKeys) {
-                float x = barMin.x + (float(k.frame) / ctx.animation->getEndFrame()) * barWidth;
-                ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
-                dl->AddCircleFilled(c, ui::kWidgetRounding*1.5f, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOffColor));
-                dl->AddCircleFilled(c, ui::kWidgetRounding, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor));
-            }
-        }
+        // const ecs::Entity* e = selectedEntity;
+        // if (e && ctx.scene->getRegistry().has<ecs::TransformAnim>(*e)) {
+        //     auto& anim = ctx.scene->getRegistry().get<ecs::TransformAnim>(*e);
+        //     for (auto& k : anim.positionKeys) {
+        //         float x = barMin.x + (float(k.frame) / ctx.animation->getEndFrame()) * barWidth;
+        //         ImVec2 c = ImVec2(x, barMin.y + barHeight * 0.5f);
+        //         dl->AddCircleFilled(c, ui::kWidgetRounding*1.5f, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOffColor));
+        //         dl->AddCircleFilled(c, ui::kWidgetRounding, ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor));
+        //     }
+        // }
 
         // Draw current frame
         std::string frameLabel = std::to_string(ctx.animation->getFrame());

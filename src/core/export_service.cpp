@@ -8,7 +8,7 @@
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr/tinyexr.h"
 
-#include "app/log.hpp"
+#include "utils/log.hpp"
 #include "core_structures.hpp"
 
 void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {

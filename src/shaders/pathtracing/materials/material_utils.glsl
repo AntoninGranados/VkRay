@@ -26,6 +26,7 @@ struct BSDFMediumInfo {
     bool isVolume;
     vec3 absorption;
     float density;
+    float scatterAlbedo;
     float anisotropic;   // `g` in the Henyey–Greenstein phase function (https://en.wikipedia.org/wiki/Henyey–Greenstein_phase_function)
 };
 

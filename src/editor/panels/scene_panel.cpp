@@ -6,16 +6,18 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 #include <nfd.hpp>
 
-#include "app/app_context.hpp"
-#include "app/log.hpp"
-#include "app/parameter_handler.hpp"
+#include "app_context.hpp"
+#include "utils/log.hpp"
+#include "core/parameter_handler.hpp"
 #include "editor/ui_constants.hpp"
 
-#include "scene/scene.hpp"
-#include "scene/scene_serializer.hpp"
+#include "core/scene/scene.hpp"
+#include "core/scene/scene_serializer.hpp"
 
 
 void ScenePanel::draw(AppContext& ctx) {
+    Scene& scene = *ctx.scene;
+
     ui::setFixedDockClass();
     ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_CUBES " Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
@@ -26,7 +28,7 @@ void ScenePanel::draw(AppContext& ctx) {
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
             if (NFD::OpenDialog(outPath, filter, 1, "assets/scenes/") == NFD_OKAY) {
                 LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
-                if (SceneSerializer::load(*ctx.scene, mode, outPath.get())) {
+                if (SceneSerializer::load(scene, *ctx.engine, mode, outPath.get())) {
                     ctx.parameters->setEnum<LightMode>("scene/light_mode", mode);
                     *ctx.restartRender = true;
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
@@ -43,14 +45,215 @@ void ScenePanel::draw(AppContext& ctx) {
                 if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
                     path += ".json";
                 LightMode mode = ctx.parameters->getEnum<LightMode>("scene/light_mode");
-                if (SceneSerializer::save(*ctx.scene, mode, path)) {
+                if (SceneSerializer::save(scene, mode, path)) {
                     Log::success("ScenePanel", std::format("Scene saved: {}", path));
                 }
             }
         }
 
         ctx.parameters->drawGroup("scene", *ctx.restartRender);
-        ctx.scene->drawUI();
+
+        bool openNewObjectPopup = false;
+        bool openNewMeshAssetPopup = false;
+
+        if (ImGui::BeginTable("Entities", 2, ImGuiTableFlags_None)) {
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Entities");
+            if (ImGui::BeginListBox("##Entities", ImVec2(-FLT_MIN, 0.0f))) {
+                for (size_t i = 0; i < scene.getEntities().size(); i++) {
+                    const ecs::Entity& e = scene.getEntities()[i];
+
+                    std::string displayName = "???";
+                    if (scene.getRegistry().has<ecs::Name>(e)) displayName = scene.getRegistry().get<ecs::Name>(e).value;
+                    if (displayName.empty()) displayName = "???";
+
+                    if (ImGui::Selectable(displayName.c_str(), selection.entity == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::IsMouseDoubleClicked(0)) {
+                            selection.entity = static_cast<int>(i);
+                        }
+                    }
+                }
+                ImGui::EndListBox();
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::NewLine();
+            if (ImGui::Button("+##Entity", ImVec2(32, 0))) openNewObjectPopup = true;
+            if (ImGui::Button("-##Entity", ImVec2(32, 0)) && selection.entity >= 0) {
+                ecs::Entity e = scene.getEntities()[static_cast<size_t>(selection.entity)];
+                scene.getRegistry().destroyEntity(e);
+                scene.getEntities().erase(std::next(scene.getEntities().begin(), selection.entity));
+                scene.update();
+                selection.entity = -1;
+            }
+
+            ImGui::EndTable();
+        }
+
+        if (ImGui::BeginTable("Materials", 2, ImGuiTableFlags_None)) {
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Materials");
+            if (ImGui::BeginListBox("##Materials", ImVec2(-FLT_MIN, 0.0f))) {
+                for (size_t i = 0; i < scene.getMaterials().size(); i++) {
+                    const std::string& materialName = scene.getMaterials()[i].name;
+                    const char* display = materialName.empty() ? "Material" : materialName.c_str();
+                    std::string label = std::string(display) + "##Material" + std::to_string(i);
+                    if (ImGui::Selectable(label.c_str(), selection.material == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::IsMouseDoubleClicked(0)) selection.material = static_cast<int>(i);
+                    }
+                }
+                ImGui::EndListBox();
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::NewLine();
+            if (ImGui::Button("+##Materials", ImVec2(32, 0))) {
+                Material mat = DEFAULT_MATERIAL;
+                mat.name = std::format("Material-uid[{:02d}]", rand());
+                scene.pushMaterial(mat);
+                scene.update();
+            }
+            if (ImGui::Button("-##Materials", ImVec2(32, 0)) &&
+                selection.material > 0 &&
+                selection.material < static_cast<int>(scene.getMaterials().size())) {
+                const int removed = selection.material;
+                scene.getMaterials().erase(scene.getMaterials().begin() + removed);
+
+                auto& matRefs = scene.getRegistry().storage<ecs::MaterialRef>();
+                const auto& refEntities = matRefs.entities();
+                for (size_t i = 0; i < matRefs.size(); i++) {
+                    ecs::MaterialRef& ref = matRefs.get(refEntities[i]);
+                    if (ref.handle == removed)
+                        ref.handle = 0;
+                    else if (ref.handle > removed)
+                        ref.handle--;
+                }
+                scene.update();
+                selection.material = -1;
+            }
+
+            ImGui::EndTable();
+        }
+
+        if (ImGui::BeginTable("MeshAssets", 2, ImGuiTableFlags_None)) {
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Mesh Assets");
+            if (ImGui::BeginListBox("##MeshAssets", ImVec2(-FLT_MIN, 0.0f))) {
+                for (size_t i = 0; i < scene.getMeshAssets().size(); i++) {
+                    const std::string& meshName = scene.getMeshAssets()[i].getName();
+                    const char* display = meshName.empty() ? "Mesh" : meshName.c_str();
+                    std::string label = std::string(display) + "##MeshAsset" + std::to_string(i);
+                    if (ImGui::Selectable(label.c_str(), selection.meshAsset == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::IsMouseDoubleClicked(0)) selection.meshAsset = static_cast<int>(i);
+                    }
+                }
+                ImGui::EndListBox();
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::NewLine();
+            if (ImGui::Button("+##MeshAssets", ImVec2(32, 0))) openNewMeshAssetPopup = true;
+            if (ImGui::Button("-##MeshAssets", ImVec2(32, 0)) &&
+                selection.meshAsset > 0 &&
+                selection.meshAsset < static_cast<int>(scene.getMeshAssets().size())) {
+                const int removed = selection.meshAsset;
+                scene.getMeshAssets().erase(scene.getMeshAssets().begin() + removed);
+
+                auto& meshRefs = scene.getRegistry().storage<ecs::MeshRef>();
+                const auto& refEntities = meshRefs.entities();
+                for (size_t i = 0; i < meshRefs.size(); i++) {
+                    ecs::MeshRef& ref = meshRefs.get(refEntities[i]);
+                    if (ref.handle == removed)
+                        ref.handle = 0;
+                    else if (ref.handle > removed)
+                        ref.handle--;
+                }
+                scene.update();
+                selection.meshAsset = -1;
+            }
+
+            ImGui::EndTable();
+        }
+
+        if (openNewMeshAssetPopup) {
+            NFD::Guard guard;
+            NFD::UniquePath outPath;
+            nfdfilteritem_t filter[1] = { { "OBJ Mesh", "obj" } };
+            if (NFD::OpenDialog(outPath, filter, 1, "assets/models/") == NFD_OKAY) {
+                const std::string meshPath = outPath.get();
+                MeshAsset asset(MeshAsset::nameFromPath(meshPath));
+                if (asset.loadFromObj(meshPath)) {
+                    Log::success("SceneEditor", std::format("Loaded mesh: {}", asset.getName()));
+                    scene.getMeshAssets().push_back(std::move(asset));
+                    scene.update();
+                }
+            }
+        }
+
+        if (openNewObjectPopup) ImGui::OpenPopup("New Object");
+        drawNewObjectPopUp(scene);
     }
     ImGui::End();
+}
+
+void ScenePanel::drawNewObjectPopUp(Scene& scene) {
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
+
+    std::string name = std::format("Entity-uid[{:02d}]", rand());
+
+    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::kButtonSize)) {
+        scene.getEntities().push_back(scene.getRegistry().createEntity());
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::kButtonSize)) {
+        scene.pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::kButtonSize)) {
+        scene.pushPlane(name, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_BOX " Box", ui::kButtonSize)) {
+        scene.pushBox(name, glm::vec3(-1.0, -1.0, -1.0), glm::vec3(1.0, 1.0, 1.0));
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_SQUARE " Quad", ui::kButtonSize)) {
+        scene.pushQuad(name, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0), glm::vec2(1, 1));
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::kButtonSize)) {
+        scene.pushMesh(name, 0, glm::mat3(1.0));
+        scene.update();
+        ImGui::CloseCurrentPopup();
+    }
+    if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::kButtonSize)) {
+        scene.pushCamera(name, glm::mat3(1.0));
+        ImGui::CloseCurrentPopup();
+    }
+    ui::PushCancelStyleColor();
+    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
+        ImGui::CloseCurrentPopup();
+    }
+    ui::PopCancelStyleColor();
+
+    ImGui::EndPopup();
 }

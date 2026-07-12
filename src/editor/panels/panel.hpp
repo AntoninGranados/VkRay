@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app/app_context.hpp"
+#include "app_context.hpp"
 
 class IPanel {
 public:

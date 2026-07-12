@@ -122,10 +122,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         vec3(0.0),
         0.0,
         false,
-        BSDFMediumInfo(false, false, vec3(1.0), 1.0, 0.0)
+        BSDFMediumInfo(false, false, vec3(1.0), 1.0, 0.0, 0.0)
     );
     Hit prevHit;
-    BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
+    BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
     bool prevIsSkipped = false;
 
     for (; i < ubo.render.maxBounces; i++) {
@@ -136,9 +136,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
         if (currentMedium.isVolume) {
             float sigma_t = currentMedium.density;
-            float t_scatter = -log(rand(seed)) / sigma_t;
+            float omega   = currentMedium.scatterAlbedo;
+            float sigma_s = sigma_t * omega;
+            float sigma_a = sigma_t * (1.0 - omega);
+
+            float t_scatter = (sigma_s > EPS) ? (-log(rand(seed)) / sigma_s) : INFINITY;
             if (t_scatter < hit.t) {
                 ray.origin += ray.dir * t_scatter;
+
+                throughput *= pow(max(currentMedium.absorption, vec3(1e-4)), vec3(sigma_a * t_scatter));
 
                 if (ubo.render.importanceSampling == 1) {
                     Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
@@ -147,7 +153,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                     if (volLight.pdf > EPS) {
                         float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
                         float wMIS = powerHeuristic(volLight.pdf, phase);
-                        radiance += throughput * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
+                        radiance += throughput * omega * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
                     }
                 } else {
                     prevIsSkipped = false;
@@ -155,7 +161,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
                 vec3 incomingDir = ray.dir;
                 ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
-                throughput *= currentMedium.absorption;
+                throughput *= omega * currentMedium.absorption;
 
                 prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
                 prevBsdf.isDelta = false;
@@ -163,6 +169,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
                 hit = intersection(ray, false, INFINITY, stats);
                 continue;
+            } else {
+                throughput *= pow(max(currentMedium.absorption, vec3(1e-4)), vec3(sigma_a * hit.t));
             }
         }
 
@@ -191,8 +199,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
         }
-        if (mat.type == mat_Volume) {
-            currentMedium = hit.frontFace ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0);
+        if (mat.type == mat_Volume || mat.type == mat_Dielectric) {
+            currentMedium = bsdf.medium.isVolume ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
         }
         bool isSkipped = false;
         if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
@@ -214,7 +222,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             if (rand(seed) > p) break;
             throughput /= p;
         }
-        if (mat.type != mat_Volume) {
+        if (mat.type != mat_Volume && !(mat.type == mat_Dielectric && bsdf.medium.isVolume)) {
             prevBsdf = bsdf;
             prevHit = hit;
             prevIsSkipped = isSkipped;
@@ -222,7 +230,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
 
         ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
         hit = intersection(ray, false, INFINITY, stats);
-        if (prevBsdf.medium.isDielectric) {
+        if (prevBsdf.medium.isDielectric && !prevBsdf.medium.isVolume) {
             throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
         }
     }

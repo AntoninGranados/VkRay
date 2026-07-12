@@ -9,18 +9,18 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/platform/platform.hpp"
 
-#include "app/parameter_handler.hpp"
+#include "core/parameter_handler.hpp"
 #include "editor/editor_renderer.hpp"
-#include "scene/scene.hpp"
-#include "scene/scene_serializer.hpp"
+#include "core/scene/scene.hpp"
+#include "core/scene/scene_serializer.hpp"
 
-#include "app/app_context.hpp"
+#include "app_context.hpp"
 #include "editor/editor_ui.hpp"
-#include "app/animation_handler.hpp"
+#include "core/animation_handler.hpp"
 #include "core/core_renderer.hpp"
 #include "offline/job_queue.hpp"
 
-#include "app/input_handler.hpp"
+#include "editor/input_handler.hpp"
 
 enum class DebugView : int {
     None = 0,

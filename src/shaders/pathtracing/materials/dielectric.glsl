@@ -43,15 +43,19 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
         weight = vec3(etaFactor);
     }
 
+    bool entering = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
+
     BSDFSample bsdf;
-    bsdf.wi      = wi;
-    bsdf.weight  = weight;
-    bsdf.pdf     = pdf;
-    bsdf.isDelta = true;
-    bsdf.medium.isDielectric = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
-    bsdf.medium.isVolume = false;
-    bsdf.medium.absorption = mat.albedo;
-    bsdf.medium.density = mat.density;
+    bsdf.wi                   = wi;
+    bsdf.weight               = weight;
+    bsdf.pdf                  = pdf;
+    bsdf.isDelta              = true;
+    bsdf.medium.isDielectric  = entering;
+    bsdf.medium.isVolume      = entering && mat.density > 0.0;
+    bsdf.medium.absorption    = mat.albedo;
+    bsdf.medium.density       = mat.density;
+    bsdf.medium.scatterAlbedo = mat.transmission;
+    bsdf.medium.anisotropic   = mat.anisotropic;
     return bsdf;
 }
 

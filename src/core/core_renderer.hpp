@@ -5,10 +5,10 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
-#include "scene/scene.hpp"
+#include "core/scene/scene.hpp"
 #include "export_service.hpp"
-#include "camera.hpp"
-#include "app/parameter_handler.hpp"
+#include "core/camera.hpp"
+#include "core/parameter_handler.hpp"
 
 struct FrameContext;
 

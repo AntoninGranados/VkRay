@@ -8,8 +8,8 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "VkSmol/image/image.hpp"
 
-#include "app/log.hpp"
-#include "scene/scene.hpp"
+#include "utils/log.hpp"
+#include "core/scene/scene.hpp"
 #include "core_structures.hpp"
 
 CoreResources CoreRenderer::initGraph(VkSmol& engine, RenderGraphBuilder& builder) {

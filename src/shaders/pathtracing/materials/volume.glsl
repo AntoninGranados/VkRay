@@ -54,11 +54,12 @@ BSDFSample sampleVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint 
     bsdf.weight  = vec3(1.0);
     bsdf.pdf     = 0.0;
     bsdf.isDelta = true;
-    bsdf.medium.isDielectric = false;
-    bsdf.medium.isVolume     = hit.frontFace;
-    bsdf.medium.absorption  = mat.albedo;
-    bsdf.medium.density     = mat.density;
-    bsdf.medium.anisotropic = mat.anisotropic;
+    bsdf.medium.isDielectric  = false;
+    bsdf.medium.isVolume      = hit.frontFace;
+    bsdf.medium.absorption    = mat.albedo;
+    bsdf.medium.density       = mat.density;
+    bsdf.medium.scatterAlbedo = 1.0;
+    bsdf.medium.anisotropic   = mat.anisotropic;
     return bsdf;
 }
 

@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-#include "app/app_context.hpp"
+#include "app_context.hpp"
 #include "utils/progress.hpp"
 
 class RenderProgressPanel: IPanel {

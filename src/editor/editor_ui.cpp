@@ -9,13 +9,15 @@
 #include "imgui/imgui_internal.h"
 #include "imgui/ImGuizmo.h"
 
-#include "VkSmol/engine.hpp"
-#include "VkSmol/platform/glfw_platform.hpp"
+#include "app_context.hpp"
+#include "core/scene/scene.hpp"
+#include "editor/ecs/systems/camera_drawing_system.hpp"
+#include "ui_constants.hpp"
 
-#include "app/app_context.hpp"
-#include "scene/scene.hpp"
-#include "./ui_constants.hpp"
 
+EditorUi::EditorUi() {
+    uiScheduler.add(ecs::cameraDrawingSystem);
+}
 
 void EditorUi::draw(const CommandBuffer& commandBuffer, AppContext& ctx) {
     if (!toggled && ctx.renderMode == RenderMode::Preview) return;
@@ -88,10 +90,12 @@ void EditorUi::drawPreview(AppContext& ctx) {
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
-        scene.runOnUi(ctx);
+        uiScheduler.run(scene.getRegistry(), ctx);
 
         const float aspect = windowSize.y > 0.0f ? windowSize.x / windowSize.y : 1.0f;
-        scene.drawGuizmo(
+        sceneUI.drawGuizmo(
+            scene,
+            selection,
             camera.getView(),
             camera.getProjection(aspect)
         );
@@ -104,10 +108,23 @@ void EditorUi::drawPreview(AppContext& ctx) {
     cameraPanel.draw(ctx);
     renderParameterPanel.draw(ctx);
     scenePanel.draw(ctx);
-    inspectorPanel.draw(ctx);
-    toastPanel.draw();
+    sceneUI.drawInspectors(scene, selection, ctx);
+    toastNotifications.draw();
 }
 
 void EditorUi::drawRender(AppContext& ctx) {
     renderPanel.draw(ctx);
+}
+
+void EditorUi::pickEntity(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize) {
+    float dist;
+    selection.entity = sceneUI.raycast(scene, screenPos, screenSize, dist);
+}
+
+bool EditorUi::focusDepthAt(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist) {
+    return sceneUI.raycast(scene, screenPos, screenSize, dist, false) >= 0;
+}
+
+void EditorUi::clearEntitySelection() {
+    selection.entity = -1;
 }

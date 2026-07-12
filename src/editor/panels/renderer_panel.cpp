@@ -5,8 +5,8 @@
 
 #include <nfd.hpp>
 
-#include "app/app_context.hpp"
-#include "app/parameter_handler.hpp"
+#include "app_context.hpp"
+#include "core/parameter_handler.hpp"
 #include "editor/ui_constants.hpp"
 #include "core/export_service.hpp"
 

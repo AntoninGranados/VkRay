@@ -8,8 +8,9 @@
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "app/log.hpp"
+#include "utils/log.hpp"
 #include "core/core_renderer.hpp"
+#include "editor/ecs/component_ui_registry.hpp"
 #include "core/export_service.hpp"
 #include "utils/progress.hpp"
 #include "version.hpp"
@@ -177,12 +178,13 @@ void Application::runJobs(JobQueue& queue) {
             coreRenderer.resize(engine, job->width, job->height);
 
         LightMode lightMode = LightMode::Day;
-        if (!SceneSerializer::load(scene, lightMode, job->scene.string(), job->seed)) {
+        if (!SceneSerializer::load(scene, engine, lightMode, job->scene.string(), job->seed)) {
             queue.fail();
             continue;
         }
         Log::success("Application", std::format("[{}/{}] Loaded: {}", jobIndex, totalJobs, job->scene.string()));
         ctx.camera = &scene.getCamera();
+        ctx.renderMode = RenderMode::RenderSingle;
         parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
         engine.waitIdle();
@@ -192,10 +194,11 @@ void Application::runJobs(JobQueue& queue) {
             auto frameContext = engine.beginFrame();
             if (!frameContext) {
                 engine.advanceFrame();
-                scene.runPostUpdate(ctx);
                 continue;
             }
-            
+
+            scene.runPreUpdate(ctx);
+            scene.runOnRender(ctx, *frameContext);
             fillUBOs();
             coreRenderer.render(engine, *frameContext);
             queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
@@ -204,6 +207,7 @@ void Application::runJobs(JobQueue& queue) {
         bar.close();
 
         coreRenderer.saveCapture(engine, job->output);
+        ctx.renderMode = RenderMode::Preview;
 
         queue.complete();
     }
@@ -265,11 +269,15 @@ void Application::initParameters() {
 }
 
 void Application::initScene(const std::string& sceneFile) {
-    scene.setContext(ctx);
     scene.init();
 
+    auto& uiReg = ecs::ComponentUiRegistry::get();
+    uiReg.setMaterials(&scene.getMaterials());
+    uiReg.setMeshAssets(&scene.getMeshAssets());
+    ecs::ComponentUiRegistry::init();
+
     LightMode mode = LightMode::Day;
-    SceneSerializer::load(scene, mode, sceneFile);
+    SceneSerializer::load(scene, engine, mode, sceneFile);
 
     parameters.setEnum<LightMode>("scene/light_mode", mode);
     ctx.camera = &scene.getCamera();
@@ -290,8 +298,8 @@ void Application::onFrameStart(float dt) {
 }
 
 void Application::clearRenderingData(RenderMode newRenderMode) {
-    scene.clearSelection();
     if (ui) {
+        ui->clearEntitySelection();
         ui->saveToggledState();
         ui->setToggle(false);
     }
@@ -305,5 +313,5 @@ void Application::fillUBOs() {
     coreRenderer.setCamera(*ctx.camera);
 
     if (!platform.isHeadless())
-        editorRenderer.setPreviewBorder(scene.isPreviewingCamera());
+        editorRenderer.setPreviewBorder(scene.isPreviewingCamera(ctx.renderMode));
 }
