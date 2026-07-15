@@ -27,6 +27,9 @@ struct PixelInfo {
     float mean;
     float m2;
     int   count;
+    uint  bounces;
+    uint  bvhChecks;
+    uint  triangleChecks;
     float varianceProba;
     uint  selectionMask;
 };

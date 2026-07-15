@@ -21,8 +21,9 @@ void cameraDrawingSystem(Registry& registry) {
 
     if (ImGui::GetCurrentContext() == nullptr) return;
 
-    ImVec2 windowPos = ImGui::GetWindowPos();
-    ImVec2 windowSize = ImGui::GetWindowSize();
+    ImVec2 windowPos  = Editor::getUi().getViewportPos();
+    ImVec2 windowSize = Editor::getUi().getViewportSize();
+    if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
 
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
@@ -109,7 +110,8 @@ void cameraDrawingSystem(Registry& registry) {
             return ImVec2(x, y);
         };
 
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImDrawList* drawList = Editor::getUi().getViewportDrawList();
+        if (!drawList) continue;
         const SceneSelection& sel = Editor::getUi().getSelection();
         const bool isSelected = sel.entity >= 0 && e == Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
         const ImU32 lineColor = isSelected ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);

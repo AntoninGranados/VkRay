@@ -288,9 +288,7 @@ void physicsSolverSystem(Registry& registry) {
         changed = true;
     }
 
-    if (changed) {
-        Core::restartAccumulation();
-    }
+    if (changed) Core::requestAccumulationRestart();
 
     if (gIsBaking) {
         for (const ecs::Entity& e : colliders.entities()) {
@@ -318,7 +316,7 @@ void bakePhysicsSimulation(Registry& registry) {
     physics_detail::gBakeState.wasPaused = animation.isPaused();
 
     animation.pause();
-    Core::restartAccumulation();
+    Core::requestAccumulationRestart();
 }
 
 bool isPhysicsBakeInProgress() {
@@ -341,7 +339,7 @@ void physicsSystem(Registry& registry) {
         transformAnimationSystem(registry);
         transformSystem(registry);
         physicsSolverSystem(registry);
-        Core::restartAccumulation();
+        Core::requestAccumulationRestart();
 
         gBakeState.nextFrame++;
         if (gBakeState.nextFrame >= gBakeState.totalFrames) {
@@ -356,7 +354,7 @@ void physicsSystem(Registry& registry) {
     }
 
     static int prevFrame = 0;
-    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationPending()) return;
+    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationRestartPending()) return;
     prevFrame = Core::getAnimation().getFrame();
 
     auto& rigidBodies = registry.storage<ecs::RigidBody>();
@@ -398,7 +396,7 @@ void physicsSystem(Registry& registry) {
     }
 
     if (changed) {
-        Core::restartAccumulation();
+        Core::requestAccumulationRestart();
     }
 }
 

@@ -1,18 +1,17 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include "VkSmol/command/command_buffer.hpp"
 
-#include "core/ecs/system_scheduler.hpp"
-#include "panels/stats_panel.hpp"
 #include "panels/animation_panel.hpp"
+#include "panels/debug_panel.hpp"
 #include "panels/render_progress_panel.hpp"
-#include "panels/camera_panel.hpp"
+#include "panels/render_viewport_panel.hpp"
 #include "panels/renderer_panel.hpp"
 #include "panels/scene_panel.hpp"
-#include "toast_notifications.hpp"
+#include "panels/stats_panel.hpp"
+#include "panels/viewport_panel.hpp"
 #include "scene/scene_ui.hpp"
+#include "toast_notifications.hpp"
 
 class Scene;
 class CommandBuffer;
@@ -28,36 +27,37 @@ public:
     void saveToggledState() { toggleState = toggled; }
     void restoreToggledState() { toggled = toggleState; }
 
-    bool isMouseCaptured() { return capturesMouse; }
+    bool isMouseCaptured()    { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }
 
-    void pickEntity(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize);
-    bool focusDepthAt(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist);
     void clearEntitySelection();
 
-    const SceneSelection& getSelection() const { return selection; }
+    const SceneSelection& getSelection()     const { return selection; }
+    ImVec2      getViewportSize()            const { return viewportPanel.getSize(); }
+    ImVec2      getViewportPos()             const { return viewportPanel.getPos(); }
+    ImDrawList* getViewportDrawList()        const { return viewportPanel.getDrawList(); }
 
 private:
-    ecs::SystemScheduler<> uiScheduler;
+    SceneSelection      selection;
 
-    SceneSelection selection;
-
-    StatsPanel statsPanel;
-    AnimationPanel animationPanel;
+    StatsPanel          statsPanel;
+    AnimationPanel      animationPanel;
     RenderProgressPanel renderPanel;
-    CameraPanel cameraPanel;
-    RendererPanel renderParameterPanel;
-    ScenePanel scenePanel{selection};
-    SceneUI sceneUI;
-    ToastNotifications toastNotifications;
-    
-    bool toggled = true;
-    bool toggleState = true;
-    bool capturesMouse = false;
+    RendererPanel       renderParameterPanel;
+    ScenePanel          scenePanel{selection};
+    DebugPanel          debugPanel;
+    ViewportPanel       viewportPanel;
+    RenderViewportPanel renderViewportPanel;
+    SceneUI             sceneUI;
+    ToastNotifications  toastNotifications;
+
+    bool toggled      = true;
+    bool toggleState  = true;
+    bool capturesMouse    = false;
     bool capturesKeyboard = false;
 
+    void setupDockspace();
     void updateState();
-
     void drawPreview();
     void drawRender();
 };

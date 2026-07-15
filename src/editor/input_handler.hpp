@@ -7,7 +7,6 @@ public:
     void handle(float dt);
 
 private:
-    bool middleClickWasDown = false;
     bool spaceWasDown = false;
 
     void handlePreview(float dt);

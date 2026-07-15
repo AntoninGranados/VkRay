@@ -3,6 +3,9 @@
 #include <chrono>
 #include <format>
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "VkSmol/render/shader.hpp"
 #include "imgui/imgui.h"
@@ -27,6 +30,7 @@ Application::Application(Platform& p) : platform(p) {
         Editor::init();
 
         ImGuiIO& io = ImGui::GetIO();
+        io.IniFilename = nullptr;
         io.Fonts->AddFontDefault();
         ImFontConfig iconConfig;
         iconConfig.MergeMode = true;
@@ -44,6 +48,8 @@ Application::Application(Platform& p) : platform(p) {
         Editor::getEditorRenderer().initGraph(builder, resources);
     engine.setGraph(builder);
     engine.initGraph();
+    if (!platform.isHeadless())
+        Editor::getEditorRenderer().registerImGuiTextures();
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
 
@@ -81,16 +87,18 @@ void Application::run() {
 
         if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
             lastSwapchainGeneration = frameContext->swapchainGeneration;
-            VkExtent2D extent = engine.getExtent();
-            Core::getCoreRenderer().resize(extent.width, extent.height);
-            Core::restartAccumulation();
+            if (platform.isHeadless()) {
+                VkExtent2D extent = engine.getExtent();
+                Core::getCoreRenderer().resize(extent.width, extent.height);
+                Core::restartAccumulation();
+            }
         }
 
         bool shouldSave = false;
         std::filesystem::path savePath;
         bool toVideo = false;
 
-        if (Core::getRenderMode() != RenderMode::Preview && !Core::isAccumulationPending()) {
+        if (Core::getRenderMode() != RenderMode::Preview && !Core::isAccumulationRestartPending()) {
             if (Core::getCoreRenderer().isRenderFinished()) {
                 shouldSave = true;
 
@@ -109,7 +117,7 @@ void Application::run() {
                     Core::setRenderMode(RenderMode::Preview);
                 }
 
-                Core::restartAccumulation();
+                Core::requestAccumulationRestart();
             }
         }
 
@@ -190,7 +198,7 @@ void Application::runJobs(JobQueue& queue) {
         parameters.setEnum<LightMode>("scene/light_mode", lightMode);
 
         engine.waitIdle();
-        Core::getCoreRenderer().reset();
+        Core::restartAccumulation();
 
         for (uint32_t i = 0; i < totalSamples; i++) {
             auto frameContext = engine.beginFrame();
@@ -231,9 +239,11 @@ void Application::initParameters() {
     parameters.addInt("pathtracer/sampling/max_bounces", "Max Bounces", 8, 1, 20, 1, false);
     parameters.addInt("pathtracer/sampling/render_samples", "Render Samples", 2048, 1, 4096, 1, false);
     parameters.addBool("pathtracer/sampling/importance_sampling", "Importance Sampling", true, false);
-    // TODO: the clip threshold should be a parameter
+
     parameters.addBool("pathtracer/sampling/clip_accumulation", "Clip Accumulation", false, true);
+    // TODO: rename `clip_value` to `clip_threshold`
     parameters.addFloat("pathtracer/sampling/clip_value", "Clip Value", 50.0, 0.0, 1000.0, 0.01, true);
+
     parameters.addBool("pathtracer/sampling/variance_sampling", "Variance Sampling", true, false);
     parameters.addInt("pathtracer/sampling/variance_warmup", "Variance Warmup Samples", 64, 0, 2048, 1, false);
 
@@ -258,14 +268,6 @@ void Application::initParameters() {
 
     Core::getCoreRenderer().bindParameters();
 
-    parameters.bindEnum(
-        "pathtracer/debug_view",
-        [](int v) {
-            Core::getCoreRenderer().setDebugView(v);
-            Editor::getEditorRenderer().setDebugView(v);
-        }
-    );
-
     parameters.saveDocumentation();
 }
 
@@ -287,11 +289,26 @@ void Application::onFrameStart(float dt) {
     if (!platform.isHeadless()) {
         Editor::getInputHandler().pollEvents();
         Editor::getInputHandler().handle(dt);
+
+        ImVec2 vpSize = Editor::getUi().getViewportSize();
+        float xscale = 1.0f, yscale = 1.0f;
+        glfwGetWindowContentScale(
+            static_cast<GLFWwindow*>(platform.getNativeWindowHandle()),
+            &xscale, &yscale);
+        VkExtent2D vpExtent = {
+            static_cast<uint32_t>(vpSize.x * xscale),
+            static_cast<uint32_t>(vpSize.y * yscale)
+        };
+        VkExtent2D current = Core::getCoreRenderer().getRenderExtent();
+        if (vpExtent.width > 0 && vpExtent.height > 0 &&
+            (vpExtent.width != current.width || vpExtent.height != current.height)) {
+            Core::getCoreRenderer().resize(vpExtent.width, vpExtent.height);
+            Editor::getEditorRenderer().resize(vpExtent.width, vpExtent.height);
+            Core::restartAccumulation();
+        }
     }
 
-    if (Core::consumeAccumulationRestart()) {
-        Core::getCoreRenderer().reset();
-    }
+    Core::consumeAccumulationRestart();
 }
 
 

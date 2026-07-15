@@ -77,7 +77,7 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     pathtrace.readBuffer(12, resources.sceneHandles.light.handle,    BufferUsageType::Storage);
     pathtrace.readBuffer(13, resources.sceneHandles.quad.handle,     BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle,  ImageUsageType::Storage);
-    pathtracingPipelineHandle = pathtrace.setPipeline("./src/shaders/pathtracing/pathtracing.glsl");
+    pathtracingPipelineHandle = pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
 
     // Compositing pass
     ComputePassBuilder composite = builder.addComputePass("CompositionPass");
@@ -87,7 +87,7 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     composite.readBuffer(1, compositingUBOHandle, BufferUsageType::Uniform);
     composite.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
     composite.writeImage(3, resources.outputImageHandle, ImageUsageType::Storage);
-    compositingPipelineHandle = composite.setPipeline("./src/shaders/compositing.glsl");
+    compositingPipelineHandle = composite.setPipeline("./src/shaders/core/compositing.glsl");
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
     exportPassHandle = exportPass.getHandle();
@@ -134,7 +134,7 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.sampleCount = ++sampleCount;
     pathtracerUBO.selectedObjectId = selectedObjectId;
 
-    const VkExtent2D extent = frameContext.extent;
+    const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : frameContext.extent;
     pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
 
@@ -174,7 +174,9 @@ void CoreRenderer::saveCapture(const std::filesystem::path& path) {
 void CoreRenderer::resize(uint32_t width, uint32_t height) {
     VkSmol& engine = Core::getEngine();
     engine.waitIdle();
-    engine.getExtent() = { width, height };
+    if (engine.isHeadless())
+        engine.getExtent() = { width, height };
+    renderExtent = { width, height };
 
     engine.resizeImage(previousPathtracingImageHandle, width, height);
     engine.resizeImage(currentPathtracingImageHandle, width, height);

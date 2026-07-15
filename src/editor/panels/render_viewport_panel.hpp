@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-class CameraPanel: IPanel {
+class RenderViewportPanel : public IPanel {
 public:
     void draw() override;
 };

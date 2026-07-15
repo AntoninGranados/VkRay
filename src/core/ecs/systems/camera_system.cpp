@@ -1,7 +1,5 @@
 #include "camera_system.hpp"
 
-#include <algorithm>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -23,7 +21,7 @@ void cameraPreUpdateSystem(Registry& registry) {
         if (Core::getRenderMode() != RenderMode::Preview && !c.isPreview) {
             c.setPreview(true);
             c.setPreviewJustSet(true);
-            Core::restartAccumulation();
+            Core::requestAccumulationRestart();
         }
 
         if (!c.isPreview) continue;
@@ -62,7 +60,7 @@ void cameraPostUpdateSystem(Registry& registry) {
 
         if (escapePressed) {
             c.setPreview(false);
-            Core::restartAccumulation();
+            Core::requestAccumulationRestart();
             Core::getScene().getCamera().setAperture(0.0f);
             continue;
         }

@@ -72,5 +72,5 @@ bool ParameterUI::drawNode(ParameterHandler& handler, const ParameterPath& prefi
 void ParameterUI::drawGroup(ParameterHandler& handler, const ParameterPath& root) {
     bool restartNeeded = false;
     drawNode(handler, root, restartNeeded);
-    if (restartNeeded) Core::restartAccumulation();
+    if (restartNeeded) Core::requestAccumulationRestart();
 }

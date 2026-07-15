@@ -102,12 +102,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
 
-    if (ubo.render.debugView == debug_HitChecks) {
-        float bvh = float(stats.bvhChecks) / 256.0;
-        float tri = float(stats.triangleChecks) / 256.0;
-        if (max(bvh, tri) > 1.0) return vec3(1.0);
-        return vec3(tri, 0.0, bvh);
-    }
+    pixelInfo.bvhChecks      = stats.bvhChecks;
+    pixelInfo.triangleChecks = stats.triangleChecks;
 
     vec3 throughput = vec3(1.0);
     vec3 radiance = vec3(0.0);
@@ -236,9 +232,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     }
     if (i == ubo.render.maxBounces) radiance = vec3(0.0);
 
-    if (ubo.render.debugView == debug_Bounces) {
-        return vec3(i / float(ubo.render.maxBounces));
-    }
+    pixelInfo.bounces = uint(i);
     return radiance;
 }
 
@@ -287,6 +281,9 @@ void main() {
         initInfo.mean                   = 0.0;
         initInfo.m2                     = 0.0;
         initInfo.count                  = 0;
+        initInfo.bounces                = 0u;
+        initInfo.bvhChecks              = 0u;
+        initInfo.triangleChecks         = 0u;
         initInfo.varianceProba          = 0.0;
         initInfo.selectionMask          = 0u;
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
@@ -306,11 +303,14 @@ void main() {
     float takenSamples = 0.0;
     vec3 colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
     PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
-    updatedInfo.aov = pixelInfo.aov;
-    updatedInfo.mean = pixelInfo.mean;
-    updatedInfo.m2 = pixelInfo.m2;
-    updatedInfo.count = pixelInfo.count;
-    updatedInfo.varianceProba = pixelInfo.varianceProba;
+    updatedInfo.aov             = pixelInfo.aov;
+    updatedInfo.mean            = pixelInfo.mean;
+    updatedInfo.m2              = pixelInfo.m2;
+    updatedInfo.count           = pixelInfo.count;
+    updatedInfo.bounces         = pixelInfo.bounces;
+    updatedInfo.bvhChecks       = pixelInfo.bvhChecks;
+    updatedInfo.triangleChecks  = pixelInfo.triangleChecks;
+    updatedInfo.varianceProba   = pixelInfo.varianceProba;
     pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
 
     Ray primaryRay = getRay(camera, fragPos, false, seed);

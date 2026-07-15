@@ -12,8 +12,7 @@
 void AnimationPanel::draw() {
     Scene& scene = Core::getScene();
 
-    ui::setFixedDockClass();
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
+    ui::setNextWindowFixed();
     ImGui::Begin("Animation");
     {
         bool paused = Core::getAnimation().isPaused();

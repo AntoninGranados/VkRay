@@ -7,7 +7,6 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
-#include "core/ecs/components.hpp"
 #include "core/ecs/registry.hpp"
 
 class MeshAsset;
@@ -36,7 +35,7 @@ public:
 
             if (ImGui::Button("-##Remove", { 32, 0 })) {
                 registry.remove<T>(e);
-                Core::restartAccumulation();
+                Core::requestAccumulationRestart();
             }
             ImGui::SameLine();
             bool update = func(t, registry, e);

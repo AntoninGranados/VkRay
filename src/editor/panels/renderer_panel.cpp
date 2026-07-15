@@ -12,8 +12,7 @@
 #include "editor/ui_constants.hpp"
 
 void RendererPanel::draw() {
-    ui::setFixedDockClass();
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
+    ui::setNextWindowFixed();
     ImGui::Begin(ICON_FA_CAMERA " Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::Button(ICON_FA_PLAY " Render", { -FLT_MIN, 0 }))

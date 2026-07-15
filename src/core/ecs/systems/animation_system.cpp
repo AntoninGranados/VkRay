@@ -11,13 +11,11 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
-#include "../components.hpp"
-
 namespace ecs {
 
 void transformAnimationSystem(Registry& registry) {
     static int prevFrame = 0;
-    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationPending()) return;
+    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationRestartPending()) return;
     prevFrame = Core::getAnimation().getFrame();
 
     auto& transformAnims = registry.storage<ecs::TransformAnim>();
@@ -101,7 +99,7 @@ void transformAnimationSystem(Registry& registry) {
         }
 
         if (changed) {
-            Core::restartAccumulation();
+            Core::requestAccumulationRestart();
         }
     }
 }
@@ -109,7 +107,7 @@ void transformAnimationSystem(Registry& registry) {
 void materialAnimationSystem(Registry& registry) {
     static int prevFrame = -1;
     const int currFrame = Core::getAnimation().getFrame();
-    if (currFrame == prevFrame && !Core::isAccumulationPending()) return;
+    if (currFrame == prevFrame && !Core::isAccumulationRestartPending()) return;
     const bool frameChanged = (currFrame != prevFrame);
     prevFrame = currFrame;
 
@@ -135,7 +133,7 @@ void materialAnimationSystem(Registry& registry) {
         mat.emissionStrength = kf.emissionStrength;
     }
 
-    if (frameChanged) Core::restartAccumulation();
+    if (frameChanged) Core::requestAccumulationRestart();
 }
 
 } // namespace ecs

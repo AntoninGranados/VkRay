@@ -2,62 +2,17 @@
 
 #include <algorithm>
 #include <format>
-#include <limits>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
-#include "imgui/ImGuizmo.h"
 
 #include "utils/log.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/component_ui_registry.hpp"
 #include "editor/ui_constants.hpp"
-#include "raycast.hpp"
 #include "material_ui.hpp"
-
-void SceneUI::drawGuizmo(Scene& scene, SceneSelection& selection, const glm::mat4& view, const glm::mat4& proj) {
-    if (selection.entity < 0) return;
-
-    ecs::Entity e = scene.getEntities()[static_cast<size_t>(selection.entity)];
-    if (!scene.getRegistry().has<ecs::Transform>(e)) return;
-
-    ecs::Transform& t = scene.getRegistry().get<ecs::Transform>(e);
-    glm::mat4 model = t.local;
-
-    int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE | ImGuizmo::OPERATION::SCALE;
-    // Keep gizmo orientation in world space: avoid mixing scale with other ops.
-    if ((opFlags & ImGuizmo::OPERATION::SCALE) && (opFlags & (ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE))) {
-        opFlags &= ~ImGuizmo::OPERATION::SCALE;
-    }
-
-    ImGuizmo::PushID(selection.entity);
-    if (ImGuizmo::Manipulate(
-            glm::value_ptr(view),
-            glm::value_ptr(proj),
-            static_cast<ImGuizmo::OPERATION>(opFlags),
-            ImGuizmo::MODE::WORLD,
-            glm::value_ptr(model))) {
-        if (isInvalid(model)) {
-            ImGuizmo::PopID();
-            return;
-        }
-
-        glm::vec3 translation, rotationEuler, scale;
-        ImGuizmo::DecomposeMatrixToComponents(
-            glm::value_ptr(model),
-            glm::value_ptr(translation),
-            glm::value_ptr(rotationEuler),
-            glm::value_ptr(scale));
-
-        t.setPosition(translation);
-        t.setRotation(glm::quat(glm::radians(rotationEuler)));
-        t.setScale(scale);
-        scene.update();
-    }
-    ImGuizmo::PopID();
-}
 
 void SceneUI::drawInspectors(Scene& scene, SceneSelection& selection) {
     drawSelectedEntityUI(scene, selection);
@@ -143,7 +98,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
 
                 if (verifyRestrictions) {
                     funcs.add(scene.getRegistry(), e);
-                    Core::restartAccumulation();
+                    Core::requestAccumulationRestart();
                 }
                 ImGui::CloseCurrentPopup();
             }
@@ -189,57 +144,4 @@ void SceneUI::drawSelectedMeshAssetUI(Scene& scene, SceneSelection& selection) {
     ImGui::End();
 
     if (!open) selection.meshAsset = -1;
-}
-
-int SceneUI::raycast(Scene& scene, const glm::vec2& screenPos, const glm::vec2& screenSize, float& dist, bool includeCameras) {
-    const Ray ray = getRay(screenPos, screenSize, scene.getCamera());
-    float tClosest = std::numeric_limits<float>::infinity();
-    int idClosest = -1;
-    float t = -1.0f;
-
-    auto& sphereStorage = scene.getRegistry().storage<ecs::Sphere>();
-    auto& planeStorage  = scene.getRegistry().storage<ecs::Plane>();
-    auto& boxStorage = scene.getRegistry().storage<ecs::Box>();
-    auto& quadStorage = scene.getRegistry().storage<ecs::Quad>();
-    auto& meshStorage     = scene.getRegistry().storage<ecs::MeshRef>();
-    auto& cameraStorage   = scene.getRegistry().storage<ecs::CameraObject>();
-    auto& transformStorage = scene.getRegistry().storage<ecs::Transform>();
-
-    for (size_t i = 0; i < scene.getEntities().size(); i++) {
-        const ecs::Entity& e = scene.getEntities()[i];
-        if (!transformStorage.has(e)) continue;
-
-        auto& transform = transformStorage.get(e);
-
-        if (sphereStorage.has(e)) {
-            auto& sphere = sphereStorage.get(e);
-            t = raySphereIntersection(ray, transform.position, sphere.radius);
-        } else if (planeStorage.has(e)) {
-            glm::vec3 normal = glm::normalize(transform.rotation * glm::vec3(0.0f, 1.0f, 0.0f));
-            t = rayPlaneIntersection(ray, transform.position, normal);
-        } else if (boxStorage.has(e)) {
-            t = rayBoxIntersection(ray, transform.local);
-        } else if (quadStorage.has(e)) {
-            const ecs::Quad& q = quadStorage.get(e);
-            t = rayQuadIntersection(ray, transform.position, q.u, q.v, q.normal);
-        } else if (meshStorage.has(e)) {
-            const ecs::MeshRef& meshRef = meshStorage.get(e);
-            if (meshRef.handle >= 0 && static_cast<size_t>(meshRef.handle) < scene.getMeshAssets().size()) {
-                const MeshAsset& asset = scene.getMeshAssets()[meshRef.handle];
-                t = rayMeshIntersection(ray, transform.local, asset.getVertices(), asset.getIndices());
-            }
-        } else if (includeCameras && cameraStorage.has(e)) {
-            if (cameraStorage.get(e).isPreview) continue;
-            constexpr float cameraSelectRadius = 0.6f;
-            t = raySphereIntersection(ray, transform.position, cameraSelectRadius);
-        }
-
-        if (t >= 0.0f && t < tClosest) {
-            tClosest = t;
-            idClosest = static_cast<int>(i);
-        }
-    }
-
-    dist = tClosest;
-    return idClosest;
 }

@@ -26,14 +26,14 @@ public:
     bool     isRenderFinished()          { return targetSampleCount >= 0 && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
     uint32_t getSampleCount()            { return sampleCount; }
     void     setTargetSampleCount(int n) { targetSampleCount = n; }
-    void     reset()                     { sampleCount = 0; }
+    void     restartAccumulation()       { sampleCount = 0; }
     void render(const FrameContext& frameContext);
 
     void saveCapture(const std::filesystem::path& path);
     void resize(uint32_t width, uint32_t height);
+    VkExtent2D getRenderExtent() const { return renderExtent; }
 
     void bindParameters();
-    void setDebugView(int v) { pathtracerUBO.render.debugView = v; }
     void setSelectedObjectId(int i) { selectedObjectId = i; }
 
 private:
@@ -58,6 +58,8 @@ private:
     ComputePipelineHandle compositingPipelineHandle;
 
     SubmissionGroupHandle coreGroupHandle = {};
+
+    VkExtent2D renderExtent = {};
 
     uint32_t sampleCount = 0;
     int      targetSampleCount = -1;

@@ -25,8 +25,9 @@ public:
     static RenderMode getRenderMode();
     static void       setRenderMode(RenderMode);
 
+    static void requestAccumulationRestart();
     static void restartAccumulation();
-    static bool isAccumulationPending();
+    static bool isAccumulationRestartPending();
     static bool consumeAccumulationRestart();
 
     static const std::filesystem::path& getOutputPath();

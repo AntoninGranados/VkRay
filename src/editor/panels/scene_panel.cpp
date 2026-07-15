@@ -17,8 +17,7 @@
 void ScenePanel::draw() {
     Scene& scene = Core::getScene();
 
-    ui::setFixedDockClass();
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
+    ui::setNextWindowFixed();
     ImGui::Begin(ICON_FA_CUBES " Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", { -FLT_MIN, 0 })) {
@@ -29,7 +28,7 @@ void ScenePanel::draw() {
                 LightMode mode = Core::getParameters().getEnum<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(scene, mode, outPath.get())) {
                     Core::getParameters().setEnum<LightMode>("scene/light_mode", mode);
-                    Core::restartAccumulation();
+                    Core::requestAccumulationRestart();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
                 }
             }

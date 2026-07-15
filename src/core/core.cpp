@@ -27,12 +27,14 @@ CoreRenderer&     Core::getCoreRenderer() { return get().coreRenderer; }
 RenderMode Core::getRenderMode()             { return get().renderMode; }
 void       Core::setRenderMode(RenderMode m) { get().renderMode = m; }
 
-void Core::restartAccumulation()    { get().restartPending = true; }
-bool Core::isAccumulationPending()  { return get().restartPending; }
+void Core::requestAccumulationRestart() { get().restartPending = true; }
+void Core::restartAccumulation() { get().coreRenderer.restartAccumulation(); }
+bool Core::isAccumulationRestartPending()  { return get().restartPending; }
 bool Core::consumeAccumulationRestart() {
     Core& c = get();
     if (!c.restartPending) return false;
     c.restartPending = false;
+    c.restartAccumulation();
     return true;
 }
 

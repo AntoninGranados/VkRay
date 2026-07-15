@@ -1,7 +1,5 @@
 #pragma once
 
-#include <filesystem>
-
 #include "core/parameter_handler.hpp"
 
 class ParameterUI {

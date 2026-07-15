@@ -24,7 +24,6 @@ struct alignas(16) RenderUBO {
     float clipValue;
     int varianceSampling;
     int varianceWarmupSamples;
-    int debugView;
 };
 
 struct PathtracerUBO {
@@ -68,6 +67,9 @@ struct PixelInfo {
     float    mean;
     float    m2;
     int      count;
+    uint32_t bounces;
+    uint32_t bvhChecks;
+    uint32_t triangleChecks;
     float    varianceProba;
     uint32_t selectionMask;
 };

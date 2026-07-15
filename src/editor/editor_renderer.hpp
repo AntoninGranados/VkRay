@@ -4,34 +4,52 @@
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/core_renderer.hpp"
+#include "imgui/imgui.h"
 
 struct FrameContext;
 
 class EditorRenderer {
 public:
     void initGraph(RenderGraphBuilder& builder, CoreResources& coreResources);
-
+    void registerImGuiTextures();
+    void resize(uint32_t width, uint32_t height);
     void render(const FrameContext& frameContext);
-    void setDebugView(int v) { displayUBO.debugView = v; }
+
+    ImTextureID getDisplayTexId() const { return displayTexId; }
+    ImTextureID getDebugTexId()   const { return debugTexId; }
 
 private:
     struct DisplayUBO {
-        int debugView            = 0;
         int previewBorderEnabled = 0;
     };
 
+    struct DebugUBO {
+        int debugView = 0;
+    };
+
     DisplayUBO displayUBO{};
+    DebugUBO   debugUBO{};
 
     ImageHandle swapchainImageHandle;
-    BufferHandle vertexBufferHandle, indexBufferHandle;
-    BufferHandle displayUBOHandle;
+    ImageHandle displayImageHandle;
+    ImageHandle debugImageHandle;
 
-    PassHandle displayPassHandle, uiPassHandle, presentPassHandle;
-    GraphicsPipelineHandle displayPipelineHandle;
+    BufferHandle displayUBOHandle;
+    BufferHandle debugUBOHandle;
+
+    PassHandle displayPassHandle, debugPassHandle, uiPassHandle, presentPassHandle;
+
+    ComputePipelineHandle displayPipelineHandle;
+    ComputePipelineHandle debugPipelineHandle;
 
     SubmissionGroupHandle editorGroupHandle = {};
-    SubmissionGroupHandle uiGroupHandle = {};
+    SubmissionGroupHandle uiGroupHandle     = {};
 
-    void displayPass(const FrameContext& frameContext);
+    VkExtent2D renderExtent = {};
+
+    ImTextureID displayTexId = 0;
+    ImTextureID debugTexId   = 0;
+
+    void editorPass(const FrameContext& frameContext);
     void uiPass();
 };

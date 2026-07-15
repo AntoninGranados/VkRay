@@ -25,7 +25,6 @@ struct RenderUBO {
     float clipValue;
     int varianceSampling;
     int varianceWarmupSamples;
-    int debugView;
 };
 
 layout(std140, set = 0, binding = 0) uniform UBO {
