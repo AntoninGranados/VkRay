@@ -18,7 +18,7 @@
 #include "editor/scene/scene_ui.hpp"
 #include "editor/ui_constants.hpp"
 
-void ViewportPanel::draw() {
+void ViewportPanel::content() {
     Scene& scene = Core::getScene();
     const SceneSelection& selection = Editor::getUi().getSelection();
 

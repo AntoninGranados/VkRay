@@ -3,11 +3,9 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
-#include "editor/ui_constants.hpp"
 
-void StatsPanel::draw() {
+void StatsPanel::content() {
     ImGui::SetNextWindowPos({ 0, 0 });
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin("FPS",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration

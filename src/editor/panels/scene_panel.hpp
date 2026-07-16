@@ -5,12 +5,12 @@
 
 class Scene;
 
-class ScenePanel: IPanel {
+class ScenePanel: public IPanel {
 public:
     ScenePanel(SceneSelection& selection) : selection(selection) {}
-    void draw() override;
-
+    
 private:
+    void content() override;
     void drawNewObjectPopUp(Scene& scene);
     SceneSelection& selection;
 };

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 #include "VkSmol/engine.hpp"
+#include "VkSmol/frame_context.hpp"
 #include "VkSmol/platform/platform.hpp"
 
 #include "core/parameter_handler.hpp"
@@ -27,5 +29,6 @@ private:
     void initParameters();
     void initScene(const std::string& sceneFile = "assets/scenes/default.json");
 
+    void renderFrame(std::function<void(FrameContext&)> onRender);
     void onFrameStart(float dt);
 };

@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-class StatsPanel: IPanel {
-public:
-    void draw() override;
+class StatsPanel: public IPanel {
+private:
+    void content() override;
 };

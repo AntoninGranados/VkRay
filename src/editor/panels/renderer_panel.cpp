@@ -11,7 +11,7 @@
 #include "editor/parameter_ui.hpp"
 #include "editor/ui_constants.hpp"
 
-void RendererPanel::draw() {
+void RendererPanel::content() {
     ui::setNextWindowFixed();
     ImGui::Begin(ICON_FA_CAMERA " Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {

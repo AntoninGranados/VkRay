@@ -3,5 +3,8 @@
 class IPanel {
 public:
     virtual ~IPanel() = default;
-    virtual void draw() = 0;
+    void draw() { content(); };
+    
+private:
+    virtual void content() = 0;
 };

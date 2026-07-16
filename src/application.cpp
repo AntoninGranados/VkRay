@@ -31,13 +31,13 @@ Application::Application(Platform& p) : platform(p) {
 
         ImGuiIO& io = ImGui::GetIO();
         io.IniFilename = nullptr;
-        io.Fonts->AddFontDefault();
+        io.Fonts->AddFontFromFileTTF("assets/fonts/FiraCode-Regular.ttf", 14.0f);
         ImFontConfig iconConfig;
         iconConfig.MergeMode = true;
         iconConfig.PixelSnapH = true;
         iconConfig.GlyphOffset = ImVec2(0.0f, 1.0f);
         static const ImWchar iconRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-        io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 12.0f, &iconConfig, iconRanges);
+        io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 14.0f, &iconConfig, iconRanges);
     }
 
     initParameters();
@@ -64,6 +64,24 @@ Application::~Application() {
     engine.terminate();
 }
 
+void Application::renderFrame(std::function<void(FrameContext&)> onRender) {
+    Core::getScene().runPreRender();
+
+    auto frameContext = engine.beginFrame();
+    if (!frameContext) {
+        engine.advanceFrame();
+        Core::getScene().runPostRender();
+        return;
+    }
+
+    Core::getScene().runOnRender(*frameContext);
+    Core::getCoreRenderer().render(*frameContext);
+    onRender(*frameContext);
+
+    engine.advanceFrame();
+    Core::getScene().runPostRender();
+}
+
 void Application::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -72,27 +90,8 @@ void Application::run() {
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
 
-        Core::getScene().runPreUpdate();
-
         if (!Core::getAnimation().isPaused()) Core::getAnimation().step(deltaTime);
-
         onFrameStart(deltaTime);
-
-        auto frameContext = engine.beginFrame();
-        if (!frameContext) {
-            engine.advanceFrame();
-            Core::getScene().runPostUpdate();
-            continue;
-        }
-
-        if (frameContext->swapchainGeneration != lastSwapchainGeneration) {
-            lastSwapchainGeneration = frameContext->swapchainGeneration;
-            if (platform.isHeadless()) {
-                VkExtent2D extent = engine.getExtent();
-                Core::getCoreRenderer().resize(extent.width, extent.height);
-                Core::restartAccumulation();
-            }
-        }
 
         bool shouldSave = false;
         std::filesystem::path savePath;
@@ -121,8 +120,6 @@ void Application::run() {
             }
         }
 
-        Core::getScene().runOnRender(*frameContext);
-
         if (!platform.isHeadless()) {
             const SceneSelection& sel = Editor::getUi().getSelection();
             int flatIdx = -1;
@@ -145,17 +142,26 @@ void Application::run() {
             Core::getCoreRenderer().setSelectedObjectId(flatIdx);
         }
 
-        Core::getCoreRenderer().render(*frameContext);
-        Editor::getEditorRenderer().render(*frameContext);
+        renderFrame([&](FrameContext& frameContext) {
+            if (frameContext.swapchainGeneration != lastSwapchainGeneration) {
+                lastSwapchainGeneration = frameContext.swapchainGeneration;
+                if (platform.isHeadless()) {
+                    VkExtent2D extent = engine.getExtent();
+                    Core::getCoreRenderer().resize(extent.width, extent.height);
+                    Core::restartAccumulation();
+                }
+            }
 
-        if (shouldSave) {
-            Core::getCoreRenderer().saveCapture(savePath);
-            if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath());
-        }
+            if (!platform.isHeadless())
+                Editor::getEditorRenderer().render(frameContext);
 
-        engine.present();
-        engine.advanceFrame();
-        Core::getScene().runPostUpdate();
+            if (shouldSave) {
+                Core::getCoreRenderer().saveCapture(savePath);
+                if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath());
+            }
+
+            engine.present();
+        });
     }
 }
 
@@ -201,17 +207,10 @@ void Application::runJobs(JobQueue& queue) {
         Core::restartAccumulation();
 
         for (uint32_t i = 0; i < totalSamples; i++) {
-            auto frameContext = engine.beginFrame();
-            if (!frameContext) {
-                engine.advanceFrame();
-                continue;
-            }
-
-            Core::getScene().runPreUpdate();
-            Core::getScene().runOnRender(*frameContext);
-            Core::getCoreRenderer().render(*frameContext);
-            queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
-            bar.step();
+            renderFrame([&](FrameContext&) {
+                queue.setProgress(static_cast<float>(i + 1) / static_cast<float>(totalSamples));
+                bar.step();
+            });
         }
         bar.close();
 

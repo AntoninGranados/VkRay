@@ -14,7 +14,7 @@
 #include "editor/ui_constants.hpp"
 
 
-void ScenePanel::draw() {
+void ScenePanel::content() {
     Scene& scene = Core::getScene();
 
     ui::setNextWindowFixed();

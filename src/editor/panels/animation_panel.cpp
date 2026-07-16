@@ -9,7 +9,7 @@
 #include "editor/editor.hpp"
 #include "editor/ui_constants.hpp"
 
-void AnimationPanel::draw() {
+void AnimationPanel::content() {
     Scene& scene = Core::getScene();
 
     ui::setNextWindowFixed();
@@ -28,9 +28,7 @@ void AnimationPanel::draw() {
             char overlay[16];
             std::snprintf(overlay, sizeof(overlay), "%.0f%%", bakeProgress * 100.0f);
 
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.55f, 0.55f, 0.55f, 0.85f));
             ImGui::ProgressBar(bakeProgress, ImVec2(120.0f, 0.0f), "");
-            ImGui::PopStyleColor();
 
             ImVec2 textSize = ImGui::CalcTextSize(overlay);
             ImVec2 barMin = ImGui::GetItemRectMin();
@@ -64,8 +62,8 @@ void AnimationPanel::draw() {
         }
 
         // Draw bar
-        ImU32 barCol = IM_COL32(140, 140, 140, 128);
-        ImU32 fillCol = IM_COL32(80, 160, 255, 255);
+        ImU32 barCol  = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_FrameBg]);
+        ImU32 fillCol = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
         ImVec2 barMin = ImVec2(p.x, p.y + (frameHeight - barHeight) * 0.5f);
         ImVec2 barMax = ImVec2(p.x + barWidth, barMin.y + barHeight);
         dl->AddRectFilled(barMin, barMax, barCol, 3.0f);

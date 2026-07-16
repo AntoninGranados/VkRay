@@ -25,6 +25,10 @@ void cameraDrawingSystem(Registry& registry) {
     ImVec2 windowSize = Editor::getUi().getViewportSize();
     if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
 
+    ImDrawList* drawList = Editor::getUi().getViewportDrawList();
+    if (!drawList) return;
+    drawList->PushClipRect(windowPos, ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y), true);
+
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
         const auto& c = cameras.get(e);
@@ -110,8 +114,6 @@ void cameraDrawingSystem(Registry& registry) {
             return ImVec2(x, y);
         };
 
-        ImDrawList* drawList = Editor::getUi().getViewportDrawList();
-        if (!drawList) continue;
         const SceneSelection& sel = Editor::getUi().getSelection();
         const bool isSelected = sel.entity >= 0 && e == Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
         const ImU32 lineColor = isSelected ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
@@ -148,6 +150,8 @@ void cameraDrawingSystem(Registry& registry) {
             }
         }
     }
+
+    drawList->PopClipRect();
 }
 
 } // namespace ecs

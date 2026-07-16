@@ -56,6 +56,7 @@ private:
     bool capturesMouse    = false;
     bool capturesKeyboard = false;
 
+    static void initStyle();
     void setupDockspace();
     void updateState();
     void drawPreview();

@@ -71,9 +71,9 @@ public:
     int getPhysicsBakeCurrentFrame() const;
     int getPhysicsBakeTotalFrames() const;
     
-    void runPreUpdate() { preUpdateScheduler.run(registry); }
+    void runPreRender()                         { preUpdateScheduler.run(registry); }
     void runOnRender(const FrameContext& frame) { onRenderScheduler.run(registry, frame); }
-    void runPostUpdate() { postUpdateScheduler.run(registry); }
+    void runPostRender()                        { postUpdateScheduler.run(registry); }
     
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }

@@ -3,6 +3,6 @@
 #include "panel.hpp"
 
 class DebugPanel : public IPanel {
-public:
-    void draw() override;
+private:
+    void content() override;
 };

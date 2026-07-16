@@ -5,7 +5,7 @@
 #include "core/core.hpp"
 #include "editor/editor.hpp"
 
-void RenderViewportPanel::draw() {
+void RenderViewportPanel::content() {
     ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->Pos);
     ImGui::SetNextWindowSize(vp->Size);

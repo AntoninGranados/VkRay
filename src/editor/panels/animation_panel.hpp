@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-class AnimationPanel: IPanel {
-public:
-    void draw() override;
+class AnimationPanel: public IPanel {
+private:
+    void content() override;
 };

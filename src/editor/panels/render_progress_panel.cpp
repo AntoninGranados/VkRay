@@ -8,11 +8,9 @@
 #include "core/core.hpp"
 #include "core/animation_handler.hpp"
 #include "core/parameter_handler.hpp"
-#include "editor/ui_constants.hpp"
 
-void RenderProgressPanel::draw() {
+void RenderProgressPanel::content() {
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::Begin(ICON_FA_STOPWATCH " Loading",
         nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration

@@ -42,9 +42,8 @@ const std::filesystem::path& Core::getOutputPath() { return get().outputPath; }
 void Core::setOutputPath(std::filesystem::path p)  { get().outputPath = std::move(p); }
 
 void Core::reloadShaders() {
-    Core& c = get();
-    c.coreRenderer.buildPipelines();
-    c.restartPending = true;
+    get().coreRenderer.buildPipelines();
+    requestAccumulationRestart();
 }
 
 void Core::startRender() {
@@ -52,7 +51,7 @@ void Core::startRender() {
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
     c.coreRenderer.setTargetSampleCount(c.parameters->getInt("pathtracer/sampling/render_samples"));
-    c.restartPending = true;
+    requestAccumulationRestart();
 }
 
 void Core::startRenderAnim() {
@@ -60,6 +59,6 @@ void Core::startRenderAnim() {
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
     c.coreRenderer.setTargetSampleCount(c.parameters->getInt("pathtracer/sampling/render_samples"));
-    c.restartPending = true;
+    requestAccumulationRestart();
     c.animation.reset(0);
 }

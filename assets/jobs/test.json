@@ -2,15 +2,19 @@
     "version": 1,
     "jobs": [
         {
-            "scene":   "assets/scenes/showcase/campfire.json",
-            "output":  "outputs/campfire.png",
-            "samples": 2048,
-            "width":   540,
-            "height":  540,
+            "scene":   "assets/scenes/room.json",
+            "output":  "outputs/render.png",
+            "samples": 100000,
+            "width":   1280,
+            "height":  720,
             "parameters": {
+                "pathtracer/sampling/max_bounces": 16,
+                
                 "pathtracer/sampling/variance_sampling": true,
-                "pathtracer/sampling/variance_warmup":   128,
-                "pathtracer/sampling/clip_accumulation": true
+                "pathtracer/sampling/variance_warmup":   1000,
+
+                "pathtracer/sampling/clip_accumulation": false ,
+                "pathtracer/sampling/clip_value":        800.0
             }
         }
     ]

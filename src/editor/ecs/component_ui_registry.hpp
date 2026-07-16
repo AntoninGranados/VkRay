@@ -31,7 +31,7 @@ public:
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
-            ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+            ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 
             if (ImGui::Button("-##Remove", { 32, 0 })) {
                 registry.remove<T>(e);

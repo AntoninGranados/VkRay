@@ -26,7 +26,6 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
     bool openNewComponentPopup = false;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin(
         "Entity",
@@ -119,7 +118,6 @@ void SceneUI::drawSelectedMaterialUI(Scene& scene, SceneSelection& selection) {
     if (selection.material < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
@@ -135,7 +133,6 @@ void SceneUI::drawSelectedMeshAssetUI(Scene& scene, SceneSelection& selection) {
     if (selection.meshAsset < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {

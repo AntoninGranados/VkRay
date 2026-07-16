@@ -2,11 +2,9 @@
 
 #include "panel.hpp"
 
-class RendererPanel: IPanel {
-public:
-    void draw() override;
-
+class RendererPanel: public IPanel {
 private:
+    void content() override;
     bool promptImagePath();
     bool promptVideoPath();
 };

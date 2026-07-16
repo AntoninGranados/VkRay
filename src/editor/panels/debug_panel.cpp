@@ -7,14 +7,12 @@
 #include "core/parameter_handler.hpp"
 #include "core/structures.hpp"
 #include "editor/editor.hpp"
-#include "editor/ui_constants.hpp"
 
-void DebugPanel::draw() {
+void DebugPanel::content() {
     if (Core::getParameters().getEnum<DebugView>("pathtracer/debug_view") == DebugView::None)
         return;
 
     ImGui::SetNextWindowSize(ImVec2(400.0f, 300.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowBgAlpha(ui::kWindowBgAlpha);
     if (ImGui::Begin("Debug View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
         VkExtent2D extent = Core::getCoreRenderer().getRenderExtent();
         if (extent.width == 0 || extent.height == 0) { ImGui::End(); return; }
