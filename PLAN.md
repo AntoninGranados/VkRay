@@ -4,7 +4,7 @@ This plan will most likely be subjected to heavy modifications.
 
 ## v0.4 Renderer Architecture
 
-- [ ] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
+- [x] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
   - Renderer owns pathtracing and compositing compute passes only; produces `OutputImage`
   - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
   - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.0]
+
+### Added
+- Toast notifications; console log panel removed
+- Dracula UI theme; cancel button hover color, viewport panel styling
+
+### Changed
+- Architecture restructured into three layers: `Core` (engine, scene, parameters), `Editor` (windowed run loop), `Offline` (headless run loop); `Application` reduced to init/teardown only
+- `AppContext` removed; subsystems access engine, scene, and parameters through `Core` statics
+- `renderFrame()` in `Core` is the shared frame skeleton used by both `Editor` and `Offline`
+- Viewport switched to an ImGui panel (was a fullscreen background blit)
+- Compositing and Display UBOs split
+- `runPreUpdate` / `runPostUpdate` -> `runPreRender` / `runPostRender`
+- Project structure: `external/` for libs, `src/shaders/` for shaders, `assets/` for resources
+- GLFW and GLM moved to git submodules
+
+### Fixed
+- Shadow rays on transmissive and volumetric objects no longer incorrectly apply importance sampling
+
+---
+
 ## [0.3.3]
 
 ### Added

@@ -1,32 +1,6 @@
-#include <cstdlib>
-#include <filesystem>
-#include <string_view>
-
-#include "VkSmol/platform/glfw_platform.hpp"
-#include "VkSmol/platform/headless_platform.hpp"
-
-#include "offline/job_queue.hpp"
 #include "application.hpp"
 
 int main(int argc, char* argv[]) {
-    if (argc >= 2 && std::string_view(argv[1]) == "--reference") {
-        JobQueue queue = JobQueue::fromFile("assets/jobs/reference.json");
-        if (queue.isEmpty()) return EXIT_SUCCESS;
-        HeadlessPlatform platform(queue.entries().front().width, queue.entries().front().height);
-        Application app(platform);
-        app.runJobs(queue);
-
-    } else if (argc >= 3 && std::string_view(argv[1]) == "--job") {
-        JobQueue queue = JobQueue::fromFile(argv[2]);
-        if (queue.isEmpty()) return EXIT_SUCCESS;
-        HeadlessPlatform platform(queue.entries().front().width, queue.entries().front().height);
-        Application app(platform);
-        app.runJobs(queue);
-    
-    } else {
-        GLFWPlatform platform("VkRay", 1280, 720);
-        Application app(platform);
-        app.run();
-    }
-    return EXIT_SUCCESS;
+    Application app(argc, argv);
+    app.run();
 }

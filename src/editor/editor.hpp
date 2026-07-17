@@ -1,12 +1,13 @@
 #pragma once
 
 #include "editor_ui.hpp"
-#include "input_handler.hpp"
 #include "editor_renderer.hpp"
+#include "input_handler.hpp"
 
 class Editor {
 public:
     static void init();
+    static void run();
 
     static EditorUi&       getUi();
     static InputHandler&   getInputHandler();

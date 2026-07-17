@@ -1,35 +1,25 @@
 #include "core.hpp"
 
-#include "VkSmol/engine.hpp"
-#include "VkSmol/platform/platform.hpp"
-#include "core/animation_handler.hpp"
-#include "core/parameter_handler.hpp"
-
 Core& Core::get() {
     static Core instance;
     return instance;
 }
 
-void Core::init(VkSmol& e, Platform& pl, ParameterHandler& p) {
-    Core& c      = get();
-    c.engine     = &e;
-    c.platform   = &pl;
-    c.parameters = &p;
+void Core::init(Platform& p, uint32_t version) {
+    Core& c    = get();
+    c.platform = &p;
+    c.engine.init("VkRay", version, p);
 }
 
-VkSmol&           Core::getEngine()        { return *get().engine; }
-Platform&         Core::getPlatform()      { return *get().platform; }
-AnimationHandler& Core::getAnimation()     { return get().animation; }
-ParameterHandler& Core::getParameters()   { return *get().parameters; }
-Scene&            Core::getScene()        { return get().scene; }
-CoreRenderer&     Core::getCoreRenderer() { return get().coreRenderer; }
+void Core::terminate() {
+    Core& c = get();
+    c.engine.waitIdle();
+    c.coreRenderer.destroy();
+    c.engine.destroyGraph();
+    c.scene.destroy();
+    c.engine.terminate();
+}
 
-RenderMode Core::getRenderMode()             { return get().renderMode; }
-void       Core::setRenderMode(RenderMode m) { get().renderMode = m; }
-
-void Core::requestAccumulationRestart() { get().restartPending = true; }
-void Core::restartAccumulation() { get().coreRenderer.restartAccumulation(); }
-bool Core::isAccumulationRestartPending()  { return get().restartPending; }
 bool Core::consumeAccumulationRestart() {
     Core& c = get();
     if (!c.restartPending) return false;
@@ -38,8 +28,21 @@ bool Core::consumeAccumulationRestart() {
     return true;
 }
 
-const std::filesystem::path& Core::getOutputPath() { return get().outputPath; }
-void Core::setOutputPath(std::filesystem::path p)  { get().outputPath = std::move(p); }
+void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
+    Core& c = get();
+    c.scene.runPreRender();
+    auto frameContext = c.engine.beginFrame();
+    if (!frameContext) {
+        c.engine.advanceFrame();
+        c.scene.runPostRender();
+        return;
+    }
+    c.scene.runOnRender(*frameContext);
+    c.coreRenderer.render(*frameContext);
+    if (onRender) onRender(*frameContext);
+    c.engine.advanceFrame();
+    c.scene.runPostRender();
+}
 
 void Core::reloadShaders() {
     get().coreRenderer.buildPipelines();
@@ -50,7 +53,7 @@ void Core::startRender() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
-    c.coreRenderer.setTargetSampleCount(c.parameters->getInt("pathtracer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("pathtracer/sampling/render_samples"));
     requestAccumulationRestart();
 }
 
@@ -58,7 +61,7 @@ void Core::startRenderAnim() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
-    c.coreRenderer.setTargetSampleCount(c.parameters->getInt("pathtracer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("pathtracer/sampling/render_samples"));
     requestAccumulationRestart();
     c.animation.reset(0);
 }

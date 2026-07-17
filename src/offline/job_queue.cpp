@@ -24,7 +24,7 @@ static std::unordered_map<std::string, std::filesystem::path> kAovPaths = {
     { "sky_mask",   "pathtracer/aov/sky_mask"   },
 };
 
-static void parseAovs(const json& arr, std::vector<ParamOverride>& overrides) {
+static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides) {
     for (const auto& name : arr) {
         const std::string s = name.get<std::string>();
         auto it = kAovPaths.find(s);
@@ -52,16 +52,16 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
 
         struct Checkpoint {
             uint32_t                   spp;
-            std::vector<ParamOverride> aovOverrides;
+            std::vector<ParameterOverride> aovOverrides;
         };
 
-        std::vector<ParamOverride> paramOverrides;
+        std::vector<ParameterOverride> parameterOverrides;
         if (j.contains("parameters")) {
             for (const auto& [key, val] : j.at("parameters").items()) {
-                if      (val.is_boolean())        paramOverrides.push_back({key, val.get<bool>()});
-                else if (val.is_number_integer()) paramOverrides.push_back({key, val.get<int32_t>()});
-                else if (val.is_number_float())   paramOverrides.push_back({key, val.get<float>()});
-                else if (val.is_string())         paramOverrides.push_back({key, val.get<std::string>()});
+                if      (val.is_boolean())        parameterOverrides.push_back({key, val.get<bool>()});
+                else if (val.is_number_integer()) parameterOverrides.push_back({key, val.get<int32_t>()});
+                else if (val.is_number_float())   parameterOverrides.push_back({key, val.get<float>()});
+                else if (val.is_string())         parameterOverrides.push_back({key, val.get<std::string>()});
             }
         }
 
@@ -71,13 +71,13 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
             if (entry.is_number()) {
                 checkpoints.push_back({ entry.get<uint32_t>(), {} });
             } else {
-                std::vector<ParamOverride> cpAovs;
+                std::vector<ParameterOverride> cpAovs;
                 if (entry.contains("aovs")) parseAovs(entry.at("aovs"), cpAovs);
                 checkpoints.push_back({ entry.at("spp").get<uint32_t>(), std::move(cpAovs) });
             }
         }
 
-        std::vector<ParamOverride> jobAovOverrides;
+        std::vector<ParameterOverride> jobAovOverrides;
         if (j.contains("aovs")) parseAovs(j.at("aovs"), jobAovOverrides);
 
         for (uint32_t n = 0; n < repeatCount; ++n) {
@@ -89,7 +89,7 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                 ResolveCtx ctx = nCtx;
                 ctx.tokens["spp"] = {static_cast<int>(ci), static_cast<int>(checkpoints.size())};
 
-                const std::vector<ParamOverride>& aovOverrides =
+                const std::vector<ParameterOverride>& aovOverrides =
                     checkpoints[ci].aovOverrides.empty() ? jobAovOverrides : checkpoints[ci].aovOverrides;
 
                 Job job;
@@ -99,7 +99,7 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                 job.seed               = nSeed;
                 job.width              = j.at("width").get<uint32_t>();
                 job.height             = j.at("height").get<uint32_t>();
-                job.parameterOverrides = paramOverrides;
+                job.parameterOverrides = parameterOverrides;
                 job.parameterOverrides.insert(job.parameterOverrides.end(), aovOverrides.begin(), aovOverrides.end());
 
                 queue.enqueue(std::move(job));

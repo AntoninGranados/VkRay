@@ -1,37 +1,42 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 
-#include "core/structures.hpp"
-#include "core/scene/scene.hpp"
+#include "VkSmol/engine.hpp"
+#include "VkSmol/frame_context.hpp"
+#include "VkSmol/platform/platform.hpp"
+
 #include "core/animation_handler.hpp"
 #include "core/core_renderer.hpp"
-
-class VkSmol;
-class Platform;
-class ParameterHandler;
+#include "core/parameter_handler.hpp"
+#include "core/scene/scene.hpp"
+#include "core/structures.hpp"
 
 class Core {
 public:
-    static void init(VkSmol&, Platform&, ParameterHandler&);
+    static void init(Platform&, uint32_t version);
+    static void terminate();
 
-    static VkSmol&           getEngine();
-    static Platform&         getPlatform();
-    static AnimationHandler& getAnimation();
-    static ParameterHandler& getParameters();
-    static Scene&            getScene();
-    static CoreRenderer&     getCoreRenderer();
+    static VkSmol&           getEngine()      { return get().engine; }
+    static Platform&         getPlatform()    { return *get().platform; }
+    static AnimationHandler& getAnimation()   { return get().animation; }
+    static ParameterHandler& getParameters()  { return get().parameters; }
+    static Scene&            getScene()       { return get().scene; }
+    static CoreRenderer&     getCoreRenderer(){ return get().coreRenderer; }
 
-    static RenderMode getRenderMode();
-    static void       setRenderMode(RenderMode);
+    static RenderMode getRenderMode()             { return get().renderMode; }
+    static void       setRenderMode(RenderMode m) { get().renderMode = m; }
 
-    static void requestAccumulationRestart();
-    static void restartAccumulation();
-    static bool isAccumulationRestartPending();
+    static void requestAccumulationRestart() { get().restartPending = true; }
+    static void restartAccumulation()        { get().coreRenderer.restartAccumulation(); }
+    static bool isAccumulationRestartPending()  { return get().restartPending; }
     static bool consumeAccumulationRestart();
 
-    static const std::filesystem::path& getOutputPath();
-    static void                         setOutputPath(std::filesystem::path);
+    static void renderFrame(std::function<void(FrameContext&)> onRender = {});
+
+    static const std::filesystem::path& getOutputPath() { return get().outputPath; }
+    static void setOutputPath(std::filesystem::path p) { get().outputPath = std::move(p); }
 
     static void reloadShaders();
     static void startRender();
@@ -41,13 +46,13 @@ private:
     Core() = default;
     static Core& get();
 
-    VkSmol*           engine         = nullptr;
-    Platform*         platform       = nullptr;
-    ParameterHandler* parameters     = nullptr;
-    Scene             scene;
-    AnimationHandler  animation{24 * 5, 24.0f};
-    CoreRenderer      coreRenderer;
-    RenderMode        renderMode     = RenderMode::Preview;
-    bool              restartPending = false;
+    Platform*        platform      = nullptr;
+    VkSmol           engine;
+    ParameterHandler parameters;
+    Scene            scene;
+    AnimationHandler animation{24 * 5, 24.0f};
+    CoreRenderer     coreRenderer;
+    RenderMode       renderMode     = RenderMode::Preview;
+    bool             restartPending = false;
     std::filesystem::path outputPath;
 };
