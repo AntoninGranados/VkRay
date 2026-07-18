@@ -1,6 +1,6 @@
 {
-    "pathtracer": {
-        "label": "Pathtracer",
+    "render": {
+        "label": "Renderer",
         "denoising": { "label": "Denoising", "default": false },
         "debug_view": {
             "label": "Debug View",
@@ -8,37 +8,39 @@
             "default": "None",
             "restart_accumulation": true
         },
-        "sampling": {
-            "label": "Sampling",
-            "max_bounces":          { "label": "Max Bounces",          "default": 8,      "min": 1, "max": 20,   "step": 1 },
-            "render_samples":       { "label": "Render Samples",       "default": 2048,   "min": 1, "max": 4096, "step": 1 },
-            "importance_sampling":  { "label": "Importance Sampling",  "default": true },
-            "clip_accumulation":    { "label": "Clip Accumulation",    "default": false,  "restart_accumulation": true },
-            "clip_threshold": {
-                "label": "Clip Threshold",
-                "default": 50.0, "min": 0.0, "max": 1000.0, "step": 0.01,
-                "restart_accumulation": true,
-                "condition": { "param": "pathtracer/sampling/clip_accumulation", "when": true }
-            },
-            "variance_sampling":    { "label": "Variance Sampling",    "default": true },
-            "variance_warmup": {
-                "label": "Variance Warmup Samples",
-                "default": 64, "min": 0, "max": 2048, "step": 1,
-                "condition": { "param": "pathtracer/sampling/variance_sampling", "when": true }
-            }
+
+        "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
+        "render_samples": { "label": "Render Samples", "default": 2048, "min": 1, "max": 4096, "step": 1 },
+        "importance_sampling": { "label": "Importance Sampling", "default": true },
+        "clamp": { "label": "Clamp Fireflies", "description": "Clamps high-luminance samples to reduce fireflies.", "default": false, "restart_accumulation": true },
+        "clamp_threshold": {
+            "label": "Clamp Threshold",
+            "description": "Luminance value above which samples are clamped.",
+            "default": 50.0, "min": 0.0, "max": 1000.0, "step": 1.0,
+            "restart_accumulation": true,
+            "condition": { "param": "render/clamp" }
         },
+        "adaptive_sampling": { "label": "Adaptive Sampling", "description": "Skips already-converged pixels to focus samples where needed.", "default": true },
+        "adaptive_warmup": {
+            "label": "Adaptive Warmup",
+            "description": "Number of samples accumulated before adaptive sampling activates.",
+            "default": 64, "min": 0, "max": 2048, "step": 1,
+            "condition": { "param": "render/adaptive_sampling" }
+        },
+
         "aov": {
             "label": "Arbitrary Output Variables",
-            "position_w": { "label": "Position W", "default": false },
-            "position":   { "label": "Position",   "default": false },
-            "normal_w":   { "label": "Normal W",   "default": false },
-            "normal":     { "label": "Normal",     "default": false },
-            "albedo":     { "label": "Albedo",     "default": false },
-            "roughness":  { "label": "Roughness",  "default": false },
-            "mat_type":   { "label": "Mat Type",   "default": false },
-            "sky_mask":   { "label": "Sky Mask",   "default": false }
+            "position_w": { "label": "Position W", "description": "World-space hit position.", "default": false },
+            "position":   { "label": "Position",   "description": "Camera-space hit position.", "default": false },
+            "normal_w":   { "label": "Normal W",   "description": "World-space surface normal.", "default": false },
+            "normal":     { "label": "Normal",     "description": "Camera-space surface normal.", "default": false },
+            "albedo":     { "label": "Albedo",     "description": "Unlit surface color.", "default": false },
+            "roughness":  { "label": "Roughness",  "description": "Surface roughness value.", "default": false },
+            "mat_type":   { "label": "Mat Type",   "description": "Encoded material type per pixel.", "default": false },
+            "sky_mask":   { "label": "Sky Mask",   "description": "White for background pixels, black for geometry.", "default": false }
         }
     },
+
     "scene": {
         "label": "Scene",
         "light_mode": {

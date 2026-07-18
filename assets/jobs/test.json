@@ -8,13 +8,13 @@
             "width":   1280,
             "height":  720,
             "parameters": {
-                "pathtracer/sampling/max_bounces": 16,
+                "render/max_bounces": 16,
                 
-                "pathtracer/sampling/variance_sampling": true,
-                "pathtracer/sampling/variance_warmup":   1000,
+                "render/adaptive_sampling": true,
+                "render/adaptive_warmup":   1000,
 
-                "pathtracer/sampling/clip_accumulation": false,
-                "pathtracer/sampling/clip_threshold":    800.0
+                "render/clamp": false,
+                "render/clamp_threshold":    800.0
             }
         }
     ]

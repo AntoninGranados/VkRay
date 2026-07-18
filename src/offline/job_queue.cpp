@@ -14,14 +14,14 @@ using json = nlohmann::json;
 static constexpr int JOB_VERSION = 1;
 
 static std::unordered_map<std::string, std::filesystem::path> kAovPaths = {
-    { "position_w", "pathtracer/aov/position_w" },
-    { "position",   "pathtracer/aov/position"   },
-    { "normal_w",   "pathtracer/aov/normal_w"   },
-    { "normal",     "pathtracer/aov/normal"     },
-    { "albedo",     "pathtracer/aov/albedo"     },
-    { "roughness",  "pathtracer/aov/roughness"  },
-    { "mat_type",   "pathtracer/aov/mat_type"   },
-    { "sky_mask",   "pathtracer/aov/sky_mask"   },
+    { "position_w", "render/aov/position_w" },
+    { "position",   "render/aov/position"   },
+    { "normal_w",   "render/aov/normal_w"   },
+    { "normal",     "render/aov/normal"     },
+    { "albedo",     "render/aov/albedo"     },
+    { "roughness",  "render/aov/roughness"  },
+    { "mat_type",   "render/aov/mat_type"   },
+    { "sky_mask",   "render/aov/sky_mask"   },
 };
 
 static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides) {

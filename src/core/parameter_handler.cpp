@@ -6,7 +6,7 @@
 
 #include "nlohmann/json.hpp"
 
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
 
 void ParameterHandler::saveDocumentation(std::filesystem::path path) {
     std::ofstream file;
@@ -46,8 +46,8 @@ void ParameterHandler::serializeParameterPath(std::ofstream& file, const Paramet
         auto labelIt = nodeLabels.find((prefix / seg).generic_string());
         const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
         file << std::endl << std::string(depth+2, '#') << ' ' << displayLabel << std::endl;
-        file << "| Path | Label | Type | Default | Constraints | Restart |" << std::endl;
-        file << "|------|-------|------|---------|-------------|---------|" << std::endl;
+        file << "| Path | Label | Description | Type | Default | Constraints | Restart |" << std::endl;
+        file << "|------|-------|-------------|------|---------|-------------|---------|" << std::endl;
 
         serializeParameterPath(file, prefix / seg, depth+1);
     }
@@ -59,16 +59,17 @@ static void parseNode(const json& obj, ParameterHandler& handler, const std::str
         bool restart = obj.value("restart_accumulation", false);
         const auto& def = obj.at("default");
 
+        ParameterBase* parameter = nullptr;
         if (def.is_boolean()) {
-            handler.addBool(path, label, def.get<bool>(), restart);
+            parameter = &handler.addBool(path, label, def.get<bool>(), restart);
         } else if (def.is_number_integer()) {
-            handler.addInt(path, label, def.get<int>(),
+            parameter = &handler.addInt(path, label, def.get<int>(),
                 obj.value("min", INT_MIN),
                 obj.value("max", INT_MAX),
                 obj.value("step", 1),
                 restart);
         } else if (def.is_number_float()) {
-            handler.addFloat(path, label, def.get<float>(),
+            parameter = &handler.addFloat(path, label, def.get<float>(),
                 obj.value("min", std::numeric_limits<float>::lowest()),
                 obj.value("max", std::numeric_limits<float>::max()),
                 obj.value("step", 1e-3f),
@@ -79,7 +80,16 @@ static void parseNode(const json& obj, ParameterHandler& handler, const std::str
             int defIdx = 0;
             for (size_t i = 0; i < items.size(); i++)
                 if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
-            handler.addEnum(path, label, defIdx, std::move(items), restart);
+            parameter = &handler.addEnum(path, label, defIdx, std::move(items), restart);
+        }
+
+        if (parameter) {
+            if (obj.contains("description"))
+                parameter->setDescription(obj.at("description").get<std::string>());
+            if (obj.contains("condition")) {
+                const auto& cond = obj.at("condition");
+                parameter->setCondition({ cond.at("param").get<std::string>(), cond.value("when", true) });
+            }
         }
     } else {
         if (obj.contains("label"))
@@ -128,7 +138,7 @@ IntParameter::IntParameter(
 }
 
 std::string IntParameter::print() {
-    return std::format("| `{}` | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
+    return std::format("| `{}` | {} | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, description.value_or("-"), defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
 }
 
 FloatParameter::FloatParameter(
@@ -147,7 +157,7 @@ FloatParameter::FloatParameter(
 
 // TODO: fix the hardcoded 1 decimal precision
 std::string FloatParameter::print() {
-    return std::format("| `{}` | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
+    return std::format("| `{}` | {} | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, description.value_or("-"), defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
 }
 
 BoolParameter::BoolParameter(
@@ -162,7 +172,7 @@ BoolParameter::BoolParameter(
 }
 
 std::string BoolParameter::print() {
-    return std::format("| `{}` | {} | Boolean | {} | - | {} |", path.c_str(), label, defaultValue, restartAccumulation ? "✓" : "-");
+    return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |", path.c_str(), label, description.value_or("-"), defaultValue, restartAccumulation ? "✓" : "-");
 }
 
 EnumParameter::EnumParameter(
@@ -183,7 +193,7 @@ std::string EnumParameter::print() {
         if (list.empty()) list = std::format("`{}`", item);
         else list = std::format("{} • `{}`", list, item);
     }
-    return std::format("| `{}` | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, items[defaultValue], list, restartAccumulation ? "✓" : "-");
+    return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, description.value_or("-"), items[defaultValue], list, restartAccumulation ? "✓" : "-");
 }
 
 IntParameter& ParameterHandler::addInt(

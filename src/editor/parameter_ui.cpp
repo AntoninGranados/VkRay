@@ -11,6 +11,7 @@ bool ParameterUI::drawParameter(ParameterBase& base) {
     bool changed = false;
     ImGui::PushID(base.path.generic_string().c_str());
 
+    ImGui::BeginGroup();
     if (auto* p = dynamic_cast<IntParameter*>(&base)) {
         ImGui::Text("%s", base.label.c_str());
         ImGui::SetNextItemWidth(-FLT_MIN);
@@ -28,6 +29,10 @@ bool ParameterUI::drawParameter(ParameterBase& base) {
         ImGui::SetNextItemWidth(-FLT_MIN);
         changed = ImGui::Combo("##value", &p->get(), names.data(), static_cast<int>(names.size()));
     }
+    ImGui::EndGroup();
+
+    if (base.description && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s", base.description->c_str());
 
     ImGui::PopID();
     if (changed && base.onSync) base.onSync();
@@ -39,13 +44,46 @@ bool ParameterUI::drawNode(ParameterHandler& handler, const ParameterPath& prefi
     const auto& parameters = handler.getParameterList();
     const auto& nodeLabels = handler.getNodeLabels();
 
+    std::string activeConditionGroup;
+    float groupLineX  = 0.0f;
+    float groupStartY = 0.0f;
+
+    auto endConditionGroup = [&] {
+        if (activeConditionGroup.empty()) return;
+        float endY = ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y;
+        ImGui::Unindent();
+        ImGui::GetWindowDrawList()->AddLine(
+            { groupLineX, groupStartY },
+            { groupLineX, endY },
+            ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.5f),
+            1.5f
+        );
+        activeConditionGroup.clear();
+    };
+
     for (const auto& parameter : parameters) {
         if (parameter->path.parent_path() != prefix) continue;
+        if (parameter->condition) {
+            const auto& cond = *parameter->condition;
+            if (handler.getBool(cond.param) != cond.when) continue;
+            std::string condKey = cond.param.generic_string();
+            if (condKey != activeConditionGroup) {
+                endConditionGroup();
+                activeConditionGroup = condKey;
+                groupLineX  = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
+                groupStartY = ImGui::GetCursorScreenPos().y;
+                ImGui::Indent();
+            }
+        } else {
+            endConditionGroup();
+        }
+        
         if (drawParameter(*parameter)) {
             changed = true;
             if (parameter->restartAccumulation) accumulationRestartNeeded = true;
         }
     }
+    endConditionGroup();
 
     std::vector<std::string> seen;
     for (const auto& parameter : parameters) {

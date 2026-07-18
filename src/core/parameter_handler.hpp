@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -11,15 +12,25 @@
 
 using ParameterPath = std::filesystem::path;
 
+struct ParameterCondition {
+    ParameterPath param;
+    bool when = true;
+};
+
 class ParameterBase {
 public:
     virtual ~ParameterBase() = default;
     virtual void reset() = 0;
     virtual std::string print() = 0;
 
-    ParameterPath         path;
-    std::string           label;
-    bool                  restartAccumulation = false;
+    void setDescription(std::string d) { description = std::move(d); }
+    void setCondition(ParameterCondition c) { condition = std::move(c); }
+
+    ParameterPath path;
+    std::string label;
+    std::optional<std::string> description;
+    bool restartAccumulation = false;
+    std::optional<ParameterCondition> condition;
     std::function<void()> onSync;
 };
 
@@ -28,11 +39,11 @@ public:
     IntParameter(
         const ParameterPath& path_,
         const std::string&   label_,
-        int                  value_,
-        int                  minValue_,
-        int                  maxValue_,
-        int                  step_,
-        bool                 restart_
+        int  value_,
+        int  minValue_,
+        int  maxValue_,
+        int  step_,
+        bool restart_
     );
     std::string print() override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
@@ -54,11 +65,11 @@ public:
     FloatParameter(
         const ParameterPath& path_,
         const std::string&   label_,
-        float                value_,
-        float                minValue_,
-        float                maxValue_,
-        float                step_,
-        bool                 restart_
+        float value_,
+        float minValue_,
+        float maxValue_,
+        float step_,
+        bool  restart_
     );
     std::string print() override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
@@ -80,8 +91,8 @@ public:
     BoolParameter(
         const ParameterPath& path_,
         const std::string&   label_,
-        bool                 value_,
-        bool                 restart_
+        bool value_,
+        bool restart_
     );
     std::string print() override;
     void  reset() override { value = defaultValue; if (onSync) onSync(); }
@@ -112,8 +123,8 @@ public:
     }
 
 private:
-    int                      value        = 0;
-    int                      defaultValue = 0;
+    int value        = 0;
+    int defaultValue = 0;
     std::vector<std::string> items;
 };
 
@@ -127,26 +138,26 @@ public:
     IntParameter& addInt(
         const ParameterPath& path,
         const std::string&   label,
-        int                  value,
-        int                  minValue,
-        int                  maxValue,
-        int                  step,
-        bool                 restartAccumulation
+        int  value,
+        int  minValue,
+        int  maxValue,
+        int  step,
+        bool restartAccumulation
     );
     FloatParameter& addFloat(
         const ParameterPath& path,
         const std::string&   label,
-        float                value,
-        float                minValue,
-        float                maxValue,
-        float                step,
-        bool                 restartAccumulation
+        float value,
+        float minValue,
+        float maxValue,
+        float step,
+        bool  restartAccumulation
     );
     BoolParameter& addBool(
         const ParameterPath& path,
         const std::string&   label,
-        bool                 value,
-        bool                 restartAccumulation
+        bool value,
+        bool restartAccumulation
     );
     EnumParameter& addEnum(
         const ParameterPath&     path,

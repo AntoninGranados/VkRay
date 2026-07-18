@@ -9,7 +9,7 @@
 #include "editor/editor.hpp"
 
 void DebugPanel::content() {
-    if (Core::getParameters().getEnum<DebugView>("pathtracer/debug_view") == DebugView::None)
+    if (Core::getParameters().getEnum<DebugView>("render/debug_view") == DebugView::None)
         return;
 
     ImGui::SetNextWindowSize(ImVec2(400.0f, 300.0f), ImGuiCond_FirstUseEver);

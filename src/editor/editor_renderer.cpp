@@ -107,7 +107,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
 
     displayUBO.previewBorderEnabled = Core::getScene().isPreviewingCamera(Core::getRenderMode()) ? 1 : 0;
-    debugUBO.debugView = Core::getParameters().getEnum<int>("pathtracer/debug_view");
+    debugUBO.debugView = Core::getParameters().getEnum<int>("render/debug_view");
 
     engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
     engine.fillBuffer(engine.getBuffer(debugUBOHandle,   frameContext.currentFrame), &debugUBO);

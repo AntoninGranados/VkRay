@@ -8,9 +8,9 @@
         //     "width":   2160,
         //     "height":  540,
         //     "parameters": {
-        //         "pathtracer/sampling/variance_sampling": true,
-        //         "pathtracer/sampling/variance_warmup":   4096,
-        //         "pathtracer/sampling/clip_accumulation": true
+        //         "render/adaptive_sampling": true,
+        //         "render/adaptive_warmup":   4096,
+        //         "render/clamp": true
         //     }
         // },
         // {
@@ -20,9 +20,9 @@
         //     "width":   1920,
         //     "height":  1080,
         //     "parameters": {
-        //         "pathtracer/sampling/variance_sampling": true,
-        //         "pathtracer/sampling/variance_warmup":   4096,
-        //         "pathtracer/sampling/clip_accumulation": true
+        //         "render/adaptive_sampling": true,
+        //         "render/adaptive_warmup":   4096,
+        //         "render/clamp": true
         //     }
         // },
         // {
@@ -32,9 +32,9 @@
         //     "width":   2160,
         //     "height":  1080,
         //     "parameters": {
-        //         "pathtracer/sampling/variance_sampling": true,
-        //         "pathtracer/sampling/variance_warmup":   4096,
-        //         "pathtracer/sampling/clip_accumulation": true
+        //         "render/adaptive_sampling": true,
+        //         "render/adaptive_warmup":   4096,
+        //         "render/clamp": true
         //     }
         // },
         {
@@ -45,9 +45,9 @@
             "width":   1080,
             "height":  1080,
             "parameters": {
-                "pathtracer/sampling/variance_sampling": true,
-                "pathtracer/sampling/variance_warmup":   4096,
-                "pathtracer/sampling/clip_accumulation": true
+                "render/adaptive_sampling": true,
+                "render/adaptive_warmup":   4096,
+                "render/clamp": true
             }
         }
     ]

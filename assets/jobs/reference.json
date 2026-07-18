@@ -9,9 +9,9 @@
             "height":  1080,
 
             "parameters": {
-                "pathtracer/sampling/max_bounces": 16,
-                "pathtracer/sampling/variance_sampling": false,
-                "pathtracer/sampling/variance_warmup": 4096
+                "render/max_bounces": 16,
+                "render/adaptive_sampling": false,
+                "render/adaptive_warmup": 4096
             }
         }
     ]

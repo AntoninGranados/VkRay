@@ -33,7 +33,7 @@ void RendererPanel::content() {
             Core::reloadShaders();
 
         ImGui::Separator();
-        ParameterUI::drawGroup(Core::getParameters(), "pathtracer");
+        ParameterUI::drawGroup(Core::getParameters(), "render");
     }
     ImGui::End();
 }

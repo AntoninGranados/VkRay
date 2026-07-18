@@ -17,7 +17,7 @@ void RenderProgressPanel::content() {
     );
 
     uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
-    int renderSamplesPerPixel = Core::getParameters().getInt("pathtracer/sampling/render_samples");
+    int renderSamplesPerPixel = Core::getParameters().getInt("render/render_samples");
 
     if (sampleCount == 1) timer.start();
 

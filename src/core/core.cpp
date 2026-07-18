@@ -56,7 +56,7 @@ void Core::startRender() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
-    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("pathtracer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("render/render_samples"));
     requestAccumulationRestart();
 }
 
@@ -64,7 +64,7 @@ void Core::startRenderAnim() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
-    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("pathtracer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("render/render_samples"));
     requestAccumulationRestart();
     c.animation.reset(0);
 }

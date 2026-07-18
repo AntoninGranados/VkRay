@@ -187,34 +187,34 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
 
 void CoreRenderer::bindParameters() {
     ParameterHandler& parameters = Core::getParameters();
-    parameters.bindBool("pathtracer/denoising", [this](bool v) {
+    parameters.bindBool("render/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
     });
 
-    parameters.bindInt("pathtracer/sampling/max_bounces",     &pathtracerUBO.render.maxBounces);
-    parameters.bindInt("pathtracer/sampling/variance_warmup", &pathtracerUBO.render.varianceWarmupSamples);
+    parameters.bindInt("render/max_bounces",    &pathtracerUBO.render.maxBounces);
+    parameters.bindInt("render/adaptive_warmup", &pathtracerUBO.render.varianceWarmupSamples);
 
-    parameters.bindBool("pathtracer/sampling/importance_sampling", [this](bool v) {
+    parameters.bindBool("render/importance_sampling", [this](bool v) {
         pathtracerUBO.render.importanceSampling = static_cast<int>(v);
     });
-    
-    parameters.bindBool("pathtracer/sampling/clip_accumulation", [this](bool v) {
+
+    parameters.bindBool("render/clamp", [this](bool v) {
         pathtracerUBO.render.clipAccumulation = static_cast<int>(v);
     });
-    parameters.bindFloat("pathtracer/sampling/clip_threshold", &pathtracerUBO.render.clipThreshold);
+    parameters.bindFloat("render/clamp_threshold", &pathtracerUBO.render.clipThreshold);
 
-    parameters.bindBool("pathtracer/sampling/variance_sampling", [this](bool v) {
+    parameters.bindBool("render/adaptive_sampling", [this](bool v) {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
     });
 
     parameters.bindEnum("scene/light_mode", &pathtracerUBO.render.lightMode);
 
-    parameters.bindBool("pathtracer/aov/position_w", &aovFlags.positionW);
-    parameters.bindBool("pathtracer/aov/position",   &aovFlags.position);
-    parameters.bindBool("pathtracer/aov/normal_w",   &aovFlags.normalW);
-    parameters.bindBool("pathtracer/aov/normal",     &aovFlags.normal);
-    parameters.bindBool("pathtracer/aov/albedo",     &aovFlags.albedo);
-    parameters.bindBool("pathtracer/aov/roughness",  &aovFlags.roughness);
-    parameters.bindBool("pathtracer/aov/mat_type",   &aovFlags.matType);
-    parameters.bindBool("pathtracer/aov/sky_mask",   &aovFlags.skyMask);
+    parameters.bindBool("render/aov/position_w", &aovFlags.positionW);
+    parameters.bindBool("render/aov/position",   &aovFlags.position);
+    parameters.bindBool("render/aov/normal_w",   &aovFlags.normalW);
+    parameters.bindBool("render/aov/normal",     &aovFlags.normal);
+    parameters.bindBool("render/aov/albedo",     &aovFlags.albedo);
+    parameters.bindBool("render/aov/roughness",  &aovFlags.roughness);
+    parameters.bindBool("render/aov/mat_type",   &aovFlags.matType);
+    parameters.bindBool("render/aov/sky_mask",   &aovFlags.skyMask);
 }
