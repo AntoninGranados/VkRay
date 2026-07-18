@@ -14,6 +14,11 @@ void ParameterHandler::saveDocumentation(std::filesystem::path path) {
     file.clear();
 
     file << "# Parameters" << std::endl;
+    file << std::endl;
+    file << "> [!NOTE]  " << std::endl;
+    file << "> Parameters are defined in `assets/parameters/parameters.json` as a hierarchical JSON file.  " << std::endl;
+    file << "> Leaf entries require a `\"default\"` field, from which the parameter type is inferred.  " << std::endl;
+    file << "> Nested objects without `\"default\"` are display groups and may carry an optional `\"label\"`.  " << std::endl;
 
     serializeParameterPath(file, "");
 
@@ -48,6 +53,44 @@ void ParameterHandler::serializeParameterPath(std::ofstream& file, const Paramet
     }
 }
 
+static void parseNode(const json& obj, ParameterHandler& handler, const std::string& path) {
+    if (obj.contains("default")) {
+        std::string label = obj.at("label").get<std::string>();
+        bool restart = obj.value("restart_accumulation", false);
+        const auto& def = obj.at("default");
+
+        if (def.is_boolean()) {
+            handler.addBool(path, label, def.get<bool>(), restart);
+        } else if (def.is_number_integer()) {
+            handler.addInt(path, label, def.get<int>(),
+                obj.value("min", INT_MIN),
+                obj.value("max", INT_MAX),
+                obj.value("step", 1),
+                restart);
+        } else if (def.is_number_float()) {
+            handler.addFloat(path, label, def.get<float>(),
+                obj.value("min", std::numeric_limits<float>::lowest()),
+                obj.value("max", std::numeric_limits<float>::max()),
+                obj.value("step", 1e-3f),
+                restart);
+        } else if (def.is_string() && obj.contains("items")) {
+            std::string defName = def.get<std::string>();
+            std::vector<std::string> items = obj.at("items").get<std::vector<std::string>>();
+            int defIdx = 0;
+            for (size_t i = 0; i < items.size(); i++)
+                if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
+            handler.addEnum(path, label, defIdx, std::move(items), restart);
+        }
+    } else {
+        if (obj.contains("label"))
+            handler.setNodeLabel(path, obj.at("label").get<std::string>());
+        for (const auto& [key, val] : obj.items()) {
+            if (key == "label") continue;
+            parseNode(val, handler, path + "/" + key);
+        }
+    }
+}
+
 ParameterHandler ParameterHandler::fromFile(std::filesystem::path path) {
     std::ifstream f(path);
     if (!f.is_open())
@@ -56,41 +99,8 @@ ParameterHandler ParameterHandler::fromFile(std::filesystem::path path) {
     ParameterHandler parameters;
     json root = json::parse(f, nullptr, true, true);
 
-    for (const auto& [key, val] : root.at("nodes").items())
-        parameters.setNodeLabel(key, val.get<std::string>());
-
-    for (const auto& [key, val] : root.at("parameters").items()) {
-        std::string label = val.at("label").get<std::string>();
-        bool restart = val.value("restart_accumulation", false);
-        const auto& def = val.at("default");
-
-        if (def.is_boolean()) {
-            parameters.addBool(key, label, def.get<bool>(), restart);
-        } else if (def.is_number_integer()) {
-            parameters.addInt(
-                key, label, def.get<int>(),
-                val.value("min", INT_MIN),
-                val.value("max", INT_MAX),
-                val.value("step", 1),
-                restart
-            );
-        } else if (def.is_number_float()) {
-            parameters.addFloat(
-                key, label, def.get<float>(),
-                val.value("min", std::numeric_limits<float>::max()),
-                val.value("max", std::numeric_limits<float>::min()),
-                val.value("step", 1e-3f),
-                restart
-            );
-        } else if (def.is_string() && val.contains("items")) {
-            std::string defName = def.get<std::string>();
-            std::vector<std::string> items = val.at("items").get<std::vector<std::string>>();
-            int defIdx = 0;
-            for (size_t i = 0; i < items.size(); i++)
-                if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
-            parameters.addEnum(key, label, defIdx, std::move(items), restart);
-        }
-    }
+    for (const auto& [key, val] : root.items())
+        parseNode(val, parameters, key);
 
     return parameters;
 }

@@ -1,5 +1,10 @@
 # Parameters
 
+> [!NOTE]  
+> Parameters are defined in `assets/parameters/parameters.json` as a hierarchical JSON file.  
+> Leaf entries require a `"default"` field, from which the parameter type is inferred.  
+> Nested objects without `"default"` are display groups and may carry an optional `"label"`.  
+
 ## Pathtracer
 | Path | Label | Type | Default | Constraints | Restart |
 |------|-------|------|---------|-------------|---------|
