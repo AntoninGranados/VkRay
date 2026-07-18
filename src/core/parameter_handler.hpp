@@ -11,21 +11,21 @@
 
 using ParameterPath = std::filesystem::path;
 
-class ParamBase {
+class ParameterBase {
 public:
-    virtual ~ParamBase() = default;
+    virtual ~ParameterBase() = default;
     virtual void reset() = 0;
     virtual std::string print() = 0;
 
     ParameterPath         path;
     std::string           label;
-    bool                  restart = false;
+    bool                  restartAccumulation = false;
     std::function<void()> onSync;
 };
 
-class IntParam : public ParamBase {
+class IntParameter : public ParameterBase {
 public:
-    IntParam(
+    IntParameter(
         const ParameterPath& path_,
         const std::string&   label_,
         int                  value_,
@@ -49,9 +49,9 @@ private:
     int step         = 1;
 };
 
-class FloatParam : public ParamBase {
+class FloatParameter : public ParameterBase {
 public:
-    FloatParam(
+    FloatParameter(
         const ParameterPath& path_,
         const std::string&   label_,
         float                value_,
@@ -75,9 +75,9 @@ private:
     float step         = 0.1f;
 };
 
-class BoolParam : public ParamBase {
+class BoolParameter : public ParameterBase {
 public:
-    BoolParam(
+    BoolParameter(
         const ParameterPath& path_,
         const std::string&   label_,
         bool                 value_,
@@ -92,9 +92,9 @@ private:
     bool defaultValue = false;
 };
 
-class EnumParam : public ParamBase {
+class EnumParameter : public ParameterBase {
 public:
-    EnumParam(
+    EnumParameter(
         const ParameterPath&      path_,
         const std::string&        label_,
         int                       value_,
@@ -117,52 +117,54 @@ private:
     std::vector<std::string> items;
 };
 
-// TODO: add parameter descriptions
-// TODO: define the parameters in a separate file so we can "preprocess" (e.g. build the doc) at build time
 class ParameterHandler {
 public:
+    static ParameterHandler fromFile(std::filesystem::path path = "./assets/parameters/parameters.json");
+    void saveDocumentation(std::filesystem::path path = "./docs/parameters.md");
+    void setNodeLabel (const ParameterPath& path, const std::string& label);
+    void resetAll();
 
-    IntParam& addInt(
+    IntParameter& addInt(
         const ParameterPath& path,
         const std::string&   label,
         int                  value,
         int                  minValue,
         int                  maxValue,
         int                  step,
-        bool                 restart
+        bool                 restartAccumulation
     );
-    FloatParam& addFloat(
+    FloatParameter& addFloat(
         const ParameterPath& path,
         const std::string&   label,
         float                value,
         float                minValue,
         float                maxValue,
         float                step,
-        bool                 restart
+        bool                 restartAccumulation
     );
-    BoolParam& addBool(
+    BoolParameter& addBool(
         const ParameterPath& path,
         const std::string&   label,
         bool                 value,
-        bool                 restart
+        bool                 restartAccumulation
+    );
+    EnumParameter& addEnum(
+        const ParameterPath&     path,
+        const std::string&       label,
+        int                      value,
+        std::vector<std::string> items,
+        bool                     restartAccumulation
     );
     template <typename EnumT>
-    EnumParam& addEnum(
+    EnumParameter& addEnum(
         const ParameterPath&     path,
         const std::string&       label,
         EnumT                    value,
         std::vector<std::string> items,
-        bool                     restart
+        bool                     restartAccumulation
     ) {
-        auto param = std::make_unique<EnumParam>(path, label, std::to_underlying(value), std::move(items), restart);
-        index[path.generic_string()] = param.get();
-        params.push_back(std::move(param));
-        return static_cast<EnumParam&>(*params.back());
+        return addEnum(path, label, std::to_underlying(value), items, restartAccumulation);
     }
-
-    void saveDocumentation(std::filesystem::path path = "./docs/parameters.md");
-    void setLabel (const ParameterPath& path, const std::string& label);
-    void resetAll();
 
     void bindInt  (const ParameterPath& path, int*   ptr);
     void bindFloat(const ParameterPath& path, float* ptr);
@@ -172,44 +174,44 @@ public:
     void bindFloat(const ParameterPath& path, std::function<void(float)> callback);
     void bindBool (const ParameterPath& path, std::function<void(bool)>  callback);
     void bindEnum (const ParameterPath& path, std::function<void(int)>   callback);
-
+    
     int&   getInt  (const ParameterPath& path);
     float& getFloat(const ParameterPath& path);
     bool&  getBool (const ParameterPath& path);
+    int&   getEnum (const ParameterPath& path);
+    template <typename EnumT>
+    EnumT  getEnum (const ParameterPath& path) {
+        return static_cast<EnumT>(getEnum(path));
+    }
+    
     void setInt       (const ParameterPath& path, int   value);
     void setFloat     (const ParameterPath& path, float value);
     void setBool      (const ParameterPath& path, bool  value);
+    void setEnum      (const ParameterPath& path, int   value);
     void setEnumByName(const ParameterPath& path, const std::string& name);
-
     template <typename EnumT>
-    EnumT getEnum(const ParameterPath& path) {
-        return static_cast<EnumT>(getParam<EnumParam>(path).get());
-    }
-    template <typename EnumT>
-    void setEnum(const ParameterPath& path, EnumT value) {
-        auto& param = getParam<EnumParam>(path);
-        param.get() = std::to_underlying(value);
-        if (param.onSync) param.onSync();
+    void setEnum      (const ParameterPath& path, EnumT value) {
+        setEnum(path, std::to_underlying(value));
     }
 
-    const std::vector<std::unique_ptr<ParamBase>>&     getParamList()   const { return params; }
+    const std::vector<std::unique_ptr<ParameterBase>>& getParameterList() const { return parameters; }
     const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
 
 private:
-    std::vector<std::unique_ptr<ParamBase>>      params;
-    std::unordered_map<std::string, ParamBase*>  index;
+    std::vector<std::unique_ptr<ParameterBase>> parameters;
+    std::unordered_map<std::string, ParameterBase*> index;
     std::unordered_map<std::string, std::string> nodeLabels;
 
     void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0);
 
     template <typename T>
-    T& getParam(const ParameterPath& path) {
+    T& getParameter(const ParameterPath& path) {
         auto it = index.find(path.generic_string());
         if (it == index.end())
             throw std::runtime_error("Parameter not found: " + path.generic_string());
-        auto param = dynamic_cast<T*>(it->second);
-        if (!param)
+        auto parameter = dynamic_cast<T*>(it->second);
+        if (!parameter)
             throw std::runtime_error("Parameter type mismatch: " + path.generic_string());
-        return *param;
+        return *parameter;
     }
 };

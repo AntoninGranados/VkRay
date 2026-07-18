@@ -36,13 +36,15 @@ static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides
 JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
     std::ifstream f(path);
     if (!f.is_open())
-        throw std::runtime_error("Cannot open job queue file: " + path.string());
+        throw std::runtime_error(std::format("Cannot open job queue file [{}]", path.string()));
 
     json root = json::parse(f, nullptr, true, true);
 
     const int version = root.value("version", -1);
     if (version != JOB_VERSION)
-        throw std::runtime_error("Job version mismatch in '" + path.string() + "': expected " + std::to_string(JOB_VERSION) + ", got " + std::to_string(version));
+        throw std::runtime_error(std::format(
+            "Job version mismatch in `{}`: expected {}, got {}", path.string(), std::to_string(JOB_VERSION), std::to_string(version)
+        ));
 
     JobQueue queue;
     std::mt19937 rng(0);

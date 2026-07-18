@@ -13,8 +13,8 @@
                 "pathtracer/sampling/variance_sampling": true,
                 "pathtracer/sampling/variance_warmup":   1000,
 
-                "pathtracer/sampling/clip_accumulation": false ,
-                "pathtracer/sampling/clip_value":        800.0
+                "pathtracer/sampling/clip_accumulation": false,
+                "pathtracer/sampling/clip_threshold":    800.0
             }
         }
     ]

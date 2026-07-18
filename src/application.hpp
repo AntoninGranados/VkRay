@@ -20,7 +20,6 @@ private:
     void initEditorMode();
     void initOfflineMode(const std::string& jobFile);
 
-    void initParameters();
     void initScene(const std::string& sceneFile = "assets/scenes/default.json");
     void buildRenderGraph(bool withEditor);
 };

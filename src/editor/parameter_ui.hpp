@@ -7,6 +7,6 @@ public:
     static void drawGroup(ParameterHandler& handler, const ParameterPath& root);
 
 private:
-    static bool drawParam(ParamBase& param);
-    static bool drawNode(ParameterHandler& handler, const ParameterPath& prefix, bool& restartNeeded);
+    static bool drawParameter(ParameterBase& base);
+    static bool drawNode(ParameterHandler& handler, const ParameterPath& prefix, bool& accumulationRestartNeeded);
 };

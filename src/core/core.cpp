@@ -9,6 +9,9 @@ void Core::init(Platform& p, uint32_t version) {
     Core& c    = get();
     c.platform = &p;
     c.engine.init("VkRay", version, p);
+    c.parameters = ParameterHandler::fromFile();
+    c.coreRenderer.bindParameters();
+    c.parameters.saveDocumentation();
 }
 
 void Core::terminate() {

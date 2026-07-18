@@ -1,0 +1,99 @@
+{
+    "nodes": {
+        "pathtracer": "Pathtracer",
+        "pathtracer/sampling": "Sampling",
+        "pathtracer/aov": "Arbitrary Output Variables",
+        "scene": "Scene"
+    },
+    "parameters": {
+        "pathtracer/denoising": {
+            "label": "Denoising",
+            "default": false
+        },
+        "pathtracer/debug_view": {
+            "label": "Debug View",
+            "items": ["None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask"],
+            "default": "None",
+            "restart_accumulation": true
+        },
+
+        "pathtracer/sampling/max_bounces": {
+            "label": "Max Bounces",
+            "default": 8,
+            "min": 1, "max": 20, "step": 1
+        },
+        "pathtracer/sampling/render_samples": {
+            "label": "Render Samples",
+            "default": 2048,
+            "min": 1, "max": 4096, "step": 1
+        },
+        "pathtracer/sampling/importance_sampling": {
+            "label": "Importance Sampling",
+            "default": true
+        },
+
+        "pathtracer/sampling/clip_accumulation": {
+            "label": "Clip Accumulation",
+            "default": false,
+            "restart_accumulation": true
+        },
+        "pathtracer/sampling/clip_threshold": {
+            "label": "Clip Threshold",
+            "default": 50.0,
+            "min": 0.0, "max": 1000.0, "step": 0.01,
+            "restart_accumulation": true,
+            "condition": { "param": "pathtracer/sampling/clip_accumulation", "when": true }
+        },
+
+        "pathtracer/sampling/variance_sampling": {
+            "label": "Variance Sampling",
+            "default": true
+        },
+        "pathtracer/sampling/variance_warmup": {
+            "label": "Variance Warmup Samples",
+            "default": 64,
+            "min": 0, "max": 2048, "step": 1,
+            "condition": { "param": "pathtracer/sampling/variance_sampling", "when": true }
+        },
+
+        "pathtracer/aov/position_w": {
+            "label": "Position W",
+            "default": false
+        },
+        "pathtracer/aov/position": {
+            "label": "Position",
+            "default": false
+        },
+        "pathtracer/aov/normal_w": {
+            "label": "Normal W",
+            "default": false
+        },
+        "pathtracer/aov/normal": {
+            "label": "Normal",
+            "default": false
+        },
+        "pathtracer/aov/albedo": {
+            "label": "Albedo",
+            "default": false
+        },
+        "pathtracer/aov/roughness": {
+            "label": "Roughness",
+            "default": false
+        },
+        "pathtracer/aov/mat_type": {
+            "label": "Mat Type",
+            "default": false
+        },
+        "pathtracer/aov/sky_mask": {
+            "label": "Sky Mask",
+            "default": false
+        },
+
+        "scene/light_mode": {
+            "label": "Light Mode",
+            "items": ["Day", "Sunset", "Night", "Empty"],
+            "default": "Day",
+            "restart_accumulation": true
+        }
+    }
+}

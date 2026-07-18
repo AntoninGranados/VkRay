@@ -186,35 +186,35 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
 }
 
 void CoreRenderer::bindParameters() {
-    ParameterHandler& params = Core::getParameters();
-    params.bindBool("pathtracer/denoising", [this](bool v) {
+    ParameterHandler& parameters = Core::getParameters();
+    parameters.bindBool("pathtracer/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
     });
 
-    params.bindInt("pathtracer/sampling/max_bounces",     &pathtracerUBO.render.maxBounces);
-    params.bindInt("pathtracer/sampling/variance_warmup", &pathtracerUBO.render.varianceWarmupSamples);
+    parameters.bindInt("pathtracer/sampling/max_bounces",     &pathtracerUBO.render.maxBounces);
+    parameters.bindInt("pathtracer/sampling/variance_warmup", &pathtracerUBO.render.varianceWarmupSamples);
 
-    params.bindBool("pathtracer/sampling/importance_sampling", [this](bool v) {
+    parameters.bindBool("pathtracer/sampling/importance_sampling", [this](bool v) {
         pathtracerUBO.render.importanceSampling = static_cast<int>(v);
     });
     
-    params.bindBool("pathtracer/sampling/clip_accumulation", [this](bool v) {
+    parameters.bindBool("pathtracer/sampling/clip_accumulation", [this](bool v) {
         pathtracerUBO.render.clipAccumulation = static_cast<int>(v);
     });
-    params.bindFloat("pathtracer/sampling/clip_value", &pathtracerUBO.render.clipValue);
+    parameters.bindFloat("pathtracer/sampling/clip_threshold", &pathtracerUBO.render.clipThreshold);
 
-    params.bindBool("pathtracer/sampling/variance_sampling", [this](bool v) {
+    parameters.bindBool("pathtracer/sampling/variance_sampling", [this](bool v) {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
     });
 
-    params.bindEnum("scene/light_mode", &pathtracerUBO.render.lightMode);
+    parameters.bindEnum("scene/light_mode", &pathtracerUBO.render.lightMode);
 
-    params.bindBool("pathtracer/aov/position_w", &aovFlags.positionW);
-    params.bindBool("pathtracer/aov/position",   &aovFlags.position);
-    params.bindBool("pathtracer/aov/normal_w",   &aovFlags.normalW);
-    params.bindBool("pathtracer/aov/normal",     &aovFlags.normal);
-    params.bindBool("pathtracer/aov/albedo",     &aovFlags.albedo);
-    params.bindBool("pathtracer/aov/roughness",  &aovFlags.roughness);
-    params.bindBool("pathtracer/aov/mat_type",   &aovFlags.matType);
-    params.bindBool("pathtracer/aov/sky_mask",   &aovFlags.skyMask);
+    parameters.bindBool("pathtracer/aov/position_w", &aovFlags.positionW);
+    parameters.bindBool("pathtracer/aov/position",   &aovFlags.position);
+    parameters.bindBool("pathtracer/aov/normal_w",   &aovFlags.normalW);
+    parameters.bindBool("pathtracer/aov/normal",     &aovFlags.normal);
+    parameters.bindBool("pathtracer/aov/albedo",     &aovFlags.albedo);
+    parameters.bindBool("pathtracer/aov/roughness",  &aovFlags.roughness);
+    parameters.bindBool("pathtracer/aov/mat_type",   &aovFlags.matType);
+    parameters.bindBool("pathtracer/aov/sky_mask",   &aovFlags.skyMask);
 }

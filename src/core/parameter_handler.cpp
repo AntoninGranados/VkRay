@@ -1,134 +1,34 @@
 #include "parameter_handler.hpp"
 
 #include <algorithm>
-#include <cctype>
-#include <iostream>
 #include <fstream>
+#include <limits>
 
-IntParam::IntParam(
-    const ParameterPath& path_,
-    const std::string&   label_,
-    int                  value_,
-    int                  minValue_,
-    int                  maxValue_,
-    int                  step_,
-    bool                 restart_
-) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
-    path    = path_;
-    label   = label_;
-    restart = restart_;
-}
+#include "nlohmann/json.hpp"
 
-std::string IntParam::print() {
-    return std::format("| `{}` | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
-}
+using json = nlohmann::json;
 
-FloatParam::FloatParam(
-    const ParameterPath& path_,
-    const std::string&   label_,
-    float                value_,
-    float                minValue_,
-    float                maxValue_,
-    float                step_,
-    bool                 restart_
-) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
-    path    = path_;
-    label   = label_;
-    restart = restart_;
-}
+void ParameterHandler::saveDocumentation(std::filesystem::path path) {
+    std::ofstream file;
+    file.open(path);
+    file.clear();
 
-// TODO: fix the hardcoded 1 decimal precision
-std::string FloatParam::print() {
-    return std::format("| `{}` | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restart ? "✓" : "-");
-}
+    file << "# Parameters" << std::endl;
 
-BoolParam::BoolParam(
-    const ParameterPath& path_,
-    const std::string&   label_,
-    bool                 value_,
-    bool                 restart_
-) : value(value_), defaultValue(value_) {
-    path    = path_;
-    label   = label_;
-    restart = restart_;
-}
+    serializeParameterPath(file, "");
 
-std::string BoolParam::print() {
-    return std::format("| `{}` | {} | Boolean | {} | - | {} |", path.c_str(), label, defaultValue, restart ? "✓" : "-");
-}
-
-EnumParam::EnumParam(
-    const ParameterPath&     path_,
-    const std::string&       label_,
-    int                      value_,
-    std::vector<std::string> items_,
-    bool                     restart_
-) : value(value_), defaultValue(value_), items(std::move(items_)) {
-    path    = path_;
-    label   = label_;
-    restart = restart_;
-}
-
-std::string EnumParam::print() {
-    std::string list = "";
-    for (const auto& item : items) {
-        if (list.empty()) list = std::format("`{}`", item);
-        else list = std::format("{} • `{}`", list, item);
-    }
-    return std::format("| `{}` | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, items[defaultValue], list, restart ? "✓" : "-");
-}
-
-IntParam& ParameterHandler::addInt(
-    const ParameterPath& path,
-    const std::string&   label,
-    int                  value,
-    int                  minValue,
-    int                  maxValue,
-    int                  step,
-    bool                 restart
-) {
-    auto param = std::make_unique<IntParam>(path, label, value, minValue, maxValue, step, restart);
-    index[path.generic_string()] = param.get();
-    params.push_back(std::move(param));
-    return static_cast<IntParam&>(*params.back());
-}
-
-FloatParam& ParameterHandler::addFloat(
-    const ParameterPath& path,
-    const std::string&   label,
-    float                value,
-    float                minValue,
-    float                maxValue,
-    float                step,
-    bool                 restart
-) {
-    auto param = std::make_unique<FloatParam>(path, label, value, minValue, maxValue, step, restart);
-    index[path.generic_string()] = param.get();
-    params.push_back(std::move(param));
-    return static_cast<FloatParam&>(*params.back());
-}
-
-BoolParam& ParameterHandler::addBool(
-    const ParameterPath& path,
-    const std::string&   label,
-    bool                 value,
-    bool                 restart
-) {
-    auto param = std::make_unique<BoolParam>(path, label, value, restart);
-    index[path.generic_string()] = param.get();
-    params.push_back(std::move(param));
-    return static_cast<BoolParam&>(*params.back());
+    file.close();
 }
 
 void ParameterHandler::serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth) {
-    for (const auto& param : params) {
-        if (param->path.parent_path() != prefix) continue;
-        file << param->print() << std::endl;
+    for (const auto& parameter : parameters) {
+        if (parameter->path.parent_path() != prefix) continue;
+        file << parameter->print() << std::endl;
     }
 
     std::vector<std::string> seen;
-    for (const auto& param : params) {
-        auto rel = param->path.lexically_relative(prefix);
+    for (const auto& parameter : parameters) {
+        auto rel = parameter->path.lexically_relative(prefix);
         if (rel.empty()) continue;
         auto it = rel.begin();
         std::string seg = it->string();
@@ -148,108 +48,281 @@ void ParameterHandler::serializeParameterPath(std::ofstream& file, const Paramet
     }
 }
 
-void ParameterHandler::saveDocumentation(std::filesystem::path path) {
-    std::ofstream file;
-    file.open(path);
-    file.clear();
+ParameterHandler ParameterHandler::fromFile(std::filesystem::path path) {
+    std::ifstream f(path);
+    if (!f.is_open())
+        throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
 
-    file << "# Parameters" << std::endl;
+    ParameterHandler parameters;
+    json root = json::parse(f, nullptr, true, true);
 
-    serializeParameterPath(file, "");
+    for (const auto& [key, val] : root.at("nodes").items())
+        parameters.setNodeLabel(key, val.get<std::string>());
 
-    file.close();
+    for (const auto& [key, val] : root.at("parameters").items()) {
+        std::string label = val.at("label").get<std::string>();
+        bool restart = val.value("restart_accumulation", false);
+        const auto& def = val.at("default");
+
+        if (def.is_boolean()) {
+            parameters.addBool(key, label, def.get<bool>(), restart);
+        } else if (def.is_number_integer()) {
+            parameters.addInt(
+                key, label, def.get<int>(),
+                val.value("min", INT_MIN),
+                val.value("max", INT_MAX),
+                val.value("step", 1),
+                restart
+            );
+        } else if (def.is_number_float()) {
+            parameters.addFloat(
+                key, label, def.get<float>(),
+                val.value("min", std::numeric_limits<float>::max()),
+                val.value("max", std::numeric_limits<float>::min()),
+                val.value("step", 1e-3f),
+                restart
+            );
+        } else if (def.is_string() && val.contains("items")) {
+            std::string defName = def.get<std::string>();
+            std::vector<std::string> items = val.at("items").get<std::vector<std::string>>();
+            int defIdx = 0;
+            for (size_t i = 0; i < items.size(); i++)
+                if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
+            parameters.addEnum(key, label, defIdx, std::move(items), restart);
+        }
+    }
+
+    return parameters;
 }
 
-void ParameterHandler::setLabel(const ParameterPath& path, const std::string& label) {
+void ParameterHandler::setNodeLabel(const ParameterPath& path, const std::string& label) {
     nodeLabels[path.generic_string()] = label;
 }
 
+void ParameterHandler::resetAll() {
+    for (auto& p : parameters) p->reset();
+}
+
+IntParameter::IntParameter(
+    const ParameterPath& path_,
+    const std::string&   label_,
+    int                  value_,
+    int                  minValue_,
+    int                  maxValue_,
+    int                  step_,
+    bool                 restart_
+) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
+    path    = path_;
+    label   = label_;
+    restartAccumulation = restart_;
+}
+
+std::string IntParameter::print() {
+    return std::format("| `{}` | {} | Integer | {} | {} ... {} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
+}
+
+FloatParameter::FloatParameter(
+    const ParameterPath& path_,
+    const std::string&   label_,
+    float                value_,
+    float                minValue_,
+    float                maxValue_,
+    float                step_,
+    bool                 restart_
+) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
+    path    = path_;
+    label   = label_;
+    restartAccumulation = restart_;
+}
+
+// TODO: fix the hardcoded 1 decimal precision
+std::string FloatParameter::print() {
+    return std::format("| `{}` | {} | Float | {} | {:.1f} ... {:.1f} | {} |", path.c_str(), label, defaultValue, minValue, maxValue, restartAccumulation ? "✓" : "-");
+}
+
+BoolParameter::BoolParameter(
+    const ParameterPath& path_,
+    const std::string&   label_,
+    bool                 value_,
+    bool                 restart_
+) : value(value_), defaultValue(value_) {
+    path    = path_;
+    label   = label_;
+    restartAccumulation = restart_;
+}
+
+std::string BoolParameter::print() {
+    return std::format("| `{}` | {} | Boolean | {} | - | {} |", path.c_str(), label, defaultValue, restartAccumulation ? "✓" : "-");
+}
+
+EnumParameter::EnumParameter(
+    const ParameterPath&     path_,
+    const std::string&       label_,
+    int                      value_,
+    std::vector<std::string> items_,
+    bool                     restart_
+) : value(value_), defaultValue(value_), items(std::move(items_)) {
+    path    = path_;
+    label   = label_;
+    restartAccumulation = restart_;
+}
+
+std::string EnumParameter::print() {
+    std::string list = "";
+    for (const auto& item : items) {
+        if (list.empty()) list = std::format("`{}`", item);
+        else list = std::format("{} • `{}`", list, item);
+    }
+    return std::format("| `{}` | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, items[defaultValue], list, restartAccumulation ? "✓" : "-");
+}
+
+IntParameter& ParameterHandler::addInt(
+    const ParameterPath& path,
+    const std::string&   label,
+    int                  value,
+    int                  minValue,
+    int                  maxValue,
+    int                  step,
+    bool                 restartAccumulation
+) {
+    auto parameter = std::make_unique<IntParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
+    index[path.generic_string()] = parameter.get();
+    parameters.push_back(std::move(parameter));
+    return static_cast<IntParameter&>(*parameters.back());
+}
+
+FloatParameter& ParameterHandler::addFloat(
+    const ParameterPath& path,
+    const std::string&   label,
+    float                value,
+    float                minValue,
+    float                maxValue,
+    float                step,
+    bool                 restartAccumulation
+) {
+    auto parameter = std::make_unique<FloatParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
+    index[path.generic_string()] = parameter.get();
+    parameters.push_back(std::move(parameter));
+    return static_cast<FloatParameter&>(*parameters.back());
+}
+
+BoolParameter& ParameterHandler::addBool(
+    const ParameterPath& path,
+    const std::string&   label,
+    bool                 value,
+    bool                 restartAccumulation
+) {
+    auto parameter = std::make_unique<BoolParameter>(path, label, value, restartAccumulation);
+    index[path.generic_string()] = parameter.get();
+    parameters.push_back(std::move(parameter));
+    return static_cast<BoolParameter&>(*parameters.back());
+}
+
+EnumParameter& ParameterHandler::addEnum(
+    const ParameterPath&     path,
+    const std::string&       label,
+    int                      value,
+    std::vector<std::string> items,
+    bool                     restartAccumulation
+) {
+    auto parameter = std::make_unique<EnumParameter>(path, label, value, std::move(items), restartAccumulation);
+    index[path.generic_string()] = parameter.get();
+    parameters.push_back(std::move(parameter));
+    return static_cast<EnumParameter&>(*parameters.back());
+}
+
 void ParameterHandler::bindInt(const ParameterPath& path, int* ptr) {
-    auto& param = getParam<IntParam>(path);
-    param.onSync = [ptr, &param]() { *ptr = param.get(); };
-    param.onSync();
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindFloat(const ParameterPath& path, float* ptr) {
-    auto& param = getParam<FloatParam>(path);
-    param.onSync = [ptr, &param]() { *ptr = param.get(); };
-    param.onSync();
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindBool(const ParameterPath& path, bool* ptr) {
-    auto& param = getParam<BoolParam>(path);
-    param.onSync = [ptr, &param]() { *ptr = param.get(); };
-    param.onSync();
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindEnum(const ParameterPath& path, int* ptr) {
-    auto& param = getParam<EnumParam>(path);
-    param.onSync = [ptr, &param]() { *ptr = param.get(); };
-    param.onSync();
+    auto& parameter = getParameter<EnumParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindInt(const ParameterPath& path, std::function<void(int)> callback) {
-    auto& param = getParam<IntParam>(path);
-    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
-    param.onSync();
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindFloat(const ParameterPath& path, std::function<void(float)> callback) {
-    auto& param = getParam<FloatParam>(path);
-    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
-    param.onSync();
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindBool(const ParameterPath& path, std::function<void(bool)> callback) {
-    auto& param = getParam<BoolParam>(path);
-    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
-    param.onSync();
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
 }
 
 void ParameterHandler::bindEnum(const ParameterPath& path, std::function<void(int)> callback) {
-    auto& param = getParam<EnumParam>(path);
-    param.onSync = [callback = std::move(callback), &param]() { callback(param.get()); };
-    param.onSync();
+    auto& parameter = getParameter<EnumParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
 }
 
 int& ParameterHandler::getInt(const ParameterPath& path) {
-    return getParam<IntParam>(path).get();
+    return getParameter<IntParameter>(path).get();
 }
 
 float& ParameterHandler::getFloat(const ParameterPath& path) {
-    return getParam<FloatParam>(path).get();
+    return getParameter<FloatParameter>(path).get();
 }
 
 bool& ParameterHandler::getBool(const ParameterPath& path) {
-    return getParam<BoolParam>(path).get();
+    return getParameter<BoolParameter>(path).get();
+}
+
+int& ParameterHandler::getEnum(const ParameterPath& path) {
+    return getParameter<EnumParameter>(path).get();
 }
 
 void ParameterHandler::setInt(const ParameterPath& path, int value) {
-    auto& param = getParam<IntParam>(path);
-    param.get() = value;
-    if (param.onSync) param.onSync();
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
 }
 
 void ParameterHandler::setFloat(const ParameterPath& path, float value) {
-    auto& param = getParam<FloatParam>(path);
-    param.get() = value;
-    if (param.onSync) param.onSync();
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
 }
 
 void ParameterHandler::setBool(const ParameterPath& path, bool value) {
-    auto& param = getParam<BoolParam>(path);
-    param.get() = value;
-    if (param.onSync) param.onSync();
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
+}
+
+void ParameterHandler::setEnum(const ParameterPath& path, int value) {
+    auto& parameter = getParameter<EnumParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
 }
 
 // TODO: should probably not crash and only log the issue
 void ParameterHandler::setEnumByName(const ParameterPath& path, const std::string& name) {
-    auto& param = getParam<EnumParam>(path);
-    if (!param.setByName(name))
+    auto& parameter = getParameter<EnumParameter>(path);
+    if (!parameter.setByName(name))
         throw std::runtime_error("Unknown enum value '" + name + "' for parameter: " + path.generic_string());
-    if (param.onSync) param.onSync();
-}
-
-void ParameterHandler::resetAll() {
-    for (auto& p : params) p->reset();
+    if (parameter.onSync) parameter.onSync();
 }

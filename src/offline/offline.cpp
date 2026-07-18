@@ -56,13 +56,13 @@ void Offline::run(JobQueue& queue) {
 
 void Offline::initParameters(const std::vector<ParameterOverride>& overrides) {
     Core::getParameters().resetAll();
-    for (const auto& paramOverride : overrides) {
+    for (const auto& parameterOverride : overrides) {
         std::visit([&](auto&& v) {
             using T = std::decay_t<decltype(v)>;
-            if constexpr      (std::is_same_v<T, bool>)        Core::getParameters().setBool(paramOverride.key, v);
-            else if constexpr (std::is_same_v<T, int>)         Core::getParameters().setInt(paramOverride.key, v);
-            else if constexpr (std::is_same_v<T, float>)       Core::getParameters().setFloat(paramOverride.key, v);
-            else if constexpr (std::is_same_v<T, std::string>) Core::getParameters().setEnumByName(paramOverride.key, v);
-        }, paramOverride.value);
+            if constexpr      (std::is_same_v<T, bool>)        Core::getParameters().setBool(parameterOverride.key, v);
+            else if constexpr (std::is_same_v<T, int>)         Core::getParameters().setInt(parameterOverride.key, v);
+            else if constexpr (std::is_same_v<T, float>)       Core::getParameters().setFloat(parameterOverride.key, v);
+            else if constexpr (std::is_same_v<T, std::string>) Core::getParameters().setEnumByName(parameterOverride.key, v);
+        }, parameterOverride.value);
     }
 }

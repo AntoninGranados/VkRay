@@ -21,7 +21,7 @@ struct alignas(16) RenderUBO {
     int maxBounces;
     int importanceSampling;
     int clipAccumulation;
-    float clipValue;
+    float clipThreshold;
     int varianceSampling;
     int varianceWarmupSamples;
 };
