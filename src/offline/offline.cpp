@@ -15,11 +15,7 @@ void Offline::run(JobQueue& queue) {
     while (Job* job = queue.nextPending()) {
         jobIndex++;
         initParameters(job->parameterOverrides);
-
-        Core::resize(
-            Core::getParameters().get<int>("renderer/output/width"),
-            Core::getParameters().get<int>("renderer/output/height")
-        );
+        Core::consumeResize();
 
         LightMode lightMode = LightMode::Day;
         if (!SceneSerializer::load(Core::getScene(), lightMode, job->scene.string(), job->seed)) {

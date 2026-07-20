@@ -5,9 +5,11 @@
 #include <variant>
 #include <vector>
 
+#include <glm/glm.hpp>
+
 enum class JobStatus { Pending, Running, Done, Failed };
 
-using ParameterValue = std::variant<bool, int, float, std::string, std::filesystem::path>;
+using ParameterValue = std::variant<bool, int, float, std::string, std::filesystem::path, glm::ivec2>;
 
 struct ParameterOverride {
     std::string key;

@@ -103,6 +103,9 @@ void EditorUi::draw(const CommandBuffer& commandBuffer) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
+    if (!Core::getScene().getCamera().isLocked())
+        ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+
     ImGui::NewFrame();
     updateState();
 

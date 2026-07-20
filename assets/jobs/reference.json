@@ -5,8 +5,7 @@
             "scene":   "assets/scenes/reference.json",
             "output":  "snapshots/reference.png",
             "samples": 16384,
-            "width":   1080,
-            "height":  1080,
+            "render_size": [1080, 1080],
 
             "parameters": {
                 "renderer/sampling/max_bounces": 16,

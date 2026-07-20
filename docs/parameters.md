@@ -30,6 +30,8 @@ The parameter type is inferred from the value in `"default"`:
 | `true` / `false` | Boolean | `"default": false` |
 | Integer literal | Integer | `"default": 8` |
 | Float literal | Float | `"default": 50.0` |
+| Array of 2–4 integers | Vec (integer) | `"default": [1920, 1080]` |
+| Array of 2–4 floats | Vec (float) | `"default": [0.0, 0.0, 1.0]` |
 | String + `"items"` array | Enumeration | `"default": "None"` |
 | String + `"extensions"` array | Path | `"default": "outputs/render.png"` |
 
@@ -43,7 +45,7 @@ All parameters support these fields:
 | `"restart_accumulation"` | If `true`, changing this parameter restarts path tracing. |
 | `"condition"` | Disables the parameter unless a condition is met. See [Conditions](#conditions). |
 
-Integer and float parameters additionally support `"min"`, `"max"`, and `"step"`.
+Integer, float, and vec parameters additionally support `"min"`, `"max"`, and `"step"`. For vec parameters, `"min"` and `"max"` are arrays matching the component count; `"step"` is a scalar float.
 
 Enumeration parameters require an `"items"` array listing the valid string values.
 
@@ -81,8 +83,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ### Output
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/output/width` | Width | - | Integer | 1920 | 1 ... 2147483647 | - |
-| `renderer/output/height` | Height | - | Integer | 1080 | 1 ... 2147483647 | - |
+| `renderer/output/render_size` | Render Size | - | Vec2 | (1920, 1080) | (1, 1) ... | - |
 | `renderer/output/output_image` | Image | - | Path | `outputs/render.png` | PNG Image (.png), OpenEXR Image (.exr) | - |
 | `renderer/output/output_video` | Video | - | Path | `outputs/render.mp4` | MP4 Video (.mp4) | - |
 | `renderer/output/frame_cache` | Frame Cache | Directory where animation frames are stored before video conversion. | Path | `outputs/cache` | - | - |

@@ -5,8 +5,7 @@
             "scene":   "assets/scenes/room.json",
             "output":  "outputs/render.png",
             "samples": 100000,
-            "width":   1280,
-            "height":  720,
+            "render_size": [1280, 720],
             "parameters": {
                 "renderer/sampling/max_bounces": 16,
                 

@@ -72,7 +72,8 @@ void Core::startRender() {
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
-    requestResize(c.parameters.get<int>("renderer/output/width"), c.parameters.get<int>("renderer/output/height"));
+    auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
+    requestResize(renderSize.x, renderSize.y);
     requestAccumulationRestart();
 }
 
@@ -81,7 +82,8 @@ void Core::startRenderAnim() {
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
-    requestResize(c.parameters.get<int>("renderer/output/width"), c.parameters.get<int>("renderer/output/height"));
+    auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
+    requestResize(renderSize.x, renderSize.y);
     requestAccumulationRestart();
     c.animation.reset(0);
 }

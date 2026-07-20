@@ -5,8 +5,7 @@
         //     "scene":   "assets/scenes/showcase/materials.json",
         //     "output":  "snapshots/showcase/materials.png",
         //     "samples": 8192,
-        //     "width":   2160,
-        //     "height":  540,
+        //     "render_size": [2160, 540],
         //     "parameters": {
         //         "renderer/sampling/adaptive_sampling": true,
         //         "renderer/sampling/adaptive_warmup":   4096,
@@ -17,8 +16,7 @@
         //     "scene":   "assets/scenes/showcase/meshes.json",
         //     "output":  "snapshots/showcase/meshes.png",
         //     "samples": 8192,
-        //     "width":   1920,
-        //     "height":  1080,
+        //     "render_size": [1920, 1080],
         //     "parameters": {
         //         "renderer/sampling/adaptive_sampling": true,
         //         "renderer/sampling/adaptive_warmup":   4096,
@@ -29,8 +27,7 @@
         //     "scene":   "assets/scenes/showcase/introduction.json",
         //     "output":  "snapshots/showcase/introduction.png",
         //     "samples": 8192,
-        //     "width":   2160,
-        //     "height":  1080,
+        //     "render_size": [2160, 1080],
         //     "parameters": {
         //         "renderer/sampling/adaptive_sampling": true,
         //         "renderer/sampling/adaptive_warmup":   4096,
@@ -42,8 +39,7 @@
             "output":  "snapshots/showcase/campfire.png",
             // "samples": 8192,
             "samples": 2048,
-            "width":   1080,
-            "height":  1080,
+            "render_size": [1080, 1080],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   4096,

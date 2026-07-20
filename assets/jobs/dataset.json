@@ -10,8 +10,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -27,8 +26,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -44,8 +42,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -61,8 +58,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -78,8 +74,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -95,8 +90,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -112,8 +106,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,
@@ -129,8 +122,7 @@
                 { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
                 // 2048
             ],
-            "width": 1024,
-            "height": 1024,
+            "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
                 "renderer/sampling/adaptive_warmup":   512,

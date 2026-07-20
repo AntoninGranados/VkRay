@@ -32,8 +32,7 @@
 
         "output": {
             "label": "Output",
-            "width":  { "label": "Width",  "default": 1920, "min": 1, "step": 1 },
-            "height": { "label": "Height", "default": 1080, "min": 1, "step": 1 },
+            "render_size": { "label": "Render Size", "default": [1920, 1080], "min": [1, 1], "step": 1.0 },
             "output_image": {
                 "label": "Image",
                 "default": "outputs/render.png",

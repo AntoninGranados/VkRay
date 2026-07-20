@@ -4,6 +4,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/type_trait.hpp>
+
 #include <nfd.hpp>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -74,17 +77,47 @@ bool ParameterUI::drawParameter(PathParameter& p) {
     return true;
 }
 
+template <typename T>
+static bool drawVecParameter(VecParameter<T>& p) {
+    using V = typename T::value_type;
+    ImGui::Text("%s", p.label.c_str());
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if constexpr (std::is_same_v<V, int>) {
+        if constexpr (T::length() == 2) return ImGui::DragInt2("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+        if constexpr (T::length() == 3) return ImGui::DragInt3("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+        if constexpr (T::length() == 4) return ImGui::DragInt4("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+    } else {
+        if constexpr (T::length() == 2) return ImGui::DragFloat2("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+        if constexpr (T::length() == 3) return ImGui::DragFloat3("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+        if constexpr (T::length() == 4) return ImGui::DragFloat4("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
+    }
+    return false;
+}
+
+template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec2>& p) { return drawVecParameter(p); }
+template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec3>& p) { return drawVecParameter(p); }
+template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec4>& p) { return drawVecParameter(p); }
+template <> bool ParameterUI::drawParameter(VecParameter<glm::vec2>& p) { return drawVecParameter(p); }
+template <> bool ParameterUI::drawParameter(VecParameter<glm::vec3>& p) { return drawVecParameter(p); }
+template <> bool ParameterUI::drawParameter(VecParameter<glm::vec4>& p) { return drawVecParameter(p); }
+
 template <>
 bool ParameterUI::drawParameter(ParameterBase& base) {
     bool changed = false;
     ImGui::PushID(base.path.generic_string().c_str());
     ImGui::BeginGroup();
 
-    if      (IntParameter*   p = dynamic_cast<IntParameter*>(&base))   changed = drawParameter(*p);
+    if (IntParameter* p = dynamic_cast<IntParameter*>(&base)) changed = drawParameter(*p);
     else if (FloatParameter* p = dynamic_cast<FloatParameter*>(&base)) changed = drawParameter(*p);
-    else if (BoolParameter*  p = dynamic_cast<BoolParameter*>(&base))  changed = drawParameter(*p);
-    else if (EnumParameter*  p = dynamic_cast<EnumParameter*>(&base))  changed = drawParameter(*p);
-    else if (PathParameter*  p = dynamic_cast<PathParameter*>(&base))  changed = drawParameter(*p);
+    else if (BoolParameter* p = dynamic_cast<BoolParameter*>(&base)) changed = drawParameter(*p);
+    else if (EnumParameter* p = dynamic_cast<EnumParameter*>(&base)) changed = drawParameter(*p);
+    else if (PathParameter* p = dynamic_cast<PathParameter*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::ivec2>*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::ivec3>*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::ivec4>*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::vec2>*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::vec3>*>(&base)) changed = drawParameter(*p);
+    else if (auto* p = dynamic_cast<VecParameter<glm::vec4>*>(&base)) changed = drawParameter(*p);
 
     ImGui::EndGroup();
     if (base.description && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))

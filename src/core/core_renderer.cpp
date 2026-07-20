@@ -207,6 +207,10 @@ void CoreRenderer::bindParameters() {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
     });
 
+    parameters.bind<glm::ivec2>("renderer/output/render_size", [](glm::ivec2 size) {
+        Core::requestResize(size.x, size.y);
+    });
+
     parameters.bind("scene/light_mode", &pathtracerUBO.render.lightMode);
 
     parameters.bind("renderer/aov/position_w", &aovFlags.positionW);

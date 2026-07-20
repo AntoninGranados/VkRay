@@ -58,8 +58,10 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
         };
 
         std::vector<ParameterOverride> parameterOverrides;
-        if (j.contains("width"))  parameterOverrides.push_back({"renderer/output/width",  j.at("width").get<int>()});
-        if (j.contains("height")) parameterOverrides.push_back({"renderer/output/height", j.at("height").get<int>()});
+        if (j.contains("render_size")) {
+            const auto& rs = j.at("render_size");
+            parameterOverrides.push_back({"renderer/output/render_size", glm::ivec2(rs[0].get<int>(), rs[1].get<int>())});
+        }
         if (j.contains("parameters")) {
             for (const auto& [key, val] : j.at("parameters").items()) {
                 if      (val.is_boolean())        parameterOverrides.push_back({key, val.get<bool>()});
