@@ -6,6 +6,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -59,11 +60,11 @@ public:
     int getStep() const { return step; }
 
 private:
-    int value        = 0;
+    int value = 0;
     int defaultValue = 0;
-    int minValue     = 0;
-    int maxValue     = 0;
-    int step         = 1;
+    int minValue = 0;
+    int maxValue = 0;
+    int step = 1;
 };
 
 class FloatParameter : public ParameterBase {
@@ -85,11 +86,11 @@ public:
     float getStep() const { return step; }
 
 private:
-    float value        = 0.0f;
+    float value = 0.0f;
     float defaultValue = 0.0f;
-    float minValue     = 0.0f;
-    float maxValue     = 0.0f;
-    float step         = 0.1f;
+    float minValue = 0.0f;
+    float maxValue = 0.0f;
+    float step = 0.1f;
 };
 
 class BoolParameter : public ParameterBase {
@@ -105,18 +106,18 @@ public:
     bool& get() { return value; }
 
 private:
-    bool value        = false;
+    bool value = false;
     bool defaultValue = false;
 };
 
 class EnumParameter : public ParameterBase {
 public:
     EnumParameter(
-        const ParameterPath&      path_,
-        const std::string&        label_,
-        int                       value_,
-        std::vector<std::string>  items_,
-        bool                      restart_
+        const ParameterPath&     path_,
+        const std::string&       label_,
+        int                      value_,
+        std::vector<std::string> items_,
+        bool                     restart_
     );
     std::string print() override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
@@ -129,7 +130,7 @@ public:
     }
 
 private:
-    int value        = 0;
+    int value = 0;
     int defaultValue = 0;
     std::vector<std::string> items;
 };
@@ -141,7 +142,7 @@ public:
         const std::string&         label_,
         std::filesystem::path      value_,
         std::vector<PathExtension> extensions_,
-        bool                       restart_
+        bool restart_
     );
     std::string print() override;
     void reset() override { value = defaultValue; if (onSync) onSync(); }
@@ -190,14 +191,7 @@ public:
         const std::string&       label,
         int                      value,
         std::vector<std::string> items,
-        bool                     restartAccumulation
-    );
-    PathParameter& addPath(
-        const ParameterPath&       path,
-        const std::string&         label,
-        std::filesystem::path      value,
-        std::vector<PathExtension> extensions,
-        bool                       restartAccumulation
+        bool restartAccumulation
     );
     template <typename EnumT>
     EnumParameter& addEnum(
@@ -205,45 +199,45 @@ public:
         const std::string&       label,
         EnumT                    value,
         std::vector<std::string> items,
-        bool                     restartAccumulation
+        bool restartAccumulation
     ) {
         return addEnum(path, label, std::to_underlying(value), items, restartAccumulation);
     }
+    PathParameter& addPath(
+        const ParameterPath&       path,
+        const std::string&         label,
+        std::filesystem::path      value,
+        std::vector<PathExtension> extensions,
+        bool restartAccumulation
+    );
 
-    void bindInt  (const ParameterPath& path, int*   ptr);
-    void bindFloat(const ParameterPath& path, float* ptr);
-    void bindBool (const ParameterPath& path, bool*  ptr);
-    void bindEnum (const ParameterPath& path, int*   ptr);
-    template <typename EnumT>
-    void bindEnum(const ParameterPath& path, EnumT* ptr) {
-        static_assert(sizeof(EnumT) == sizeof(int));
-        bindEnum(path, reinterpret_cast<int*>(ptr));
+    template <typename T> T get(const ParameterPath& path) requires (!std::is_enum_v<T>);
+    template <typename T> T get(const ParameterPath& path) requires std::is_enum_v<T> {
+        return static_cast<T>(getParameter<EnumParameter>(path).get());
     }
-    void bindInt  (const ParameterPath& path, std::function<void(int)>   callback);
-    void bindFloat(const ParameterPath& path, std::function<void(float)> callback);
-    void bindBool (const ParameterPath& path, std::function<void(bool)>  callback);
-    void bindEnum (const ParameterPath& path, std::function<void(int)>   callback);
-    
-    int&                   getInt  (const ParameterPath& path);
-    float&                 getFloat(const ParameterPath& path);
-    bool&                  getBool (const ParameterPath& path);
-    int&                   getEnum (const ParameterPath& path);
-    std::filesystem::path& getPath (const ParameterPath& path);
-    template <typename EnumT>
-    EnumT getEnum (const ParameterPath& path) {
-        return static_cast<EnumT>(getEnum(path));
+
+    template <typename T> void set(const ParameterPath& path, T value) requires (!std::is_enum_v<T>);
+    template <typename T> void set(const ParameterPath& path, T value) requires std::is_enum_v<T> {
+        auto& parameter = getParameter<EnumParameter>(path);
+        parameter.get() = std::to_underlying(value);
+        if (parameter.onSync) parameter.onSync();
     }
-    
-    void setInt        (const ParameterPath& path, int value);
-    void setFloat      (const ParameterPath& path, float value);
-    void setBool       (const ParameterPath& path, bool value);
-    void setEnum       (const ParameterPath& path, int value);
-    void setEnumByName (const ParameterPath& path, const std::string& name);
-    template <typename EnumT>
-    void setEnum      (const ParameterPath& path, EnumT value) {
-        setEnum(path, std::to_underlying(value));
+
+    template <typename T> void bind(const ParameterPath& path, T* ptr) requires (!std::is_enum_v<T>);
+    template <typename T> void bind(const ParameterPath& path, T* ptr) requires std::is_enum_v<T> {
+        auto& parameter = getParameter<EnumParameter>(path);
+        parameter.onSync = [ptr, &parameter]() { *ptr = static_cast<T>(parameter.get()); };
+        parameter.onSync();
     }
-    void setPath       (const ParameterPath& path, std::filesystem::path value);
+
+    template <typename T> void bind(const ParameterPath& path, std::function<void(T)> callback) requires (!std::is_enum_v<T>);
+    template <typename T> void bind(const ParameterPath& path, std::function<void(T)> callback) requires std::is_enum_v<T> {
+        auto& parameter = getParameter<EnumParameter>(path);
+        parameter.onSync = [callback = std::move(callback), &parameter]() { callback(static_cast<T>(parameter.get())); };
+        parameter.onSync();
+    }
+
+    void setEnumByName(const ParameterPath& path, const std::string& name);
 
 private:
     std::vector<std::unique_ptr<ParameterBase>> parameters;
@@ -253,11 +247,9 @@ private:
     template <typename T>
     T& getParameter(const ParameterPath& path) {
         auto it = index.find(path.generic_string());
-        if (it == index.end())
-            throw std::runtime_error("Parameter not found: " + path.generic_string());
+        if (it == index.end()) throw std::runtime_error("Parameter not found: " + path.generic_string());
         auto parameter = dynamic_cast<T*>(it->second);
-        if (!parameter)
-            throw std::runtime_error("Parameter type mismatch: " + path.generic_string());
+        if (!parameter) throw std::runtime_error("Parameter type mismatch: " + path.generic_string());
         return *parameter;
     }
 };

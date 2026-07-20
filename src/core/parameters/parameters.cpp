@@ -1,6 +1,6 @@
 #include "parameters.hpp"
 
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::ordered_json;
 
@@ -81,6 +81,30 @@ std::string EnumParameter::print() {
     return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, description.value_or("-"), items[defaultValue], list, restartAccumulation ? "✓" : "-");
 }
 
+PathParameter::PathParameter(
+    const ParameterPath&       path_,
+    const std::string&         label_,
+    std::filesystem::path      value_,
+    std::vector<PathExtension> extensions_,
+    bool                       restart_
+) : value(value_), defaultValue(value_), extensions(std::move(extensions_)) {
+    path = path_;
+    label = label_;
+    restartAccumulation = restart_;
+}
+
+std::string PathParameter::print() {
+    std::string exts;
+    for (const auto& e : extensions) {
+        if (!exts.empty()) exts += ", ";
+        exts += e.displayName() + " (." + e.ext + ")";
+    }
+    return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
+        path.c_str(), label, description.value_or("-"),
+        defaultValue.string(), exts.empty() ? "-" : exts,
+        restartAccumulation ? "✓" : "-");
+}
+
 IntParameter& ParameterHandler::addInt(
     const ParameterPath& path,
     const std::string&   label,
@@ -123,30 +147,6 @@ BoolParameter& ParameterHandler::addBool(
     return static_cast<BoolParameter&>(*parameters.back());
 }
 
-PathParameter::PathParameter(
-    const ParameterPath&       path_,
-    const std::string&         label_,
-    std::filesystem::path      value_,
-    std::vector<PathExtension> extensions_,
-    bool                       restart_
-) : value(value_), defaultValue(value_), extensions(std::move(extensions_)) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string PathParameter::print() {
-    std::string exts;
-    for (const auto& e : extensions) {
-        if (!exts.empty()) exts += ", ";
-        exts += e.displayName() + " (." + e.ext + ")";
-    }
-    return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
-        path.c_str(), label, description.value_or("-"),
-        defaultValue.string(), exts.empty() ? "-" : exts,
-        restartAccumulation ? "✓" : "-");
-}
-
 EnumParameter& ParameterHandler::addEnum(
     const ParameterPath&     path,
     const std::string&       label,
@@ -173,108 +173,122 @@ PathParameter& ParameterHandler::addPath(
     return static_cast<PathParameter&>(*parameters.back());
 }
 
-void ParameterHandler::bindInt(const ParameterPath& path, int* ptr) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindFloat(const ParameterPath& path, float* ptr) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindBool(const ParameterPath& path, bool* ptr) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindEnum(const ParameterPath& path, int* ptr) {
-    auto& parameter = getParameter<EnumParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindInt(const ParameterPath& path, std::function<void(int)> callback) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindFloat(const ParameterPath& path, std::function<void(float)> callback) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindBool(const ParameterPath& path, std::function<void(bool)> callback) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-void ParameterHandler::bindEnum(const ParameterPath& path, std::function<void(int)> callback) {
-    auto& parameter = getParameter<EnumParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-int& ParameterHandler::getInt(const ParameterPath& path) {
-    return getParameter<IntParameter>(path).get();
-}
-
-float& ParameterHandler::getFloat(const ParameterPath& path) {
-    return getParameter<FloatParameter>(path).get();
-}
-
-bool& ParameterHandler::getBool(const ParameterPath& path) {
-    return getParameter<BoolParameter>(path).get();
-}
-
-int& ParameterHandler::getEnum(const ParameterPath& path) {
-    return getParameter<EnumParameter>(path).get();
-}
-
-std::filesystem::path& ParameterHandler::getPath(const ParameterPath& path) {
-    return getParameter<PathParameter>(path).get();
-}
-
-void ParameterHandler::setInt(const ParameterPath& path, int value) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-void ParameterHandler::setFloat(const ParameterPath& path, float value) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-void ParameterHandler::setBool(const ParameterPath& path, bool value) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-void ParameterHandler::setPath(const ParameterPath& path, std::filesystem::path value) {
-    auto& parameter = getParameter<PathParameter>(path);
-    parameter.get() = std::move(value);
-    if (parameter.onSync) parameter.onSync();
-}
-
-void ParameterHandler::setEnum(const ParameterPath& path, int value) {
-    auto& parameter = getParameter<EnumParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
 // TODO: should probably not crash and only log the issue
 void ParameterHandler::setEnumByName(const ParameterPath& path, const std::string& name) {
     auto& parameter = getParameter<EnumParameter>(path);
     if (!parameter.setByName(name))
         throw std::runtime_error("Unknown enum value '" + name + "' for parameter: " + path.generic_string());
     if (parameter.onSync) parameter.onSync();
+}
+
+// ===================== get =====================
+
+template <>
+bool ParameterHandler::get<bool>(const ParameterPath& path) {
+    return getParameter<BoolParameter>(path).get();
+}
+
+template <>
+int ParameterHandler::get<int>(const ParameterPath& path) {
+    return getParameter<IntParameter>(path).get();
+}
+
+template <>
+float ParameterHandler::get<float>(const ParameterPath& path) {
+    return getParameter<FloatParameter>(path).get();
+}
+
+template <>
+std::filesystem::path ParameterHandler::get<std::filesystem::path>(const ParameterPath& path) {
+    return getParameter<PathParameter>(path).get();
+}
+
+// ===================== set =====================
+
+template <>
+void ParameterHandler::set<bool>(const ParameterPath& path, bool value) {
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
+}
+
+template <>
+void ParameterHandler::set<int>(const ParameterPath& path, int value) {
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
+}
+
+template <>
+void ParameterHandler::set<float>(const ParameterPath& path, float value) {
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
+}
+
+template <>
+void ParameterHandler::set<std::filesystem::path>(const ParameterPath& path, std::filesystem::path value) {
+    auto& parameter = getParameter<PathParameter>(path);
+    parameter.get() = std::move(value);
+    if (parameter.onSync) parameter.onSync();
+}
+
+// ===================== bind (pointer) =====================
+
+template <>
+void ParameterHandler::bind<bool>(const ParameterPath& path, bool* ptr) {
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<int>(const ParameterPath& path, int* ptr) {
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<float>(const ParameterPath& path, float* ptr) {
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<std::filesystem::path>(const ParameterPath& path, std::filesystem::path* ptr) {
+    auto& parameter = getParameter<PathParameter>(path);
+    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
+    parameter.onSync();
+}
+
+// ===================== bind (callback) =====================
+
+template <>
+void ParameterHandler::bind<bool>(const ParameterPath& path, std::function<void(bool)> callback) {
+    auto& parameter = getParameter<BoolParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<int>(const ParameterPath& path, std::function<void(int)> callback) {
+    auto& parameter = getParameter<IntParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<float>(const ParameterPath& path, std::function<void(float)> callback) {
+    auto& parameter = getParameter<FloatParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
+}
+
+template <>
+void ParameterHandler::bind<std::filesystem::path>(const ParameterPath& path, std::function<void(std::filesystem::path)> callback) {
+    auto& parameter = getParameter<PathParameter>(path);
+    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
+    parameter.onSync();
 }

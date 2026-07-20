@@ -71,8 +71,8 @@ void Core::startRender() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
-    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("renderer/sampling/render_samples"));
-    requestResize(c.parameters.getInt("renderer/output/width"), c.parameters.getInt("renderer/output/height"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
+    requestResize(c.parameters.get<int>("renderer/output/width"), c.parameters.get<int>("renderer/output/height"));
     requestAccumulationRestart();
 }
 
@@ -80,8 +80,8 @@ void Core::startRenderAnim() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
-    c.coreRenderer.setTargetSampleCount(c.parameters.getInt("renderer/sampling/render_samples"));
-    requestResize(c.parameters.getInt("renderer/output/width"), c.parameters.getInt("renderer/output/height"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
+    requestResize(c.parameters.get<int>("renderer/output/width"), c.parameters.get<int>("renderer/output/height"));
     requestAccumulationRestart();
     c.animation.reset(0);
 }

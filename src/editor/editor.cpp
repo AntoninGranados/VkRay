@@ -66,7 +66,7 @@ void Editor::run() {
                 shouldSave = true;
 
                 if (Core::getRenderMode() == RenderMode::RenderAnimation) {
-                    const auto& cacheDir = Core::getParameters().getPath("renderer/output/frame_cache");
+                    const auto cacheDir = Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache");
                     savePath = ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir);
                     Core::getAnimation().stepFixed();
                     if (Core::getAnimation().getFrame() == 0) {
@@ -112,7 +112,7 @@ void Editor::run() {
 
             if (shouldSave) {
                 Core::getCoreRenderer().saveCapture(savePath);
-                if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath(), Core::getParameters().getPath("renderer/output/frame_cache"));
+                if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath(), Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache"));
             }
 
             Core::getEngine().present();

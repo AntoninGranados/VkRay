@@ -187,34 +187,34 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
 
 void CoreRenderer::bindParameters() {
     ParameterHandler& parameters = Core::getParameters();
-    parameters.bindBool("renderer/denoising", [this](bool v) {
+    parameters.bind<bool>("renderer/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
     });
 
-    parameters.bindInt("renderer/sampling/max_bounces",      &pathtracerUBO.render.maxBounces);
-    parameters.bindInt("renderer/sampling/adaptive_warmup", &pathtracerUBO.render.varianceWarmupSamples);
+    parameters.bind("renderer/sampling/max_bounces",      &pathtracerUBO.render.maxBounces);
+    parameters.bind("renderer/sampling/adaptive_warmup", &pathtracerUBO.render.varianceWarmupSamples);
 
-    parameters.bindBool("renderer/sampling/importance_sampling", [this](bool v) {
+    parameters.bind<bool>("renderer/sampling/importance_sampling", [this](bool v) {
         pathtracerUBO.render.importanceSampling = static_cast<int>(v);
     });
 
-    parameters.bindBool("renderer/sampling/clamp", [this](bool v) {
+    parameters.bind<bool>("renderer/sampling/clamp", [this](bool v) {
         pathtracerUBO.render.clipAccumulation = static_cast<int>(v);
     });
-    parameters.bindFloat("renderer/sampling/clamp_threshold", &pathtracerUBO.render.clipThreshold);
+    parameters.bind("renderer/sampling/clamp_threshold", &pathtracerUBO.render.clipThreshold);
 
-    parameters.bindBool("renderer/sampling/adaptive_sampling", [this](bool v) {
+    parameters.bind<bool>("renderer/sampling/adaptive_sampling", [this](bool v) {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
     });
 
-    parameters.bindEnum("scene/light_mode", &pathtracerUBO.render.lightMode);
+    parameters.bind("scene/light_mode", &pathtracerUBO.render.lightMode);
 
-    parameters.bindBool("renderer/aov/position_w", &aovFlags.positionW);
-    parameters.bindBool("renderer/aov/position",   &aovFlags.position);
-    parameters.bindBool("renderer/aov/normal_w",   &aovFlags.normalW);
-    parameters.bindBool("renderer/aov/normal",     &aovFlags.normal);
-    parameters.bindBool("renderer/aov/albedo",     &aovFlags.albedo);
-    parameters.bindBool("renderer/aov/roughness",  &aovFlags.roughness);
-    parameters.bindBool("renderer/aov/mat_type",   &aovFlags.matType);
-    parameters.bindBool("renderer/aov/sky_mask",   &aovFlags.skyMask);
+    parameters.bind("renderer/aov/position_w", &aovFlags.positionW);
+    parameters.bind("renderer/aov/position",   &aovFlags.position);
+    parameters.bind("renderer/aov/normal_w",   &aovFlags.normalW);
+    parameters.bind("renderer/aov/normal",     &aovFlags.normal);
+    parameters.bind("renderer/aov/albedo",     &aovFlags.albedo);
+    parameters.bind("renderer/aov/roughness",  &aovFlags.roughness);
+    parameters.bind("renderer/aov/mat_type",   &aovFlags.matType);
+    parameters.bind("renderer/aov/sky_mask",   &aovFlags.skyMask);
 }

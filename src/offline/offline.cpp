@@ -17,8 +17,8 @@ void Offline::run(JobQueue& queue) {
         initParameters(job->parameterOverrides);
 
         Core::resize(
-            Core::getParameters().getInt("renderer/output/width"),
-            Core::getParameters().getInt("renderer/output/height")
+            Core::getParameters().get<int>("renderer/output/width"),
+            Core::getParameters().get<int>("renderer/output/height")
         );
 
         LightMode lightMode = LightMode::Day;
@@ -29,14 +29,14 @@ void Offline::run(JobQueue& queue) {
         }
         Log::success("Offline", std::format("[{}/{}] Loaded: `{}`", jobIndex, totalJobs, job->scene.string()));
         Core::setRenderMode(RenderMode::RenderSingle);
-        Core::getParameters().setEnum<LightMode>("scene/light_mode", lightMode);
+        Core::getParameters().set("scene/light_mode", lightMode);
 
         Core::getEngine().waitIdle();
         Core::restartAccumulation();
 
-        const uint32_t totalSamples = Core::getParameters().getInt("renderer/sampling/render_samples");
+        const uint32_t totalSamples = Core::getParameters().get<int>("renderer/sampling/render_samples");
         ProgressBar bar(
-            "[" + std::to_string(jobIndex) + "/" + std::to_string(totalJobs) + "]",
+            std::format("[{}/{}]", jobIndex, totalJobs),
             totalSamples,
             "spp"
         );
@@ -47,7 +47,7 @@ void Offline::run(JobQueue& queue) {
         }
         bar.close();
 
-        Core::getCoreRenderer().saveCapture(Core::getParameters().getPath("renderer/output/output_image"));
+        Core::getCoreRenderer().saveCapture(Core::getParameters().get<std::filesystem::path>("renderer/output/output_image"));
 
         queue.complete();
     }
@@ -58,11 +58,10 @@ void Offline::initParameters(const std::vector<ParameterOverride>& overrides) {
     for (const auto& parameterOverride : overrides) {
         std::visit([&](auto&& v) {
             using T = std::decay_t<decltype(v)>;
-            if constexpr      (std::is_same_v<T, bool>)        Core::getParameters().setBool(parameterOverride.key, v);
-            else if constexpr (std::is_same_v<T, int>)         Core::getParameters().setInt(parameterOverride.key, v);
-            else if constexpr (std::is_same_v<T, float>)       Core::getParameters().setFloat(parameterOverride.key, v);
-            else if constexpr (std::is_same_v<T, std::string>) Core::getParameters().setEnumByName(parameterOverride.key, v);
-            else if constexpr (std::is_same_v<T, std::filesystem::path>) Core::getParameters().setPath(parameterOverride.key, v);
+            if constexpr (std::is_same_v<T, std::string>)
+                Core::getParameters().setEnumByName(parameterOverride.key, v);
+            else
+                Core::getParameters().set(parameterOverride.key, v);
         }, parameterOverride.value);
     }
 }

@@ -153,7 +153,7 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     }
 
     bool conditionMet = !item.condition ||
-        (Core::getParameters().getBool(item.condition->param) == item.condition->when);
+        (Core::getParameters().get<bool>(item.condition->param) == item.condition->when);
 
     float lineX  = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
     float startY = ImGui::GetCursorScreenPos().y;

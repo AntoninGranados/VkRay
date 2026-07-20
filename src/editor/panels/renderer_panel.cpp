@@ -10,7 +10,7 @@
 #include "utils/log.hpp"
 
 static void startRender(const char* paramPath, auto startFn) {
-    auto& path = Core::getParameters().getPath(paramPath);
+    auto path = Core::getParameters().get<std::filesystem::path>(paramPath);
     if (path.empty()) {
         Log::error("Renderer", std::format("No output path set for '{}', configure it in the parameters panel.", paramPath));
         return;

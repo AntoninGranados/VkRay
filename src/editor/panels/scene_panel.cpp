@@ -25,9 +25,9 @@ void ScenePanel::content() {
             NFD::UniquePath outPath;
             nfdfilteritem_t filter[1] = { { "Scene", "json" } };
             if (NFD::OpenDialog(outPath, filter, 1, "assets/scenes/") == NFD_OKAY) {
-                LightMode mode = Core::getParameters().getEnum<LightMode>("scene/light_mode");
+                LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(scene, mode, outPath.get())) {
-                    Core::getParameters().setEnum<LightMode>("scene/light_mode", mode);
+                    Core::getParameters().set("scene/light_mode", mode);
                     Core::requestAccumulationRestart();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
                 }
@@ -42,7 +42,7 @@ void ScenePanel::content() {
                 std::string path = outPath.get();
                 if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
                     path += ".json";
-                LightMode mode = Core::getParameters().getEnum<LightMode>("scene/light_mode");
+                LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
                 if (SceneSerializer::save(scene, mode, path)) {
                     Log::success("ScenePanel", std::format("Scene saved: {}", path));
                 }

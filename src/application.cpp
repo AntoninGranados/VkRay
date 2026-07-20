@@ -98,5 +98,5 @@ void Application::initScene(const std::string& sceneFile) {
     LightMode mode = LightMode::Day;
     SceneSerializer::load(Core::getScene(), mode, sceneFile);
 
-    Core::getParameters().setEnum("scene/light_mode", mode);
+    Core::getParameters().set("scene/light_mode", mode);
 }
