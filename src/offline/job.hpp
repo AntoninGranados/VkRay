@@ -7,22 +7,18 @@
 
 enum class JobStatus { Pending, Running, Done, Failed };
 
-using ParamValue = std::variant<bool, int, float, std::string>;
+using ParameterValue = std::variant<bool, int, float, std::string, std::filesystem::path>;
 
 struct ParameterOverride {
     std::string key;
-    ParamValue  value;
+    ParameterValue value;
 };
 
 struct Job {
-    std::filesystem::path      scene;
-    std::filesystem::path      output;
-    uint32_t                   samples;
-    uint32_t                   seed;
-    uint32_t                   width;
-    uint32_t                   height;
+    std::filesystem::path scene;
+    uint32_t seed;
     std::vector<ParameterOverride> parameterOverrides;
 
-    JobStatus status   = JobStatus::Pending;
-    float     progress = 0.0f;
+    JobStatus status = JobStatus::Pending;
+    float progress = 0.0f;
 };

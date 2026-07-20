@@ -16,9 +16,10 @@ void Offline::run(JobQueue& queue) {
         jobIndex++;
         initParameters(job->parameterOverrides);
 
-        const VkExtent2D extent = Core::getEngine().getExtent();
-        if (job->width != extent.width || job->height != extent.height)
-            Core::getCoreRenderer().resize(job->width, job->height);
+        Core::resize(
+            Core::getParameters().getInt("renderer/output/width"),
+            Core::getParameters().getInt("renderer/output/height")
+        );
 
         LightMode lightMode = LightMode::Day;
         if (!SceneSerializer::load(Core::getScene(), lightMode, job->scene.string(), job->seed)) {
@@ -33,7 +34,7 @@ void Offline::run(JobQueue& queue) {
         Core::getEngine().waitIdle();
         Core::restartAccumulation();
 
-        const uint32_t totalSamples = job->samples;
+        const uint32_t totalSamples = Core::getParameters().getInt("renderer/sampling/render_samples");
         ProgressBar bar(
             "[" + std::to_string(jobIndex) + "/" + std::to_string(totalJobs) + "]",
             totalSamples,
@@ -46,9 +47,7 @@ void Offline::run(JobQueue& queue) {
         }
         bar.close();
 
-        // TODO: move the output path to the parameters
-        const auto& outputOverride = Core::getOutputPath();
-        Core::getCoreRenderer().saveCapture(outputOverride.empty() ? job->output : outputOverride);
+        Core::getCoreRenderer().saveCapture(Core::getParameters().getPath("renderer/output/output_image"));
 
         queue.complete();
     }
@@ -63,6 +62,7 @@ void Offline::initParameters(const std::vector<ParameterOverride>& overrides) {
             else if constexpr (std::is_same_v<T, int>)         Core::getParameters().setInt(parameterOverride.key, v);
             else if constexpr (std::is_same_v<T, float>)       Core::getParameters().setFloat(parameterOverride.key, v);
             else if constexpr (std::is_same_v<T, std::string>) Core::getParameters().setEnumByName(parameterOverride.key, v);
+            else if constexpr (std::is_same_v<T, std::filesystem::path>) Core::getParameters().setPath(parameterOverride.key, v);
         }, parameterOverride.value);
     }
 }

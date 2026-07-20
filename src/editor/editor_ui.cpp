@@ -36,10 +36,11 @@ void EditorUi::initStyle() {
     style.ScrollbarRounding = ui::kWidgetRounding;
     style.GrabRounding      = ui::kWidgetRounding;
     style.TabRounding       = ui::kWidgetRounding;
+    style.DisabledAlpha     = 0.2f;
 
     ImVec4* c = style.Colors;
     c[ImGuiCol_Text]                      = ui::kDraculaFg;
-    c[ImGuiCol_TextDisabled]              = ui::kDraculaSubtle;
+    c[ImGuiCol_TextDisabled]              = ui::luma(ui::kDraculaFg, 0.4f);
     c[ImGuiCol_WindowBg]                  = ui::kDraculaBg;
     c[ImGuiCol_ChildBg]                   = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     c[ImGuiCol_PopupBg]                   = ui::kDraculaBg;

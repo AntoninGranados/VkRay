@@ -58,7 +58,7 @@ void Application::initEditorMode() {
     io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 14.0f, &iconConfig, iconRanges);
 
     initScene();
-    buildRenderGraph(true);
+    buildRenderGraph(false);
     runFn = Editor::run;
 }
 
@@ -66,27 +66,24 @@ void Application::initOfflineMode(const std::string& jobFile) {
     JobQueue queue = JobQueue::fromFile(jobFile);
     if (queue.isEmpty()) return;
 
-    platform = std::make_unique<HeadlessPlatform>(
-        queue.entries().front().width,
-        queue.entries().front().height
-    );
+    platform = std::make_unique<HeadlessPlatform>(1080, 1080);  // This size is arbitrary as the buffers will be resized with the first jobs parameters
     Core::init(*platform, VK_RAY_VERSION);
 
     initScene();
-    buildRenderGraph(false);
+    buildRenderGraph(true);
     // TODO: move job queue into Core; that removes the lifetime issue and this capture
     runFn = [q = std::move(queue)]() mutable { Offline::run(q); };
 }
 
-void Application::buildRenderGraph(bool withEditor) {
+void Application::buildRenderGraph(bool offline) {
     RenderGraphBuilder builder;
     CoreResources resources = Core::getCoreRenderer().initGraph(builder);
-    if (withEditor)
-        Editor::getEditorRenderer().initGraph(builder, resources);
+    if (!offline) Editor::getEditorRenderer().initGraph(builder, resources);
+
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();
-    if (withEditor)
-        Editor::getEditorRenderer().registerImGuiTextures();
+
+    if (!offline) Editor::getEditorRenderer().registerImGuiTextures();
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
 
@@ -101,5 +98,5 @@ void Application::initScene(const std::string& sceneFile) {
     LightMode mode = LightMode::Day;
     SceneSerializer::load(Core::getScene(), mode, sceneFile);
 
-    Core::getParameters().setEnum<LightMode>("scene/light_mode", mode);
+    Core::getParameters().setEnum("scene/light_mode", mode);
 }

@@ -4,6 +4,7 @@
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/core_renderer.hpp"
+#include "editor/structures.hpp"
 #include "imgui/imgui.h"
 
 struct FrameContext;
@@ -17,22 +18,16 @@ public:
 
     ImTextureID getDisplayTexId() const { return displayTexId; }
     ImTextureID getDebugTexId()   const { return debugTexId; }
+    ImTextureID getOutputTexId()  const { return outputTexId; }
 
 private:
-    struct DisplayUBO {
-        int previewBorderEnabled = 0;
-    };
-
-    struct DebugUBO {
-        int debugView = 0;
-    };
-
     DisplayUBO displayUBO{};
     DebugUBO   debugUBO{};
 
     ImageHandle swapchainImageHandle;
     ImageHandle displayImageHandle;
     ImageHandle debugImageHandle;
+    ImageHandle outputImageHandle;
 
     BufferHandle displayUBOHandle;
     BufferHandle debugUBOHandle;
@@ -49,6 +44,7 @@ private:
 
     ImTextureID displayTexId = 0;
     ImTextureID debugTexId   = 0;
+    ImTextureID outputTexId  = 0;
 
     void editorPass(const FrameContext& frameContext);
     void uiPass();

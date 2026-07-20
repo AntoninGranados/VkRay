@@ -9,7 +9,8 @@
 
 #include "core/animation_handler.hpp"
 #include "core/core_renderer.hpp"
-#include "core/parameter_handler.hpp"
+#include "core/parameters/parameters.hpp"
+#include "core/parameters/parameter_serializer.hpp"
 #include "core/scene/scene.hpp"
 #include "core/structures.hpp"
 
@@ -33,6 +34,10 @@ public:
     static bool isAccumulationRestartPending()  { return get().restartPending; }
     static bool consumeAccumulationRestart();
 
+    static void resize(int width, int height);
+    static void requestResize(int width, int height) { get().targetExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
+    static bool consumeResize();
+
     static void renderFrame(std::function<void(FrameContext&)> onRender = {});
 
     static const std::filesystem::path& getOutputPath() { return get().outputPath; }
@@ -54,5 +59,6 @@ private:
     CoreRenderer     coreRenderer;
     RenderMode       renderMode     = RenderMode::Preview;
     bool             restartPending = false;
+    VkExtent2D       targetExtent   = {};
     std::filesystem::path outputPath;
 };

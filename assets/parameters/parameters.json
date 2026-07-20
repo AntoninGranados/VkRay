@@ -1,5 +1,5 @@
 {
-    "render": {
+    "renderer": {
         "label": "Renderer",
         "denoising": { "label": "Denoising", "default": false },
         "debug_view": {
@@ -8,24 +8,53 @@
             "default": "None",
             "restart_accumulation": true
         },
-
-        "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
-        "render_samples": { "label": "Render Samples", "default": 2048, "min": 1, "max": 4096, "step": 1 },
-        "importance_sampling": { "label": "Importance Sampling", "default": true },
-        "clamp": { "label": "Clamp Fireflies", "description": "Clamps high-luminance samples to reduce fireflies.", "default": false, "restart_accumulation": true },
-        "clamp_threshold": {
-            "label": "Clamp Threshold",
-            "description": "Luminance value above which samples are clamped.",
-            "default": 50.0, "min": 0.0, "max": 1000.0, "step": 1.0,
-            "restart_accumulation": true,
-            "condition": { "param": "render/clamp" }
+        "sampling": {
+            "label": "Sampling",
+            "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
+            "render_samples": { "label": "Render Samples", "default": 2048, "min": 1, "max": 4096, "step": 1 },
+            "importance_sampling": { "label": "Importance Sampling", "default": true },
+            "clamp": { "label": "Clamp Fireflies", "description": "Clamps high-luminance samples to reduce fireflies.", "default": false, "restart_accumulation": true },
+            "clamp_threshold": {
+                "label": "Clamp Threshold",
+                "description": "Luminance value above which samples are clamped.",
+                "default": 50.0, "min": 0.0, "max": 1000.0, "step": 1.0,
+                "restart_accumulation": true,
+                "condition": { "param": "renderer/sampling/clamp" }
+            },
+            "adaptive_sampling": { "label": "Adaptive Sampling", "description": "Skips already-converged pixels to focus samples where needed.", "default": true },
+            "adaptive_warmup": {
+                "label": "Adaptive Warmup",
+                "description": "Number of samples accumulated before adaptive sampling activates.",
+                "default": 64, "min": 0, "max": 2048, "step": 1,
+                "condition": { "param": "renderer/sampling/adaptive_sampling" }
+            }
         },
-        "adaptive_sampling": { "label": "Adaptive Sampling", "description": "Skips already-converged pixels to focus samples where needed.", "default": true },
-        "adaptive_warmup": {
-            "label": "Adaptive Warmup",
-            "description": "Number of samples accumulated before adaptive sampling activates.",
-            "default": 64, "min": 0, "max": 2048, "step": 1,
-            "condition": { "param": "render/adaptive_sampling" }
+
+        "output": {
+            "label": "Output",
+            "width":  { "label": "Width",  "default": 1920, "min": 1, "step": 1 },
+            "height": { "label": "Height", "default": 1080, "min": 1, "step": 1 },
+            "output_image": {
+                "label": "Image",
+                "default": "outputs/render.png",
+                "extensions": [
+                    { "ext": "png", "name": "PNG Image" },
+                    { "ext": "exr", "name": "OpenEXR Image" }
+                ]
+            },
+            "output_video": {
+                "label": "Video",
+                "default": "outputs/render.mp4",
+                "extensions": [
+                    { "ext": "mp4", "name": "MP4 Video" }
+                ]
+            },
+            "frame_cache": {
+                "label": "Frame Cache",
+                "description": "Directory where animation frames are stored before video conversion.",
+                "default": "outputs/cache",
+                "extensions": []
+            }
         },
 
         "aov": {

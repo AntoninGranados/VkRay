@@ -49,7 +49,7 @@ void ScenePanel::content() {
             }
         }
 
-        ParameterUI::drawGroup(Core::getParameters(), "scene");
+        ParameterUI::drawGroup("scene");
 
         bool openNewObjectPopup = false;
         bool openNewMeshAssetPopup = false;

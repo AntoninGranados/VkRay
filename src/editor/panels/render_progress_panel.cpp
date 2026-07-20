@@ -7,7 +7,7 @@
 
 #include "core/core.hpp"
 #include "core/animation_handler.hpp"
-#include "core/parameter_handler.hpp"
+#include "core/parameters/parameters.hpp"
 
 void RenderProgressPanel::content() {
     ImGui::SetNextWindowPos({0, 0});
@@ -17,7 +17,7 @@ void RenderProgressPanel::content() {
     );
 
     uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
-    int renderSamplesPerPixel = Core::getParameters().getInt("render/render_samples");
+    int renderSamplesPerPixel = Core::getParameters().getInt("renderer/sampling/render_samples");
 
     if (sampleCount == 1) timer.start();
 

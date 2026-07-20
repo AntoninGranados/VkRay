@@ -21,5 +21,5 @@ private:
     void initOfflineMode(const std::string& jobFile);
 
     void initScene(const std::string& sceneFile = "assets/scenes/default.json");
-    void buildRenderGraph(bool withEditor);
+    void buildRenderGraph(bool offline);
 };

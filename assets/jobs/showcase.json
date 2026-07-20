@@ -8,9 +8,9 @@
         //     "width":   2160,
         //     "height":  540,
         //     "parameters": {
-        //         "render/adaptive_sampling": true,
-        //         "render/adaptive_warmup":   4096,
-        //         "render/clamp": true
+        //         "renderer/sampling/adaptive_sampling": true,
+        //         "renderer/sampling/adaptive_warmup":   4096,
+        //         "renderer/sampling/clamp": true
         //     }
         // },
         // {
@@ -20,9 +20,9 @@
         //     "width":   1920,
         //     "height":  1080,
         //     "parameters": {
-        //         "render/adaptive_sampling": true,
-        //         "render/adaptive_warmup":   4096,
-        //         "render/clamp": true
+        //         "renderer/sampling/adaptive_sampling": true,
+        //         "renderer/sampling/adaptive_warmup":   4096,
+        //         "renderer/sampling/clamp": true
         //     }
         // },
         // {
@@ -32,9 +32,9 @@
         //     "width":   2160,
         //     "height":  1080,
         //     "parameters": {
-        //         "render/adaptive_sampling": true,
-        //         "render/adaptive_warmup":   4096,
-        //         "render/clamp": true
+        //         "renderer/sampling/adaptive_sampling": true,
+        //         "renderer/sampling/adaptive_warmup":   4096,
+        //         "renderer/sampling/clamp": true
         //     }
         // },
         {
@@ -45,9 +45,9 @@
             "width":   1080,
             "height":  1080,
             "parameters": {
-                "render/adaptive_sampling": true,
-                "render/adaptive_warmup":   4096,
-                "render/clamp": true
+                "renderer/sampling/adaptive_sampling": true,
+                "renderer/sampling/adaptive_warmup":   4096,
+                "renderer/sampling/clamp": true
             }
         }
     ]

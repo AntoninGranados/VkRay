@@ -9,7 +9,7 @@
 #include "tinyexr/tinyexr.h"
 
 #include "utils/log.hpp"
-#include "core_structures.hpp"
+#include "core/structures.hpp"
 
 void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
     width  = _width;
@@ -44,8 +44,8 @@ void ExportService::save(VkSmol& engine, Image& image, const std::filesystem::pa
     saveAOVs(engine, path, aovFlags);
 }
 
-std::filesystem::path ExportService::buildAnimationFramePath(int frame) {
-    return std::filesystem::path(kAnimationCacheDir) / std::format("frame_{:05d}.png", frame);
+std::filesystem::path ExportService::buildAnimationFramePath(int frame, const std::filesystem::path& dir) {
+    return dir / std::format("frame_{:05d}.png", frame);
 }
 
 void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path& path) {

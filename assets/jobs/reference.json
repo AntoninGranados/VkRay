@@ -9,9 +9,9 @@
             "height":  1080,
 
             "parameters": {
-                "render/max_bounces": 16,
-                "render/adaptive_sampling": false,
-                "render/adaptive_warmup": 4096
+                "renderer/sampling/max_bounces": 16,
+                "renderer/sampling/adaptive_sampling": false,
+                "renderer/sampling/adaptive_warmup": 4096
             }
         }
     ]

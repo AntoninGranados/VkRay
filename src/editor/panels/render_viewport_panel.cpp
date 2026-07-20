@@ -4,13 +4,14 @@
 
 #include "core/core.hpp"
 #include "editor/editor.hpp"
+#include "editor/ui_constants.hpp"
 
 void RenderViewportPanel::content() {
     ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->Pos);
     ImGui::SetNextWindowSize(vp->Size);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::kDraculaBg);
     ImGui::Begin("RenderView", nullptr,
         ImGuiWindowFlags_NoDecoration         |
         ImGuiWindowFlags_NoMove               |
@@ -40,7 +41,7 @@ void RenderViewportPanel::content() {
         cursor.x + (available.x - imageSize.x) * 0.5f,
         cursor.y + (available.y - imageSize.y) * 0.5f
     });
-    ImGui::Image(Editor::getEditorRenderer().getDisplayTexId(), imageSize);
+    ImGui::Image(Editor::getEditorRenderer().getOutputTexId(), imageSize);
 
     ImGui::End();
     ImGui::PopStyleColor();

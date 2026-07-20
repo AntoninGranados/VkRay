@@ -1,123 +1,8 @@
-#include "parameter_handler.hpp"
-
-#include <algorithm>
-#include <fstream>
-#include <limits>
+#include "parameters.hpp"
 
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::ordered_json;
-
-void ParameterHandler::saveDocumentation(std::filesystem::path path) {
-    std::ofstream file;
-    file.open(path);
-    file.clear();
-
-    file << "# Parameters" << std::endl;
-    file << std::endl;
-    file << "> [!NOTE]  " << std::endl;
-    file << "> Parameters are defined in `assets/parameters/parameters.json` as a hierarchical JSON file.  " << std::endl;
-    file << "> Leaf entries require a `\"default\"` field, from which the parameter type is inferred.  " << std::endl;
-    file << "> Nested objects without `\"default\"` are display groups and may carry an optional `\"label\"`.  " << std::endl;
-
-    serializeParameterPath(file, "");
-
-    file.close();
-}
-
-void ParameterHandler::serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth) {
-    for (const auto& parameter : parameters) {
-        if (parameter->path.parent_path() != prefix) continue;
-        file << parameter->print() << std::endl;
-    }
-
-    std::vector<std::string> seen;
-    for (const auto& parameter : parameters) {
-        auto rel = parameter->path.lexically_relative(prefix);
-        if (rel.empty()) continue;
-        auto it = rel.begin();
-        std::string seg = it->string();
-        if (seg == "..") continue;
-        it++;
-        if (it == rel.end()) continue;
-        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
-        seen.push_back(seg);
-
-        auto labelIt = nodeLabels.find((prefix / seg).generic_string());
-        const std::string& displayLabel = labelIt != nodeLabels.end() ? labelIt->second : seg;
-        file << std::endl << std::string(depth+2, '#') << ' ' << displayLabel << std::endl;
-        file << "| Path | Label | Description | Type | Default | Constraints | Restart |" << std::endl;
-        file << "|------|-------|-------------|------|---------|-------------|---------|" << std::endl;
-
-        serializeParameterPath(file, prefix / seg, depth+1);
-    }
-}
-
-static void parseNode(const json& obj, ParameterHandler& handler, const std::string& path) {
-    if (obj.contains("default")) {
-        std::string label = obj.at("label").get<std::string>();
-        bool restart = obj.value("restart_accumulation", false);
-        const auto& def = obj.at("default");
-
-        ParameterBase* parameter = nullptr;
-        if (def.is_boolean()) {
-            parameter = &handler.addBool(path, label, def.get<bool>(), restart);
-        } else if (def.is_number_integer()) {
-            parameter = &handler.addInt(path, label, def.get<int>(),
-                obj.value("min", INT_MIN),
-                obj.value("max", INT_MAX),
-                obj.value("step", 1),
-                restart);
-        } else if (def.is_number_float()) {
-            parameter = &handler.addFloat(path, label, def.get<float>(),
-                obj.value("min", std::numeric_limits<float>::lowest()),
-                obj.value("max", std::numeric_limits<float>::max()),
-                obj.value("step", 1e-3f),
-                restart);
-        } else if (def.is_string() && obj.contains("items")) {
-            std::string defName = def.get<std::string>();
-            std::vector<std::string> items = obj.at("items").get<std::vector<std::string>>();
-            int defIdx = 0;
-            for (size_t i = 0; i < items.size(); i++)
-                if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
-            parameter = &handler.addEnum(path, label, defIdx, std::move(items), restart);
-        }
-
-        if (parameter) {
-            if (obj.contains("description"))
-                parameter->setDescription(obj.at("description").get<std::string>());
-            if (obj.contains("condition")) {
-                const auto& cond = obj.at("condition");
-                parameter->setCondition({ cond.at("param").get<std::string>(), cond.value("when", true) });
-            }
-        }
-    } else {
-        if (obj.contains("label"))
-            handler.setNodeLabel(path, obj.at("label").get<std::string>());
-        for (const auto& [key, val] : obj.items()) {
-            if (key == "label") continue;
-            parseNode(val, handler, path + "/" + key);
-        }
-    }
-}
-
-ParameterHandler ParameterHandler::fromFile(std::filesystem::path path) {
-    std::ifstream f(path);
-    if (!f.is_open())
-        throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
-
-    ParameterHandler parameters;
-    json root = json::parse(f, nullptr, true, true);
-
-    for (const auto& [key, val] : root.items())
-        parseNode(val, parameters, key);
-
-    return parameters;
-}
-
-void ParameterHandler::setNodeLabel(const ParameterPath& path, const std::string& label) {
-    nodeLabels[path.generic_string()] = label;
-}
 
 void ParameterHandler::resetAll() {
     for (auto& p : parameters) p->reset();
@@ -238,6 +123,30 @@ BoolParameter& ParameterHandler::addBool(
     return static_cast<BoolParameter&>(*parameters.back());
 }
 
+PathParameter::PathParameter(
+    const ParameterPath&       path_,
+    const std::string&         label_,
+    std::filesystem::path      value_,
+    std::vector<PathExtension> extensions_,
+    bool                       restart_
+) : value(value_), defaultValue(value_), extensions(std::move(extensions_)) {
+    path = path_;
+    label = label_;
+    restartAccumulation = restart_;
+}
+
+std::string PathParameter::print() {
+    std::string exts;
+    for (const auto& e : extensions) {
+        if (!exts.empty()) exts += ", ";
+        exts += e.displayName() + " (." + e.ext + ")";
+    }
+    return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
+        path.c_str(), label, description.value_or("-"),
+        defaultValue.string(), exts.empty() ? "-" : exts,
+        restartAccumulation ? "✓" : "-");
+}
+
 EnumParameter& ParameterHandler::addEnum(
     const ParameterPath&     path,
     const std::string&       label,
@@ -249,6 +158,19 @@ EnumParameter& ParameterHandler::addEnum(
     index[path.generic_string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<EnumParameter&>(*parameters.back());
+}
+
+PathParameter& ParameterHandler::addPath(
+    const ParameterPath&       path,
+    const std::string&         label,
+    std::filesystem::path      value,
+    std::vector<PathExtension> extensions,
+    bool                       restartAccumulation
+) {
+    auto parameter = std::make_unique<PathParameter>(path, label, std::move(value), std::move(extensions), restartAccumulation);
+    index[path.generic_string()] = parameter.get();
+    parameters.push_back(std::move(parameter));
+    return static_cast<PathParameter&>(*parameters.back());
 }
 
 void ParameterHandler::bindInt(const ParameterPath& path, int* ptr) {
@@ -315,6 +237,10 @@ int& ParameterHandler::getEnum(const ParameterPath& path) {
     return getParameter<EnumParameter>(path).get();
 }
 
+std::filesystem::path& ParameterHandler::getPath(const ParameterPath& path) {
+    return getParameter<PathParameter>(path).get();
+}
+
 void ParameterHandler::setInt(const ParameterPath& path, int value) {
     auto& parameter = getParameter<IntParameter>(path);
     parameter.get() = value;
@@ -330,6 +256,12 @@ void ParameterHandler::setFloat(const ParameterPath& path, float value) {
 void ParameterHandler::setBool(const ParameterPath& path, bool value) {
     auto& parameter = getParameter<BoolParameter>(path);
     parameter.get() = value;
+    if (parameter.onSync) parameter.onSync();
+}
+
+void ParameterHandler::setPath(const ParameterPath& path, std::filesystem::path value) {
+    auto& parameter = getParameter<PathParameter>(path);
+    parameter.get() = std::move(value);
     if (parameter.onSync) parameter.onSync();
 }
 

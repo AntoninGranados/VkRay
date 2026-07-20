@@ -14,14 +14,14 @@ using json = nlohmann::json;
 static constexpr int JOB_VERSION = 1;
 
 static std::unordered_map<std::string, std::filesystem::path> kAovPaths = {
-    { "position_w", "render/aov/position_w" },
-    { "position",   "render/aov/position"   },
-    { "normal_w",   "render/aov/normal_w"   },
-    { "normal",     "render/aov/normal"     },
-    { "albedo",     "render/aov/albedo"     },
-    { "roughness",  "render/aov/roughness"  },
-    { "mat_type",   "render/aov/mat_type"   },
-    { "sky_mask",   "render/aov/sky_mask"   },
+    { "position_w", "renderer/aov/position_w" },
+    { "position",   "renderer/aov/position"   },
+    { "normal_w",   "renderer/aov/normal_w"   },
+    { "normal",     "renderer/aov/normal"     },
+    { "albedo",     "renderer/aov/albedo"     },
+    { "roughness",  "renderer/aov/roughness"  },
+    { "mat_type",   "renderer/aov/mat_type"   },
+    { "sky_mask",   "renderer/aov/sky_mask"   },
 };
 
 static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides) {
@@ -58,6 +58,8 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
         };
 
         std::vector<ParameterOverride> parameterOverrides;
+        if (j.contains("width"))  parameterOverrides.push_back({"renderer/output/width",  j.at("width").get<int>()});
+        if (j.contains("height")) parameterOverrides.push_back({"renderer/output/height", j.at("height").get<int>()});
         if (j.contains("parameters")) {
             for (const auto& [key, val] : j.at("parameters").items()) {
                 if      (val.is_boolean())        parameterOverrides.push_back({key, val.get<bool>()});
@@ -95,13 +97,11 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                     checkpoints[ci].aovOverrides.empty() ? jobAovOverrides : checkpoints[ci].aovOverrides;
 
                 Job job;
-                job.scene              = scenePath;
-                job.output             = resolveTemplate(j.at("output").get<std::string>(), ctx);
-                job.samples            = checkpoints[ci].spp;
-                job.seed               = nSeed;
-                job.width              = j.at("width").get<uint32_t>();
-                job.height             = j.at("height").get<uint32_t>();
+                job.scene  = scenePath;
+                job.parameterOverrides.push_back({"renderer/output/output_image", std::filesystem::path(resolveTemplate(j.at("output").get<std::string>(), ctx))});
+                job.seed   = nSeed;
                 job.parameterOverrides = parameterOverrides;
+                job.parameterOverrides.push_back({"renderer/sampling/render_samples", static_cast<int>(checkpoints[ci].spp)});
                 job.parameterOverrides.insert(job.parameterOverrides.end(), aovOverrides.begin(), aovOverrides.end());
 
                 queue.enqueue(std::move(job));

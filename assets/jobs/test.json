@@ -8,13 +8,13 @@
             "width":   1280,
             "height":  720,
             "parameters": {
-                "render/max_bounces": 16,
+                "renderer/sampling/max_bounces": 16,
                 
-                "render/adaptive_sampling": true,
-                "render/adaptive_warmup":   1000,
+                "renderer/sampling/adaptive_sampling": true,
+                "renderer/sampling/adaptive_warmup":   1000,
 
-                "render/clamp": false,
-                "render/clamp_threshold":    800.0
+                "renderer/sampling/clamp": false,
+                "renderer/sampling/clamp_threshold":    800.0
             }
         }
     ]

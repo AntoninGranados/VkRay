@@ -12,6 +12,12 @@
 
 using ParameterPath = std::filesystem::path;
 
+struct PathExtension {
+    std::string ext;
+    std::string name;
+    std::string displayName() const { return name.empty() ? ext : name; }
+};
+
 struct ParameterCondition {
     ParameterPath param;
     bool when = true;
@@ -128,11 +134,31 @@ private:
     std::vector<std::string> items;
 };
 
+class PathParameter : public ParameterBase {
+public:
+    PathParameter(
+        const ParameterPath&       path_,
+        const std::string&         label_,
+        std::filesystem::path      value_,
+        std::vector<PathExtension> extensions_,
+        bool                       restart_
+    );
+    std::string print() override;
+    void reset() override { value = defaultValue; if (onSync) onSync(); }
+    std::filesystem::path& get() { return value; }
+    const std::vector<PathExtension>& getExtensions() const { return extensions; }
+
+private:
+    std::filesystem::path value;
+    std::filesystem::path defaultValue;
+    std::vector<PathExtension> extensions;
+};
+
 class ParameterHandler {
 public:
-    static ParameterHandler fromFile(std::filesystem::path path = "./assets/parameters/parameters.json");
-    void saveDocumentation(std::filesystem::path path = "./docs/parameters.md");
-    void setNodeLabel (const ParameterPath& path, const std::string& label);
+    void setNodeLabel (const ParameterPath& path, const std::string& label) { nodeLabels[path.generic_string()] = label; }
+    const std::vector<std::unique_ptr<ParameterBase>>& getParameterList() const { return parameters; }
+    const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
     void resetAll();
 
     IntParameter& addInt(
@@ -166,6 +192,13 @@ public:
         std::vector<std::string> items,
         bool                     restartAccumulation
     );
+    PathParameter& addPath(
+        const ParameterPath&       path,
+        const std::string&         label,
+        std::filesystem::path      value,
+        std::vector<PathExtension> extensions,
+        bool                       restartAccumulation
+    );
     template <typename EnumT>
     EnumParameter& addEnum(
         const ParameterPath&     path,
@@ -181,39 +214,41 @@ public:
     void bindFloat(const ParameterPath& path, float* ptr);
     void bindBool (const ParameterPath& path, bool*  ptr);
     void bindEnum (const ParameterPath& path, int*   ptr);
+    template <typename EnumT>
+    void bindEnum(const ParameterPath& path, EnumT* ptr) {
+        static_assert(sizeof(EnumT) == sizeof(int));
+        bindEnum(path, reinterpret_cast<int*>(ptr));
+    }
     void bindInt  (const ParameterPath& path, std::function<void(int)>   callback);
     void bindFloat(const ParameterPath& path, std::function<void(float)> callback);
     void bindBool (const ParameterPath& path, std::function<void(bool)>  callback);
     void bindEnum (const ParameterPath& path, std::function<void(int)>   callback);
     
-    int&   getInt  (const ParameterPath& path);
-    float& getFloat(const ParameterPath& path);
-    bool&  getBool (const ParameterPath& path);
-    int&   getEnum (const ParameterPath& path);
+    int&                   getInt  (const ParameterPath& path);
+    float&                 getFloat(const ParameterPath& path);
+    bool&                  getBool (const ParameterPath& path);
+    int&                   getEnum (const ParameterPath& path);
+    std::filesystem::path& getPath (const ParameterPath& path);
     template <typename EnumT>
-    EnumT  getEnum (const ParameterPath& path) {
+    EnumT getEnum (const ParameterPath& path) {
         return static_cast<EnumT>(getEnum(path));
     }
     
-    void setInt       (const ParameterPath& path, int   value);
-    void setFloat     (const ParameterPath& path, float value);
-    void setBool      (const ParameterPath& path, bool  value);
-    void setEnum      (const ParameterPath& path, int   value);
-    void setEnumByName(const ParameterPath& path, const std::string& name);
+    void setInt        (const ParameterPath& path, int value);
+    void setFloat      (const ParameterPath& path, float value);
+    void setBool       (const ParameterPath& path, bool value);
+    void setEnum       (const ParameterPath& path, int value);
+    void setEnumByName (const ParameterPath& path, const std::string& name);
     template <typename EnumT>
     void setEnum      (const ParameterPath& path, EnumT value) {
         setEnum(path, std::to_underlying(value));
     }
-
-    const std::vector<std::unique_ptr<ParameterBase>>& getParameterList() const { return parameters; }
-    const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
+    void setPath       (const ParameterPath& path, std::filesystem::path value);
 
 private:
     std::vector<std::unique_ptr<ParameterBase>> parameters;
     std::unordered_map<std::string, ParameterBase*> index;
     std::unordered_map<std::string, std::string> nodeLabels;
-
-    void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0);
 
     template <typename T>
     T& getParameter(const ParameterPath& path) {

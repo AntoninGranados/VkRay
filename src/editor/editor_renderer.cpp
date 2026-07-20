@@ -11,8 +11,9 @@
 #include "imgui/imgui_impl_vulkan.h"
 
 #include "core/core.hpp"
-#include "core/parameter_handler.hpp"
+#include "core/parameters/parameters.hpp"
 #include "editor.hpp"
+#include "editor/ui_constants.hpp"
 
 void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreResources) {
     VkSmol& engine = Core::getEngine();
@@ -37,6 +38,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
         VK_FORMAT_R32G32B32A32_SFLOAT,
         engine.getExtent().width, engine.getExtent().height
     );
+    outputImageHandle = coreResources.outputImageHandle;
 
     displayUBOHandle = builder.createPerFrameBuffer("DisplayUBO", sizeof(DisplayUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     debugUBOHandle   = builder.createPerFrameBuffer("DebugUBO",   sizeof(DebugUBO),   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -45,19 +47,19 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
     displayPassHandle = display.getHandle();
     display.setGroup(editorGroupHandle);
-    display.readImage ( 0, coreResources.outputImageHandle,        ImageUsageType::Sampled);
-    display.readBuffer( 1, displayUBOHandle,                       BufferUsageType::Uniform);
-    display.readBuffer( 2, coreResources.pixelInfoBufferHandle,    BufferUsageType::Storage);
-    display.writeImage( 3, displayImageHandle,                     ImageUsageType::Storage);
+    display.readImage ( 0, coreResources.outputImageHandle, ImageUsageType::Sampled);
+    display.readBuffer( 1, displayUBOHandle, BufferUsageType::Uniform);
+    display.readBuffer( 2, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
+    display.writeImage( 3, displayImageHandle, ImageUsageType::Storage);
     displayPipelineHandle = display.setPipeline("./src/shaders/editor/display.glsl");
 
     // Debug pass — debug view visualization (compute)
     ComputePassBuilder debug = builder.addComputePass("DebugPass");
     debugPassHandle = debug.getHandle();
     debug.setGroup(editorGroupHandle);
-    debug.readBuffer( 0, debugUBOHandle,                        BufferUsageType::Uniform);
-    debug.readBuffer( 1, coreResources.pixelInfoBufferHandle,   BufferUsageType::Storage);
-    debug.writeImage( 2, debugImageHandle,                      ImageUsageType::Storage);
+    debug.readBuffer( 0, debugUBOHandle, BufferUsageType::Uniform);
+    debug.readBuffer( 1, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
+    debug.writeImage( 2, debugImageHandle, ImageUsageType::Storage);
     debugPipelineHandle = debug.setPipeline("./src/shaders/editor/debug.glsl");
 
     // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers
@@ -66,6 +68,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     ui.setGroup(uiGroupHandle);
     ui.readImage(0, displayImageHandle, ImageUsageType::Sampled);
     ui.readImage(1, debugImageHandle,   ImageUsageType::Sampled);
+    ui.readImage(2, coreResources.outputImageHandle, ImageUsageType::Sampled);
     ui.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
 
     PresentPassBuilder present = builder.addPresentPass("PresentPass");
@@ -80,9 +83,15 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
 void EditorRenderer::registerImGuiTextures() {
     VkSmol& engine = Core::getEngine();
 
+    if (outputTexId)  ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)outputTexId);
     if (displayTexId) ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)displayTexId);
     if (debugTexId)   ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)debugTexId);
 
+    outputTexId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
+        engine.getSampler(outputImageHandle).get(),
+        engine.getView(outputImageHandle).get(),
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );
     displayTexId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
         engine.getSampler(displayImageHandle).get(),
         engine.getView(displayImageHandle).get(),
@@ -107,7 +116,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
 
     displayUBO.previewBorderEnabled = Core::getScene().isPreviewingCamera(Core::getRenderMode()) ? 1 : 0;
-    debugUBO.debugView = Core::getParameters().getEnum<int>("render/debug_view");
+    debugUBO.debugView = Core::getParameters().getEnum<DebugView>("renderer/debug_view");
 
     engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
     engine.fillBuffer(engine.getBuffer(debugUBOHandle,   frameContext.currentFrame), &debugUBO);
@@ -156,7 +165,7 @@ void EditorRenderer::uiPass() {
         commandBuffer,
         attachments[0].view, attachments[0].layout,
         attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
-        {{ 0.0f, 0.0f, 0.0f, 1.0f }}
+        {{ ui::kDraculaBg.x, ui::kDraculaBg.y, ui::kDraculaBg.z, ui::kDraculaBg.w }}
     );
 
     Editor::getUi().draw(commandBuffer);

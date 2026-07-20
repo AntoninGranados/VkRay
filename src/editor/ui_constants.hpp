@@ -77,6 +77,15 @@ inline void PopTransparentStyleColor() {
 inline const ImVec4 kKeyframeOffColor = kDraculaSubtle;
 inline const ImVec4 kKeyframeOnColor  = kDraculaOrange;
 
+inline void drawIndentLine(float x, float startY, float endY) {
+    ImGui::GetWindowDrawList()->AddLine(
+        { x, startY },
+        { x, endY },
+        ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.5f),
+        1.5f
+    );
+}
+
 // Call before Begin to pin a window to its dock node
 inline void setNextWindowFixed(bool noTabBar = false) {
     static ImGuiWindowClass fixedClass;

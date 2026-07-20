@@ -43,12 +43,17 @@ void Editor::run() {
             static_cast<uint32_t>(vpSize.x * xscale),
             static_cast<uint32_t>(vpSize.y * yscale)
         };
-        VkExtent2D current = Core::getCoreRenderer().getRenderExtent();
-        if (vpExtent.width > 0 && vpExtent.height > 0 &&
-            (vpExtent.width != current.width || vpExtent.height != current.height)) {
-            Core::getCoreRenderer().resize(vpExtent.width, vpExtent.height);
-            get().editorRenderer.resize(vpExtent.width, vpExtent.height);
-            Core::restartAccumulation();
+        if (Core::getRenderMode() == RenderMode::Preview && vpExtent.width > 0 && vpExtent.height > 0)
+            Core::requestResize(vpExtent.width, vpExtent.height);
+
+        if (Core::consumeResize()) {
+            if (Core::getRenderMode() == RenderMode::Preview) {
+                VkExtent2D e = Core::getCoreRenderer().getRenderExtent();
+                get().editorRenderer.resize(e.width, e.height);
+            } else {
+                get().editorRenderer.registerImGuiTextures();
+            }
+            Core::requestAccumulationRestart();
         }
         Core::consumeAccumulationRestart();
 
@@ -61,7 +66,8 @@ void Editor::run() {
                 shouldSave = true;
 
                 if (Core::getRenderMode() == RenderMode::RenderAnimation) {
-                    savePath = ExportService::buildAnimationFramePath(Core::getAnimation().getFrame());
+                    const auto& cacheDir = Core::getParameters().getPath("renderer/output/frame_cache");
+                    savePath = ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir);
                     Core::getAnimation().stepFixed();
                     if (Core::getAnimation().getFrame() == 0) {
                         toVideo = true;
@@ -106,7 +112,7 @@ void Editor::run() {
 
             if (shouldSave) {
                 Core::getCoreRenderer().saveCapture(savePath);
-                if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath());
+                if (toVideo) ExportService::convertFramesToVideo(Core::getOutputPath(), Core::getParameters().getPath("renderer/output/frame_cache"));
             }
 
             Core::getEngine().present();

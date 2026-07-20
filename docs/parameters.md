@@ -1,34 +1,103 @@
 # Parameters
 
-> [!NOTE]  
-> Parameters are defined in `assets/parameters/parameters.json` as a hierarchical JSON file.  
-> Leaf entries require a `"default"` field, from which the parameter type is inferred.  
-> Nested objects without `"default"` are display groups and may carry an optional `"label"`.  
+Parameters are defined in `assets/parameters/parameters.json`. The file is a hierarchical JSON structure where nested objects form display groups, and leaf objects are parameters
+
+## File Format
+All objects may carry an optional `"label"` that is used instead of the full path in the UI.
+
+### Groups Format
+A nested object without `"default"` is a display group.
+
+```json
+"sampling": {
+    "label": "Sampling",
+    "max_bounces":     { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
+    "clamp":           { "label": "Clamp Fireflies", "default": false, "restart_accumulation": true },
+    "clamp_threshold": {
+        "label": "Clamp Threshold",
+        "default": 50.0,
+        "restart_accumulation": true,
+        "condition": { "param": "renderer/sampling/clamp" }
+    }
+}
+```
+
+### Parameters Format
+The parameter type is inferred from the value in `"default"`:
+
+| `"default"` value | Type | Example |
+|-------------------|------|---------|
+| `true` / `false` | Boolean | `"default": false` |
+| Integer literal | Integer | `"default": 8` |
+| Float literal | Float | `"default": 50.0` |
+| String + `"items"` array | Enumeration | `"default": "None"` |
+| String + `"extensions"` array | Path | `"default": "outputs/render.png"` |
+
+All parameters support these fields:
+
+| Field | Description |
+|-------|-------------|
+| `"label"` | Display name shown in the UI. Required. |
+| `"default"` | Default value. Determines the type. Required. |
+| `"description"` | Optional tooltip text. |
+| `"restart_accumulation"` | If `true`, changing this parameter restarts path tracing. |
+| `"condition"` | Disables the parameter unless a condition is met. See [Conditions](#conditions). |
+
+Integer and float parameters additionally support `"min"`, `"max"`, and `"step"`.
+
+Enumeration parameters require an `"items"` array listing the valid string values.
+
+Path parameters use an `"extensions"` array of `{ "ext", "name" }` objects to filter the file picker. An empty array makes the picker select a directory instead of a file.
+
+### Conditions
+Parameters can be disabled in the UI, this is defined using a `"condition"` object:
+
+```json
+"condition": { "param": "renderer/sampling/clamp" }
+"condition": { "param": "renderer/sampling/clamp", "when": false }
+```
+
+`"param"` is the full path to a boolean parameter and `"when "` is `true` by default.
+
+---
 
 ## Renderer
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `render/denoising` | Denoising | - | Boolean | false | - | - |
-| `render/debug_view` | Debug View | - | Enumeration | `None` | `None` • `Position W` • `Position` • `Normal W` • `Normal` • `Albedo` • `Roughness` • `Mat Type` • `Bounces` • `Hit Checks` • `Variance` • `Selection Mask` • `Sky Mask` | ✓ |
-| `render/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | - |
-| `render/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | - |
-| `render/importance_sampling` | Importance Sampling | - | Boolean | true | - | - |
-| `render/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | ✓ |
-| `render/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0.0 ... 1000.0 | ✓ |
-| `render/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | - |
-| `render/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | - |
+| `renderer/denoising` | Denoising | - | Boolean | false | - | - |
+| `renderer/debug_view` | Debug View | - | Enumeration | `None` | `None` • `Position W` • `Position` • `Normal W` • `Normal` • `Albedo` • `Roughness` • `Mat Type` • `Bounces` • `Hit Checks` • `Variance` • `Selection Mask` • `Sky Mask` | ✓ |
+
+### Sampling
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+| `renderer/sampling/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | - |
+| `renderer/sampling/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | - |
+| `renderer/sampling/importance_sampling` | Importance Sampling | - | Boolean | true | - | - |
+| `renderer/sampling/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | ✓ |
+| `renderer/sampling/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0.0 ... 1000.0 | ✓ |
+| `renderer/sampling/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | - |
+| `renderer/sampling/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | - |
+
+### Output
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+| `renderer/output/width` | Width | - | Integer | 1920 | 1 ... 2147483647 | - |
+| `renderer/output/height` | Height | - | Integer | 1080 | 1 ... 2147483647 | - |
+| `renderer/output/output_image` | Image | - | Path | `outputs/render.png` | PNG Image (.png), OpenEXR Image (.exr) | - |
+| `renderer/output/output_video` | Video | - | Path | `outputs/render.mp4` | MP4 Video (.mp4) | - |
+| `renderer/output/frame_cache` | Frame Cache | Directory where animation frames are stored before video conversion. | Path | `outputs/cache` | - | - |
 
 ### Arbitrary Output Variables
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `render/aov/position_w` | Position W | World-space hit position. | Boolean | false | - | - |
-| `render/aov/position` | Position | Camera-space hit position. | Boolean | false | - | - |
-| `render/aov/normal_w` | Normal W | World-space surface normal. | Boolean | false | - | - |
-| `render/aov/normal` | Normal | Camera-space surface normal. | Boolean | false | - | - |
-| `render/aov/albedo` | Albedo | Unlit surface color. | Boolean | false | - | - |
-| `render/aov/roughness` | Roughness | Surface roughness value. | Boolean | false | - | - |
-| `render/aov/mat_type` | Mat Type | Encoded material type per pixel. | Boolean | false | - | - |
-| `render/aov/sky_mask` | Sky Mask | White for background pixels, black for geometry. | Boolean | false | - | - |
+| `renderer/aov/position_w` | Position W | World-space hit position. | Boolean | false | - | - |
+| `renderer/aov/position` | Position | Camera-space hit position. | Boolean | false | - | - |
+| `renderer/aov/normal_w` | Normal W | World-space surface normal. | Boolean | false | - | - |
+| `renderer/aov/normal` | Normal | Camera-space surface normal. | Boolean | false | - | - |
+| `renderer/aov/albedo` | Albedo | Unlit surface color. | Boolean | false | - | - |
+| `renderer/aov/roughness` | Roughness | Surface roughness value. | Boolean | false | - | - |
+| `renderer/aov/mat_type` | Mat Type | Encoded material type per pixel. | Boolean | false | - | - |
+| `renderer/aov/sky_mask` | Sky Mask | White for background pixels, black for geometry. | Boolean | false | - | - |
 
 ## Scene
 | Path | Label | Description | Type | Default | Constraints | Restart |

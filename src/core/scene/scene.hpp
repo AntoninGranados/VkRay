@@ -17,13 +17,6 @@
 #include "core/structures.hpp"
 #include "core/scene/object/material.hpp"
 
-enum LightMode : int {
-    Day,
-    Sunset,
-    Night,
-    Empty,
-};
-
 struct ScenePackingMaps {
     std::unordered_map<ecs::Entity, int> sphereId;
     std::unordered_map<ecs::Entity, int> planeId;
@@ -34,7 +27,7 @@ struct ScenePackingMaps {
 
 struct SceneGpuBufferEntry {
     BufferHandle handle;
-    size_t       capacity = 0;
+    size_t capacity = 0;
 };
 
 struct SceneGpuBuffers {
