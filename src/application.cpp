@@ -43,7 +43,7 @@ Application::~Application() {
 }
 
 void Application::initEditorMode() {
-    platform = std::make_unique<GLFWPlatform>("VkRay", 1280, 720);
+    platform = std::make_unique<GLFWPlatform>(std::format("VkRay [{}]", VK_RAY_VERSION_STRING), 1280, 720);
     Core::init(*platform, VK_RAY_VERSION);
 
     Editor::init();

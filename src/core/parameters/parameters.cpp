@@ -1,8 +1,11 @@
 #include "parameters.hpp"
 
-#include <nlohmann/json.hpp>
+#include <limits>
 
 #include <glm/glm.hpp>
+#include <nlohmann/json.hpp>
+
+#include "utils/log.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -53,15 +56,14 @@ FloatParameter::FloatParameter(
     restartAccumulation = restart_;
 }
 
-// TODO: fix the hardcoded 1 decimal precision
 std::string FloatParameter::print() {
     bool hasMn = minValue != std::numeric_limits<float>::lowest();
     bool hasMx = maxValue != std::numeric_limits<float>::max();
     std::string constraints = "-";
-    if (hasMn && hasMx) constraints = std::format("{:.1f} ... {:.1f}", minValue, maxValue);
-    else if (hasMn)     constraints = std::format("{:.1f} ...", minValue);
-    else if (hasMx)     constraints = std::format("... {:.1f}", maxValue);
-    return std::format("| `{}` | {} | {} | Float | {} | {} | {} |",
+    if (hasMn && hasMx) constraints = std::format("{:g} ... {:g}", minValue, maxValue);
+    else if (hasMn)     constraints = std::format("{:g} ...", minValue);
+    else if (hasMx)     constraints = std::format("... {:g}", maxValue);
+    return std::format("| `{}` | {} | {} | Float | {:g} | {} | {} |",
         path.c_str(), label, description.value_or("-"), defaultValue, constraints, restartAccumulation ? "✓" : "-");
 }
 
@@ -135,7 +137,7 @@ IntParameter& ParameterHandler::addInt(
     bool restartAccumulation
 ) {
     auto parameter = std::make_unique<IntParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
-    index[path.generic_string()] = parameter.get();
+    index[path.string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<IntParameter&>(*parameters.back());
 }
@@ -150,7 +152,7 @@ FloatParameter& ParameterHandler::addFloat(
     bool restartAccumulation
 ) {
     auto parameter = std::make_unique<FloatParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
-    index[path.generic_string()] = parameter.get();
+    index[path.string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<FloatParameter&>(*parameters.back());
 }
@@ -162,7 +164,7 @@ BoolParameter& ParameterHandler::addBool(
     bool restartAccumulation
 ) {
     auto parameter = std::make_unique<BoolParameter>(path, label, value, restartAccumulation);
-    index[path.generic_string()] = parameter.get();
+    index[path.string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<BoolParameter&>(*parameters.back());
 }
@@ -175,7 +177,7 @@ EnumParameter& ParameterHandler::addEnum(
     bool restartAccumulation
 ) {
     auto parameter = std::make_unique<EnumParameter>(path, label, value, std::move(items), restartAccumulation);
-    index[path.generic_string()] = parameter.get();
+    index[path.string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<EnumParameter&>(*parameters.back());
 }
@@ -188,16 +190,17 @@ PathParameter& ParameterHandler::addPath(
     bool restartAccumulation
 ) {
     auto parameter = std::make_unique<PathParameter>(path, label, std::move(value), std::move(extensions), restartAccumulation);
-    index[path.generic_string()] = parameter.get();
+    index[path.string()] = parameter.get();
     parameters.push_back(std::move(parameter));
     return static_cast<PathParameter&>(*parameters.back());
 }
 
-// TODO: should probably not crash and only log the issue
 void ParameterHandler::setEnumByName(const ParameterPath& path, const std::string& name) {
     auto& parameter = getParameter<EnumParameter>(path);
-    if (!parameter.setByName(name))
-        throw std::runtime_error("Unknown enum value '" + name + "' for parameter: " + path.generic_string());
+    if (!parameter.setByName(name)) {
+        Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, path.string()));
+        return;
+    }
     if (parameter.onSync) parameter.onSync();
 }
 

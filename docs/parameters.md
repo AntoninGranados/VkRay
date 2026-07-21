@@ -76,7 +76,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 | `renderer/sampling/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | - |
 | `renderer/sampling/importance_sampling` | Importance Sampling | - | Boolean | true | - | - |
 | `renderer/sampling/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | ✓ |
-| `renderer/sampling/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0.0 ... 1000.0 | ✓ |
+| `renderer/sampling/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0 ... 1000 | ✓ |
 | `renderer/sampling/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | - |
 | `renderer/sampling/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | - |
 

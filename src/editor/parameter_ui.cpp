@@ -182,7 +182,7 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
         const auto& labels = handler.getNodeLabels();
         auto it = labels.find(item.path.generic_string());
         const std::string& label = it != labels.end() ? it->second : item.path.filename().string();
-        if (!ImGui::CollapsingHeader(label.c_str())) return;
+        ImGui::SeparatorText(label.c_str());
     }
 
     bool conditionMet = !item.condition ||
