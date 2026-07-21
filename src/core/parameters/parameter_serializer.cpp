@@ -29,7 +29,7 @@ void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
 
     file << R"(# Parameters
 
-Parameters are defined in `assets/parameters/parameters.json`. The file is a hierarchical JSON structure where nested objects form display groups, and leaf objects are parameters
+Parameters are defined in `src/config/parameters.json`. The file is a hierarchical JSON structure where nested objects form display groups, and leaf objects are parameters
 
 ## File Format
 All objects may carry an optional `"label"` that is used instead of the full path in the UI.

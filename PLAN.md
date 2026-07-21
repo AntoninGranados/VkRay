@@ -15,9 +15,11 @@ This plan will most likely be subjected to heavy modifications.
   - Vec parameter types (ivec2–4, vec2–4) in editor, parser, and job overrides
   - Partial constraint display (omits type-limit bounds); adaptive float precision
 - [ ] **[0.4.2] Data-driven ECS components**: define components in JSON rather than hardcoded C++
-  - Component registry: name → C++ factory + UI function; replaces `components.hpp`
-  - Scene objects become an ordered list of components
-  - Both the current shorthand scene format and the new component-based format are supported
+  - `src/config/components.json` declares each component: id, group, field list (name / type / label / range), requirements, conflicts
+  - C++ component structs stay as-is; a thin registration call wires each struct to its schema entry (factory, has, serialise/deserialise, UI draw)
+  - `components.hpp` X-macro and hard-coded group/label/restrictions maps replaced by the registry populated from JSON at startup
+  - Inspector UI generated from field schemas (same pattern as `ParameterUI`); per-component hand-written UI lambdas removed
+  - Scene serialiser accepts both the current shorthand format (`"type": "sphere", ...`) and a new explicit component list format (`"components": ["Transform", "Sphere", ...], "sphere": { ... }`); both expand to the same in-memory entity
 
 ## v0.5 Camera & Lens
 

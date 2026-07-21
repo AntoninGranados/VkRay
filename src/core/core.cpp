@@ -10,7 +10,7 @@ void Core::init(Platform& p, uint32_t version) {
     Core& c    = get();
     c.platform = &p;
     c.engine.init("VkRay", version, p);
-    c.parameters = ParameterSerializer::load("./assets/parameters/parameters.json");
+    c.parameters = ParameterSerializer::load("./src/config/parameters.json");
     c.coreRenderer.bindParameters();
     // TODO: move that to a meta programm
     ParameterSerializer::saveDocumentation("./docs/parameters.md");
