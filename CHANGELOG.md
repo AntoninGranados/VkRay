@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.1]
+
+### Added
+- Vec parameter types: `ivec2`, `ivec3`, `ivec4`, `vec2`, `vec3`, `vec4` — registered via `addVec<T>`, with generated drag widgets and full parser support
+- Vec parameter overrides in job files; `ParameterValue` variant covers all six vec types
+- `syncAll()` on `ParameterHandler` to fire all `onSync` callbacks without resetting values
+- Chaining setters: `setDescription()` and `setCondition()` return `ParameterBase&`
+
+### Changed
+- Parameters now defined in `assets/parameters/parameters.json` with a hierarchical path structure; `ParameterSerializer` parses and registers them at startup
+- Getter/setter/binder API is now fully templated with constrained overloads for scalars, enums, and glm vecs — no per-type specialisations needed for vecs
+- Render resolution migrated from two separate `int` parameters to a single `ivec2` (`renderer/output/render_size`)
+- Constraint display in `docs/parameters.md` now omits bounds that are at the type's numeric limits; shows one-sided bounds (`min ...` / `... max`) where only one side is meaningful; float values use `{:g}` precision
+- `setEnumByName` logs and returns on unknown values instead of throwing
+- Parameter subgroups in the editor replaced collapsible headers with named separators
+
+### Fixed
+- ImGui hover events no longer fire while the cursor is locked during camera movement
+
+---
+
 ## [0.4.0]
 
 ### Added

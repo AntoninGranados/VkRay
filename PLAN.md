@@ -9,10 +9,15 @@ This plan will most likely be subjected to heavy modifications.
   - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
   - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer
   - Headless mode runs the renderer loop directly with no display layer
-- [ ] **[0.4.1] Parameter UX**: quality-of-life additions to the parameter system
-  - Tooltips on parameter widgets
-  - Conditional visibility (hide/grey out params based on other param values)
-  - Reset to default value (right-click or Alt+click or other ?)
+- [x] **[0.4.1] Parameter system**: JSON-driven parameter system with a full type-safe API
+  - Parameters defined in `assets/parameters/parameters.json` with hierarchical paths
+  - Template getter/setter/binder with constrained overloads (scalar, enum, vec)
+  - Vec parameter types (ivec2–4, vec2–4) in editor, parser, and job overrides
+  - Partial constraint display (omits type-limit bounds); adaptive float precision
+- [ ] **[0.4.2] Data-driven ECS components**: define components in JSON rather than hardcoded C++
+  - Component registry: name → C++ factory + UI function; replaces `components.hpp`
+  - Scene objects become an ordered list of components
+  - Both the current shorthand scene format and the new component-based format are supported
 
 ## v0.5 Camera & Lens
 
