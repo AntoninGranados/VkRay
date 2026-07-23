@@ -209,7 +209,7 @@ private:
     float step;
 };
 
-class ParameterHandler {
+class ParameterRegistry {
 public:
     void setNodeLabel(const ParameterPath& path, const std::string& label) { nodeLabels[path.generic_string()] = label; }
     const std::vector<std::unique_ptr<ParameterBase>>& getParameterList() const { return parameters; }

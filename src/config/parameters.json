@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "renderer": {
         "label": "Renderer",
         "denoising": { "label": "Denoising", "default": false },

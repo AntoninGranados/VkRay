@@ -22,7 +22,7 @@ public:
     static VkSmol&           getEngine()      { return get().engine; }
     static Platform&         getPlatform()    { return *get().platform; }
     static AnimationHandler& getAnimation()   { return get().animation; }
-    static ParameterHandler& getParameters()  { return get().parameters; }
+    static ParameterRegistry& getParameters()  { return get().parameters; }
     static Scene&            getScene()       { return get().scene; }
     static CoreRenderer&     getCoreRenderer(){ return get().coreRenderer; }
 
@@ -51,14 +51,14 @@ private:
     Core() = default;
     static Core& get();
 
-    Platform*        platform      = nullptr;
-    VkSmol           engine;
-    ParameterHandler parameters;
-    Scene            scene;
-    AnimationHandler animation{24 * 5, 24.0f};
-    CoreRenderer     coreRenderer;
-    RenderMode       renderMode     = RenderMode::Preview;
-    bool             restartPending = false;
-    VkExtent2D       targetExtent   = {};
+    Platform*         platform      = nullptr;
+    VkSmol            engine;
+    ParameterRegistry parameters;
+    Scene             scene;
+    AnimationHandler  animation{24 * 5, 24.0f};
+    CoreRenderer      coreRenderer;
+    RenderMode        renderMode     = RenderMode::Preview;
+    bool              restartPending = false;
+    VkExtent2D        targetExtent   = {};
     std::filesystem::path outputPath;
 };

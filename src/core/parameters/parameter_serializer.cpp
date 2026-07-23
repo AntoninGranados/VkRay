@@ -5,6 +5,8 @@
 
 #include "core/core.hpp"
 
+static constexpr int PARAMETER_VERSION = 1;
+
 template <typename T>
 static T readJsonVec(const json& arr) {
     T v{};
@@ -15,13 +17,13 @@ static T readJsonVec(const json& arr) {
 
 template <typename T>
 static ParameterBase& parseVecNode(
-    const json& obj, ParameterHandler& handler, const std::string& path,
+    const json& obj, ParameterRegistry& parameters, const std::string& path,
     const std::string& label, bool restart, T defMin, T defMax, float step
 ) {
     T val = readJsonVec<T>(obj.at("default"));
     T mn = obj.contains("min") ? readJsonVec<T>(obj.at("min")) : defMin;
     T mx = obj.contains("max") ? readJsonVec<T>(obj.at("max")) : defMax;
-    return handler.addVec<T>(path, label, val, mn, mx, step, restart);
+    return parameters.addVec<T>(path, label, val, mn, mx, step, restart);
 }
 
 void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
@@ -124,22 +126,30 @@ void ParameterSerializer::serializeParameterPath(std::ofstream& file, const Para
     }
 }
 
-ParameterHandler ParameterSerializer::load(std::filesystem::path path) {
+ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
     std::ifstream f(path);
     if (!f.is_open())
         throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
 
-    ParameterHandler parameters;
+    ParameterRegistry parameters;
     json root = json::parse(f, nullptr, true, true);
 
-    for (const auto& [key, val] : root.items())
+    const int version = root.value("version", -1);
+    if (version != PARAMETER_VERSION)
+        throw std::runtime_error(std::format(
+            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), PARAMETER_VERSION, version
+        ));
+
+    for (const auto& [key, val] : root.items()) {
+        if (!val.is_object()) continue;
         parseNode(val, parameters, key);
+    }
 
     return parameters;
 }
 
 
-void ParameterSerializer::parseNode(const json& obj, ParameterHandler& handler, const std::string& path) {
+void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& parameters, const std::string& path) {
     if (obj.contains("default")) {
         std::string label = obj.at("label").get<std::string>();
         bool restart = obj.value("restart_accumulation", false);
@@ -147,15 +157,15 @@ void ParameterSerializer::parseNode(const json& obj, ParameterHandler& handler, 
 
         ParameterBase* parameter = nullptr;
         if (def.is_boolean()) {
-            parameter = &handler.addBool(path, label, def.get<bool>(), restart);
+            parameter = &parameters.addBool(path, label, def.get<bool>(), restart);
         } else if (def.is_number_integer()) {
-            parameter = &handler.addInt(path, label, def.get<int>(),
+            parameter = &parameters.addInt(path, label, def.get<int>(),
                 obj.value("min", INT_MIN),
                 obj.value("max", INT_MAX),
                 obj.value("step", 1),
                 restart);
         } else if (def.is_number_float()) {
-            parameter = &handler.addFloat(path, label, def.get<float>(),
+            parameter = &parameters.addFloat(path, label, def.get<float>(),
                 obj.value("min", std::numeric_limits<float>::lowest()),
                 obj.value("max", std::numeric_limits<float>::max()),
                 obj.value("step", 1e-3f),
@@ -168,28 +178,28 @@ void ParameterSerializer::parseNode(const json& obj, ParameterHandler& handler, 
                 ext.name = e.value("name", "");
                 extensions.push_back(std::move(ext));
             }
-            parameter = &handler.addPath(path, label, def.get<std::string>(), std::move(extensions), restart);
+            parameter = &parameters.addPath(path, label, def.get<std::string>(), std::move(extensions), restart);
         } else if (def.is_string() && obj.contains("items")) {
             std::string defName = def.get<std::string>();
             std::vector<std::string> items = obj.at("items").get<std::vector<std::string>>();
             int defIdx = 0;
             for (size_t i = 0; i < items.size(); i++)
                 if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
-            parameter = &handler.addEnum(path, label, defIdx, std::move(items), restart);
+            parameter = &parameters.addEnum(path, label, defIdx, std::move(items), restart);
         } else if (def.is_array() && (def.size() == 2 || def.size() == 3 || def.size() == 4)) {
             bool isFloat = def[0].is_number_float();
             float step = obj.value("step", isFloat ? 1e-3f : 1.0f);
             int n = static_cast<int>(def.size());
             if (!isFloat) {
                 const int lo = std::numeric_limits<int>::lowest(), hi = std::numeric_limits<int>::max();
-                if (n == 2) parameter = &parseVecNode(obj, handler, path, label, restart, glm::ivec2(lo), glm::ivec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, handler, path, label, restart, glm::ivec3(lo), glm::ivec3(hi), step);
-                else             parameter = &parseVecNode(obj, handler, path, label, restart, glm::ivec4(lo), glm::ivec4(hi), step);
+                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec2(lo), glm::ivec2(hi), step);
+                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec3(lo), glm::ivec3(hi), step);
+                else             parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec4(lo), glm::ivec4(hi), step);
             } else {
                 const float lo = std::numeric_limits<float>::lowest(), hi = std::numeric_limits<float>::max();
-                if (n == 2) parameter = &parseVecNode(obj, handler, path, label, restart, glm::vec2(lo), glm::vec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, handler, path, label, restart, glm::vec3(lo), glm::vec3(hi), step);
-                else             parameter = &parseVecNode(obj, handler, path, label, restart, glm::vec4(lo), glm::vec4(hi), step);
+                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec2(lo), glm::vec2(hi), step);
+                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec3(lo), glm::vec3(hi), step);
+                else             parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec4(lo), glm::vec4(hi), step);
             }
         }
 
@@ -203,10 +213,10 @@ void ParameterSerializer::parseNode(const json& obj, ParameterHandler& handler, 
         }
     } else {
         if (obj.contains("label"))
-            handler.setNodeLabel(path, obj.at("label").get<std::string>());
+            parameters.setNodeLabel(path, obj.at("label").get<std::string>());
         for (const auto& [key, val] : obj.items()) {
             if (key == "label") continue;
-            parseNode(val, handler, path + "/" + key);
+            parseNode(val, parameters, path + "/" + key);
         }
     }
 }

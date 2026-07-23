@@ -186,7 +186,7 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
 }
 
 void CoreRenderer::bindParameters() {
-    ParameterHandler& parameters = Core::getParameters();
+    ParameterRegistry& parameters = Core::getParameters();
     parameters.bind<bool>("renderer/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
     });

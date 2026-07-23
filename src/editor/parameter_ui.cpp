@@ -130,11 +130,11 @@ bool ParameterUI::drawParameter(ParameterBase& base) {
 
 // TODO: refactor
 std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) {
-    ParameterHandler& handler = Core::getParameters();
+    ParameterRegistry& parameters = Core::getParameters();
     std::vector<ParameterItem> items;
     std::unordered_map<std::string, size_t> conditionGroups;
 
-    for (const auto& param : handler.getParameterList()) {
+    for (const auto& param : parameters.getParameterList()) {
         if (param->path.parent_path() != prefix) continue;
         if (!param->condition) {
             items.push_back({ .parameter = param.get() });
@@ -150,7 +150,7 @@ std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) 
     }
 
     std::vector<std::string> seen;
-    for (const auto& param : handler.getParameterList()) {
+    for (const auto& param : parameters.getParameterList()) {
         const auto rel = param->path.lexically_relative(prefix);
         if (rel.empty()) continue;
         const std::string seg = rel.begin()->string();
@@ -178,8 +178,8 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     }
 
     if (item.collapsible) {
-        ParameterHandler& handler = Core::getParameters();
-        const auto& labels = handler.getNodeLabels();
+        ParameterRegistry& parameters = Core::getParameters();
+        const auto& labels = parameters.getNodeLabels();
         auto it = labels.find(item.path.generic_string());
         const std::string& label = it != labels.end() ? it->second : item.path.filename().string();
         ImGui::SeparatorText(label.c_str());
