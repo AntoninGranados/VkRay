@@ -183,16 +183,6 @@ int Scene::getPhysicsBakeTotalFrames() const {
 }
 
 
-bool Scene::isPreviewingCamera(RenderMode renderMode) const {
-    if (renderMode != RenderMode::Preview) return false; // can't preview in render mode (a CameraObject is used but is should not be considered as a preview camera)
-
-    auto& cameras = registry.storage<ecs::CameraObject>();
-    for (const auto& e : cameras.entities()) {
-        if (cameras.get(e).isPreview)
-            return true;
-    }
-    return false;
-}
 
 bool Scene::checkUpdate() {
     if (updated) {

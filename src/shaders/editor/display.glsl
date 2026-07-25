@@ -3,13 +3,10 @@
 #include "../common.glsl"
 
 layout(set = 0, binding = 0) uniform sampler2D outputTex;
-layout(set = 0, binding = 1) uniform DisplayUBO {
-    int previewBorderEnabled;
-} ubo;
-layout(set = 0, binding = 2) buffer PixelInfoBuffer {
+layout(set = 0, binding = 1) buffer PixelInfoBuffer {
     PixelInfo pixels[];
 } pixelInfoBuffer;
-layout(set = 0, binding = 3, rgba32f) uniform writeonly image2D displayOut;
+layout(set = 0, binding = 2, rgba32f) uniform writeonly image2D displayOut;
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -48,19 +45,6 @@ void main() {
 
     float edgeAmount = centerMask != 0u ? 1.0 - neighborMask : neighborMask;
     color = mix(color, edgeColor, smoothstep(0.0, feather, edgeAmount));
-
-    if (ubo.previewBorderEnabled != 0) {
-        vec2 ndc = (vec2(coord) + 0.5) / vec2(texSize) * 2.0 - 1.0;
-        if (abs(ndc.x) > 0.8 || abs(ndc.y) > 0.8) {
-            color *= 0.2;
-        }
-        if ((abs(ndc.x) < 0.8 + 2.0 * outlineWidth / float(texSize.x) && abs(ndc.x) > 0.8 - 2.0 * outlineWidth / float(texSize.x)) && abs(ndc.y) < 0.8) {
-            color = edgeColor;
-        }
-        if ((abs(ndc.y) < 0.8 + 2.0 * outlineWidth / float(texSize.y) && abs(ndc.y) > 0.8 - 2.0 * outlineWidth / float(texSize.y)) && abs(ndc.x) < 0.8) {
-            color = edgeColor;
-        }
-    }
 
     imageStore(displayOut, coord, vec4(color, 1.0));
 }

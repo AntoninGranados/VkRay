@@ -40,17 +40,15 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     );
     outputImageHandle = coreResources.outputImageHandle;
 
-    displayUBOHandle = builder.createPerFrameBuffer("DisplayUBO", sizeof(DisplayUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    debugUBOHandle   = builder.createPerFrameBuffer("DebugUBO",   sizeof(DebugUBO),   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    debugUBOHandle = builder.createPerFrameBuffer("DebugUBO", sizeof(DebugUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     // Display pass — beauty + selection edges + camera frame (compute)
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
     displayPassHandle = display.getHandle();
     display.setGroup(editorGroupHandle);
     display.readImage ( 0, coreResources.outputImageHandle, ImageUsageType::Sampled);
-    display.readBuffer( 1, displayUBOHandle, BufferUsageType::Uniform);
-    display.readBuffer( 2, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    display.writeImage( 3, displayImageHandle, ImageUsageType::Storage);
+    display.readBuffer( 1, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
+    display.writeImage( 2, displayImageHandle, ImageUsageType::Storage);
     displayPipelineHandle = display.setPipeline("./src/shaders/editor/display.glsl");
 
     // Debug pass — debug view visualization (compute)
@@ -115,11 +113,9 @@ void EditorRenderer::resize(uint32_t width, uint32_t height) {
 void EditorRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
 
-    displayUBO.previewBorderEnabled = Core::getScene().isPreviewingCamera(Core::getRenderMode()) ? 1 : 0;
     debugUBO.debugView = Core::getParameters().get<DebugView>("renderer/debug_view");
 
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
-    engine.fillBuffer(engine.getBuffer(debugUBOHandle,   frameContext.currentFrame), &debugUBO);
+    engine.fillBuffer(engine.getBuffer(debugUBOHandle, frameContext.currentFrame), &debugUBO);
 
     engine.bindImage(
         swapchainImageHandle,

@@ -21,15 +21,13 @@ public:
     ImTextureID getOutputTexId()  const { return outputTexId; }
 
 private:
-    DisplayUBO displayUBO{};
-    DebugUBO   debugUBO{};
+    DebugUBO debugUBO{};
 
     ImageHandle swapchainImageHandle;
     ImageHandle displayImageHandle;
     ImageHandle debugImageHandle;
     ImageHandle outputImageHandle;
 
-    BufferHandle displayUBOHandle;
     BufferHandle debugUBOHandle;
 
     PassHandle displayPassHandle, debugPassHandle, uiPassHandle, presentPassHandle;

@@ -72,7 +72,6 @@ public:
     const ecs::Registry& getRegistry() const { return registry; }
 
     Camera& getCamera() { return camera; }
-    bool isPreviewingCamera(RenderMode renderMode) const;
     
     SceneGpuBuffers& getBuffers() { return gpuBuffers; }
     const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }

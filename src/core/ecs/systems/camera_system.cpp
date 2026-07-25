@@ -12,11 +12,10 @@ namespace ecs {
 void cameraPreUpdateSystem(Registry& registry) {
     auto& cameras = registry.storage<ecs::CameraObject>();
     auto& transforms = registry.storage<ecs::Transform>();
-    constexpr float previewViewportScale = 0.8f;
-    
+
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
-        
+
         ecs::CameraObject& c = cameras.get(e);
         if (Core::getRenderMode() != RenderMode::Preview && !c.isPreview) {
             c.setPreview(true);
@@ -34,13 +33,7 @@ void cameraPreUpdateSystem(Registry& registry) {
 
         camera.setPosition(t.position);
         camera.setTarget(t.position + dir * dist);
-        float fov = c.fov;
-        if (Core::getRenderMode() == RenderMode::Preview) {
-            const float baseFovRad = glm::radians(c.fov);
-            const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
-            fov = glm::degrees(previewFovRad);
-        }
-        camera.setFov(fov);
+        camera.setFov(c.fov);
         camera.setAperture(c.aperture);
         camera.setFocusDepth(c.focusDepth);
         break;
@@ -52,7 +45,6 @@ void cameraPostUpdateSystem(Registry& registry) {
     auto& transforms = registry.storage<ecs::Transform>();
     bool escapePressed = glfwGetKey(static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), GLFW_KEY_ESCAPE);
     Camera& camera = Core::getScene().getCamera();
-    constexpr float previewViewportScale = 0.8f;
 
     for (const auto& e : cameras.entities()) {
         ecs::CameraObject& c = cameras.get(e);
@@ -71,13 +63,7 @@ void cameraPostUpdateSystem(Registry& registry) {
         }
 
         if (c.updated) {
-            float fov = c.fov;
-            if (Core::getRenderMode() == RenderMode::Preview) {
-                const float baseFovRad = glm::radians(c.fov);
-                const float previewFovRad = 2.0f * atanf(tanf(baseFovRad * 0.5f) / previewViewportScale);
-                fov = glm::degrees(previewFovRad);
-            }
-            camera.setFov(fov);
+            camera.setFov(c.fov);
             camera.setAperture(c.aperture);
             camera.setFocusDepth(c.focusDepth);
             c.updated = false;
@@ -96,13 +82,7 @@ void cameraPostUpdateSystem(Registry& registry) {
             continue;
         }
 
-        float fov = camera.getFov();
-        if (Core::getRenderMode() == RenderMode::Preview) {
-            const float previewFovRad = glm::radians(camera.getFov());
-            const float baseFovRad = 2.0f * atanf(tanf(previewFovRad * 0.5f) * previewViewportScale);
-            fov = glm::degrees(baseFovRad);
-        }
-        c.setFov(fov);
+        c.setFov(camera.getFov());
         c.setAperture(camera.getAperture());
         c.setFocusDepth(camera.getFocusDepth());
         t.setPosition(camera.getPosition());
