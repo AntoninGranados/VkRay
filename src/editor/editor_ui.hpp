@@ -2,15 +2,15 @@
 
 #include "VkSmol/command/command_buffer.hpp"
 
-#include "panels/animation_panel.hpp"
-#include "panels/debug_panel.hpp"
-#include "panels/render_progress_panel.hpp"
-#include "panels/render_viewport_panel.hpp"
-#include "panels/renderer_panel.hpp"
-#include "panels/scene_panel.hpp"
-#include "panels/stats_panel.hpp"
-#include "panels/viewport_panel.hpp"
-#include "scene/scene_ui.hpp"
+#include "editor/panels/animation_panel.hpp"
+#include "editor/panels/debug_panel.hpp"
+#include "editor/panels/render_progress_panel.hpp"
+#include "editor/panels/render_viewport_panel.hpp"
+#include "editor/panels/renderer_panel.hpp"
+#include "editor/panels/scene_panel.hpp"
+#include "editor/panels/stats_panel.hpp"
+#include "editor/panels/viewport_panel.hpp"
+#include "editor/scene/scene_ui.hpp"
 #include "toast_notifications.hpp"
 
 class Scene;

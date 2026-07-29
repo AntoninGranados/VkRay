@@ -7,6 +7,7 @@
 #include "VkSmol/frame_context.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "core/scene/object/object.hpp"
 #include "core/core.hpp"
@@ -33,9 +34,9 @@ inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry
 }
 
 void spherePackingSystem(Registry& registry, const FrameContext& frame) {
-    auto& spheres = registry.storage<ecs::Sphere>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& spheres = registry.storage(Sphere);
+    auto& transforms = registry.storage(Transform);
+    auto& materialRefs = registry.storage(MaterialRef);
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuSphere> gpuSpheres;
@@ -44,14 +45,14 @@ void spherePackingSystem(Registry& registry, const FrameContext& frame) {
 
     for (const auto& e : spheres.entities()) {
         if (!transforms.has(e)) continue;
-        ecs::Sphere& s = spheres.get(e);
-        ecs::Transform& t = transforms.get(e);
+        const Component& s = spheres.get(e);
+        const Component& t = transforms.get(e);
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
 
         gpuSpheres.push_back(GpuSphere{
-            .center = t.position,
-            .radius = s.radius,
+            .center = t.get<glm::vec3>("position"),
+            .radius = s.get<float>("radius"),
             .materialHandle = handle,
         });
 
@@ -62,9 +63,9 @@ void spherePackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void planePackingSystem(Registry& registry, const FrameContext& frame) {
-    auto& planes = registry.storage<ecs::Plane>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& planes = registry.storage(Plane);
+    auto& transforms = registry.storage(Transform);
+    auto& materialRefs = registry.storage(MaterialRef);
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuPlane> gpuPlanes;
@@ -73,13 +74,14 @@ void planePackingSystem(Registry& registry, const FrameContext& frame) {
 
     for (const auto& e : planes.entities()) {
         if (!transforms.has(e)) continue;
-        ecs::Transform& t = transforms.get(e);
+        const Component& t = transforms.get(e);
+        const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
 
         gpuPlanes.push_back(GpuPlane{
-            .point = t.position,
-            .normal = glm::normalize(t.rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
+            .point = t.get<glm::vec3>("position"),
+            .normal = glm::normalize(rot * glm::vec3(0.0f, 1.0f, 0.0f)),
             .materialHandle = handle,
         });
 
@@ -90,9 +92,9 @@ void planePackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void boxPackingSystem(Registry& registry, const FrameContext& frame) {
-    auto& boxes = registry.storage<ecs::Box>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& boxes = registry.storage(Box);
+    auto& transforms = registry.storage(Transform);
+    auto& materialRefs = registry.storage(MaterialRef);
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuBox> gpuBoxes;
@@ -101,13 +103,16 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
 
     for (const auto& e : boxes.entities()) {
         if (!transforms.has(e)) continue;
-        ecs::Transform& t = transforms.get(e);
+        const Component& t = transforms.get(e);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
 
         gpuBoxes.push_back(GpuBox{
-            .transform = t.local,
-            .invTransform = glm::inverse(t.local),
+            .transform = local,
+            .invTransform = glm::inverse(local),
             .materialHandle = handle,
         });
 
@@ -118,9 +123,9 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void quadPackingSystem(Registry& registry, const FrameContext& frame) {
-    auto& quads = registry.storage<ecs::Quad>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& quads = registry.storage(Quad);
+    auto& transforms = registry.storage(Transform);
+    auto& materialRefs = registry.storage(MaterialRef);
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuQuad> gpuQuads;
@@ -129,16 +134,21 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
 
     for (const auto& e : quads.entities()) {
         if (!transforms.has(e)) continue;
-        ecs::Transform& t = transforms.get(e);
+        const Component& t = transforms.get(e);
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
 
-        const ecs::Quad& q = quads.get(e);
+        const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+        const glm::vec3 scale = t.get<glm::vec3>("scale");
+        const glm::vec3 center = t.get<glm::vec3>("position");
+        const glm::vec3 u = rot * glm::vec3(1.0f, 0.0f, 0.0f) * scale.x;
+        const glm::vec3 v = rot * glm::vec3(0.0f, 1.0f, 0.0f) * scale.y;
+        const glm::vec3 normal = rot * glm::vec3(0.0f, 0.0f, 1.0f);
         gpuQuads.push_back(GpuQuad{
-            .point  = t.position,
-            .u      = q.u,
-            .v      = q.v,
-            .normal = q.normal,
+            .point = center - 0.5f * (u + v),
+            .u = u,
+            .v = v,
+            .normal = glm::normalize(normal),
             .materialHandle = handle,
         });
 
@@ -149,9 +159,9 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void meshPackingSystem(Registry& registry, const FrameContext& frame) {
-    auto& meshRefs = registry.storage<ecs::MeshRef>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& meshRefs = registry.storage(MeshRef);
+    auto& transforms = registry.storage(Transform);
+    auto& materialRefs = registry.storage(MaterialRef);
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuMesh> meshTemplates;
@@ -170,14 +180,14 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
         glm::vec3 meshAabbMin = mesh.getAabbMin();
         glm::vec3 meshAabbMax = mesh.getAabbMax();
         meshTemplates.push_back(GpuMesh{
-            .indexOffset   = indexOffset,
+            .indexOffset = indexOffset,
             .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
-            .bvhOffset     = bvhOffset,
-            .bvhNodeCount  = static_cast<uint32_t>(meshBvhNodes.size()),
+            .bvhOffset = bvhOffset,
+            .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
             .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
             .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
-            .smoothShading   = mesh.getSmoothShading() ? 1u : 0u,
-            .hasVertexColor  = mesh.hasVertexColor()   ? 1u : 0u,
+            .smoothShading = mesh.getSmoothShading() ? 1u : 0u,
+            .hasVertexColor = mesh.hasVertexColor() ? 1u : 0u,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
@@ -209,23 +219,26 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
 
     for (const auto& e : meshRefs.entities()) {
         if (!transforms.has(e)) continue;
-        ecs::MeshRef& meshRef = meshRefs.get(e);
-        const GpuMesh& meshTemplate = meshTemplates[meshRef.handle];
-        ecs::Transform& t = transforms.get(e);
+        const Component& mesh = meshRefs.get(e);
+        const GpuMesh& meshTemplate = meshTemplates[mesh.get<int>("handle")];
+        const Component& t = transforms.get(e);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).handle : 0;
+        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
 
         meshes.push_back(GpuMesh{
-            .transform      = t.local,
-            .invTransform   = glm::inverse(t.local),
-            .indexOffset    = meshTemplate.indexOffset,
-            .triangleCount  = meshTemplate.triangleCount,
-            .bvhOffset      = meshTemplate.bvhOffset,
-            .bvhNodeCount   = meshTemplate.bvhNodeCount,
+            .transform = local,
+            .invTransform = glm::inverse(local),
+            .indexOffset = meshTemplate.indexOffset,
+            .triangleCount = meshTemplate.triangleCount,
+            .bvhOffset = meshTemplate.bvhOffset,
+            .bvhNodeCount = meshTemplate.bvhNodeCount,
             .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
             .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
             .materialHandle = handle,
-            .smoothShading  = meshTemplate.smoothShading,
+            .smoothShading = meshTemplate.smoothShading,
             .hasVertexColor = meshTemplate.hasVertexColor,
         });
 
@@ -300,10 +313,10 @@ void objectPackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void lightPackingSystem(Registry& registry, const FrameContext& frame) {
-    const auto& spheres = registry.storage<ecs::Sphere>();
-    const auto& meshRefs = registry.storage<ecs::MeshRef>();
-    const auto& transforms = registry.storage<ecs::Transform>();
-    const auto& materialRefs = registry.storage<ecs::MaterialRef>();
+    auto& spheres = registry.storage(Sphere);
+    auto& meshes = registry.storage(MeshRef);
+    const auto& transforms = registry.storage(Transform);
+    const auto& materialRefs = registry.storage(MaterialRef);
     const auto& materials = Core::getScene().getMaterials();
     const auto& meshAssets = Core::getScene().getMeshAssets();
     const auto& packingMaps = Core::getScene().getPackingMaps();
@@ -315,9 +328,9 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Spheres
     for (const auto& [e, _] : packingMaps.sphereId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
 
-        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).radius, 2.0f);
+        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).get<float>("radius"), 2.0f);
         totalArea += area;
         lights.push_back(GpuLight{
             .objectId = objectId-1,
@@ -330,9 +343,12 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Boxes
     for (const auto& [e, _] : packingMaps.boxId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
 
-        const glm::mat4& local = transforms.get(e).local;
+        const Component& bt = transforms.get(e);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), bt.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(bt.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), bt.get<glm::vec3>("scale"));
         const glm::vec3 axisX = glm::vec3(local[0]);
         const glm::vec3 axisY = glm::vec3(local[1]);
         const glm::vec3 axisZ = glm::vec3(local[2]);
@@ -350,11 +366,14 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Quads
     for (const auto& [e, id] : packingMaps.quadId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
 
-        const glm::mat4& local = transforms.get(e).local;
+        const Component& qt = transforms.get(e);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), qt.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(qt.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), qt.get<glm::vec3>("scale"));
         const glm::vec3 u = glm::vec3(local[0]);
-        const glm::vec3 v = glm::vec3(local[2]);
+        const glm::vec3 v = glm::vec3(local[1]);
         const float area = glm::length(glm::cross(u, v));
         totalArea += area;
         lights.push_back(GpuLight{
@@ -366,10 +385,13 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Meshes
     for (const auto& [e, _] : packingMaps.meshId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).handle].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
 
-        const glm::mat4& t = transforms.get(e).local;
-        const float area = meshAssets[meshRefs.get(e).handle].computeArea(t);
+        const Component& mt = transforms.get(e);
+        const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), mt.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(mt.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), mt.get<glm::vec3>("scale"));
+        const float area = meshAssets[meshes.get(e).get<int>("handle")].computeArea(mLocal);
         totalArea += area;
         lights.push_back(GpuLight{
             .objectId = objectId-1,

@@ -1,8 +1,11 @@
 #pragma once
 
+#include <optional>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "core/ecs/entity.hpp"
 
 class Camera {
 public:
@@ -40,6 +43,11 @@ public:
 
     void resetMouse() { firstMouse = true; }
 
+    void setPreviewCamera(ecs::Entity e) { previewEntity = e; }
+    void clearPreviewCamera() { previewEntity.reset(); }
+    bool hasPreviewCamera() const { return previewEntity.has_value(); }
+    ecs::Entity getPreviewCamera() const { return *previewEntity; }
+
 private:
     enum class DragMode {
         None,
@@ -71,6 +79,9 @@ private:
 
     DragMode dragMode = DragMode::None;
     bool locked = true;
+    std::optional<ecs::Entity> previewEntity;
 
     static constexpr glm::vec3 up = { 0.0f, 1.0f, 0.0f };
+
+    void syncToPreviewTransform();
 };

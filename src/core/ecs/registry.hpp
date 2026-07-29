@@ -1,13 +1,11 @@
 #pragma once
 
 #include <cassert>
-#include <memory>
-#include <typeindex>
+#include <string>
 #include <unordered_map>
-#include <vector>
 
-#include "./component_storage.hpp"
-#include "./entity.hpp"
+#include "core/ecs/components/component_storage.hpp"
+#include "entity.hpp"
 
 namespace ecs {
 
@@ -29,7 +27,7 @@ public:
         if (!isAlive(e))
             return;
         for (auto& [_, storage] : storages)
-            storage->remove(e);
+            storage.remove(e);
         generations[e.getId()]++;
         freeIds.push_back(e.getId());
     }
@@ -38,97 +36,39 @@ public:
         return e.getId() < generations.size() && generations[e.getId()] == e.getGen();
     }
 
-    template<typename T>
-    ComponentStorage<T>& storage() {
-        return getStorage<T>();
+    ComponentStorage& storage(const ComponentType& type) {
+        return storages[type.getId()];
     }
 
-    template<typename T>
-    const ComponentStorage<T>& storage() const {
-        return getStorage<T>();
+    const ComponentStorage& storage(const ComponentType& type) const {
+        return storages.at(type.getId());
     }
 
-    template<typename T>
-    void add(const Entity& e, T value) {
-        getStorage<T>().add(e, std::move(value));
+    Component& add(const Entity& e, const ComponentType& prototype) {
+        return storages[prototype.getId()].add(e, prototype);
     }
 
-    template<typename T>
-    bool has(const Entity& e) const {
-        const ComponentStorage<T>* storage = findStorage<T>();
-        return storage ? storage->has(e) : false;
+    bool has(const Entity& e, const ComponentType& type) const {
+        auto it = storages.find(type.getId());
+        return it != storages.end() && it->second.has(e);
     }
 
-    template<typename T>
-    T& get(const Entity& e) {
-        return getStorage<T>().get(e);
+    Component& get(const Entity& e, const ComponentType& type) {
+        return storages.at(type.getId()).get(e);
     }
 
-    template<typename T>
-    const T& get(const Entity& e) const {
-        return getStorage<T>().get(e);
+    const Component& get(const Entity& e, const ComponentType& type) const {
+        return storages.at(type.getId()).get(e);
     }
 
-    template<typename T>
-    void remove(const Entity& e) {
-        getStorage<T>().remove(e);
+    void remove(const Entity& e, const ComponentType& type) {
+        auto it = storages.find(type.getId());
+        if (it != storages.end())
+            it->second.remove(e);
     }
 
 private:
-    struct IStorage {
-        virtual ~IStorage() = default;
-        virtual void remove(const Entity& e) = 0;
-    };
-
-    template<typename T>
-    struct StorageImpl final : IStorage {
-        ComponentStorage<T> storage;
-
-        void remove(const Entity& e) override {
-            storage.remove(e);
-        }
-    };
-
-    template<typename T>
-    ComponentStorage<T>& getStorage() {
-        const std::type_index key(typeid(T));
-        auto it = storages.find(key);
-        if (it == storages.end()) {
-            auto ptr = std::make_unique<StorageImpl<T>>();
-            StorageImpl<T>* raw = ptr.get();
-            storages.emplace(key, std::move(ptr));
-            return raw->storage;
-        }
-        return static_cast<StorageImpl<T>*>(it->second.get())->storage;
-    }
-
-    template<typename T>
-    const ComponentStorage<T>& getStorage() const {
-        const std::type_index key(typeid(T));
-        auto it = storages.find(key);
-        assert(it != storages.end());
-        return static_cast<StorageImpl<T>*>(it->second.get())->storage;
-    }
-
-    template<typename T>
-    ComponentStorage<T>* findStorage() {
-        const std::type_index key(typeid(T));
-        auto it = storages.find(key);
-        if (it == storages.end())
-            return nullptr;
-        return &static_cast<StorageImpl<T>*>(it->second.get())->storage;
-    }
-
-    template<typename T>
-    const ComponentStorage<T>* findStorage() const {
-        const std::type_index key(typeid(T));
-        auto it = storages.find(key);
-        if (it == storages.end())
-            return nullptr;
-        return &static_cast<StorageImpl<T>*>(it->second.get())->storage;
-    }
-
-    std::unordered_map<std::type_index, std::unique_ptr<IStorage>> storages;
+    std::unordered_map<std::string, ComponentStorage> storages;
     std::vector<uint32_t> generations;
     std::vector<uint32_t> freeIds;
 };

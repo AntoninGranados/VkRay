@@ -3,14 +3,14 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../../registry.hpp"
-#include "../../components/transform.hpp"
+#include "core/ecs/registry.hpp"
 #include "core/scene/asset/mesh.hpp"
 
 namespace ecs {
@@ -119,7 +119,12 @@ struct BodyState {
     std::unordered_map<int, FrameSnapshot> snapshots;
 };
 
-bool getPrevColliderTransform(const Entity& entity, Transform& outTransform);
+struct ColliderState {
+    glm::vec3 position { 0.0f, 0.0f, 0.0f };
+    glm::vec3 rotation { 0.0f, 0.0f, 0.0f };
+};
+
+std::optional<ColliderState> getPrevColliderTransform(const Entity& entity);
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax);
 

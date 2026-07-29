@@ -6,7 +6,6 @@
 #include "core/animation_handler.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
-#include "editor/editor.hpp"
 #include "editor/ui_constants.hpp"
 
 void AnimationPanel::content() {
@@ -62,7 +61,7 @@ void AnimationPanel::content() {
         }
 
         // Draw bar
-        ImU32 barCol  = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_FrameBg]);
+        ImU32 barCol = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_FrameBg]);
         ImU32 fillCol = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_SliderGrab]);
         ImVec2 barMin = ImVec2(p.x, p.y + (frameHeight - barHeight) * 0.5f);
         ImVec2 barMax = ImVec2(p.x + barWidth, barMin.y + barHeight);
@@ -74,6 +73,7 @@ void AnimationPanel::content() {
         dl->AddRectFilled(ImVec2(barMin.x + barWidth * tNorm - 4.0f, barMin.y), ImVec2(barMin.x + barWidth * tNorm + 4.0f, barMax.y), fillCol, 3.0f);
         
         // Draw keyframes
+        /* TODO: rewire to new storage
         const SceneSelection& sel = Editor::getUi().getSelection();
         if (sel.entity >= 0) {
             const ecs::Entity e = Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
@@ -87,6 +87,7 @@ void AnimationPanel::content() {
                 }
             }
         }
+        */
 
         // Draw current frame
         std::string frameLabel = std::to_string(Core::getAnimation().getFrame());

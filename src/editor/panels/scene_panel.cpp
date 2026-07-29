@@ -66,7 +66,10 @@ void ScenePanel::content() {
                     const ecs::Entity& e = scene.getEntities()[i];
 
                     std::string displayName = "???";
-                    if (scene.getRegistry().has<ecs::Name>(e)) displayName = scene.getRegistry().get<ecs::Name>(e).value;
+                    if (scene.getRegistry().has(e, ecs::Name)) {
+                        const ecs::Component& n = scene.getRegistry().get(e, ecs::Name);
+                        displayName = n.get<std::string>("value");
+                    }
                     if (displayName.empty()) displayName = "???";
 
                     if (ImGui::Selectable(displayName.c_str(), selection.entity == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
@@ -125,14 +128,15 @@ void ScenePanel::content() {
                 const int removed = selection.material;
                 scene.getMaterials().erase(scene.getMaterials().begin() + removed);
 
-                auto& matRefs = scene.getRegistry().storage<ecs::MaterialRef>();
+                auto& matRefs = scene.getRegistry().storage(ecs::MaterialRef);
                 const auto& refEntities = matRefs.entities();
                 for (size_t i = 0; i < matRefs.size(); i++) {
-                    ecs::MaterialRef& ref = matRefs.get(refEntities[i]);
-                    if (ref.handle == removed)
-                        ref.handle = 0;
-                    else if (ref.handle > removed)
-                        ref.handle--;
+                    ecs::Component& ref = matRefs.get(refEntities[i]);
+                    const int h = ref.get<int>("handle");
+                    if (h == removed)
+                        ref.set<int>("handle", 0);
+                    else if (h > removed)
+                        ref.set<int>("handle", h - 1);
                 }
                 scene.update();
                 selection.material = -1;
@@ -169,14 +173,15 @@ void ScenePanel::content() {
                 const int removed = selection.meshAsset;
                 scene.getMeshAssets().erase(scene.getMeshAssets().begin() + removed);
 
-                auto& meshRefs = scene.getRegistry().storage<ecs::MeshRef>();
-                const auto& refEntities = meshRefs.entities();
-                for (size_t i = 0; i < meshRefs.size(); i++) {
-                    ecs::MeshRef& ref = meshRefs.get(refEntities[i]);
-                    if (ref.handle == removed)
-                        ref.handle = 0;
-                    else if (ref.handle > removed)
-                        ref.handle--;
+                auto& meshes = scene.getRegistry().storage(ecs::MeshRef);
+                const auto& refEntities = meshes.entities();
+                for (size_t i = 0; i < meshes.size(); i++) {
+                    ecs::Component& ref = meshes.get(refEntities[i]);
+                    const int h = ref.get<int>("handle");
+                    if (h == removed)
+                        ref.set<int>("handle", 0);
+                    else if (h > removed)
+                        ref.set<int>("handle", h - 1);
                 }
                 scene.update();
                 selection.meshAsset = -1;

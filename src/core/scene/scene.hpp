@@ -108,7 +108,7 @@ private:
 
     ecs::Entity createNamedEntity(std::string name);
     void addMaterialRef(ecs::Entity e, MaterialHandle materialHandle);
-    ecs::Transform makeTransformFromMatrix(const glm::mat4& transform) const;
+    void addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform);
     void resetSceneState();
     void ensureDefaultAssets();
 

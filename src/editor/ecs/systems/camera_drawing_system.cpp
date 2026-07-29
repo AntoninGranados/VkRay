@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "imgui/imgui.h"
 #include "core/camera.hpp"
@@ -16,12 +17,12 @@ namespace ecs {
 void cameraDrawingSystem(Registry& registry) {
     if (Core::getRenderMode() != RenderMode::Preview) return;    // don't draw the cameras when rendering
 
-    auto& cameras = registry.storage<ecs::CameraObject>();
-    auto& transforms = registry.storage<ecs::Transform>();
+    auto& cameras = registry.storage(Camera);
+    auto& transforms = registry.storage(Transform);
 
     if (ImGui::GetCurrentContext() == nullptr) return;
 
-    ImVec2 windowPos  = Editor::getUi().getViewportPos();
+    ImVec2 windowPos = Editor::getUi().getViewportPos();
     ImVec2 windowSize = Editor::getUi().getViewportSize();
     if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
 
@@ -31,23 +32,24 @@ void cameraDrawingSystem(Registry& registry) {
 
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
-        const auto& c = cameras.get(e);
-        const auto& t = transforms.get(e);
-        if (c.isPreview) continue;
+        const Component& c = cameras.get(e);
+        const Component& t = transforms.get(e);
+        if (c.get<bool>("is_preview")) continue;
 
-        glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
-        const glm::vec3 up = glm::normalize(t.rotation * glm::vec3(0.0f, 1.0f, 0.0f));
+        const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+        glm::vec3 dir = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));
+        const glm::vec3 up = glm::normalize(rot * glm::vec3(0.0f, 1.0f, 0.0f));
         if (glm::length(dir) < 1e-6f) dir = glm::vec3(0.0f, 0.0f, -1.0f);
 
         const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
-        const float fov = glm::radians(c.fov);
+        const float fov = glm::radians(c.get<float>("fov"));
 
-        const Camera& activeCamera = Core::getScene().getCamera();
+        const ::Camera& activeCamera = Core::getScene().getCamera();
         const glm::mat4 view = activeCamera.getView();
         const glm::mat4 proj = activeCamera.getProjection(aspect);
         const glm::mat4 viewProj = proj * view;
 
-        const glm::vec3 camPos = t.position;
+        const glm::vec3 camPos = t.get<glm::vec3>("position");
         const glm::vec3 camDir = dir;
         const glm::vec3 camRight = glm::normalize(glm::cross(camDir, up));
         const glm::vec3 camUp = glm::normalize(glm::cross(camRight, camDir));
@@ -134,7 +136,7 @@ void cameraDrawingSystem(Registry& registry) {
             drawClipped(clipNear[i], clipFar[i]);
         }
 
-        const float apertureRadius = c.aperture * 0.5f;
+        const float apertureRadius = c.get<float>("aperture") * 0.5f;
         if (apertureRadius > 1e-4f) {
             const int ringSegments = 32;
             glm::vec3 prevPoint = camPos + camRight * apertureRadius;

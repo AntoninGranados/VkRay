@@ -9,6 +9,8 @@
 
 #include "core/animation_handler.hpp"
 #include "core/core.hpp"
+#include "core/ecs/components/animation/transform_anim.hpp"
+#include "core/ecs/components/animation/material_anim.hpp"
 #include "core/scene/scene.hpp"
 
 namespace ecs {
@@ -18,12 +20,13 @@ void transformAnimationSystem(Registry& registry) {
     if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationRestartPending()) return;
     prevFrame = Core::getAnimation().getFrame();
 
+    /* TODO: rewire to new storage
     auto& transformAnims = registry.storage<ecs::TransformAnim>();
-    auto& transforms = registry.storage<ecs::Transform>();
+    auto& transforms = registry.storage(Transform);
 
     for (const auto& e : transformAnims.entities()) {
         if (!transforms.has(e)) continue;
-        auto& transform = transforms.get(e);
+        Component& transform = transforms.get(e);
         const int currFrame = Core::getAnimation().getFrame();
 
         auto& anim = transformAnims.get(e);
@@ -31,10 +34,10 @@ void transformAnimationSystem(Registry& registry) {
 
         if (!anim.positionKeys.empty()) {
             if (currFrame < anim.positionKeys.front().frame) {
-                transform.setPosition(anim.positionKeys.front().value);
+                transform.set<glm::vec3>("position", anim.positionKeys.front().value);
                 changed = true;
             } else if (currFrame >= anim.positionKeys.back().frame) {
-                transform.setPosition(anim.positionKeys.back().value);
+                transform.set<glm::vec3>("position", anim.positionKeys.back().value);
                 changed = true;
             } else {
                 KeyVec3 prevKf = { 0, anim.positionKeys[0].value };
@@ -44,19 +47,20 @@ void transformAnimationSystem(Registry& registry) {
                     if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
                     prevKf = nextKf;
                 }
-                
                 const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
-                transform.setPosition(prevKf.value * (1.0f - t) + nextKf.value * t);
+                transform.set<glm::vec3>("position", prevKf.value * (1.0f - t) + nextKf.value * t);
                 changed = true;
             }
         }
-        
+
         if (!anim.rotationKeys.empty()) {
             if (currFrame < anim.rotationKeys.front().frame) {
-                transform.setRotation(anim.rotationKeys.front().value);
+                const glm::quat q = glm::normalize(anim.rotationKeys.front().value);
+                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
                 changed = true;
             } else if (currFrame >= anim.rotationKeys.back().frame) {
-                transform.setRotation(anim.rotationKeys.back().value);
+                const glm::quat q = glm::normalize(anim.rotationKeys.back().value);
+                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
                 changed = true;
             } else {
                 KeyQuat prevKf = { 0, anim.rotationKeys[0].value };
@@ -66,22 +70,22 @@ void transformAnimationSystem(Registry& registry) {
                     if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
                     prevKf = nextKf;
                 }
-                
                 const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
                 const glm::quat q0 = glm::normalize(prevKf.value);
                 glm::quat q1 = glm::normalize(nextKf.value);
                 if (glm::dot(q0, q1) < 0.0f) q1 = -q1; // Shortest-path interpolation.
-                transform.setRotation(glm::slerp(q0, q1, t));
+                const glm::quat q = glm::slerp(q0, q1, t);
+                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
                 changed = true;
             }
         }
 
         if (!anim.scaleKeys.empty()) {
             if (currFrame < anim.scaleKeys.front().frame) {
-                transform.setScale(anim.scaleKeys.front().value);
+                transform.set<glm::vec3>("scale", anim.scaleKeys.front().value);
                 changed = true;
             } else if (currFrame >= anim.scaleKeys.back().frame) {
-                transform.setScale(anim.scaleKeys.back().value);
+                transform.set<glm::vec3>("scale", anim.scaleKeys.back().value);
                 changed = true;
             } else {
                 KeyVec3 prevKf = { 0, anim.scaleKeys[0].value };
@@ -91,9 +95,8 @@ void transformAnimationSystem(Registry& registry) {
                     if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
                     prevKf = nextKf;
                 }
-
                 const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
-                transform.setScale(prevKf.value * (1.0f - t) + nextKf.value * t);
+                transform.set<glm::vec3>("scale", prevKf.value * (1.0f - t) + nextKf.value * t);
                 changed = true;
             }
         }
@@ -102,29 +105,30 @@ void transformAnimationSystem(Registry& registry) {
             Core::requestAccumulationRestart();
         }
     }
+    */
 }
 
 void materialAnimationSystem(Registry& registry) {
     static int prevFrame = -1;
     const int currFrame = Core::getAnimation().getFrame();
     if (currFrame == prevFrame && !Core::isAccumulationRestartPending()) return;
-    const bool frameChanged = (currFrame != prevFrame);
     prevFrame = currFrame;
 
+    /* TODO: rewire to new storage
     auto& materialAnims = registry.storage<ecs::MaterialAnim>();
-    auto& materialRefs  = registry.storage<ecs::MaterialRef>();
+    auto& materialRefs  = registry.storage(MaterialRef);
     auto& materials     = Core::getScene().getMaterials();
 
     for (const auto& e : materialAnims.entities()) {
         if (!materialRefs.has(e)) continue;
 
         auto&     anim   = materialAnims.get(e);
-        const int handle = materialRefs.get(e).handle;
+        const int handle = materialRefs.get(e).get<int>("handle");
 
         if (handle < 0 || handle >= static_cast<int>(materials.size())) continue;
 
         const KeyMaterial kf = anim.getKeyframe(currFrame);
-        Material& mat        = materials[handle];
+        auto& mat = materials[handle];
 
         mat.roughness        = kf.roughness;
         mat.metalness        = kf.metalness;
@@ -134,6 +138,7 @@ void materialAnimationSystem(Registry& registry) {
     }
 
     if (frameChanged) Core::requestAccumulationRestart();
+    */
 }
 
 } // namespace ecs

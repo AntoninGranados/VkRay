@@ -1,14 +1,13 @@
 #pragma once
 
 #include <cassert>
-#include <utility>
 #include <vector>
 
-#include "./entity.hpp"
+#include "core/ecs/entity.hpp"
+#include "component.hpp"
 
 namespace ecs {
 
-template<typename T>
 class ComponentStorage {
 public:
     bool has(const Entity& e) const {
@@ -17,32 +16,29 @@ public:
         return index >= 0 && denseEntities[index].getGen() == e.getGen();
     }
 
-    T& get(const Entity& e) {
+    Component& get(const Entity& e) {
         assert(has(e));
         return dense[sparse[e.getId()]];
     }
 
-    const T& get(const Entity& e) const {
+    const Component& get(const Entity& e) const {
         assert(has(e));
         return dense[sparse[e.getId()]];
     }
 
-    void add(const Entity& e, T value) {
+    Component& add(const Entity& e, const ComponentType& prototype) {
         ensureSparseSize(e.getId());
         int index = sparse[e.getId()];
-        if (index >= 0 && denseEntities[index].getGen() == e.getGen()) {
-            dense[index] = std::move(value);
-            return;
-        } else {
-            sparse[e.getId()] = static_cast<int>(dense.size());
-            dense.push_back(std::move(value));
-            denseEntities.push_back(e);
-        }
+        if (index >= 0 && denseEntities[index].getGen() == e.getGen())
+            return dense[index];
+        sparse[e.getId()] = static_cast<int>(dense.size());
+        dense.emplace_back(prototype);
+        denseEntities.push_back(e);
+        return dense.back();
     }
 
     void remove(const Entity& e) {
         if (!has(e)) return;
-
         int index = sparse[e.getId()];
         int last = static_cast<int>(dense.size()) - 1;
         if (index != last) {
@@ -56,7 +52,7 @@ public:
     }
 
     size_t size() const { return dense.size(); }
-    const std::vector<T>& data() const { return dense; }
+    const std::vector<Component>& data() const { return dense; }
     const std::vector<Entity>& entities() const { return denseEntities; }
 
 private:
@@ -65,7 +61,7 @@ private:
             sparse.resize(id + 1, -1);
     }
 
-    std::vector<T> dense;
+    std::vector<Component> dense;
     std::vector<Entity> denseEntities;
     std::vector<int> sparse;
 };

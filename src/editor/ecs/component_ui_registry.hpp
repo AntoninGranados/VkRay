@@ -1,12 +1,12 @@
 #pragma once
 
 #include <functional>
-#include <utility>
 #include <vector>
 
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
+#include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
 
 class MeshAsset;
@@ -17,32 +17,18 @@ class ComponentUiRegistry {
 public:
     using Drawer = std::function<bool(Registry&, Entity)>;
 
-    void addDrawer(Drawer drawer) {
-        drawers.push_back(std::move(drawer));
-    }
+    void add(const ComponentType& componentType);
 
-    template<typename T>
-    void add(std::function<bool(T& t, Registry& registry, Entity e)> func) {
-        drawers.emplace_back([func](Registry& registry, Entity e) {
-            if (!registry.has<T>(e)) return false;
+    void add(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> func) {
+        drawers.emplace_back([func, type](Registry& registry, Entity e) {
+            if (!registry.has(e, type)) return false;
 
-            T& t = registry.get<T>(e);
-            ImGui::PushID(&t);
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
-            ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-
-            if (ImGui::Button("-##Remove", { 32, 0 })) {
-                registry.remove<T>(e);
-                Core::requestAccumulationRestart();
-            }
-            ImGui::SameLine();
-            bool update = func(t, registry, e);
-
-            ImGui::EndChild();
-            ImGui::PopStyleColor(3);
-            ImGui::PopID();
+            Component& component = registry.get(e, type);
+            ComponentUiRegistry::beginDraw(&component, [&]() {
+                registry.remove(e, type);
+            });
+            bool update = func(component, registry, e);
+            ComponentUiRegistry::endDraw();
             return update;
         });
     }
@@ -63,6 +49,26 @@ private:
     std::vector<Drawer> drawers;
     std::vector<Material>* materials = nullptr;
     std::vector<MeshAsset>* meshAssets = nullptr;
+
+    static void beginDraw(void* id, std::function<void(void)> remove) {
+        ImGui::PushID(id);
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
+        ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+
+        if (ImGui::Button("-##Remove", { 32, 0 })) {
+            remove();
+            Core::requestAccumulationRestart();
+        }
+        ImGui::SameLine();
+    }
+
+    static void endDraw() {
+        ImGui::EndChild();
+        ImGui::PopStyleColor(3);
+        ImGui::PopID();
+    }
 };
 
 } // namespace ecs

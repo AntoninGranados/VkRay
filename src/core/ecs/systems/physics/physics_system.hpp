@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../registry.hpp"
+#include "core/ecs/registry.hpp"
 
 namespace ecs {
 

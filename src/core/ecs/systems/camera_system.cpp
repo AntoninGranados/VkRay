@@ -1,7 +1,10 @@
 #include "camera_system.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "core/camera.hpp"
 #include "core/core.hpp"
@@ -10,84 +13,44 @@
 namespace ecs {
 
 void cameraPreUpdateSystem(Registry& registry) {
-    auto& cameras = registry.storage<ecs::CameraObject>();
-    auto& transforms = registry.storage<ecs::Transform>();
+    ::Camera& sceneCamera = Core::getScene().getCamera();
+    if (!sceneCamera.hasPreviewCamera()) return;
 
-    for (const auto& e : cameras.entities()) {
-        if (!transforms.has(e)) continue;
+    const ecs::Entity previewEnt = sceneCamera.getPreviewCamera();
+    auto& cameras = registry.storage(Camera);
+    auto& transforms = registry.storage(Transform);
 
-        ecs::CameraObject& c = cameras.get(e);
-        if (Core::getRenderMode() != RenderMode::Preview && !c.isPreview) {
-            c.setPreview(true);
-            c.setPreviewJustSet(true);
-            Core::requestAccumulationRestart();
-        }
+    if (!cameras.has(previewEnt) || !transforms.has(previewEnt)) return;
 
-        if (!c.isPreview) continue;
-
-        ecs::Transform& t = transforms.get(e);
-        Camera& camera = Core::getScene().getCamera();
-
-        const float dist = glm::max(0.1f, glm::length(camera.getTarget() - camera.getPosition()));
-        const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
-
-        camera.setPosition(t.position);
-        camera.setTarget(t.position + dir * dist);
-        camera.setFov(c.fov);
-        camera.setAperture(c.aperture);
-        camera.setFocusDepth(c.focusDepth);
-        break;
-    }
+    const Component& t = transforms.get(previewEnt);
+    const Component& c = cameras.get(previewEnt);
+    const glm::quat q = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+    const glm::vec3 pos = t.get<glm::vec3>("position");
+    const float dist = glm::max(0.1f, glm::length(sceneCamera.getTarget() - sceneCamera.getPosition()));
+    sceneCamera.setPosition(pos);
+    sceneCamera.setTarget(pos + glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)) * dist);
+    sceneCamera.setFov(c.get<float>("fov"));
+    sceneCamera.setAperture(c.get<float>("aperture"));
+    sceneCamera.setFocusDepth(c.get<float>("focus_depth"));
 }
 
 void cameraPostUpdateSystem(Registry& registry) {
-    auto& cameras = registry.storage<ecs::CameraObject>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    bool escapePressed = glfwGetKey(static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), GLFW_KEY_ESCAPE);
-    Camera& camera = Core::getScene().getCamera();
+    ::Camera& sceneCamera = Core::getScene().getCamera();
+    if (!sceneCamera.hasPreviewCamera()) return;
 
-    for (const auto& e : cameras.entities()) {
-        ecs::CameraObject& c = cameras.get(e);
-        if (!c.isPreview) continue;
+    const bool escapePressed = glfwGetKey(
+        static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), GLFW_KEY_ESCAPE
+    );
+    if (!escapePressed) return;
 
-        if (escapePressed) {
-            c.setPreview(false);
-            Core::requestAccumulationRestart();
-            Core::getScene().getCamera().setAperture(0.0f);
-            continue;
-        }
-
-        if (c.previewJustSet) {
-            c.previewJustSet = false;
-            continue;
-        }
-
-        if (c.updated) {
-            camera.setFov(c.fov);
-            camera.setAperture(c.aperture);
-            camera.setFocusDepth(c.focusDepth);
-            c.updated = false;
-            continue;
-        }
-
-        if (!transforms.has(e)) continue;
-        ecs::Transform& t = transforms.get(e);
-
-        if (t.updated) {
-            const float dist = glm::max(0.1f, glm::length(camera.getTarget() - camera.getPosition()));
-            const glm::vec3 dir = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
-            camera.setPosition(t.position);
-            camera.setTarget(t.position + dir * dist);
-            t.updated = false;
-            continue;
-        }
-
-        c.setFov(camera.getFov());
-        c.setAperture(camera.getAperture());
-        c.setFocusDepth(camera.getFocusDepth());
-        t.setPosition(camera.getPosition());
-        t.setRotation(glm::quatLookAt(glm::normalize(camera.getDirection()), camera.getUp()));
+    const ecs::Entity previewEnt = sceneCamera.getPreviewCamera();
+    auto& cameras = registry.storage(Camera);
+    if (cameras.has(previewEnt)) {
+        cameras.get(previewEnt).set<bool>("is_preview", false);
     }
+    sceneCamera.clearPreviewCamera();
+    sceneCamera.setAperture(0.0f);
+    Core::requestAccumulationRestart();
 }
 
 } // namespace ecs

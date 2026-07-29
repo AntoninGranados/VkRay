@@ -1,124 +1,95 @@
 #pragma once
 
-#include <functional>
-#include <unordered_map>
-#include <list>
+#include "FontAwesome/IconsFontAwesome7.h"
 
-#include "./components/material.hpp"
-#include "./components/transform.hpp"
+#include <glm/glm.hpp>
 
-#include "./components/objects/sphere.hpp"
-#include "./components/objects/plane.hpp"
-#include "./components/objects/collider.hpp"
-#include "./components/objects/box.hpp"
-#include "./components/objects/quad.hpp"
-#include "./components/objects/mesh.hpp"
-#include "./components/objects/rigid_body.hpp"
-#include "./components/objects/camera_object.hpp"
+#include "core/ecs/components/component_type.hpp"
 
-#include "./components/name.hpp"
+namespace ecs {
 
-#include "./components/animation/transform_anim.hpp"
-#include "./components/animation/material_anim.hpp"
-#include "core/ecs/registry.hpp"
+inline const ComponentType Sphere = ComponentType::builder("sphere")
+    .icon(ICON_FA_CIRCLE)
+    .group("object")
+    .needs("transform")
+    .conflicts("plane", "box", "mesh", "camera")
+    .field<float>("radius", 1.0f, { .min = 0.0f, .step = 0.01f })
+    .build();
 
-#define REQ_NONE {}
-#define CONFLICT_NONE {}
+inline const ComponentType Plane = ComponentType::builder("plane")
+    .icon(ICON_FA_SQUARE)
+    .group("object")
+    .needs("transform")
+    .conflicts("sphere", "box", "mesh", "quad", "camera")
+    .build();
 
-#define REQ_TRANSFORM ComponentId::Transform
+inline const ComponentType Box = ComponentType::builder("box")
+    .icon(ICON_FA_BOX)
+    .group("object")
+    .needs("transform")
+    .conflicts("sphere", "plane", "mesh", "quad", "camera")
+    .build();
 
-#define CONFLICT_OBJECTS ComponentId::Sphere, ComponentId::Plane, ComponentId::Box, ComponentId::MeshRef, ComponentId::CameraObject
+inline const ComponentType Quad = ComponentType::builder("quad")
+    .icon(ICON_FA_SQUARE)
+    .group("object")
+    .needs("transform")
+    .conflicts("sphere", "plane", "box", "mesh", "camera")
+    .build();
 
-enum class ComponentGroup {
-    Editor,
-    Objects,
-    Movement,
-    Physics,
-    Other
-};
+inline const ComponentType MeshRef = ComponentType::builder("mesh")
+    .icon(ICON_FA_CUBE)
+    .group("object")
+    .needs("transform")
+    .conflicts("sphere", "plane", "box", "quad", "camera")
+    .field<int>("handle")
+    .build();
 
-#define ECS_COMPONENTS(X)                                               \
-    X(Name,          Editor,   { },               { })                  \
-                                                                        \
-    X(Transform,     Movement, { },               { })                  \
-    X(TransformAnim, Movement, { REQ_TRANSFORM }, { })                  \
-                                                                        \
-    X(Sphere,        Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(Plane,         Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(Box,           Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(Quad,          Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(MeshRef,       Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(CameraObject,  Objects,  { REQ_TRANSFORM }, { CONFLICT_OBJECTS }) \
-    X(Collider,      Physics,  { REQ_TRANSFORM }, { })                  \
-    X(RigidBody,     Physics,  { REQ_TRANSFORM }, { })                  \
-                                                                        \
-    X(MaterialRef,   Other,    { },               { })                  \
-    X(MaterialAnim,  Other,    { },               { })                  \
+inline const ComponentType Camera = ComponentType::builder("camera")
+    .icon(ICON_FA_VIDEO)
+    .group("object")
+    .needs("transform")
+    .conflicts("sphere", "plane", "box", "quad", "mesh")
+    .field<float>("fov", 80.0f, { .min = 1.0f, .max = 160.0f, .step = 0.1f })
+    .field<float>("aperture", 0.0f, { .min = 0.0f, .max = 10.0f, .step = 0.01f })
+    .field<float>("focus_depth", 10.0f, { .min = 0.0f, .step = 0.01f })
+    .privateField<bool>("is_preview")
+    .build();
 
-#define COMPONENTS_ID(Id, Group, Req, Conflict) Id,
-enum class ComponentId {
-    ECS_COMPONENTS(COMPONENTS_ID)
-};
+inline const ComponentType Collider = ComponentType::builder("collider")
+    .icon(ICON_FA_SQUARE)
+    .group("physics")
+    .field<float>("restitution", 0.4f, { .min = 0.0f, .max = 1.0f, .step = 0.01f })
+    .field<float>("friction", 0.4f, { .min = 0.0f, .max = 1.0f, .step = 0.01f })
+    .build();
 
-#define COMPONENTS_LABEL(Id, Group, Req, Conflict) case ComponentId::Id: return #Id;
-inline std::string componentLabel(const ComponentId& id) {
-    switch (id) {
-        ECS_COMPONENTS(COMPONENTS_LABEL)
-    }
-    return "Unknown";
-}
+inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
+    .icon(ICON_FA_CUBES_STACKED)
+    .group("physics")
+    .field<bool>("use_gravity", true)
+    .field<float>("density", 50.0f, { .min = 0.1f, .max = 10000.0f, .step = 1.0f })
+    .privateField<glm::vec3>("linear_velocity")
+    .privateField<glm::vec3>("angular_velocity")
+    .build();
 
-#define COMPONENTS_GROUP(Id, Group, Req, Conflict) case ComponentId::Id: return ComponentGroup::Group;
-inline ComponentGroup componentGroup(const ComponentId& id) {
-    switch (id) {
-        ECS_COMPONENTS(COMPONENTS_GROUP)
-    }
-    return ComponentGroup::Other;
-}
+inline const ComponentType Name = ComponentType::builder("name")
+    .icon(ICON_FA_TAG)
+    .group("other")
+    .field<std::string>("value")
+    .build();
 
-inline std::string componentGroupLabel(ComponentGroup group) {
-    switch (group) {
-        case ComponentGroup::Editor:   return "Editor";
-        case ComponentGroup::Objects:  return "Objects";
-        case ComponentGroup::Movement: return "Movement";
-        case ComponentGroup::Physics:  return "Physics";
-        case ComponentGroup::Other:    return "Other";
-    }
-    return "Other";
-}
+inline const ComponentType Transform = ComponentType::builder("transform")
+    .icon(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT)
+    .group("movement")
+    .field<glm::vec3>("position")
+    .field<glm::vec3>("rotation", glm::vec3(0.0f), { .step = 0.1f })
+    .field<glm::vec3>("scale", glm::vec3(1.0f))
+    .build();
 
-using AddFunction = std::function<void(ecs::Registry&, ecs::Entity)>;
-using HasFunction = std::function<bool(ecs::Registry&, ecs::Entity)>;
-struct ComponentFunc {
-    AddFunction add;
-    HasFunction has;
-};
+inline const ComponentType MaterialRef = ComponentType::builder("material")
+    .icon(ICON_FA_PALETTE)
+    .group("other")
+    .field<int>("handle")
+    .build();
 
-#define COMPONENTS_TYPES(Id, Group, Req, Conflict) {                                                   \
-    ComponentId::Id,                                                                                   \
-    ComponentFunc {                                                                                    \
-        [](ecs::Registry& r, ecs::Entity e) { if (!r.has<ecs::Id>(e)) r.add<ecs::Id>(e, ecs::Id{}); }, \
-        [](ecs::Registry& r, ecs::Entity e) { return r.has<ecs::Id>(e); }                              \
-    }                                                                                                  \
-},
-inline std::unordered_map<ComponentId, ComponentFunc>& componentFuncs() {
-    static std::unordered_map<ComponentId, ComponentFunc> types = {
-        ECS_COMPONENTS(COMPONENTS_TYPES)
-    };
-    return types;
-}
-
-struct ComponentRestrictions {
-    std::list<ComponentId> requirements;
-    std::list<ComponentId> conflicts;
-};
-#define COMPONENTS_RESTRICTIONS(Id, Group, Req, Conflict) { \
-    ComponentId::Id,                                 \
-    ComponentRestrictions { Req, Conflict }          \
-},
-inline std::unordered_map<ComponentId, ComponentRestrictions>& componentRestrictions() {
-    static std::unordered_map<ComponentId, ComponentRestrictions> restrictions = {
-        ECS_COMPONENTS(COMPONENTS_RESTRICTIONS)
-    };
-    return restrictions;
-};
+}   // namespace ecs

@@ -12,11 +12,11 @@
 #include <glm/gtx/quaternion.hpp>
 #include "nlohmann/json.hpp"
 
-#include "utils/json_resolve.hpp"
-#include "utils/log.hpp"
 #include "scene.hpp"
 #include "core/core.hpp"
 #include "core/scene/object/material.hpp"
+#include "utils/json_resolve.hpp"
+#include "utils/log.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -101,8 +101,7 @@ static MaterialType parseMaterialType(const std::string& s) {
     if (s == "dielectric")   return MaterialType::Dielectric;
     if (s == "volume")       return MaterialType::Volume;
     if (s == "programmable") return MaterialType::Programmable;
-    
-            Log::error("SceneSerializer", std::format("Unknown material type '{}'", s));
+    Log::error("SceneSerializer", std::format("Unknown material type '{}'", s));
     std::unreachable();
 }
 
@@ -125,8 +124,7 @@ static LightMode parseLightMode(const std::string& s) {
     if (s == "sunset") return LightMode::Sunset;
     if (s == "night")  return LightMode::Night;
     if (s == "empty")  return LightMode::Empty;
-    
-            Log::error("SceneSerializer", std::format("Unknown light mode '{}'", s));
+    Log::error("SceneSerializer", std::format("Unknown light mode '{}'", s));
     std::unreachable();
 }
 
@@ -227,8 +225,7 @@ static void spawnOne(
         scene.pushMesh(name, meshPath, t, mat, smooth);
 
     } else {
-        
-            Log::error("SceneSerializer", std::format("Unknown object type '{}'", type));
+        Log::error("SceneSerializer", std::format("Unknown object type '{}'", type));
         return;
     }
 
@@ -237,42 +234,38 @@ static void spawnOne(
     const ecs::Entity last = entities.back();
     auto& reg = scene.getRegistry();
 
-    if (obj.contains("collider")) {
-        const auto& c = obj["collider"];
-        ecs::Collider collider{};
-        if (c.is_object()) {
-            if (c.contains("restitution")) collider.restitution = resolveFloat(c["restitution"], ctx);
-            if (c.contains("friction"))    collider.friction    = resolveFloat(c["friction"],    ctx);
+    if (obj.contains("collider") && !reg.has(last, ecs::Collider)) {
+        const auto& cj = obj["collider"];
+        ecs::Component& c = reg.add(last, ecs::Collider);
+        if (cj.is_object()) {
+            if (cj.contains("restitution")) c.set<float>("restitution", resolveFloat(cj["restitution"], ctx));
+            if (cj.contains("friction"))    c.set<float>("friction",    resolveFloat(cj["friction"],    ctx));
         }
-        if (!reg.has<ecs::Collider>(last)) reg.add<ecs::Collider>(last, collider);
     }
 
-    if (obj.contains("rigid_body")) {
-        const auto& rb = obj["rigid_body"];
-        ecs::RigidBody rigidBody{};
-        if (rb.is_object()) {
-            if (rb.contains("use_gravity"))      rigidBody.useGravity      = rb["use_gravity"].get<bool>();
-            if (rb.contains("density"))          rigidBody.density         = resolveFloat(rb["density"], ctx);
-            if (rb.contains("linear_velocity"))  rigidBody.linearVelocity  = resolveVec3(rb["linear_velocity"],  ctx);
-            if (rb.contains("angular_velocity")) rigidBody.angularVelocity = resolveVec3(rb["angular_velocity"], ctx);
+    if (obj.contains("rigid_body") && !reg.has(last, ecs::RigidBody)) {
+        const auto& rbj = obj["rigid_body"];
+        ecs::Component& rb = reg.add(last, ecs::RigidBody);
+        if (rbj.is_object()) {
+            if (rbj.contains("use_gravity"))      rb.set<bool>("use_gravity",            rbj["use_gravity"].get<bool>());
+            if (rbj.contains("density"))          rb.set<float>("density",               resolveFloat(rbj["density"], ctx));
+            if (rbj.contains("linear_velocity"))  rb.set<glm::vec3>("linear_velocity",   resolveVec3(rbj["linear_velocity"],  ctx));
+            if (rbj.contains("angular_velocity")) rb.set<glm::vec3>("angular_velocity",  resolveVec3(rbj["angular_velocity"], ctx));
         }
-        if (!reg.has<ecs::RigidBody>(last)) reg.add<ecs::RigidBody>(last, rigidBody);
     }
 }
 
 bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        
-            Log::error("SceneSerializer", std::format("Cannot open scene: {}", path));
+        Log::error("SceneSerializer", std::format("Cannot open scene: {}", path));
         return false;
     }
 
     json j;
     try { j = json::parse(file, nullptr, true, true); }
     catch (const json::parse_error& e) {
-        
-            Log::error("SceneSerializer", std::format("Scene parse error: {}", e.what()));
+        Log::error("SceneSerializer", std::format("Scene parse error: {}", e.what()));
         return false;
     }
 
@@ -281,8 +274,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
     const int version = j.value("version", -1);
     if (version != SCENE_VERSION) {
-        
-            Log::error("SceneSerializer", std::format("Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version));
+        Log::error("SceneSerializer", std::format("Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version));
         return false;
     }
 
@@ -340,12 +332,12 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
         const auto& allEntities = scene.getEntities();
         if (!allEntities.empty()) {
-            auto& camStorage = scene.getRegistry().storage<ecs::CameraObject>();
+            auto& camStorage = scene.getRegistry().storage(ecs::Camera);
             const ecs::Entity& last = allEntities.back();
             if (camStorage.has(last)) {
-                camStorage.get(last).setFov(fov);
-                camStorage.get(last).setAperture(aperture);
-                camStorage.get(last).setFocusDepth(focusDepth);
+                camStorage.get(last).set<float>("fov", fov);
+                camStorage.get(last).set<float>("aperture", aperture);
+                camStorage.get(last).set<float>("focus_depth", focusDepth);
             }
         }
     }
@@ -400,8 +392,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         } else {
             const std::string name = obj.value("name", "Object");
             if (!obj.contains("type")) {
-                
-            Log::warn("SceneSerializer", std::format("'{}': missing 'type' field, skipping", name));
+                Log::warn("SceneSerializer", std::format("'{}': missing 'type' field, skipping", name));
                 continue;
             }
             ResolveCtx ctx{ rng, {} };
@@ -418,40 +409,44 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
     j["light"]   = toString(lightMode);
 
     auto& reg        = scene.getRegistry();
-    auto& transforms = reg.storage<ecs::Transform>();
-    auto& names      = reg.storage<ecs::Name>();
-    auto& camObjects = reg.storage<ecs::CameraObject>();
+    auto& transforms = reg.storage(ecs::Transform);
+    auto& names      = reg.storage(ecs::Name);
+    auto& camObjects = reg.storage(ecs::Camera);
 
     bool savedCameraEntity = false;
     for (const ecs::Entity& e : scene.getEntities()) {
         if (!camObjects.has(e) || !transforms.has(e)) continue;
-        const ecs::CameraObject& c = camObjects.get(e);
-        if (c.isPreview) continue;
+        const ecs::Component& c = camObjects.get(e);
+        if (c.get<bool>("is_preview")) continue;
 
-        const ecs::Transform& t = transforms.get(e);
-        const glm::vec3 dir     = glm::normalize(t.rotation * glm::vec3(0.0f, 0.0f, -1.0f));
-        const glm::vec3 target  = t.position + dir * glm::max(0.1f, c.focusDepth);
+        const ecs::Component& t = transforms.get(e);
+        const glm::quat rot     = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+        const glm::vec3 pos     = t.get<glm::vec3>("position");
+        const glm::vec3 dir     = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));
+        const glm::vec3 target  = pos + dir * glm::max(0.1f, c.get<float>("focus_depth"));
 
         json cam;
-        cam["name"]       = names.has(e) ? trimmed(names.get(e).value) : "Camera";
-        cam["position"]   = fromVec3(t.position);
-        cam["target"]     = fromVec3(target);
-        cam["fov"]        = c.fov;
-        cam["aperture"]   = c.aperture;
-        cam["focus_depth"] = c.focusDepth;
-        j["camera"]       = cam;
+        cam["name"] = names.has(e)
+            ? names.get(e).get<std::string>("value")
+            : "Camera";
+        cam["position"] = fromVec3(pos);
+        cam["target"] = fromVec3(target);
+        cam["fov"] = c.get<float>("fov");
+        cam["aperture"] = c.get<float>("aperture");
+        cam["focus_depth"] = c.get<float>("focus_depth");
+        j["camera"] = cam;
         savedCameraEntity = true;
         break;
     }
     if (!savedCameraEntity) {
         const Camera& cam = scene.getCamera();
         json c;
-        c["position"]   = fromVec3(cam.getPosition());
-        c["target"]     = fromVec3(cam.getTarget());
-        c["fov"]        = cam.getFov();
-        c["aperture"]   = cam.getAperture();
+        c["position"] = fromVec3(cam.getPosition());
+        c["target"] = fromVec3(cam.getTarget());
+        c["fov"] = cam.getFov();
+        c["aperture"] = cam.getAperture();
         c["focus_depth"] = cam.getFocusDepth();
-        j["camera"]     = c;
+        j["camera"] = c;
     }
 
     json matsJson = json::array();
@@ -462,27 +457,26 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         mj["name"]   = trimmed(m.name);
         mj["type"]   = toString(m.type);
         mj["albedo"] = fromVec3(m.albedo);
-        if (m.roughness        != 0.0f) mj["roughness"]        = m.roughness;
-        if (m.metalness        != 0.0f) mj["metalness"]        = m.metalness;
-        if (m.ior              != 0.0f) mj["ior"]              = m.ior;
-        if (m.transmission     != 0.0f) mj["transmission"]     = m.transmission;
+        if (m.roughness != 0.0f) mj["roughness"] = m.roughness;
+        if (m.metalness != 0.0f) mj["metalness"] = m.metalness;
+        if (m.ior != 0.0f) mj["ior"] = m.ior;
+        if (m.transmission != 0.0f) mj["transmission"] = m.transmission;
         if (m.emissionStrength != 0.0f) mj["emission_strength"] = m.emissionStrength;
-        if (m.density          != 1.0f) mj["density"]          = m.density;
-        if (m.anisotropic      != 0.0f) mj["anisotropic"]      = m.anisotropic;
+        if (m.density != 1.0f) mj["density"] = m.density;
+        if (m.anisotropic != 0.0f) mj["anisotropic"] = m.anisotropic;
         matsJson.push_back(mj);
     }
     j["materials"] = matsJson;
 
-    auto& materialRefs = reg.storage<ecs::MaterialRef>();
-    auto& spheres      = reg.storage<ecs::Sphere>();
-    auto& planes       = reg.storage<ecs::Plane>();
-    auto& boxes        = reg.storage<ecs::Box>();
-    auto& quads        = reg.storage<ecs::Quad>();
-    auto& meshRefs     = reg.storage<ecs::MeshRef>();
+    auto& materialRefs = reg.storage(ecs::MaterialRef);
+    auto& planes   = reg.storage(ecs::Plane);
+    auto& boxes    = reg.storage(ecs::Box);
+    auto& quads    = reg.storage(ecs::Quad);
+    auto& meshes = reg.storage(ecs::MeshRef);
 
     auto getMatName = [&](ecs::Entity e) -> std::string {
         if (!materialRefs.has(e)) return "";
-        const MaterialHandle h = materialRefs.get(e).handle;
+        const int h = materialRefs.get(e).get<int>("handle");
         if (h > 0 && h < (int)mats.size()) return trimmed(mats[h].name);
         return "";
     };
@@ -492,83 +486,91 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         if (camObjects.has(e))  continue;
         if (!transforms.has(e)) continue;
 
-        const ecs::Transform& t      = transforms.get(e);
-        const std::string entityName = names.has(e) ? trimmed(names.get(e).value) : "Object";
+        const ecs::Component& t      = transforms.get(e);
+        const std::string entityName = names.has(e)
+            ? names.get(e).get<std::string>("value")
+            : "Object";
         const std::string matName    = getMatName(e);
 
         json obj;
         obj["name"] = entityName;
 
-        if (spheres.has(e)) {
+        if (reg.has(e, ecs::Sphere)) {
             obj["type"]   = "sphere";
             if (!matName.empty()) obj["material"] = matName;
-            obj["center"] = fromVec3(t.position);
-            obj["radius"] = spheres.get(e).radius;
+            obj["center"] = fromVec3(t.get<glm::vec3>("position"));
+            obj["radius"] = reg.get(e, ecs::Sphere).get<float>("radius");
 
         } else if (planes.has(e)) {
             obj["type"]   = "plane";
             if (!matName.empty()) obj["material"] = matName;
-            obj["point"]  = fromVec3(t.position);
-            obj["normal"] = fromVec3(glm::normalize(t.rotation * glm::vec3(0.0f, 1.0f, 0.0f)));
+            const glm::quat pRot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+            obj["point"]  = fromVec3(t.get<glm::vec3>("position"));
+            obj["normal"] = fromVec3(glm::normalize(pRot * glm::vec3(0.0f, 1.0f, 0.0f)));
 
         } else if (boxes.has(e)) {
             obj["type"] = "box";
             if (!matName.empty()) obj["material"] = matName;
-            obj["min"]  = fromVec3(t.position - t.scale);
-            obj["max"]  = fromVec3(t.position + t.scale);
+            const glm::vec3 bPos   = t.get<glm::vec3>("position");
+            const glm::vec3 bScale = t.get<glm::vec3>("scale");
+            obj["min"]  = fromVec3(bPos - bScale);
+            obj["max"]  = fromVec3(bPos + bScale);
 
         } else if (quads.has(e)) {
-            const ecs::Quad& q        = quads.get(e);
-            const glm::vec3 center    = t.position + 0.5f * (q.u + q.v);
-            const glm::vec2 scale     = { glm::length(q.u), glm::length(q.v) };
-            const glm::vec3 ref       = std::abs(glm::dot(q.normal, glm::vec3(0,1,0))) < 0.99f
+            const glm::quat qRot      = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+            const glm::vec3 qScale    = t.get<glm::vec3>("scale");
+            const glm::vec3 center    = t.get<glm::vec3>("position");
+            const glm::vec3 u_hat     = qRot * glm::vec3(1.0f, 0.0f, 0.0f);
+            const glm::vec3 normal    = qRot * glm::vec3(0.0f, 0.0f, 1.0f);
+            const glm::vec2 scale     = { qScale.x, qScale.y };
+            const glm::vec3 ref       = std::abs(glm::dot(normal, glm::vec3(0,1,0))) < 0.99f
                                         ? glm::vec3(0,1,0) : glm::vec3(1,0,0);
-            const glm::vec3 tangent   = glm::normalize(glm::cross(ref, q.normal));
-            const glm::vec3 bitangent = glm::normalize(glm::cross(q.normal, tangent));
-            const glm::vec3 uHat      = glm::normalize(q.u);
-            const float rotation      = std::atan2(glm::dot(uHat, bitangent), glm::dot(uHat, tangent));
+            const glm::vec3 tangent   = glm::normalize(glm::cross(ref, normal));
+            const glm::vec3 bitangent = glm::normalize(glm::cross(normal, tangent));
+            const float rotation      = std::atan2(glm::dot(u_hat, bitangent), glm::dot(u_hat, tangent));
 
             obj["type"]     = "quad";
             if (!matName.empty()) obj["material"] = matName;
             obj["center"]   = fromVec3(center);
-            obj["normal"]   = fromVec3(q.normal);
+            obj["normal"]   = fromVec3(glm::normalize(normal));
             obj["scale"]    = fromVec2(scale);
             obj["rotation"] = rotation;
 
-        } else if (meshRefs.has(e)) {
-            const ecs::MeshRef& ref = meshRefs.get(e);
+        } else if (meshes.has(e)) {
+            const ecs::Component& ref = meshes.get(e);
+            const int handle          = ref.get<int>("handle");
             const auto& assets = scene.getMeshAssets();
-            if (ref.handle < 0 || ref.handle >= (int)assets.size()) continue;
-            const std::string meshPath = assets[ref.handle].getPath();
+            if (handle < 0 || handle >= (int)assets.size()) continue;
+            const std::string meshPath = assets[handle].getPath();
             if (meshPath.empty()) continue;
 
             obj["type"]     = "mesh";
             if (!matName.empty()) obj["material"] = matName;
             obj["path"]     = meshPath;
-            obj["smooth"]   = assets[ref.handle].getSmoothShading();
-            obj["position"] = fromVec3(t.position);
-            obj["rotation"] = fromVec3(glm::degrees(glm::eulerAngles(t.rotation)));
-            obj["scale"]    = fromVec3(t.scale);
+            obj["smooth"]   = assets[handle].getSmoothShading();
+            obj["position"] = fromVec3(t.get<glm::vec3>("position"));
+            obj["rotation"] = fromVec3(t.get<glm::vec3>("rotation"));
+            obj["scale"]    = fromVec3(t.get<glm::vec3>("scale"));
 
         } else {
             continue;
         }
 
-        if (reg.has<ecs::Collider>(e)) {
-            const auto& c = reg.get<ecs::Collider>(e);
+        if (reg.has(e, ecs::Collider)) {
+            const ecs::Component& c = reg.get(e, ecs::Collider);
             json cj;
-            if (c.restitution != 0.4f) cj["restitution"] = c.restitution;
-            if (c.friction    != 0.4f) cj["friction"]     = c.friction;
+            if (c.get<float>("restitution") != 0.4f) cj["restitution"] = c.get<float>("restitution");
+            if (c.get<float>("friction")    != 0.4f) cj["friction"]    = c.get<float>("friction");
             obj["collider"] = cj;
         }
 
-        if (reg.has<ecs::RigidBody>(e)) {
-            const auto& rb = reg.get<ecs::RigidBody>(e);
+        if (reg.has(e, ecs::RigidBody)) {
+            const ecs::Component& rb = reg.get(e, ecs::RigidBody);
             json rbj;
-            if (!rb.useGravity)                              rbj["use_gravity"]       = rb.useGravity;
-            if (rb.density != 50.0f)                         rbj["density"]           = rb.density;
-            if (rb.linearVelocity  != glm::vec3(0.0f))      rbj["linear_velocity"]   = fromVec3(rb.linearVelocity);
-            if (rb.angularVelocity != glm::vec3(0.0f))      rbj["angular_velocity"]  = fromVec3(rb.angularVelocity);
+            if (!rb.get<bool>("use_gravity"))                                    rbj["use_gravity"]      = rb.get<bool>("use_gravity");
+            if (rb.get<float>("density") != 50.0f)                               rbj["density"]          = rb.get<float>("density");
+            if (rb.get<glm::vec3>("linear_velocity")  != glm::vec3(0.0f))       rbj["linear_velocity"]  = fromVec3(rb.get<glm::vec3>("linear_velocity"));
+            if (rb.get<glm::vec3>("angular_velocity") != glm::vec3(0.0f))       rbj["angular_velocity"] = fromVec3(rb.get<glm::vec3>("angular_velocity"));
             obj["rigid_body"] = rbj;
         }
 
@@ -578,8 +580,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
 
     std::ofstream out(path);
     if (!out.is_open()) {
-        
-            Log::error("SceneSerializer", std::format("Failed to write scene: {}", path));
+        Log::error("SceneSerializer", std::format("Failed to write scene: {}", path));
         return false;
     }
     out << prettify(j);

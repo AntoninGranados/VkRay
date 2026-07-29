@@ -2,7 +2,12 @@
 
 #include <cmath>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 #include "core/core.hpp"
+#include "core/ecs/components.hpp"
 
 namespace {
 
@@ -13,6 +18,15 @@ void updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch)
 }
 
 } // namespace
+
+void Camera::syncToPreviewTransform() {
+    ecs::Registry& reg = Core::getScene().getRegistry();
+    if (!reg.has(*previewEntity, ecs::Transform)) return;
+    ecs::Component& t = reg.get(*previewEntity, ecs::Transform);
+    const glm::quat q = glm::quatLookAt(glm::normalize(getDirection()), getUp());
+    t.set<glm::vec3>("position", position);
+    t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
+}
 
 // Public
 Camera::Camera(glm::vec3 position)
@@ -51,6 +65,7 @@ bool Camera::cursorPosCallback(double x, double y) {
         position -= offset;
         target -= offset;
         setTarget(target);
+        if (change && previewEntity) syncToPreviewTransform();
         return change;
     }
 
@@ -59,6 +74,7 @@ bool Camera::cursorPosCallback(double x, double y) {
         orbitDistance = glm::max(0.1f, orbitDistance + dollyDelta);
         position = target - dir * orbitDistance;
         setTarget(target);
+        if (change && previewEntity) syncToPreviewTransform();
         return change;
     }
 
@@ -78,12 +94,14 @@ bool Camera::cursorPosCallback(double x, double y) {
     if (dragMode == DragMode::Look) {
         target = position + newDir * orbitDistance;
         setTarget(target);
+        if (change && previewEntity) syncToPreviewTransform();
         return change;
     }
 
     if (dragMode == DragMode::Orbit) {
         position = target - newDir * orbitDistance;
         setTarget(target);
+        if (change && previewEntity) syncToPreviewTransform();
         return change;
     }
 
@@ -168,8 +186,10 @@ bool Camera::processInput(float deltaTime) {
         }
     }
 
-    if (change)
+    if (change) {
         setTarget(target);
+        if (previewEntity) syncToPreviewTransform();
+    }
 
     return change;
 }

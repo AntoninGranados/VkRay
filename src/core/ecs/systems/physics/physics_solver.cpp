@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../../components/objects/plane.hpp"
-#include "../../components/objects/collider.hpp"
-#include "../../components/objects/box.hpp"
-#include "../../components/objects/sphere.hpp"
+#include "core/ecs/components.hpp"
 
 namespace ecs {
 
@@ -102,16 +99,16 @@ void RigidSolver::step(const Entity bodyEntity, const float dt, Registry& regist
     appTime += dt;
     const float colliderDt = std::max(dt, 1e-8f);
 
-    auto& colliders = registry.storage<Collider>();
+    auto& colliders = registry.storage(Collider);
 
     while (appTime > simTime) {
         computeForceAndTorque();
         integrate(simDt * 0.5f);
         for (const Entity& e : colliders.entities()) {
             if (e == bodyEntity) continue;
-            if (registry.storage<Plane>().has(e)) resolvePlaneCollision(e, registry, colliderDt);
-            if (registry.storage<Box>().has(e)) resolveBoxCollision(e, registry, colliderDt);
-            if (registry.storage<Sphere>().has(e)) resolveSphereCollision(e, registry, colliderDt);
+            if (registry.storage(Plane).has(e)) resolvePlaneCollision(e, registry, colliderDt);
+            if (registry.storage(Box).has(e)) resolveBoxCollision(e, registry, colliderDt);
+            if (registry.has(e, Sphere)) resolveSphereCollision(e, registry, colliderDt);
         }
         integrate(simDt * 0.5f);
         ++stepCount;
@@ -150,15 +147,15 @@ void RigidSolver::computeForceAndTorque() {
 }
 
 glm::vec3 computeColliderPointVelocity(
-    const Transform& t,
-    const Transform& prevTransform,
+    const ColliderState& curr,
+    const ColliderState& prev,
     const glm::vec3& point,
     const glm::vec3& center,
     const float colliderDt
 ) {
-    const glm::vec3 linearVelocity = (t.position - prevTransform.position) / colliderDt;
-    const glm::quat qPrev = glm::normalize(prevTransform.rotation);
-    const glm::quat qCurr = glm::normalize(t.rotation);
+    const glm::vec3 linearVelocity = (curr.position - prev.position) / colliderDt;
+    const glm::quat qPrev = glm::normalize(glm::quat(glm::radians(prev.rotation)));
+    const glm::quat qCurr = glm::normalize(glm::quat(glm::radians(curr.rotation)));
     glm::quat dq = qCurr * glm::inverse(qPrev);
     if (dq.w < 0.0f) dq = -dq;
     const float w = std::clamp(dq.w, -1.0f, 1.0f);
@@ -187,16 +184,19 @@ void RigidSolver::resolveSdfCollision(
         bool penetrating;
     };
 
-    auto& colliders = registry.storage<Collider>();
-    auto& transforms = registry.storage<Transform>();
+    auto& colliders = registry.storage(Collider);
+    auto& transforms = registry.storage(Transform);
     if (!colliders.has(e) || !transforms.has(e)) return;
 
-    const Collider& collider = colliders.get(e);
-    const Transform& t = transforms.get(e);
-    const float eps = collider.restitution;
-    const float mu = collider.friction;
-    Transform prevTransform {};
-    const bool hasPrev = getPrevColliderTransform(e, prevTransform);
+    const Component& collider = colliders.get(e);
+    const Component& t = transforms.get(e);
+    const float eps = collider.get<float>("restitution");
+    const float mu = collider.get<float>("friction");
+    const ColliderState currState {
+        .position = t.get<glm::vec3>("position"),
+        .rotation = t.get<glm::vec3>("rotation"),
+    };
+    const auto prevState = getPrevColliderTransform(e);
     std::vector<ContactCandidate> contacts;
     contacts.reserve(body->vdata0.size());
 
@@ -212,8 +212,8 @@ void RigidSolver::resolveSdfCollision(
         const glm::vec3 normal = sample.normal / normalLen;
 
         glm::vec3 colliderVelocity(0.0f);
-        if (hasPrev) {
-            colliderVelocity = computeColliderPointVelocity(t, prevTransform, r, sample.center, colliderDt);
+        if (prevState) {
+            colliderVelocity = computeColliderPointVelocity(currState, *prevState, r, sample.center, colliderDt);
         }
 
         const glm::vec3 v = body->V + glm::cross(body->omega, rRel) - colliderVelocity;
@@ -285,13 +285,14 @@ void RigidSolver::resolveSdfCollision(
 }
 
 void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry, const float colliderDt) {
-    auto& planes = registry.storage<Plane>();
-    auto& transforms = registry.storage<Transform>();
+    auto& planes = registry.storage(Plane);
+    auto& transforms = registry.storage(Transform);
     if (!planes.has(e) || !transforms.has(e)) return;
 
-    const Transform& t = transforms.get(e);
-    const glm::vec3 p0 = t.position;
-    const glm::vec3 nRaw = t.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+    const Component& t = transforms.get(e);
+    const glm::vec3 p0 = t.get<glm::vec3>("position");
+    const glm::quat tQuat = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+    const glm::vec3 nRaw = tQuat * glm::vec3(0.0f, 1.0f, 0.0f);
     const float nLen = glm::length(nRaw);
     if (!std::isfinite(nLen) || nLen <= 1e-8f) return;
     const glm::vec3 n = nRaw / nLen;
@@ -306,16 +307,17 @@ void RigidSolver::resolvePlaneCollision(const Entity& e, Registry& registry, con
 }
 
 void RigidSolver::resolveBoxCollision(const Entity& e, Registry& registry, const float colliderDt) {
-    auto& boxes = registry.storage<Box>();
-    auto& transforms = registry.storage<Transform>();
+    auto& boxes = registry.storage(Box);
+    auto& transforms = registry.storage(Transform);
     if (!boxes.has(e) || !transforms.has(e)) return;
 
-    const Transform& t = transforms.get(e);
-    const glm::vec3 center = t.position;
-    const glm::vec3 halfExtents = glm::max(glm::abs(t.scale), glm::vec3(1e-4f));
-    const glm::quat invRot = glm::inverse(glm::normalize(t.rotation));
+    const Component& t = transforms.get(e);
+    const glm::vec3 center = t.get<glm::vec3>("position");
+    const glm::vec3 halfExtents = glm::max(glm::abs(t.get<glm::vec3>("scale")), glm::vec3(1e-4f));
+    const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+    const glm::quat invRot = glm::inverse(glm::normalize(rot));
 
-    const SdfSampler sdfSampler = [center, halfExtents, invRot, rot = t.rotation](const glm::vec3& p, SdfContactSample& sample) -> bool {
+    const SdfSampler sdfSampler = [center, halfExtents, invRot, rot](const glm::vec3& p, SdfContactSample& sample) -> bool {
         const glm::vec3 local = invRot * (p - center);
         const glm::vec3 q = glm::abs(local) - halfExtents;
 
@@ -349,15 +351,15 @@ void RigidSolver::resolveBoxCollision(const Entity& e, Registry& registry, const
 }
 
 void RigidSolver::resolveSphereCollision(const Entity& e, Registry& registry, const float colliderDt) {
-    auto& spheres = registry.storage<Sphere>();
-    auto& transforms = registry.storage<Transform>();
-    if (!spheres.has(e) || !transforms.has(e)) return;
+    auto& transforms = registry.storage(Transform);
+    if (!registry.has(e, Sphere) || !transforms.has(e)) return;
 
-    const Sphere& sphere = spheres.get(e);
-    const Transform& t = transforms.get(e);
-    const glm::vec3 center = t.position;
-    const float maxScale = std::max(std::max(std::abs(t.scale.x), std::abs(t.scale.y)), std::abs(t.scale.z));
-    const float radius = std::max(1e-4f, sphere.radius * maxScale);
+    const Component& sphere = registry.get(e, Sphere);
+    const Component& t = transforms.get(e);
+    const glm::vec3 center = t.get<glm::vec3>("position");
+    const glm::vec3 tScale = t.get<glm::vec3>("scale");
+    const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
+    const float radius = std::max(1e-4f, sphere.get<float>("radius") * maxScale);
     const SdfSampler sdfSampler = [center, radius](const glm::vec3& p, SdfContactSample& sample) -> bool {
         const glm::vec3 delta = p - center;
         const float deltaLen = glm::length(delta);

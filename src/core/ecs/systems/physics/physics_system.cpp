@@ -6,18 +6,17 @@
 
 #include "physics_solver.hpp"
 
-#include "../animation_system.hpp"
-#include "../transform_system.hpp"
-#include "core/core.hpp"
-#include "core/scene/scene.hpp"
 #include "core/animation_handler.hpp"
+#include "core/core.hpp"
+#include "core/ecs/systems/animation_system.hpp"
+#include "core/scene/scene.hpp"
 
 namespace ecs {
 
 namespace physics_detail {
 
 static std::unordered_map<ecs::Entity, BodyState> gStates;
-static std::unordered_map<ecs::Entity, ecs::Transform> gPrevColliderTransforms;
+static std::unordered_map<ecs::Entity, physics_detail::ColliderState> gPrevColliderTransforms;
 static int gPrevSolverFrame = -1;
 static int gPrevSystemFrame = -1;
 static bool gIsBaking = false;
@@ -30,11 +29,10 @@ struct BakeState {
 };
 static BakeState gBakeState;
 
-bool getPrevColliderTransform(const Entity& entity, Transform& outTransform) {
+std::optional<ColliderState> getPrevColliderTransform(const Entity& entity) {
     auto it = gPrevColliderTransforms.find(entity);
-    if (it == gPrevColliderTransforms.end()) return false;
-    outTransform = it->second;
-    return true;
+    if (it == gPrevColliderTransforms.end()) return std::nullopt;
+    return it->second;
 }
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax) {
@@ -80,43 +78,42 @@ void applyBodySnapshot(BodyAttributes& body, const BodySnapshot& snapshot) {
 void syncFromBody(
     const BodyAttributes& body,
     const glm::vec3& localCenterScaled,
-    ecs::Transform& transform,
-    ecs::RigidBody& rigidBody
+    ecs::Component& transform,
+    ecs::Component& rigidBody
 ) {
     const glm::quat newRot = glm::normalize(body.q);
-    const glm::vec3 center = body.X;
-    const glm::vec3 newPos = center - (newRot * localCenterScaled);
-    transform.setRotation(newRot);
-    transform.setPosition(newPos);
-    rigidBody.linearVelocity = body.V;
-    rigidBody.angularVelocity = body.omega;
+    const glm::vec3 newPos = body.X - (newRot * localCenterScaled);
+    transform.set<glm::vec3>("position", newPos);
+    transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(newRot)));
+    rigidBody.set<glm::vec3>("linear_velocity", body.V);
+    rigidBody.set<glm::vec3>("angular_velocity", body.omega);
 }
 
 FrameSnapshot captureFrameSnapshot(
     const BodyAttributes& body,
-    const ecs::Transform& transform,
-    const ecs::RigidBody& rigidBody
+    const ecs::Component& transform,
+    const ecs::Component& rigidBody
 ) {
     return FrameSnapshot{
         .body = captureBodySnapshot(body),
-        .position = transform.position,
-        .rotation = transform.rotation,
-        .linearVelocity = rigidBody.linearVelocity,
-        .angularVelocity = rigidBody.angularVelocity,
+        .position = transform.get<glm::vec3>("position"),
+        .rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))),
+        .linearVelocity = rigidBody.get<glm::vec3>("linear_velocity"),
+        .angularVelocity = rigidBody.get<glm::vec3>("angular_velocity"),
     };
 }
 
 void applyFrameSnapshot(
     BodyAttributes& body,
     const FrameSnapshot& snapshot,
-    ecs::Transform& transform,
-    ecs::RigidBody& rigidBody
+    ecs::Component& transform,
+    ecs::Component& rigidBody
 ) {
     applyBodySnapshot(body, snapshot.body);
-    transform.setPosition(snapshot.position);
-    transform.setRotation(snapshot.rotation);
-    rigidBody.linearVelocity = snapshot.linearVelocity;
-    rigidBody.angularVelocity = snapshot.angularVelocity;
+    transform.set<glm::vec3>("position", snapshot.position);
+    transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snapshot.rotation))));
+    rigidBody.set<glm::vec3>("linear_velocity", snapshot.linearVelocity);
+    rigidBody.set<glm::vec3>("angular_velocity", snapshot.angularVelocity);
 }
 
 } // namespace physics_detail
@@ -124,16 +121,15 @@ void applyFrameSnapshot(
 void physicsSolverSystem(Registry& registry) {
     using namespace ecs::physics_detail;
 
-    auto& rigidBodies = registry.storage<ecs::RigidBody>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& meshRefs = registry.storage<ecs::MeshRef>();
-    auto& boxes = registry.storage<ecs::Box>();
-    auto& spheres = registry.storage<ecs::Sphere>();
-    auto& colliders = registry.storage<ecs::Collider>();
+    auto& rigidBodies = registry.storage(RigidBody);
+    auto& transforms = registry.storage(Transform);
+    auto& meshes = registry.storage(MeshRef);
+    auto& boxes = registry.storage(Box);
+    auto& colliders = registry.storage(Collider);
     auto& meshAssets = Core::getScene().getMeshAssets();
 
     for (auto it = gStates.begin(); it != gStates.end();) {
-        if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshRefs.has(it->first) && !boxes.has(it->first) && !spheres.has(it->first))) {
+        if (!rigidBodies.has(it->first) || !transforms.has(it->first) || (!meshes.has(it->first) && !boxes.has(it->first) && !registry.has(it->first, Sphere))) {
             it = gStates.erase(it);
         } else {
             ++it;
@@ -150,16 +146,16 @@ void physicsSolverSystem(Registry& registry) {
     for (const ecs::Entity& e : rigidBodies.entities()) {
         if (!transforms.has(e)) continue;
 
-        ecs::RigidBody& rb = rigidBodies.get(e);
-        ecs::Transform& t = transforms.get(e);
-        const bool hasMesh = meshRefs.has(e);
+        Component& rb = rigidBodies.get(e);
+        Component& t = transforms.get(e);
+        const bool hasMesh = meshes.has(e);
         const bool hasBox = boxes.has(e);
-        const bool hasSphere = spheres.has(e);
+        const bool hasSphere = registry.has(e, Sphere);
         if (!hasMesh && !hasBox && !hasSphere) continue;
 
         MeshHandle meshHandle = -1;
         if (hasMesh) {
-            meshHandle = meshRefs.get(e).handle;
+            meshHandle = meshes.get(e).get<int>("handle");
             if (meshHandle < 0 || static_cast<size_t>(meshHandle) >= meshAssets.size()) continue;
         }
 
@@ -183,50 +179,56 @@ void physicsSolverSystem(Registry& registry) {
                 localHalfExtents = glm::vec3(1.0f);
             } else {
                 localCenter = glm::vec3(0.0f);
-                localHalfExtents = glm::vec3(spheres.get(e).radius);
+                localHalfExtents = glm::vec3(registry.get(e, Sphere).get<float>("radius"));
             }
 
             const auto& safeExtent = [](float v) { return std::max(std::abs(v), 1e-3f); };
 
-            glm::vec3 scaledHalfExtents = glm::abs(t.scale) * localHalfExtents;
+            const glm::vec3 tScale = t.get<glm::vec3>("scale");
+            glm::vec3 scaledHalfExtents = glm::abs(tScale) * localHalfExtents;
             scaledHalfExtents.x = safeExtent(scaledHalfExtents.x);
             scaledHalfExtents.y = safeExtent(scaledHalfExtents.y);
             scaledHalfExtents.z = safeExtent(scaledHalfExtents.z);
 
             BodyState state;
-            state.localCenterScaled = localCenter * t.scale;
+            state.localCenterScaled = localCenter * tScale;
+            const float density = rb.get<float>("density");
+            const glm::vec3 linVel = rb.get<glm::vec3>("linear_velocity");
+            const glm::vec3 angVel = rb.get<glm::vec3>("angular_velocity");
+
             if (hasSphere) {
-                const float maxScale = std::max(std::max(std::abs(t.scale.x), std::abs(t.scale.y)), std::abs(t.scale.z));
-                const float radius = std::max(1e-4f, spheres.get(e).radius * maxScale);
+                const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
+                const float radius = std::max(1e-4f, registry.get(e, Sphere).get<float>("radius") * maxScale);
                 state.body = std::make_unique<RigidSphere>(
                     radius,
-                    rb.density,
-                    glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z),
-                    glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z)
+                    density,
+                    glm::vec3(linVel.x, linVel.y, linVel.z),
+                    glm::vec3(angVel.x, angVel.y, angVel.z)
                 );
             } else {
                 state.body = std::make_unique<RigidBox>(
                     scaledHalfExtents.x * 2.0f,
                     scaledHalfExtents.y * 2.0f,
                     scaledHalfExtents.z * 2.0f,
-                    rb.density,
-                    glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z),
-                    glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z)
+                    density,
+                    glm::vec3(linVel.x, linVel.y, linVel.z),
+                    glm::vec3(angVel.x, angVel.y, angVel.z)
                 );
             }
 
-            const glm::vec3 worldCenter = t.position + (t.rotation * state.localCenterScaled);
+            const glm::quat tQuat = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+            const glm::vec3 worldCenter = t.get<glm::vec3>("position") + (tQuat * state.localCenterScaled);
             state.body->X = glm::vec3(worldCenter.x, worldCenter.y, worldCenter.z);
-            state.body->q = glm::normalize(t.rotation);
+            state.body->q = glm::normalize(tQuat);
             state.body->R = glm::mat3_cast(state.body->q);
-            state.body->P = state.body->M * glm::vec3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z);
+            state.body->P = state.body->M * glm::vec3(linVel.x, linVel.y, linVel.z);
             state.body->Iinv = state.body->R * state.body->I0inv * glm::transpose(state.body->R);
             const glm::mat3 I = glm::inverse(state.body->Iinv);
-            state.body->L = I * glm::vec3(rb.angularVelocity.x, rb.angularVelocity.y, rb.angularVelocity.z);
+            state.body->L = I * glm::vec3(angVel.x, angVel.y, angVel.z);
 
             state.solver.init(state.body.get());
             state.solver.setGravity(
-                rb.useGravity ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f)
+                rb.get<bool>("use_gravity") ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f)
             );
             state.initializedFrame = currFrame;
             state.snapshots.clear();
@@ -240,7 +242,7 @@ void physicsSolverSystem(Registry& registry) {
 
         // TODO: manually set the gravity so it is not an hardcoded value
         state.solver.setGravity(
-            rb.useGravity ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f)
+            rb.get<bool>("use_gravity") ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f)
         );
 
         auto exact = state.snapshots.find(currFrame);
@@ -293,7 +295,11 @@ void physicsSolverSystem(Registry& registry) {
     if (gIsBaking) {
         for (const ecs::Entity& e : colliders.entities()) {
             if (!transforms.has(e)) continue;
-            gPrevColliderTransforms.insert_or_assign(e, transforms.get(e));
+            const Component& tc = transforms.get(e);
+            gPrevColliderTransforms.insert_or_assign(e, ColliderState{
+                .position = tc.get<glm::vec3>("position"),
+                .rotation = tc.get<glm::vec3>("rotation"),
+            });
         }
     }
 }
@@ -337,7 +343,6 @@ void physicsSystem(Registry& registry) {
     if (gBakeState.inProgress) {
         Core::getAnimation().reset(gBakeState.nextFrame);
         transformAnimationSystem(registry);
-        transformSystem(registry);
         physicsSolverSystem(registry);
         Core::requestAccumulationRestart();
 
@@ -357,17 +362,16 @@ void physicsSystem(Registry& registry) {
     if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationRestartPending()) return;
     prevFrame = Core::getAnimation().getFrame();
 
-    auto& rigidBodies = registry.storage<ecs::RigidBody>();
-    auto& transforms = registry.storage<ecs::Transform>();
-    auto& meshRefs = registry.storage<ecs::MeshRef>();
-    auto& boxes = registry.storage<ecs::Box>();
-    auto& spheres = registry.storage<ecs::Sphere>();
+    auto& rigidBodies = registry.storage(RigidBody);
+    auto& transforms = registry.storage(Transform);
+    auto& meshes = registry.storage(MeshRef);
+    auto& boxes = registry.storage(Box);
 
     // Remove states that no longer points to proper rigid bodies
     for (auto it = gStates.begin(); it != gStates.end();) {
         if (!rigidBodies.has(it->first) || !transforms.has(it->first)) {
             it = gStates.erase(it);
-        } else if (!meshRefs.has(it->first) && !boxes.has(it->first) && !spheres.has(it->first)) {
+        } else if (!meshes.has(it->first) && !boxes.has(it->first) && !registry.has(it->first, Sphere)) {
             it = gStates.erase(it);
         } else {
             ++it;
@@ -381,12 +385,12 @@ void physicsSystem(Registry& registry) {
     // Apply the physics transform
     bool changed = false;
     for (const ecs::Entity& e : rigidBodies.entities()) {
-        if (!transforms.has(e) || (!meshRefs.has(e) && !boxes.has(e) && !spheres.has(e))) continue;
+        if (!transforms.has(e) || (!meshes.has(e) && !boxes.has(e) && !registry.has(e, Sphere))) continue;
         auto it = gStates.find(e);
         if (it == gStates.end()) continue;
 
-        ecs::Transform& t = transforms.get(e);
-        ecs::RigidBody& rb = rigidBodies.get(e);
+        Component& t = transforms.get(e);
+        Component& rb = rigidBodies.get(e);
         BodyState& state = it->second;
         auto snap = state.snapshots.find(currFrame);
         if (snap == state.snapshots.end()) continue;
