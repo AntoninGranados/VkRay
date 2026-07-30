@@ -6,7 +6,7 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/core.hpp"
-#include "core/animation_handler.hpp"
+#include "core/animation/animation_handler.hpp"
 #include "core/parameters/parameters.hpp"
 
 void RenderProgressPanel::content() {

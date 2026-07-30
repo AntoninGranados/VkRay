@@ -7,7 +7,7 @@
 #include "VkSmol/frame_context.hpp"
 #include "VkSmol/platform/platform.hpp"
 
-#include "core/animation_handler.hpp"
+#include "core/animation/animation_handler.hpp"
 #include "core/core_renderer.hpp"
 #include "core/parameters/parameters.hpp"
 #include "core/parameters/parameter_serializer.hpp"

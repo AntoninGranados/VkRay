@@ -50,11 +50,14 @@ private:
     std::vector<Material>* materials = nullptr;
     std::vector<MeshAsset>* meshAssets = nullptr;
 
-    static void beginDraw(void* id, std::function<void(void)> remove) {
+    static bool drawField(Component& component, const Field& schema);
+
+    static void beginDraw(void* id, std::function<void()> remove) {
         ImGui::PushID(id);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_Separator));
         ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 
         if (ImGui::Button("-##Remove", { 32, 0 })) {
@@ -66,7 +69,7 @@ private:
 
     static void endDraw() {
         ImGui::EndChild();
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(4);
         ImGui::PopID();
     }
 };

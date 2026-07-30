@@ -2,32 +2,37 @@
 
 #include "imgui/imgui.h"
 
-bool drawPrincipledUI(Material& material) {
+#include "core/core.hpp"
+#include "core/scene/scene.hpp"
+#include "editor/ui_utils.hpp"
+
+static bool drawPrincipledUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("Roughness:");
+    ui::drawKeyframeButton(handle, "roughness"); ImGui::Text("Roughness:");
     if (ImGui::SliderFloat("##Mat Roughness", &material.roughness, 0.0f, 1.0f))
         updated = true;
 
-    ImGui::Text("Metalness:");
+    ui::drawKeyframeButton(handle, "metalness"); ImGui::Text("Metalness:");
     if (ImGui::SliderFloat("##Mat Metalness", &material.metalness, 0.0f, 1.0f))
         updated = true;
 
-    ImGui::Text("IoR:");
+    ui::drawKeyframeButton(handle, "ior"); ImGui::Text("IoR:");
     if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01f, 1.0f, FLT_MAX))
         updated = true;
 
-    ImGui::Text("Transmission:");
+    ui::drawKeyframeButton(handle, "transmission"); ImGui::Text("Transmission:");
     if (ImGui::SliderFloat("##Mat Transmission", &material.transmission, 0.0f, 1.0f))
         updated = true;
 
     if (material.transmission > 0.0f) {
-        ImGui::Text("Density:");
+        ui::drawKeyframeButton(handle, "density"); ImGui::Text("Density:");
         if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
             updated = true;
     }
@@ -36,15 +41,16 @@ bool drawPrincipledUI(Material& material) {
     return updated;
 }
 
-bool drawEmissiveUI(Material& material) {
+static bool drawEmissiveUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("Intensity:");
+    ui::drawKeyframeButton(handle, "emissionStrength"); ImGui::Text("Intensity:");
     if (ImGui::DragFloat("##Mat Intensity", &material.emissionStrength, 0.1f, 0.0f, FLT_MAX))
         updated = true;
 
@@ -52,11 +58,12 @@ bool drawEmissiveUI(Material& material) {
     return updated;
 }
 
-bool drawLambertianUI(Material& material) {
+static bool drawLambertianUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
@@ -64,15 +71,16 @@ bool drawLambertianUI(Material& material) {
     return updated;
 }
 
-bool drawGgxMetalUI(Material& material) {
+static bool drawGgxMetalUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("Roughness:");
+    ui::drawKeyframeButton(handle, "roughness"); ImGui::Text("Roughness:");
     if (ImGui::SliderFloat("##Mat Roughness", &material.roughness, 0.0f, 1.0f))
         updated = true;
 
@@ -80,19 +88,20 @@ bool drawGgxMetalUI(Material& material) {
     return updated;
 }
 
-bool drawGgxGlossyUI(Material& material) {
+static bool drawGgxGlossyUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("Roughness:");
+    ui::drawKeyframeButton(handle, "roughness"); ImGui::Text("Roughness:");
     if (ImGui::SliderFloat("##Mat Roughness", &material.roughness, 0.0f, 1.0f))
         updated = true;
 
-    ImGui::Text("IoR:");
+    ui::drawKeyframeButton(handle, "ior"); ImGui::Text("IoR:");
     if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01f, 1.0f, FLT_MAX))
         updated = true;
 
@@ -100,33 +109,34 @@ bool drawGgxGlossyUI(Material& material) {
     return updated;
 }
 
-bool drawDielectricUI(Material& material) {
+static bool drawDielectricUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("IoR:");
+    ui::drawKeyframeButton(handle, "ior"); ImGui::Text("IoR:");
     if (ImGui::DragFloat("##Mat IoR", &material.ior, 0.01f, 1.0f, FLT_MAX))
         updated = true;
 
-    ImGui::Text("Roughness:");
+    ui::drawKeyframeButton(handle, "roughness"); ImGui::Text("Roughness:");
     if (ImGui::SliderFloat("##Mat Roughness", &material.roughness, 0.0f, 1.0f))
         updated = true;
 
-    ImGui::Text("Density:");
+    ui::drawKeyframeButton(handle, "density"); ImGui::Text("Density:");
     if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
         updated = true;
 
     if (material.density > 0.0f) {
-        ImGui::Text("Scatter albedo:");
+        ui::drawKeyframeButton(handle, "transmission"); ImGui::Text("Scatter albedo:");
         if (ImGui::SliderFloat("##Mat Transmission", &material.transmission, 0.0f, 1.0f))
             updated = true;
 
         if (material.transmission > 0.0f) {
-            ImGui::Text("Anisotropic:");
+            ui::drawKeyframeButton(handle, "anisotropic"); ImGui::Text("Anisotropic:");
             if (ImGui::DragFloat("##Mat Anisotropic", &material.anisotropic, 0.01f, -1.0f, 1.0f))
                 updated = true;
         }
@@ -136,19 +146,20 @@ bool drawDielectricUI(Material& material) {
     return updated;
 }
 
-bool drawVolumeUI(Material& material) {
+static bool drawVolumeUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
-    ImGui::Text("Density:");
+    ui::drawKeyframeButton(handle, "density"); ImGui::Text("Density:");
     if (ImGui::DragFloat("##Mat Density", &material.density, 0.01f, 0.0f, FLT_MAX))
         updated = true;
 
-    ImGui::Text("Anisotropic:");
+    ui::drawKeyframeButton(handle, "anisotropic"); ImGui::Text("Anisotropic:");
     if (ImGui::SliderFloat("##Mat Anisotropic", &material.anisotropic, -1.0f, 1.0))
         updated = true;
 
@@ -156,11 +167,12 @@ bool drawVolumeUI(Material& material) {
     return updated;
 }
 
-bool drawProgrammableUI(Material& material) {
+static bool drawProgrammableUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Albedo:");
+    ui::drawKeyframeButton(handle, "albedo"); ImGui::Text("Albedo:");
     if (ImGui::ColorEdit3("##Mat Albedo", glm::value_ptr(material.albedo)))
         updated = true;
 
@@ -168,7 +180,8 @@ bool drawProgrammableUI(Material& material) {
     return updated;
 }
 
-bool drawMaterialUI(Material& material) {
+bool drawMaterialUI(MaterialHandle handle) {
+    Material& material = Core::getScene().getMaterials()[handle];
     bool updated = false;
     MaterialType prevType = material.type;
 
@@ -189,9 +202,9 @@ bool drawMaterialUI(Material& material) {
     if (material.type != prevType) {
         switch (material.type) {
             case MaterialType::Principled:
-                material.roughness    = 0.3f;
-                material.metalness    = 0.0f;
-                material.ior          = 1.5f;
+                material.roughness = 0.3f;
+                material.metalness = 0.0f;
+                material.ior = 1.5f;
                 material.transmission = 0.0f;
                 break;
             case MaterialType::Emissive:
@@ -202,14 +215,14 @@ bool drawMaterialUI(Material& material) {
                 break;
             case MaterialType::GgxGlossy:
                 material.roughness = 0.2f;
-                material.ior       = 1.5f;
+                material.ior = 1.5f;
                 break;
             case MaterialType::Dielectric:
-                material.albedo        = glm::vec3(1.0f);
-                material.roughness     = 0.0f;
-                material.ior           = 1.5f;
-                material.density       = 0.0f;
-                material.transmission  = 0.0f;
+                material.albedo = glm::vec3(1.0f);
+                material.roughness = 0.0f;
+                material.ior = 1.5f;
+                material.density = 0.0f;
+                material.transmission = 0.0f;
                 break;
             default:
                 break;
@@ -217,14 +230,14 @@ bool drawMaterialUI(Material& material) {
     }
 
     switch (material.type) {
-        case MaterialType::Principled:   updated |= drawPrincipledUI(material);   break;
-        case MaterialType::Emissive:     updated |= drawEmissiveUI(material);     break;
-        case MaterialType::Lambertian:   updated |= drawLambertianUI(material);   break;
-        case MaterialType::GgxMetal:     updated |= drawGgxMetalUI(material);     break;
-        case MaterialType::GgxGlossy:    updated |= drawGgxGlossyUI(material);    break;
-        case MaterialType::Dielectric:   updated |= drawDielectricUI(material);   break;
-        case MaterialType::Volume:       updated |= drawVolumeUI(material);       break;
-        case MaterialType::Programmable: updated |= drawProgrammableUI(material); break;
+        case MaterialType::Principled:   updated |= drawPrincipledUI(handle);   break;
+        case MaterialType::Emissive:     updated |= drawEmissiveUI(handle);     break;
+        case MaterialType::Lambertian:   updated |= drawLambertianUI(handle);   break;
+        case MaterialType::GgxMetal:     updated |= drawGgxMetalUI(handle);     break;
+        case MaterialType::GgxGlossy:    updated |= drawGgxGlossyUI(handle);    break;
+        case MaterialType::Dielectric:   updated |= drawDielectricUI(handle);   break;
+        case MaterialType::Volume:       updated |= drawVolumeUI(handle);       break;
+        case MaterialType::Programmable: updated |= drawProgrammableUI(handle); break;
     }
 
     return updated;

@@ -6,7 +6,7 @@
 
 #include "physics_solver.hpp"
 
-#include "core/animation_handler.hpp"
+#include "core/animation/animation_handler.hpp"
 #include "core/core.hpp"
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/scene/scene.hpp"
@@ -182,7 +182,7 @@ void physicsSolverSystem(Registry& registry) {
                 localHalfExtents = glm::vec3(registry.get(e, Sphere).get<float>("radius"));
             }
 
-            const auto& safeExtent = [](float v) { return std::max(std::abs(v), 1e-3f); };
+            const auto safeExtent = [](float v) { return std::max(std::abs(v), 1e-3f); };
 
             const glm::vec3 tScale = t.get<glm::vec3>("scale");
             glm::vec3 scaledHalfExtents = glm::abs(tScale) * localHalfExtents;
@@ -199,32 +199,26 @@ void physicsSolverSystem(Registry& registry) {
             if (hasSphere) {
                 const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
                 const float radius = std::max(1e-4f, registry.get(e, Sphere).get<float>("radius") * maxScale);
-                state.body = std::make_unique<RigidSphere>(
-                    radius,
-                    density,
-                    glm::vec3(linVel.x, linVel.y, linVel.z),
-                    glm::vec3(angVel.x, angVel.y, angVel.z)
-                );
+                state.body = std::make_unique<RigidSphere>(radius, density, linVel, angVel);
             } else {
                 state.body = std::make_unique<RigidBox>(
                     scaledHalfExtents.x * 2.0f,
                     scaledHalfExtents.y * 2.0f,
                     scaledHalfExtents.z * 2.0f,
                     density,
-                    glm::vec3(linVel.x, linVel.y, linVel.z),
-                    glm::vec3(angVel.x, angVel.y, angVel.z)
+                    linVel,
+                    angVel
                 );
             }
 
             const glm::quat tQuat = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-            const glm::vec3 worldCenter = t.get<glm::vec3>("position") + (tQuat * state.localCenterScaled);
-            state.body->X = glm::vec3(worldCenter.x, worldCenter.y, worldCenter.z);
+            state.body->X = t.get<glm::vec3>("position") + (tQuat * state.localCenterScaled);
             state.body->q = glm::normalize(tQuat);
             state.body->R = glm::mat3_cast(state.body->q);
-            state.body->P = state.body->M * glm::vec3(linVel.x, linVel.y, linVel.z);
+            state.body->P = state.body->M * linVel;
             state.body->Iinv = state.body->R * state.body->I0inv * glm::transpose(state.body->R);
             const glm::mat3 I = glm::inverse(state.body->Iinv);
-            state.body->L = I * glm::vec3(angVel.x, angVel.y, angVel.z);
+            state.body->L = I * angVel;
 
             state.solver.init(state.body.get());
             state.solver.setGravity(
@@ -342,7 +336,7 @@ void physicsSystem(Registry& registry) {
 
     if (gBakeState.inProgress) {
         Core::getAnimation().reset(gBakeState.nextFrame);
-        transformAnimationSystem(registry);
+        animationSystem(registry);
         physicsSolverSystem(registry);
         Core::requestAccumulationRestart();
 

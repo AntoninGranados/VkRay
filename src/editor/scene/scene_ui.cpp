@@ -11,7 +11,7 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/component_ui_registry.hpp"
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 #include "material_ui.hpp"
 
 void SceneUI::drawInspectors(Scene& scene, SceneSelection& selection) {
@@ -131,8 +131,7 @@ void SceneUI::drawSelectedMaterialUI(Scene& scene, SceneSelection& selection) {
     ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
     ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
     {
-        auto& mat = scene.getMaterials()[static_cast<size_t>(selection.material)];
-        if (drawMaterialUI(mat)) scene.update();
+        if (drawMaterialUI(selection.material)) scene.update();
     }
     ImGui::End();
 

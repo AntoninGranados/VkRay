@@ -1,144 +1,22 @@
 #include "animation_system.hpp"
 
-#include <vector>
-
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-
-#include "core/animation_handler.hpp"
+#include "core/animation/animation_store.hpp"
 #include "core/core.hpp"
-#include "core/ecs/components/animation/transform_anim.hpp"
-#include "core/ecs/components/animation/material_anim.hpp"
 #include "core/scene/scene.hpp"
 
 namespace ecs {
 
-void transformAnimationSystem(Registry& registry) {
-    static int prevFrame = 0;
-    if (Core::getAnimation().isPaused() && prevFrame == Core::getAnimation().getFrame() && !Core::isAccumulationRestartPending()) return;
-    prevFrame = Core::getAnimation().getFrame();
-
-    /* TODO: rewire to new storage
-    auto& transformAnims = registry.storage<ecs::TransformAnim>();
-    auto& transforms = registry.storage(Transform);
-
-    for (const auto& e : transformAnims.entities()) {
-        if (!transforms.has(e)) continue;
-        Component& transform = transforms.get(e);
-        const int currFrame = Core::getAnimation().getFrame();
-
-        auto& anim = transformAnims.get(e);
-        bool changed = false;
-
-        if (!anim.positionKeys.empty()) {
-            if (currFrame < anim.positionKeys.front().frame) {
-                transform.set<glm::vec3>("position", anim.positionKeys.front().value);
-                changed = true;
-            } else if (currFrame >= anim.positionKeys.back().frame) {
-                transform.set<glm::vec3>("position", anim.positionKeys.back().value);
-                changed = true;
-            } else {
-                KeyVec3 prevKf = { 0, anim.positionKeys[0].value };
-                KeyVec3 nextKf = anim.positionKeys[0];
-                for (const auto& kf : anim.positionKeys) {
-                    nextKf = kf;
-                    if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
-                    prevKf = nextKf;
-                }
-                const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
-                transform.set<glm::vec3>("position", prevKf.value * (1.0f - t) + nextKf.value * t);
-                changed = true;
-            }
-        }
-
-        if (!anim.rotationKeys.empty()) {
-            if (currFrame < anim.rotationKeys.front().frame) {
-                const glm::quat q = glm::normalize(anim.rotationKeys.front().value);
-                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
-                changed = true;
-            } else if (currFrame >= anim.rotationKeys.back().frame) {
-                const glm::quat q = glm::normalize(anim.rotationKeys.back().value);
-                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
-                changed = true;
-            } else {
-                KeyQuat prevKf = { 0, anim.rotationKeys[0].value };
-                KeyQuat nextKf = anim.rotationKeys[0];
-                for (const auto& kf : anim.rotationKeys) {
-                    nextKf = kf;
-                    if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
-                    prevKf = nextKf;
-                }
-                const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
-                const glm::quat q0 = glm::normalize(prevKf.value);
-                glm::quat q1 = glm::normalize(nextKf.value);
-                if (glm::dot(q0, q1) < 0.0f) q1 = -q1; // Shortest-path interpolation.
-                const glm::quat q = glm::slerp(q0, q1, t);
-                transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
-                changed = true;
-            }
-        }
-
-        if (!anim.scaleKeys.empty()) {
-            if (currFrame < anim.scaleKeys.front().frame) {
-                transform.set<glm::vec3>("scale", anim.scaleKeys.front().value);
-                changed = true;
-            } else if (currFrame >= anim.scaleKeys.back().frame) {
-                transform.set<glm::vec3>("scale", anim.scaleKeys.back().value);
-                changed = true;
-            } else {
-                KeyVec3 prevKf = { 0, anim.scaleKeys[0].value };
-                KeyVec3 nextKf = anim.scaleKeys[0];
-                for (const auto& kf : anim.scaleKeys) {
-                    nextKf = kf;
-                    if (prevKf.frame <= currFrame && currFrame < nextKf.frame) break;
-                    prevKf = nextKf;
-                }
-                const float t = static_cast<float>(currFrame - prevKf.frame) / static_cast<float>(nextKf.frame - prevKf.frame);
-                transform.set<glm::vec3>("scale", prevKf.value * (1.0f - t) + nextKf.value * t);
-                changed = true;
-            }
-        }
-
-        if (changed) {
-            Core::requestAccumulationRestart();
-        }
-    }
-    */
-}
-
-void materialAnimationSystem(Registry& registry) {
+void animationSystem(Registry& registry) {
     static int prevFrame = -1;
     const int currFrame = Core::getAnimation().getFrame();
     if (currFrame == prevFrame && !Core::isAccumulationRestartPending()) return;
     prevFrame = currFrame;
 
-    /* TODO: rewire to new storage
-    auto& materialAnims = registry.storage<ecs::MaterialAnim>();
-    auto& materialRefs  = registry.storage(MaterialRef);
-    auto& materials     = Core::getScene().getMaterials();
-
-    for (const auto& e : materialAnims.entities()) {
-        if (!materialRefs.has(e)) continue;
-
-        auto&     anim   = materialAnims.get(e);
-        const int handle = materialRefs.get(e).get<int>("handle");
-
-        if (handle < 0 || handle >= static_cast<int>(materials.size())) continue;
-
-        const KeyMaterial kf = anim.getKeyframe(currFrame);
-        auto& mat = materials[handle];
-
-        mat.roughness        = kf.roughness;
-        mat.metalness        = kf.metalness;
-        mat.ior              = kf.ior;
-        mat.transmission     = kf.transmission;
-        mat.emissionStrength = kf.emissionStrength;
-    }
-
-    if (frameChanged) Core::requestAccumulationRestart();
-    */
+    AnimationStore& store = Core::getScene().getAnimationStore();
+    if (store.isEmpty()) return;
+    store.evaluate(registry, float(currFrame));
+    store.evaluate(Core::getScene().getMaterials(), float(currFrame));
+    Core::requestAccumulationRestart();
 }
 
 } // namespace ecs

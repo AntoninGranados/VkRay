@@ -165,7 +165,6 @@ void Scene::pushCamera(std::string name, const glm::mat4& transform) {
     entities.push_back(e);
 }
 
-
 void Scene::bakePhysics() {
     ecs::bakePhysicsSimulation(registry);
 }
@@ -182,8 +181,6 @@ int Scene::getPhysicsBakeTotalFrames() const {
     return ecs::getPhysicsBakeTotalFrames();
 }
 
-
-
 bool Scene::checkUpdate() {
     if (updated) {
         updated = false;
@@ -195,8 +192,7 @@ bool Scene::checkUpdate() {
 // Private helpers
 void Scene::initSystems() {
     preUpdateScheduler.clear();
-    preUpdateScheduler.add(ecs::transformAnimationSystem);
-    preUpdateScheduler.add(ecs::materialAnimationSystem);
+    preUpdateScheduler.add(ecs::animationSystem);
     preUpdateScheduler.add(ecs::physicsSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
@@ -246,7 +242,7 @@ void Scene::resetSceneState() {
     entities.clear();
     materials.clear();
     meshAssets.clear();
-
+    animationStore.clear();
 }
 
 void Scene::ensureDefaultAssets() {

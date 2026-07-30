@@ -2,12 +2,8 @@
 
 #include <cmath>
 
-AnimationHandler::AnimationHandler(int endFrame, double fps):
-endFrame(endFrame), fps(fps) {
-    paused = true;
-    fixedDt = 1.0 / fps;
-    reset(0);
-}
+AnimationHandler::AnimationHandler(int endFrame, double fps)
+    : endFrame(endFrame), frame(0), time(0.0), fps(fps), dt(0.0), fixedDt(1.0 / fps), paused(true) {}
 
 void AnimationHandler::reset(double t) {
     time = t;
@@ -16,31 +12,29 @@ void AnimationHandler::reset(double t) {
 
 void AnimationHandler::reset(int _frame) {
     frame = _frame;
-    time = static_cast<float>(frame) / fps;
+    time = static_cast<double>(_frame) / fps;
 }
 
 void AnimationHandler::step(double _dt) {
     dt = _dt;
-    
-    int newFrame = static_cast<int>(std::floor((time + _dt) * fps));
+    const int newFrame = static_cast<int>(std::floor((time + _dt) * fps));
     if (newFrame >= endFrame) {
-        time = dt;
+        time = _dt;
         frame = 0;
     } else {
-        time += dt;
+        time += _dt;
         frame = newFrame;
     }
 }
 
-void AnimationHandler::stepFixed() {    
+void AnimationHandler::stepFixed() {
     dt = fixedDt;
-
-    int newFrame = frame + 1;
+    const int newFrame = frame + 1;
     if (newFrame >= endFrame) {
-        time = dt;
+        time = fixedDt;
         frame = 0;
     } else {
-        time += dt;
+        time += fixedDt;
         frame = newFrame;
     }
 }

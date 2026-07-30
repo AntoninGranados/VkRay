@@ -13,7 +13,7 @@
 #include "core/core.hpp"
 #include "core/parameters/parameters.hpp"
 #include "editor.hpp"
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 
 void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreResources) {
     VkSmol& engine = Core::getEngine();

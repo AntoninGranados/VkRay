@@ -13,7 +13,7 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 
 template <>
 bool ParameterUI::drawParameter(IntParameter& p) {

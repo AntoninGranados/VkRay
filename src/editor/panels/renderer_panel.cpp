@@ -6,7 +6,7 @@
 #include "core/core.hpp"
 #include "editor/editor.hpp"
 #include "editor/parameter_ui.hpp"
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 #include "utils/log.hpp"
 
 static void startRender(const char* paramPath, auto startFn) {

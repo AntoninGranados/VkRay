@@ -4,12 +4,12 @@ This plan will most likely be subjected to heavy modifications.
 
 ## v0.4 Renderer Architecture
 
-- [x] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
+- [X] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
   - Renderer owns pathtracing and compositing compute passes only; produces `OutputImage`
   - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
   - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer
   - Headless mode runs the renderer loop directly with no display layer
-- [x] **[0.4.1] Parameter system**: JSON-driven parameter system with a full type-safe API
+- [X] **[0.4.1] Parameter system**: JSON-driven parameter system with a full type-safe API
   - Parameters defined in `assets/parameters/parameters.json` with hierarchical paths
   - Template getter/setter/binder with constrained overloads (scalar, enum, vec)
   - Vec parameter types (ivec2–4, vec2–4) in editor, parser, and job overrides

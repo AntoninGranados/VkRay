@@ -4,7 +4,6 @@
 
 namespace ecs {
 
-void transformAnimationSystem(Registry& registry);
-void materialAnimationSystem(Registry& registry);
+void animationSystem(Registry& registry);
 
 } // namespace ecs

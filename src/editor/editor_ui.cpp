@@ -11,7 +11,7 @@
 
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
-#include "ui_constants.hpp"
+#include "ui_utils.hpp"
 
 EditorUi::EditorUi() {
     initStyle();
@@ -32,6 +32,7 @@ void EditorUi::initStyle() {
     style.WindowBorderSize  = 1.0f;
     style.FrameBorderSize   = 0.0f;
     style.WindowRounding    = ui::kWidgetRounding;
+    style.ChildRounding     = ui::kWidgetRounding;
     style.FrameRounding     = ui::kWidgetRounding;
     style.ScrollbarRounding = ui::kWidgetRounding;
     style.GrabRounding      = ui::kWidgetRounding;
@@ -66,7 +67,7 @@ void EditorUi::initStyle() {
     c[ImGuiCol_Header]                    = ui::kDraculaSurface;
     c[ImGuiCol_HeaderHovered]             = ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f);
     c[ImGuiCol_HeaderActive]              = ui::kDraculaPurple;
-    c[ImGuiCol_Separator]                 = ui::kDraculaSurface;
+    c[ImGuiCol_Separator]                 = ImVec4(c[ImGuiCol_TextDisabled].x, c[ImGuiCol_TextDisabled].y, c[ImGuiCol_TextDisabled].z, 0.5f);
     c[ImGuiCol_SeparatorHovered]          = ui::kDraculaPurple;
     c[ImGuiCol_SeparatorActive]           = ui::kDraculaPink;
     c[ImGuiCol_ResizeGrip]                = ui::kDraculaSurface;

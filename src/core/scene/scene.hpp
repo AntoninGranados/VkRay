@@ -8,6 +8,7 @@
 
 #include "VkSmol/engine.hpp"
 
+#include "core/animation/animation_store.hpp"
 #include "core/camera.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/ecs/registry.hpp"
@@ -72,6 +73,7 @@ public:
     const ecs::Registry& getRegistry() const { return registry; }
 
     Camera& getCamera() { return camera; }
+    AnimationStore& getAnimationStore() { return animationStore; }
     
     SceneGpuBuffers& getBuffers() { return gpuBuffers; }
     const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }
@@ -101,6 +103,7 @@ private:
     std::vector<MeshAsset> meshAssets;
 
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
+    AnimationStore animationStore;
 
     bool updated = false;
 

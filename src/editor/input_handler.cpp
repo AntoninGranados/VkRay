@@ -1,5 +1,7 @@
 #include "input_handler.hpp"
 
+#include <algorithm>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -8,7 +10,7 @@
 
 #include "VkSmol/platform/platform.hpp"
 
-#include "core/animation_handler.hpp"
+#include "core/animation/animation_handler.hpp"
 #include "core/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
@@ -60,6 +62,53 @@ void InputHandler::handlePreview(float dt) {
         spaceWasDown = true;
     } else {
         spaceWasDown = false;
+    }
+
+    constexpr float kRepeatDelay = 0.4f;
+    constexpr float kRepeatInterval = 0.05f;
+
+    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_LEFT)) {
+        AnimationHandler& anim = Core::getAnimation();
+        if (!leftWasDown) {
+            anim.reset(std::max(0, anim.getFrame() - 1));
+            anim.pause();
+            Core::requestAccumulationRestart();
+            leftRepeat = kRepeatDelay;
+        } else {
+            leftRepeat -= dt;
+            if (leftRepeat <= 0.0f) {
+                anim.reset(std::max(0, anim.getFrame() - 1));
+                anim.pause();
+                Core::requestAccumulationRestart();
+                leftRepeat += kRepeatInterval;
+            }
+        }
+        leftWasDown = true;
+    } else {
+        leftWasDown = false;
+        leftRepeat = 0.0f;
+    }
+
+    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_RIGHT)) {
+        AnimationHandler& anim = Core::getAnimation();
+        if (!rightWasDown) {
+            anim.reset(std::min(anim.getEndFrame() - 1, anim.getFrame() + 1));
+            anim.pause();
+            Core::requestAccumulationRestart();
+            rightRepeat = kRepeatDelay;
+        } else {
+            rightRepeat -= dt;
+            if (rightRepeat <= 0.0f) {
+                anim.reset(std::min(anim.getEndFrame() - 1, anim.getFrame() + 1));
+                anim.pause();
+                Core::requestAccumulationRestart();
+                rightRepeat += kRepeatInterval;
+            }
+        }
+        rightWasDown = true;
+    } else {
+        rightWasDown = false;
+        rightRepeat = 0.0f;
     }
 
     if (!blockKeyboardInput) {

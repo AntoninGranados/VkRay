@@ -11,7 +11,7 @@
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "editor/parameter_ui.hpp"
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 
 
 void ScenePanel::content() {
@@ -86,6 +86,7 @@ void ScenePanel::content() {
             if (ImGui::Button("+##Entity", ImVec2(32, 0))) openNewObjectPopup = true;
             if (ImGui::Button("-##Entity", ImVec2(32, 0)) && selection.entity >= 0) {
                 ecs::Entity e = scene.getEntities()[static_cast<size_t>(selection.entity)];
+                scene.getAnimationStore().remove(e);
                 scene.getRegistry().destroyEntity(e);
                 scene.getEntities().erase(std::next(scene.getEntities().begin(), selection.entity));
                 scene.update();

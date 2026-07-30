@@ -5,12 +5,9 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/ecs/components.hpp"
-#include "core/ecs/components/animation/transform_anim.hpp"
-
 #include "core/scene/asset/mesh.hpp"
-#include "core/animation_handler.hpp"
-#include "editor/ui_constants.hpp"
 #include "editor/scene/material_ui.hpp"
+#include "editor/ui_utils.hpp"
 
 namespace ecs {
 
@@ -19,7 +16,7 @@ ComponentUiRegistry& ComponentUiRegistry::get() {
     return r;
 }
 
-static bool drawField(Component& component, const ecs::Field& schema) {
+bool ComponentUiRegistry::drawField(Component& component, const ecs::Field& schema) {
     bool update = false;
     float step = schema.metadata.step != 0.0f ? schema.metadata.step : 0.01f;
     float fmin = schema.metadata.min;
@@ -86,7 +83,8 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
             ImGui::PushItemWidth(-FLT_MIN);
             for (const ecs::Field& schema : component.getType().getFields()) {
                 if (schema.isPrivate) continue;
-                update |= drawField(component, schema);
+                if (schema.metadata.animatable) ui::drawKeyframeButton(e, component, schema);
+                update |= ComponentUiRegistry::drawField(component, schema);
             }
             ImGui::PopItemWidth();
         }
@@ -94,30 +92,6 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
         return update;
     });
 }
-
-
-void keyframeButton(ecs::Registry& r, ecs::Entity& e, ecs::TransformAnim& anim, const TransformKeyframeType& type, std::function<void(const bool&)> func) {
-    bool hasKeyframe;
-    switch (type) {
-        case TransformKeyframeType::Position: hasKeyframe = anim.hasPositionKeyframe(Core::getAnimation().getFrame()); break;
-        case TransformKeyframeType::Rotation: hasKeyframe = anim.hasRotationKeyframe(Core::getAnimation().getFrame()); break;
-        case TransformKeyframeType::Scale:    hasKeyframe = anim.hasScaleKeyframe(Core::getAnimation().getFrame());    break;
-    }
-
-    if (hasKeyframe) ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOnColor);
-    else ImGui::PushStyleColor(ImGuiCol_Text, ui::kKeyframeOffColor);
-
-    ImGui::PushID((long)&type + (long)&e);
-    ui::PushTransparentStyleColor();
-    if (ImGui::Button(ICON_FA_SQUARE "##KeyframePos")) {
-        func(hasKeyframe);
-    }
-    ui::PopTransparentStyleColor();
-    ImGui::PopID();
-
-    ImGui::PopStyleColor();
-    ImGui::SameLine();
-};
 
 void ComponentUiRegistry::init() {
     static bool init = false;
@@ -174,6 +148,7 @@ void ComponentUiRegistry::init() {
             ImGui::PushItemWidth(-FLT_MIN);
             for (const ecs::Field& schema : c.getType().getFields()) {
                 if (schema.isPrivate) continue;
+                if (schema.metadata.animatable) ui::drawKeyframeButton(e, c, schema);
                 update |= drawField(c, schema);
             }
             if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
@@ -219,7 +194,7 @@ void ComponentUiRegistry::init() {
             ImGui::PopItemWidth();
 
             ImGui::BeginChild("MaterialData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-            update |= drawMaterialUI((*mats)[current]);
+            update |= drawMaterialUI(current);
             ImGui::EndChild();
         }
 

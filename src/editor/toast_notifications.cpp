@@ -7,7 +7,7 @@
 #include "imgui/imgui_internal.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "editor/ui_constants.hpp"
+#include "editor/ui_utils.hpp"
 
 constexpr float kToastTTL            = 15.0f;
 constexpr float kToastFadeOut        = 0.2f;

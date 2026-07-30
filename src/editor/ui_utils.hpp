@@ -1,11 +1,15 @@
-// TODO: find a better name for this file
 #pragma once
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+
+#include "core/ecs/components/component.hpp"
+#include "core/ecs/entity.hpp"
+#include "core/scene/object/material.hpp"
 
 namespace ui {
 
@@ -74,14 +78,16 @@ inline void PopTransparentStyleColor() {
 }
 
 // Keyframe
-inline const ImVec4 kKeyframeOffColor = kDraculaSubtle;
-inline const ImVec4 kKeyframeOnColor  = kDraculaOrange;
+inline const ImVec4 kKeyframeOnColor = kDraculaOrange;
+
+void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const ecs::Field& field);
+void drawKeyframeButton(MaterialHandle handle, const std::string& field);
 
 inline void drawIndentLine(float x, float startY, float endY) {
     ImGui::GetWindowDrawList()->AddLine(
         { x, startY },
         { x, endY },
-        ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.5f),
+        ImGui::GetColorU32(ImGuiCol_Separator),
         1.5f
     );
 }

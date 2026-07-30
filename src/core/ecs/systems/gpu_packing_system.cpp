@@ -15,11 +15,13 @@
 
 namespace ecs {
 
-static size_t sceneCapacityFromCount(size_t count) {
+namespace {
+size_t sceneCapacityFromCount(size_t count) {
     size_t cap = 16;
     while (cap < count) cap <<= 1;
     return cap;
 }
+} // namespace
 
 template <typename T>
 inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry& entry, std::vector<T>& data) {

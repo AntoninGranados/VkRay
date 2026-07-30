@@ -9,30 +9,31 @@ public:
         fixedDt = 1.0 / fps;
     }
 
-    void reset(double t = 0);
+    void reset(double t = 0.0);
     void reset(int frame = 0);
     void step(double dt);
     void stepFixed();
-    
-    int getFrame() { return frame; }
-    int getEndFrame() { return endFrame; }
-    double getTime() { return time; }
-    double getDt() { return dt; }
-    double getFixedDt() { return fixedDt; }
 
-    void pause() { paused = true; }
-    void play() { paused = false; }
+    int    getFrame()    const { return frame; }
+    int    getEndFrame() const { return endFrame; }
+    int    getFps()      const { return static_cast<int>(fps); }
+    double getTime()     const { return time; }
+    double getDt()       const { return dt; }
+    double getFixedDt()  const { return fixedDt; }
+
+    void pause()  { paused = true; }
+    void play()   { paused = false; }
     void toggle() { paused = !paused; }
-    bool isPaused() { return paused; }
+    bool isPaused() const { return paused; }
 
 private:
     int endFrame;
-    
+
     int frame;
     double time;
-    
+
     double fps;
     double dt, fixedDt;
-    
+
     bool paused;
 };
