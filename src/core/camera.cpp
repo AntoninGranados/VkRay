@@ -109,10 +109,7 @@ bool Camera::cursorPosCallback(double x, double y) {
 }
 
 bool Camera::scrollCallback(double xoffset, double yoffset) {
-    float newFov = getFov() - static_cast<float>(yoffset);
-    if (newFov < 1.0f) newFov = 1.0f;
-    if (newFov > 160.0f) newFov = 160.0f;
-    setFov(newFov);
+    setFov(getFov() - static_cast<float>(yoffset));
     return yoffset != 0;
 }
 

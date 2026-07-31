@@ -10,9 +10,6 @@
 
 typedef int MeshHandle;
 
-static constexpr int LEAF_SIZE = 16;
-static constexpr int SAH_K     = 12;
-
 struct Vertex {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
@@ -22,7 +19,7 @@ struct Vertex {
 
 class MeshAsset {
 public:
-    MeshAsset(const std::string& name): name(name) {};
+    MeshAsset(const std::string& name): name(name) {}
     MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
     bool loadFromObj(const std::string& path);
@@ -51,7 +48,7 @@ public:
 
 private:
     std::string name;
-    std::string path = "";
+    std::string path;
     float simplifyRatio = 1.0f;
     bool smoothShading     = false;
     bool vertexColorLoaded = false;
@@ -72,6 +69,9 @@ private:
         glm::vec3 max;
         glm::vec3 centroid;
     };
+
+    static constexpr int kLeafSize = 16;
+    static constexpr int kSahK = 12;
 
     size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start, uint32_t count, glm::vec3& outAabbMin, glm::vec3& outAabbMax);
 };

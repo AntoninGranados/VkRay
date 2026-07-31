@@ -139,17 +139,17 @@ static std::string toString(LightMode m) {
 }
 
 static Material parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName = "Unnamed") {
-    Material mat{};
-    mat.name             = resolveTemplate(m.value("name", fallbackName), ctx);
-    mat.type             = parseMaterialType(m.value("type", "lambertian"));
-    if (m.contains("albedo")) mat.albedo = resolveVec3(m["albedo"], ctx);
-    mat.roughness        = m.contains("roughness")        ? resolveFloat(m["roughness"],        ctx) : 0.0f;
-    mat.metalness        = m.contains("metalness")        ? resolveFloat(m["metalness"],        ctx) : 0.0f;
-    mat.ior              = m.contains("ior")              ? resolveFloat(m["ior"],              ctx) : 0.0f;
-    mat.transmission     = m.contains("transmission")     ? resolveFloat(m["transmission"],     ctx) : 0.0f;
-    mat.emissionStrength = m.contains("emission_strength") ? resolveFloat(m["emission_strength"], ctx) : 0.0f;
-    mat.density          = m.contains("density")          ? resolveFloat(m["density"],          ctx) : 1.0f;
-    mat.anisotropic      = m.contains("anisotropic")      ? resolveFloat(m["anisotropic"],      ctx) : 0.0f;
+    Material mat = Material::make();
+    mat.setName(resolveTemplate(m.value("name", fallbackName), ctx));
+    mat.setType(parseMaterialType(m.value("type", "lambertian")));
+    if (m.contains("albedo"))           mat.set<glm::vec3>("albedo",          resolveVec3(m["albedo"], ctx));
+    if (m.contains("roughness"))        mat.set<float>("roughness",           resolveFloat(m["roughness"],        ctx));
+    if (m.contains("metalness"))        mat.set<float>("metalness",           resolveFloat(m["metalness"],        ctx));
+    if (m.contains("ior"))              mat.set<float>("ior",                 resolveFloat(m["ior"],              ctx));
+    if (m.contains("transmission"))     mat.set<float>("transmission",        resolveFloat(m["transmission"],     ctx));
+    if (m.contains("emission_strength")) mat.set<float>("emissionStrength",   resolveFloat(m["emission_strength"], ctx));
+    if (m.contains("density"))          mat.set<float>("density",             resolveFloat(m["density"],          ctx));
+    if (m.contains("anisotropic"))      mat.set<float>("anisotropic",         resolveFloat(m["anisotropic"],      ctx));
     return mat;
 }
 
@@ -350,12 +350,12 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
                 for (int n = 0; n < count; n++) {
                     ResolveCtx ctx{ rng, {{"n", {n, count}}} };
                     Material mat = parseMaterial(m, ctx);
-                    matMap[mat.name] = scene.pushMaterial(mat);
+                    matMap[mat.getName()] = scene.pushMaterial(mat);
                 }
             } else {
                 ResolveCtx ctx{ rng, {} };
                 Material mat = parseMaterial(m, ctx);
-                matMap[mat.name] = scene.pushMaterial(mat);
+                matMap[mat.getName()] = scene.pushMaterial(mat);
             }
         }
     }
@@ -454,16 +454,16 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
     for (size_t i = 1; i < mats.size(); i++) {
         const Material& m = mats[i];
         json mj;
-        mj["name"]   = trimmed(m.name);
-        mj["type"]   = toString(m.type);
-        mj["albedo"] = fromVec3(m.albedo);
-        if (m.roughness != 0.0f) mj["roughness"] = m.roughness;
-        if (m.metalness != 0.0f) mj["metalness"] = m.metalness;
-        if (m.ior != 0.0f) mj["ior"] = m.ior;
-        if (m.transmission != 0.0f) mj["transmission"] = m.transmission;
-        if (m.emissionStrength != 0.0f) mj["emission_strength"] = m.emissionStrength;
-        if (m.density != 1.0f) mj["density"] = m.density;
-        if (m.anisotropic != 0.0f) mj["anisotropic"] = m.anisotropic;
+        mj["name"]   = trimmed(m.getName());
+        mj["type"]   = toString(m.getType());
+        mj["albedo"] = fromVec3(m.get<glm::vec3>("albedo"));
+        if (m.get<float>("roughness")        != 0.0f) mj["roughness"]        = m.get<float>("roughness");
+        if (m.get<float>("metalness")        != 0.0f) mj["metalness"]        = m.get<float>("metalness");
+        if (m.get<float>("ior")              != 0.0f) mj["ior"]              = m.get<float>("ior");
+        if (m.get<float>("transmission")     != 0.0f) mj["transmission"]     = m.get<float>("transmission");
+        if (m.get<float>("emissionStrength") != 0.0f) mj["emission_strength"] = m.get<float>("emissionStrength");
+        if (m.get<float>("density")          != 1.0f) mj["density"]          = m.get<float>("density");
+        if (m.get<float>("anisotropic")      != 0.0f) mj["anisotropic"]      = m.get<float>("anisotropic");
         matsJson.push_back(mj);
     }
     j["materials"] = matsJson;
@@ -477,7 +477,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
     auto getMatName = [&](ecs::Entity e) -> std::string {
         if (!materialRefs.has(e)) return "";
         const int h = materialRefs.get(e).get<int>("handle");
-        if (h > 0 && h < (int)mats.size()) return trimmed(mats[h].name);
+        if (h > 0 && h < (int)mats.size()) return trimmed(mats[h].getName());
         return "";
     };
 

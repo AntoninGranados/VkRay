@@ -50,7 +50,7 @@ private:
     std::vector<Material>* materials = nullptr;
     std::vector<MeshAsset>* meshAssets = nullptr;
 
-    static bool drawField(Component& component, const Field& schema);
+    static bool drawField(Component& component, const ComponentField& schema);
 
     static void beginDraw(void* id, std::function<void()> remove) {
         ImGui::PushID(id);

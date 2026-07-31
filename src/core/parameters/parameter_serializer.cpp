@@ -8,7 +8,7 @@
 static constexpr int PARAMETER_VERSION = 1;
 
 template <typename T>
-static T readJsonVec(const json& arr) {
+T ParameterSerializer::readJsonVec(const json& arr) {
     T v{};
     for (int i = 0; i < T::length(); i++)
         v[i] = arr[static_cast<size_t>(i)].get<typename T::value_type>();
@@ -16,14 +16,18 @@ static T readJsonVec(const json& arr) {
 }
 
 template <typename T>
-static ParameterBase& parseVecNode(
+Parameter& ParameterSerializer::parseVecNode(
     const json& obj, ParameterRegistry& parameters, const std::string& path,
     const std::string& label, bool restart, T defMin, T defMax, float step
 ) {
     T val = readJsonVec<T>(obj.at("default"));
     T mn = obj.contains("min") ? readJsonVec<T>(obj.at("min")) : defMin;
     T mx = obj.contains("max") ? readJsonVec<T>(obj.at("max")) : defMax;
-    return parameters.addVec<T>(path, label, val, mn, mx, step, restart);
+    FieldMetadata meta;
+    meta.min = static_cast<float>(mn[0]);
+    meta.max = static_cast<float>(mx[0]);
+    meta.step = step;
+    return parameters.add<T>(path, label, val, std::move(meta), restart);
 }
 
 void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
@@ -99,14 +103,14 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 }
 
 void ParameterSerializer::serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth) {
-    for (const auto& parameter : Core::getParameters().getParameterList()) {
-        if (parameter->path.parent_path() != prefix) continue;
+    for (const auto& parameter : Core::getParameters().getAll()) {
+        if (parameter->getPath().parent_path() != prefix) continue;
         file << parameter->print() << std::endl;
     }
 
     std::vector<std::string> seen;
-    for (const auto& parameter : Core::getParameters().getParameterList()) {
-        auto rel = parameter->path.lexically_relative(prefix);
+    for (const auto& parameter : Core::getParameters().getAll()) {
+        auto rel = parameter->getPath().lexically_relative(prefix);
         if (rel.empty()) continue;
         auto it = rel.begin();
         std::string seg = it->string();
@@ -118,11 +122,11 @@ void ParameterSerializer::serializeParameterPath(std::ofstream& file, const Para
 
         auto labelIt = Core::getParameters().getNodeLabels().find((prefix / seg).generic_string());
         const std::string& displayLabel = labelIt != Core::getParameters().getNodeLabels().end() ? labelIt->second : seg;
-        file << std::endl << std::string(depth+2, '#') << ' ' << displayLabel << std::endl;
+        file << std::endl << std::string(depth + 2, '#') << ' ' << displayLabel << std::endl;
         file << "| Path | Label | Description | Type | Default | Constraints | Restart |" << std::endl;
         file << "|------|-------|-------------|------|---------|-------------|---------|" << std::endl;
 
-        serializeParameterPath(file, prefix / seg, depth+1);
+        serializeParameterPath(file, prefix / seg, depth + 1);
     }
 }
 
@@ -148,44 +152,47 @@ ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
     return parameters;
 }
 
-
 void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& parameters, const std::string& path) {
     if (obj.contains("default")) {
         std::string label = obj.at("label").get<std::string>();
         bool restart = obj.value("restart_accumulation", false);
         const auto& def = obj.at("default");
 
-        ParameterBase* parameter = nullptr;
+        Parameter* parameter = nullptr;
         if (def.is_boolean()) {
-            parameter = &parameters.addBool(path, label, def.get<bool>(), restart);
+            parameter = &parameters.add<bool>(path, label, def.get<bool>(), {}, restart);
         } else if (def.is_number_integer()) {
-            parameter = &parameters.addInt(path, label, def.get<int>(),
-                obj.value("min", INT_MIN),
-                obj.value("max", INT_MAX),
-                obj.value("step", 1),
-                restart);
+            int mn = obj.value("min", INT_MIN), mx = obj.value("max", INT_MAX);
+            FieldMetadata meta;
+            meta.min = mn != INT_MIN ? static_cast<float>(mn) : -std::numeric_limits<float>::infinity();
+            meta.max = mx != INT_MAX ? static_cast<float>(mx) : std::numeric_limits<float>::infinity();
+            meta.step = static_cast<float>(obj.value("step", 1));
+            parameter = &parameters.add<int>(path, label, def.get<int>(), std::move(meta), restart);
         } else if (def.is_number_float()) {
-            parameter = &parameters.addFloat(path, label, def.get<float>(),
-                obj.value("min", std::numeric_limits<float>::lowest()),
-                obj.value("max", std::numeric_limits<float>::max()),
-                obj.value("step", 1e-3f),
-                restart);
+            float mn = obj.value("min", std::numeric_limits<float>::lowest());
+            float mx = obj.value("max", std::numeric_limits<float>::max());
+            FieldMetadata meta;
+            meta.min = mn != std::numeric_limits<float>::lowest() ? mn : -std::numeric_limits<float>::infinity();
+            meta.max = mx != std::numeric_limits<float>::max() ? mx : std::numeric_limits<float>::infinity();
+            meta.step = obj.value("step", 1e-3f);
+            parameter = &parameters.add<float>(path, label, def.get<float>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("extensions")) {
-            std::vector<PathExtension> extensions;
+            FieldMetadata meta;
             for (const auto& e : obj.at("extensions")) {
                 PathExtension ext;
                 ext.ext  = e.at("ext").get<std::string>();
                 ext.name = e.value("name", "");
-                extensions.push_back(std::move(ext));
+                meta.pathExtensions.push_back(std::move(ext));
             }
-            parameter = &parameters.addPath(path, label, def.get<std::string>(), std::move(extensions), restart);
+            parameter = &parameters.add<std::filesystem::path>(path, label, def.get<std::string>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("items")) {
             std::string defName = def.get<std::string>();
-            std::vector<std::string> items = obj.at("items").get<std::vector<std::string>>();
+            FieldMetadata meta;
+            meta.enumItems = obj.at("items").get<std::vector<std::string>>();
             int defIdx = 0;
-            for (size_t i = 0; i < items.size(); i++)
-                if (items[i] == defName) { defIdx = static_cast<int>(i); break; }
-            parameter = &parameters.addEnum(path, label, defIdx, std::move(items), restart);
+            for (size_t i = 0; i < meta.enumItems.size(); i++)
+                if (meta.enumItems[i] == defName) { defIdx = static_cast<int>(i); break; }
+            parameter = &parameters.add<int>(path, label, defIdx, std::move(meta), restart);
         } else if (def.is_array() && (def.size() == 2 || def.size() == 3 || def.size() == 4)) {
             bool isFloat = def[0].is_number_float();
             float step = obj.value("step", isFloat ? 1e-3f : 1.0f);

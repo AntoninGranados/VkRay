@@ -142,7 +142,7 @@ void cameraDrawingSystem(Registry& registry) {
             glm::vec3 prevPoint = camPos + camRight * apertureRadius;
             glm::vec4 prevClip = viewProj * glm::vec4(prevPoint, 1.0f);
             for (int i = 1; i <= ringSegments; i++) {
-                float angle = (2.0f * 3.14159265f) * (static_cast<float>(i) / ringSegments);
+                float angle = (2.0f * glm::pi<float>()) * (static_cast<float>(i) / ringSegments);
                 glm::vec3 point = camPos
                     + camRight * (cosf(angle) * apertureRadius)
                     + camUp * (sinf(angle) * apertureRadius);

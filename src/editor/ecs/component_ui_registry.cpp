@@ -6,6 +6,7 @@
 
 #include "core/ecs/components.hpp"
 #include "core/scene/asset/mesh.hpp"
+#include "editor/field_ui.hpp"
 #include "editor/scene/material_ui.hpp"
 #include "editor/ui_utils.hpp"
 
@@ -16,56 +17,8 @@ ComponentUiRegistry& ComponentUiRegistry::get() {
     return r;
 }
 
-bool ComponentUiRegistry::drawField(Component& component, const ecs::Field& schema) {
-    bool update = false;
-    float step = schema.metadata.step != 0.0f ? schema.metadata.step : 0.01f;
-    float fmin = schema.metadata.min;
-    float fmax = schema.metadata.max;
-    std::string label = "##" + schema.id;
-
-    ImGui::Text("%s:", schema.label.c_str());
-    switch (schema.type) {
-        case ecs::FieldType::Float:
-            update |= ImGui::DragFloat(label.c_str(), component.getPtr<float>(schema.id), step, fmin, fmax);
-            break;
-        case ecs::FieldType::Float2:
-            update |= ImGui::DragFloat2(label.c_str(), component.getPtr<float>(schema.id), step, fmin, fmax);
-            break;
-        case ecs::FieldType::Float3:
-            update |= ImGui::DragFloat3(label.c_str(), component.getPtr<float>(schema.id), step, fmin, fmax);
-            break;
-        case ecs::FieldType::Float4:
-            update |= ImGui::DragFloat4(label.c_str(), component.getPtr<float>(schema.id), step, fmin, fmax);
-            break;
-        case ecs::FieldType::Int:
-            update |= ImGui::DragInt(label.c_str(), component.getPtr<int>(schema.id), step, (int)fmin, (int)fmax);
-            break;
-        case ecs::FieldType::Int2:
-            update |= ImGui::DragInt2(label.c_str(), component.getPtr<int>(schema.id), step, (int)fmin, (int)fmax);
-            break;
-        case ecs::FieldType::Int3:
-            update |= ImGui::DragInt3(label.c_str(), component.getPtr<int>(schema.id), step, (int)fmin, (int)fmax);
-            break;
-        case ecs::FieldType::Int4:
-            update |= ImGui::DragInt4(label.c_str(), component.getPtr<int>(schema.id), step, (int)fmin, (int)fmax);
-            break;
-        case ecs::FieldType::Bool:
-            update |= ImGui::Checkbox(label.c_str(), component.getPtr<bool>(schema.id));
-            break;
-        case ecs::FieldType::String:
-            update |= ImGui::InputText(label.c_str(), component.getPtr<char>(schema.id), ecs::maxStringFieldSize);
-            break;
-        case ecs::FieldType::Quat: {
-            glm::quat* q = component.getPtr<glm::quat>(schema.id);
-            glm::vec3 euler = glm::degrees(glm::eulerAngles(*q));
-            if (ImGui::DragFloat3(label.c_str(), glm::value_ptr(euler), step)) {
-                *q = glm::quat(glm::radians(euler));
-                update = true;
-            }
-            break;
-        }
-    }
-    return update;
+bool ComponentUiRegistry::drawField(Component& component, const ecs::ComponentField& schema) {
+    return ui::drawField(component.getField(schema.getId()), "##" + schema.getId());
 }
 
 void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
@@ -80,13 +33,11 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
         });
         bool update = false;
         if (ImGui::CollapsingHeader(header.c_str(), component.getType().getFields().size() > 0 ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
-            ImGui::PushItemWidth(-FLT_MIN);
-            for (const ecs::Field& schema : component.getType().getFields()) {
-                if (schema.isPrivate) continue;
-                if (schema.metadata.animatable) ui::drawKeyframeButton(e, component, schema);
+            for (const ecs::ComponentField& schema : component.getType().getFields()) {
+                if (schema.isPrivate()) continue;
+                if (schema.isAnimatable()) ui::drawKeyframeButton(e, component, schema.getId());
                 update |= ComponentUiRegistry::drawField(component, schema);
             }
-            ImGui::PopItemWidth();
         }
         ComponentUiRegistry::endDraw();
         return update;
@@ -145,10 +96,9 @@ void ComponentUiRegistry::init() {
     ui_reg.add(Camera, [](Component& c, Registry& r, Entity e) {
         bool update = false;
         if (ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) {
-            ImGui::PushItemWidth(-FLT_MIN);
-            for (const ecs::Field& schema : c.getType().getFields()) {
-                if (schema.isPrivate) continue;
-                if (schema.metadata.animatable) ui::drawKeyframeButton(e, c, schema);
+            for (const ecs::ComponentField& schema : c.getType().getFields()) {
+                if (schema.isPrivate()) continue;
+                if (schema.isAnimatable()) ui::drawKeyframeButton(e, c, schema.getId());
                 update |= drawField(c, schema);
             }
             if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
@@ -160,7 +110,6 @@ void ComponentUiRegistry::init() {
                 Core::getScene().getCamera().setPreviewCamera(e);
                 update = true;
             }
-            ImGui::PopItemWidth();
         }
 
         return update;
@@ -177,10 +126,10 @@ void ComponentUiRegistry::init() {
             ImGui::PushItemWidth(-FLT_MIN);
 
             int current = c.get<int>("handle");
-            const char* preview = (*mats)[current].name.empty() ? "Material" : (*mats)[current].name.c_str();
+            const char* preview = (*mats)[current].getName().empty() ? "Material" : (*mats)[current].getName().c_str();
             if (ImGui::BeginCombo("##Material", preview)) {
                 for (int i = 0; i < static_cast<int>(mats->size()); i++) {
-                    const char* display = (*mats)[i].name.empty() ? "Material" : (*mats)[i].name.c_str();
+                    const char* display = (*mats)[i].getName().empty() ? "Material" : (*mats)[i].getName().c_str();
                     std::string label = std::string(display) + "##MaterialItem" + std::to_string(i);
                     const bool selected = (i == current);
                     if (ImGui::Selectable(label.c_str(), selected)) {

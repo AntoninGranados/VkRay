@@ -9,7 +9,9 @@
 
 namespace ui {
 
-static void drawKeyframeIcon(bool has, bool hovered, bool active) {
+namespace {
+
+void drawKeyframeIcon(bool has, bool hovered, bool active) {
     ImVec4 color;
     if (has) {
         if (active) color = luma(kKeyframeOnColor, 0.7f);
@@ -30,22 +32,23 @@ static void drawKeyframeIcon(bool has, bool hovered, bool active) {
         ImGui::ColorConvertFloat4ToU32(color), ICON_FA_SQUARE);
 }
 
-void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const ecs::Field& field) {
+} // namespace
+
+void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fieldId) {
     AnimationStore& store = Core::getScene().getAnimationStore();
     const int frame = Core::getAnimation().getFrame();
-    const Track& track = store.getTrack(e, c.getType(), field);
-    const bool has = track.hasKeyframe(frame);
+    const bool has = store.has(e, c.getType(), fieldId, frame);
 
     constexpr float iconSize = 10.0f;
-    ImGui::PushID((field.id + "_keyframe").c_str());
+    ImGui::PushID((fieldId + "_keyframe").c_str());
     const bool clicked = ImGui::InvisibleButton("##keyframe", ImVec2(iconSize, ImGui::GetTextLineHeight()));
     const bool hovered = ImGui::IsItemHovered();
     const bool active = ImGui::IsItemActive();
     ImGui::PopID();
 
     if (clicked) {
-        if (has) store.getTrack(e, c.getType(), field).removeKeyframe(frame);
-        else store.getTrack(e, c.getType(), field).setKeyframe(frame, AnimationStore::sampleValue(c, field));
+        if (has) store.remove(e, c.getType(), fieldId, frame);
+        else store.capture(e, c, fieldId, frame);
         Core::requestAccumulationRestart();
     }
 
@@ -53,25 +56,21 @@ void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const ecs::Field& fiel
     ImGui::SameLine();
 }
 
-void drawKeyframeButton(MaterialHandle handle, const std::string& field) {
+void drawKeyframeButton(MaterialHandle handle, const std::string& fieldId) {
     AnimationStore& store = Core::getScene().getAnimationStore();
     const int frame = Core::getAnimation().getFrame();
-    const Track& track = store.getTrack(handle, field);
-    const bool has = track.hasKeyframe(frame);
+    const bool has = store.has(handle, fieldId, frame);
 
     constexpr float iconSize = 10.0f;
-    ImGui::PushID((field + "_keyframe").c_str());
+    ImGui::PushID((fieldId + "_keyframe").c_str());
     const bool clicked = ImGui::InvisibleButton("##keyframe", ImVec2(iconSize, ImGui::GetTextLineHeight()));
     const bool hovered = ImGui::IsItemHovered();
     const bool active = ImGui::IsItemActive();
     ImGui::PopID();
 
     if (clicked) {
-        if (has) store.getTrack(handle, field).removeKeyframe(frame);
-        else {
-            const Material& mat = Core::getScene().getMaterials()[handle];
-            store.getTrack(handle, field).setKeyframe(frame, AnimationStore::sampleValue(mat, field));
-        }
+        if (has) store.remove(handle, fieldId, frame);
+        else store.capture(handle, fieldId, frame, Core::getScene().getMaterials()[handle]);
         Core::requestAccumulationRestart();
     }
 

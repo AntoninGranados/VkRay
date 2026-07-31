@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <type_traits>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -16,21 +15,23 @@
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
 
-std::vector<float> AnimationPanel::extractComponents(const KeyframeValue& value) {
-    return std::visit([](const auto& v) -> std::vector<float> {
-        using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, float>)       return { v };
-        if constexpr (std::is_same_v<T, glm::vec2>)   return { v.x, v.y };
-        if constexpr (std::is_same_v<T, glm::vec3>)   return { v.x, v.y, v.z };
-        if constexpr (std::is_same_v<T, glm::vec4>)   return { v.x, v.y, v.z, v.w };
-        if constexpr (std::is_same_v<T, int>)         return { float(v) };
-        if constexpr (std::is_same_v<T, glm::ivec2>)  return { float(v.x), float(v.y) };
-        if constexpr (std::is_same_v<T, glm::ivec3>)  return { float(v.x), float(v.y), float(v.z) };
-        if constexpr (std::is_same_v<T, glm::ivec4>)  return { float(v.x), float(v.y), float(v.z), float(v.w) };
-        if constexpr (std::is_same_v<T, glm::quat>)   return { v.x, v.y, v.z, v.w };
-        if constexpr (std::is_same_v<T, bool>)        return { v ? 1.0f : 0.0f };
-        return { 0.0f };
-    }, value);
+template<> std::vector<float> AnimationPanel::decompose(bool v)        { return { v ? 1.0f : 0.0f }; }
+template<> std::vector<float> AnimationPanel::decompose(int v)         { return { float(v) }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::ivec2 v)  { return { float(v.x), float(v.y) }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::ivec3 v)  { return { float(v.x), float(v.y), float(v.z) }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::ivec4 v)  { return { float(v.x), float(v.y), float(v.z), float(v.w) }; }
+template<> std::vector<float> AnimationPanel::decompose(float v)       { return { v }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::vec2 v)   { return { v.x, v.y }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::vec3 v)   { return { v.x, v.y, v.z }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::vec4 v)   { return { v.x, v.y, v.z, v.w }; }
+template<> std::vector<float> AnimationPanel::decompose(glm::quat v)   { return { v.x, v.y, v.z, v.w }; }
+
+std::vector<float> AnimationPanel::decomposeInterpolation(const Keyframe& from, const Keyframe& to, float t) {
+    std::vector<float> result;
+    from.getValue().dispatch([&]<typename T>(T) {
+        result = decompose(Keyframe::interpolate<T>(from, to, t));
+    });
+    return result;
 }
 
 void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& from, const Keyframe& to) {
@@ -49,7 +50,7 @@ void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& 
     std::vector<std::vector<float>> componentSamples;
     for (int i = 0; i < kSamples; i++) {
         const float t = float(i) / float(kSamples - 1);
-        const std::vector<float> components = extractComponents(Keyframe::interpolate(from, to, t));
+        const std::vector<float> components = decomposeInterpolation(from, to, t);
         if (componentSamples.empty())
             componentSamples.resize(components.size());
         for (size_t c = 0; c < components.size(); c++)
@@ -276,8 +277,8 @@ void AnimationPanel::content() {
                     if (!registry.has(entity, ct)) continue;
 
                     bool hasAnim = false;
-                    for (const ecs::Field& f : ct.getFields())
-                        if (f.metadata.animatable) { hasAnim = true; break; }
+                    for (const ecs::ComponentField& f : ct.getFields())
+                        if (f.isAnimatable()) { hasAnim = true; break; }
                     if (!hasAnim) continue;
 
                     if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
@@ -285,11 +286,10 @@ void AnimationPanel::content() {
 
                     ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
-                    for (const ecs::Field& f : ct.getFields()) {
-                        if (!f.metadata.animatable) continue;
-                        const Track& track = store.getTrack(entity, ct, f);
-                        if (auto seg = drawRow(ctx, f.label.c_str(), f.id.c_str(), track.getKeyframes())) {
-                            pendingSegment = { f.label, seg->first, seg->second, EntityTrack{ entity, &ct, &f } };
+                    for (const ecs::ComponentField& f : ct.getFields()) {
+                        if (!f.isAnimatable()) continue;
+                        if (auto seg = drawRow(ctx, f.getLabel().c_str(), f.getId().c_str(), store.keyframes(entity, ct, f.getId()))) {
+                            pendingSegment = { f.getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f.getId() } };
                             ImGui::OpenPopup("##segment_interp");
                         }
                     }
@@ -300,9 +300,8 @@ void AnimationPanel::content() {
                     if (handle >= 0 && handle < static_cast<int>(scene.getMaterials().size())) {
                         if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
                         ImGui::TextDisabled("Material");
-                        for (auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[handle].type)) {
-                            const Track& fieldTrack = store.getTrack(handle, fieldId);
-                            if (auto seg = drawRow(ctx, fieldLabel, fieldId, fieldTrack.getKeyframes())) {
+                        for (const auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[handle].getType())) {
+                            if (auto seg = drawRow(ctx, fieldLabel, fieldId, store.keyframes(handle, fieldId))) {
                                 pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ handle, fieldId } };
                                 ImGui::OpenPopup("##segment_interp");
                             }
@@ -313,9 +312,8 @@ void AnimationPanel::content() {
 
             if (!hasEntity && hasMaterial) {
                 ImGui::TextDisabled("Material");
-                for (auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[sel.material].type)) {
-                    const Track& fieldTrack = store.getTrack(sel.material, fieldId);
-                    if (auto seg = drawRow(ctx, fieldLabel, fieldId, fieldTrack.getKeyframes())) {
+                for (const auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[sel.material].getType())) {
+                    if (auto seg = drawRow(ctx, fieldLabel, fieldId, store.keyframes(sel.material, fieldId))) {
                         pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ sel.material, fieldId } };
                         ImGui::OpenPopup("##segment_interp");
                     }
@@ -325,16 +323,16 @@ void AnimationPanel::content() {
             static const char* kInterpolationNames[] = { "Step", "Linear", "Cubic", "Ease In", "Ease Out", "Ease In-Out" };
             ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Always);
             if (pendingSegment && ImGui::BeginPopup("##segment_interp")) {
-                int current = static_cast<int>(pendingSegment->from.interpolation);
+                int current = static_cast<int>(pendingSegment->from.getInterpolation());
                 if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
                     const Interpolation interpolation = static_cast<Interpolation>(current);
-                    pendingSegment->from.interpolation = interpolation;
+                    pendingSegment->from.setInterpolation(interpolation);
                     std::visit([&](const auto& t) {
                         using T = std::decay_t<decltype(t)>;
                         if constexpr (std::is_same_v<T, EntityTrack>)
-                            store.getTrack(t.entity, *t.type, *t.field).setInterpolation(pendingSegment->from.frame, interpolation);
+                            store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
                         else
-                            store.getTrack(t.handle, t.field).setInterpolation(pendingSegment->from.frame, interpolation);
+                            store.setInterpolation(t.handle, t.fieldId, pendingSegment->from.getFrame(), interpolation);
                     }, pendingSegment->track);
                 }
                 drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);

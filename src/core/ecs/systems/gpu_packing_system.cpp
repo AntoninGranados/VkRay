@@ -255,15 +255,15 @@ void materialPackingSystem(Registry&, const FrameContext& frame) {
 
     for (const auto& mat : Core::getScene().getMaterials()) {
         materials.push_back(GpuMaterial{
-            .type = mat.type,
-            .albedo = mat.albedo,
-            .roughness = mat.roughness,
-            .metalness = mat.metalness,
-            .ior = mat.ior,
-            .transmission = mat.transmission,
-            .emissionStrength = mat.emissionStrength,
-            .density = mat.density,
-            .anisotropic = mat.anisotropic,
+            .type = mat.getType(),
+            .albedo = mat.get<glm::vec3>("albedo"),
+            .roughness = mat.get<float>("roughness"),
+            .metalness = mat.get<float>("metalness"),
+            .ior = mat.get<float>("ior"),
+            .transmission = mat.get<float>("transmission"),
+            .emissionStrength = mat.get<float>("emissionStrength"),
+            .density = mat.get<float>("density"),
+            .anisotropic = mat.get<float>("anisotropic"),
         });
     }
 
@@ -330,7 +330,7 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Spheres
     for (const auto& [e, _] : packingMaps.sphereId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
         const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).get<float>("radius"), 2.0f);
         totalArea += area;
@@ -345,7 +345,7 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Boxes
     for (const auto& [e, _] : packingMaps.boxId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
         const Component& bt = transforms.get(e);
         const glm::mat4 local = glm::translate(glm::mat4(1.0f), bt.get<glm::vec3>("position"))
@@ -368,7 +368,7 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Quads
     for (const auto& [e, id] : packingMaps.quadId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
         const Component& qt = transforms.get(e);
         const glm::mat4 local = glm::translate(glm::mat4(1.0f), qt.get<glm::vec3>("position"))
@@ -387,7 +387,7 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     // Meshes
     for (const auto& [e, _] : packingMaps.meshId) {
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].type != MaterialType::Emissive) continue;
+        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
         const Component& mt = transforms.get(e);
         const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), mt.get<glm::vec3>("position"))

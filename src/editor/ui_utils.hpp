@@ -80,8 +80,8 @@ inline void PopTransparentStyleColor() {
 // Keyframe
 inline const ImVec4 kKeyframeOnColor = kDraculaOrange;
 
-void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const ecs::Field& field);
-void drawKeyframeButton(MaterialHandle handle, const std::string& field);
+void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fieldId);
+void drawKeyframeButton(MaterialHandle handle, const std::string& fieldId);
 
 inline void drawIndentLine(float x, float startY, float endY) {
     ImGui::GetWindowDrawList()->AddLine(

@@ -6,7 +6,7 @@
 #include "core/parameters/parameters.hpp"
 
 struct ParameterItem {
-    ParameterBase* parameter = nullptr;
+    Parameter* parameter = nullptr;
     ParameterPath path;
     bool collapsible = false;
     std::optional<ParameterCondition> condition;
@@ -20,8 +20,7 @@ public:
 private:
     static ParameterUI& get();
 
-    template <typename ParameterType>
-    static bool drawParameter(ParameterType& p);
+    static bool drawParameter(Parameter& p);
     static void drawItem(ParameterItem& item, bool& changed, bool& restartNeeded);
     static std::vector<ParameterItem> buildItems(const ParameterPath& prefix);
 

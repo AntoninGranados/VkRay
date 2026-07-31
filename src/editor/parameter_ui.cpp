@@ -4,145 +4,41 @@
 #include <unordered_map>
 #include <vector>
 
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/type_trait.hpp>
-
-#include <nfd.hpp>
-
-#include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
+#include "editor/field_ui.hpp"
 #include "editor/ui_utils.hpp"
 
-template <>
-bool ParameterUI::drawParameter(IntParameter& p) {
-    ImGui::Text("%s", p.label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    return ImGui::DragInt("##value", &p.get(), static_cast<float>(p.getStep()), p.getMin(), p.getMax());
-}
-
-template <>
-bool ParameterUI::drawParameter(FloatParameter& p) {
-    ImGui::Text("%s", p.label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    return ImGui::DragFloat("##value", &p.get(), p.getStep(), p.getMin(), p.getMax());
-}
-
-template <>
-bool ParameterUI::drawParameter(BoolParameter& p) {
-    return ImGui::Checkbox(p.label.c_str(), &p.get());
-}
-
-template <>
-bool ParameterUI::drawParameter(EnumParameter& p) {
-    std::vector<const char*> names;
-    for (const auto& item : p.getItems()) names.push_back(item.c_str());
-    ImGui::Text("%s", p.label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    return ImGui::Combo("##value", &p.get(), names.data(), static_cast<int>(names.size()));
-}
-
-template <>
-bool ParameterUI::drawParameter(PathParameter& p) {
-    ImGui::Text("%s", p.label.c_str());
-    std::string display = p.get().empty() ? "(not set)" : p.get().string();
-    float browseWidth = ImGui::CalcTextSize(ICON_FA_FOLDER_OPEN).x + ImGui::GetStyle().FramePadding.x * 2.0f;
-    ImGui::SetNextItemWidth(-browseWidth - ImGui::GetStyle().ItemSpacing.x);
-    ImGui::BeginDisabled();
-    ImGui::InputText("##path", display.data(), display.size() + 1, ImGuiInputTextFlags_ReadOnly);
-    ImGui::EndDisabled();
-    ImGui::SameLine();
-    if (!ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browseWidth, 0))) return false;
-
-    NFD::Guard guard;
-    NFD::UniquePath outPath;
-    nfdresult_t result;
-    if (p.getExtensions().empty()) {
-        std::string defaultPath = p.get().string();
-        result = NFD::PickFolder(outPath, defaultPath.empty() ? nullptr : defaultPath.c_str());
-    } else {
-        std::vector<std::pair<std::string, std::string>> extStrs;
-        for (const auto& e : p.getExtensions())
-            extStrs.push_back({ e.displayName(), e.ext });
-        std::vector<nfdfilteritem_t> filters;
-        for (const auto& [name, ext] : extStrs)
-            filters.push_back({ name.c_str(), ext.c_str() });
-        std::string defaultName = p.get().filename().string();
-        result = NFD::SaveDialog(outPath, filters.data(), static_cast<nfdfiltersize_t>(filters.size()), nullptr, defaultName.empty() ? nullptr : defaultName.c_str());
-    }
-    if (result != NFD_OKAY) return false;
-    p.get() = outPath.get();
-    if (p.onSync) p.onSync();
-    return true;
-}
-
-template <typename T>
-static bool drawVecParameter(VecParameter<T>& p) {
-    using V = typename T::value_type;
-    ImGui::Text("%s", p.label.c_str());
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    if constexpr (std::is_same_v<V, int>) {
-        if constexpr (T::length() == 2) return ImGui::DragInt2("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-        if constexpr (T::length() == 3) return ImGui::DragInt3("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-        if constexpr (T::length() == 4) return ImGui::DragInt4("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-    } else {
-        if constexpr (T::length() == 2) return ImGui::DragFloat2("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-        if constexpr (T::length() == 3) return ImGui::DragFloat3("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-        if constexpr (T::length() == 4) return ImGui::DragFloat4("##value", glm::value_ptr(p.get()), p.getStep(), p.getMin().x, p.getMax().x);
-    }
-    return false;
-}
-
-template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec2>& p) { return drawVecParameter(p); }
-template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec3>& p) { return drawVecParameter(p); }
-template <> bool ParameterUI::drawParameter(VecParameter<glm::ivec4>& p) { return drawVecParameter(p); }
-template <> bool ParameterUI::drawParameter(VecParameter<glm::vec2>& p) { return drawVecParameter(p); }
-template <> bool ParameterUI::drawParameter(VecParameter<glm::vec3>& p) { return drawVecParameter(p); }
-template <> bool ParameterUI::drawParameter(VecParameter<glm::vec4>& p) { return drawVecParameter(p); }
-
-template <>
-bool ParameterUI::drawParameter(ParameterBase& base) {
-    bool changed = false;
-    ImGui::PushID(base.path.generic_string().c_str());
+bool ParameterUI::drawParameter(Parameter& p) {
+    ImGui::PushID(p.getPath().generic_string().c_str());
     ImGui::BeginGroup();
 
-    if (IntParameter* p = dynamic_cast<IntParameter*>(&base)) changed = drawParameter(*p);
-    else if (FloatParameter* p = dynamic_cast<FloatParameter*>(&base)) changed = drawParameter(*p);
-    else if (BoolParameter* p = dynamic_cast<BoolParameter*>(&base)) changed = drawParameter(*p);
-    else if (EnumParameter* p = dynamic_cast<EnumParameter*>(&base)) changed = drawParameter(*p);
-    else if (PathParameter* p = dynamic_cast<PathParameter*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::ivec2>*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::ivec3>*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::ivec4>*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::vec2>*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::vec3>*>(&base)) changed = drawParameter(*p);
-    else if (auto* p = dynamic_cast<VecParameter<glm::vec4>*>(&base)) changed = drawParameter(*p);
+    bool changed = ui::drawField(p, "##value");
 
     ImGui::EndGroup();
-    if (base.description && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-        ImGui::SetTooltip("%s", base.description->c_str());
+    if (p.getDescription() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s", p.getDescription()->c_str());
     ImGui::PopID();
 
-    if (changed && base.onSync) base.onSync();
+    if (changed) p.sync();
     return changed;
 }
 
-// TODO: refactor
 std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) {
     ParameterRegistry& parameters = Core::getParameters();
     std::vector<ParameterItem> items;
     std::unordered_map<std::string, size_t> conditionGroups;
 
-    for (const auto& param : parameters.getParameterList()) {
-        if (param->path.parent_path() != prefix) continue;
-        if (!param->condition) {
+    for (const auto& param : parameters.getAll()) {
+        if (param->getPath().parent_path() != prefix) continue;
+        if (!param->getCondition()) {
             items.push_back({ .parameter = param.get() });
             continue;
         }
-        const auto& cond = *param->condition;
+        const auto& cond = *param->getCondition();
         const std::string key = cond.param.string();
-        if (!conditionGroups.count(key)) {
+        if (!conditionGroups.contains(key)) {
             conditionGroups[key] = items.size();
             items.push_back({ .condition = cond });
         }
@@ -150,8 +46,8 @@ std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) 
     }
 
     std::vector<std::string> seen;
-    for (const auto& param : parameters.getParameterList()) {
-        const auto rel = param->path.lexically_relative(prefix);
+    for (const auto& param : parameters.getAll()) {
+        const auto rel = param->getPath().lexically_relative(prefix);
         if (rel.empty()) continue;
         const std::string seg = rel.begin()->string();
         if (seg == "..") continue;
@@ -172,7 +68,7 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     if (item.parameter) {
         if (drawParameter(*item.parameter)) {
             changed = true;
-            if (item.parameter->restartAccumulation) restartNeeded = true;
+            if (item.parameter->isRestartingAnimation()) restartNeeded = true;
         }
         return;
     }
@@ -188,7 +84,7 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     bool conditionMet = !item.condition ||
         (Core::getParameters().get<bool>(item.condition->param) == item.condition->when);
 
-    float lineX  = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
+    float lineX = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
     float startY = ImGui::GetCursorScreenPos().y;
     ImGui::Indent();
     if (!conditionMet) ImGui::BeginDisabled();

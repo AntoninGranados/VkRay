@@ -105,7 +105,7 @@ void ScenePanel::content() {
             ImGui::Text("Materials");
             if (ImGui::BeginListBox("##Materials", ImVec2(-FLT_MIN, 0.0f))) {
                 for (size_t i = 0; i < scene.getMaterials().size(); i++) {
-                    const std::string& materialName = scene.getMaterials()[i].name;
+                    const std::string& materialName = scene.getMaterials()[i].getName();
                     const char* display = materialName.empty() ? "Material" : materialName.c_str();
                     std::string label = std::string(display) + "##Material" + std::to_string(i);
                     if (ImGui::Selectable(label.c_str(), selection.material == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
@@ -119,7 +119,7 @@ void ScenePanel::content() {
             ImGui::NewLine();
             if (ImGui::Button("+##Materials", ImVec2(32, 0))) {
                 Material mat = DEFAULT_MATERIAL;
-                mat.name = std::format("Material-uid[{:02d}]", rand());
+                mat.setName(std::format("Material-uid[{:02d}]", rand()));
                 scene.pushMaterial(mat);
                 scene.update();
             }

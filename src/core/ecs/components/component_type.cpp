@@ -28,7 +28,6 @@ const std::vector<ComponentType>& ComponentType::all() {
 }
 
 ComponentType& ComponentType::Builder::build() {
-    type.totalSize = currentOffset;
     ComponentType::storage.push_back(std::move(type));
     return ComponentType::storage.back();
 }
@@ -47,7 +46,6 @@ std::string ComponentType::Builder::deriveLabel(const std::string& id) {
             result += c;
         }
     }
-
     return result;
 }
 

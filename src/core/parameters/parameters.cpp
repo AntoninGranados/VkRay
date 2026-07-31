@@ -1,317 +1,96 @@
 #include "parameters.hpp"
 
+#include <format>
 #include <limits>
+#include <stdexcept>
 
 #include <glm/glm.hpp>
-#include <nlohmann/json.hpp>
 
 #include "utils/log.hpp"
-
-using json = nlohmann::ordered_json;
 
 void ParameterRegistry::resetAll() {
     for (auto& p : parameters) p->reset();
 }
 
 void ParameterRegistry::syncAll() {
-    for (auto& p : parameters) if (p->onSync) p->onSync();
-}
-
-IntParameter::IntParameter(
-    const ParameterPath& path_,
-    const std::string& label_,
-    int value_,
-    int minValue_,
-    int maxValue_,
-    int step_,
-    bool restart_
-) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string IntParameter::print() {
-    bool hasMn = minValue != std::numeric_limits<int>::lowest();
-    bool hasMx = maxValue != std::numeric_limits<int>::max();
-    std::string constraints = "-";
-    if (hasMn && hasMx) constraints = std::format("{} ... {}", minValue, maxValue);
-    else if (hasMn)     constraints = std::format("{} ...", minValue);
-    else if (hasMx)     constraints = std::format("... {}", maxValue);
-    return std::format("| `{}` | {} | {} | Integer | {} | {} | {} |",
-        path.c_str(), label, description.value_or("-"), defaultValue, constraints, restartAccumulation ? "✓" : "-");
-}
-
-FloatParameter::FloatParameter(
-    const ParameterPath& path_,
-    const std::string& label_,
-    float value_,
-    float minValue_,
-    float maxValue_,
-    float step_,
-    bool restart_
-) : value(value_), defaultValue(value_), minValue(minValue_), maxValue(maxValue_), step(step_) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string FloatParameter::print() {
-    bool hasMn = minValue != std::numeric_limits<float>::lowest();
-    bool hasMx = maxValue != std::numeric_limits<float>::max();
-    std::string constraints = "-";
-    if (hasMn && hasMx) constraints = std::format("{:g} ... {:g}", minValue, maxValue);
-    else if (hasMn)     constraints = std::format("{:g} ...", minValue);
-    else if (hasMx)     constraints = std::format("... {:g}", maxValue);
-    return std::format("| `{}` | {} | {} | Float | {:g} | {} | {} |",
-        path.c_str(), label, description.value_or("-"), defaultValue, constraints, restartAccumulation ? "✓" : "-");
-}
-
-BoolParameter::BoolParameter(
-    const ParameterPath& path_,
-    const std::string& label_,
-    bool value_,
-    bool restart_
-) : value(value_), defaultValue(value_) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string BoolParameter::print() {
-    return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |", path.c_str(), label, description.value_or("-"), defaultValue, restartAccumulation ? "✓" : "-");
-}
-
-EnumParameter::EnumParameter(
-    const ParameterPath& path_,
-    const std::string& label_,
-    int value_,
-    std::vector<std::string> items_,
-    bool restart_
-) : value(value_), defaultValue(value_), items(std::move(items_)) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string EnumParameter::print() {
-    std::string list = "";
-    for (const auto& item : items) {
-        if (list.empty()) list = std::format("`{}`", item);
-        else list = std::format("{} • `{}`", list, item);
-    }
-    return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |", path.c_str(), label, description.value_or("-"), items[defaultValue], list, restartAccumulation ? "✓" : "-");
-}
-
-PathParameter::PathParameter(
-    const ParameterPath& path_,
-    const std::string& label_,
-    std::filesystem::path value_,
-    std::vector<PathExtension> extensions_,
-    bool restart_
-) : value(value_), defaultValue(value_), extensions(std::move(extensions_)) {
-    path = path_;
-    label = label_;
-    restartAccumulation = restart_;
-}
-
-std::string PathParameter::print() {
-    std::string exts;
-    for (const auto& e : extensions) {
-        if (!exts.empty()) exts += ", ";
-        exts += e.displayName() + " (." + e.ext + ")";
-    }
-    return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
-        path.c_str(), label, description.value_or("-"),
-        defaultValue.string(), exts.empty() ? "-" : exts,
-        restartAccumulation ? "✓" : "-");
-}
-
-IntParameter& ParameterRegistry::addInt(
-    const ParameterPath& path,
-    const std::string& label,
-    int value,
-    int minValue,
-    int maxValue,
-    int step,
-    bool restartAccumulation
-) {
-    auto parameter = std::make_unique<IntParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
-    index[path.string()] = parameter.get();
-    parameters.push_back(std::move(parameter));
-    return static_cast<IntParameter&>(*parameters.back());
-}
-
-FloatParameter& ParameterRegistry::addFloat(
-    const ParameterPath& path,
-    const std::string& label,
-    float value,
-    float minValue,
-    float maxValue,
-    float step,
-    bool restartAccumulation
-) {
-    auto parameter = std::make_unique<FloatParameter>(path, label, value, minValue, maxValue, step, restartAccumulation);
-    index[path.string()] = parameter.get();
-    parameters.push_back(std::move(parameter));
-    return static_cast<FloatParameter&>(*parameters.back());
-}
-
-BoolParameter& ParameterRegistry::addBool(
-    const ParameterPath& path,
-    const std::string& label,
-    bool value,
-    bool restartAccumulation
-) {
-    auto parameter = std::make_unique<BoolParameter>(path, label, value, restartAccumulation);
-    index[path.string()] = parameter.get();
-    parameters.push_back(std::move(parameter));
-    return static_cast<BoolParameter&>(*parameters.back());
-}
-
-EnumParameter& ParameterRegistry::addEnum(
-    const ParameterPath& path,
-    const std::string& label,
-    int value,
-    std::vector<std::string> items,
-    bool restartAccumulation
-) {
-    auto parameter = std::make_unique<EnumParameter>(path, label, value, std::move(items), restartAccumulation);
-    index[path.string()] = parameter.get();
-    parameters.push_back(std::move(parameter));
-    return static_cast<EnumParameter&>(*parameters.back());
-}
-
-PathParameter& ParameterRegistry::addPath(
-    const ParameterPath& path,
-    const std::string& label,
-    std::filesystem::path value,
-    std::vector<PathExtension> extensions,
-    bool restartAccumulation
-) {
-    auto parameter = std::make_unique<PathParameter>(path, label, std::move(value), std::move(extensions), restartAccumulation);
-    index[path.string()] = parameter.get();
-    parameters.push_back(std::move(parameter));
-    return static_cast<PathParameter&>(*parameters.back());
+    for (auto& p : parameters) p->sync();
 }
 
 void ParameterRegistry::setEnumByName(const ParameterPath& path, const std::string& name) {
-    auto& parameter = getParameter<EnumParameter>(path);
-    if (!parameter.setByName(name)) {
-        Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, path.string()));
-        return;
+    auto& p = getParam(path);
+    const auto& items = p.getMetadata().enumItems;
+    for (size_t i = 0; i < items.size(); i++) {
+        if (items[i] == name) {
+            p.set(static_cast<int>(i));
+            return;
+        }
     }
-    if (parameter.onSync) parameter.onSync();
+    Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, path.string()));
 }
 
-// ===================== get =====================
-
-template <>
-bool ParameterRegistry::get<bool>(const ParameterPath& path) {
-    return getParameter<BoolParameter>(path).get();
+Parameter& ParameterRegistry::getParam(const ParameterPath& path) {
+    auto it = index.find(path.generic_string());
+    if (it == index.end()) throw std::runtime_error("Parameter not found: " + path.generic_string());
+    return *it->second;
 }
 
-template <>
-int ParameterRegistry::get<int>(const ParameterPath& path) {
-    return getParameter<IntParameter>(path).get();
-}
+// ===================== print =====================
 
-template <>
-float ParameterRegistry::get<float>(const ParameterPath& path) {
-    return getParameter<FloatParameter>(path).get();
-}
+std::string Parameter::print() const {
+    auto constraints = [&](auto mn, auto mx, auto sentinel_lo, auto sentinel_hi) -> std::string {
+        bool hasMn = mn > sentinel_lo;
+        bool hasMx = mx < sentinel_hi;
+        if (hasMn && hasMx) return std::format("{} ... {}", mn, mx);
+        if (hasMn)          return std::format("{} ...", mn);
+        if (hasMx)          return std::format("... {}", mx);
+        return "-";
+    };
 
-template <>
-std::filesystem::path ParameterRegistry::get<std::filesystem::path>(const ParameterPath& path) {
-    return getParameter<PathParameter>(path).get();
-}
+    const char* p = path.c_str();
+    const char* l = getLabel().c_str();
+    std::string desc = description.value_or("-");
+    const FieldMetadata& metadata = getMetadata();
+    const char* r = restartAccumulation ? "✓" : "-";
 
-// ===================== set =====================
-
-template <>
-void ParameterRegistry::set<bool>(const ParameterPath& path, bool value) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::set<int>(const ParameterPath& path, int value) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::set<float>(const ParameterPath& path, float value) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.get() = value;
-    if (parameter.onSync) parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::set<std::filesystem::path>(const ParameterPath& path, std::filesystem::path value) {
-    auto& parameter = getParameter<PathParameter>(path);
-    parameter.get() = std::move(value);
-    if (parameter.onSync) parameter.onSync();
-}
-
-// ===================== bind (pointer) =====================
-
-template <>
-void ParameterRegistry::bind<bool>(const ParameterPath& path, bool* ptr) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<int>(const ParameterPath& path, int* ptr) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<float>(const ParameterPath& path, float* ptr) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<std::filesystem::path>(const ParameterPath& path, std::filesystem::path* ptr) {
-    auto& parameter = getParameter<PathParameter>(path);
-    parameter.onSync = [ptr, &parameter]() { *ptr = parameter.get(); };
-    parameter.onSync();
-}
-
-// ===================== bind (callback) =====================
-
-template <>
-void ParameterRegistry::bind<bool>(const ParameterPath& path, std::function<void(bool)> callback) {
-    auto& parameter = getParameter<BoolParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<int>(const ParameterPath& path, std::function<void(int)> callback) {
-    auto& parameter = getParameter<IntParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<float>(const ParameterPath& path, std::function<void(float)> callback) {
-    auto& parameter = getParameter<FloatParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
-}
-
-template <>
-void ParameterRegistry::bind<std::filesystem::path>(const ParameterPath& path, std::function<void(std::filesystem::path)> callback) {
-    auto& parameter = getParameter<PathParameter>(path);
-    parameter.onSync = [callback = std::move(callback), &parameter]() { callback(parameter.get()); };
-    parameter.onSync();
+    switch (type) {
+        case FieldType::Bool:
+            return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |",
+                p, l, desc, getDefault<bool>() ? "true" : "false", r);
+        case FieldType::Int: {
+            int mn = std::isinf(metadata.min) ? std::numeric_limits<int>::lowest() : (int)metadata.min;
+            int mx = std::isinf(metadata.max) ? std::numeric_limits<int>::max() : (int)metadata.max;
+            return std::format("| `{}` | {} | {} | Integer | {} | {} | {} |",
+                p, l, desc, getDefault<int>(), constraints(mn, mx, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max()), r);
+        }
+        case FieldType::Float:
+            return std::format("| `{}` | {} | {} | Float | {:g} | {} | {} |",
+                p, l, desc, getDefault<float>(), constraints(metadata.min, metadata.max, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()), r);
+        case FieldType::Enum: {
+            int def = getDefault<int>();
+            std::string list;
+            for (const auto& item : metadata.enumItems)
+                list = list.empty() ? std::format("`{}`", item) : std::format("{} • `{}`", list, item);
+            return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |",
+                p, l, desc, metadata.enumItems.empty() ? "" : metadata.enumItems[def], list, r);
+        }
+        case FieldType::Path: {
+            std::string defPath = getDefault<std::string>();
+            std::string exts;
+            for (const auto& e : metadata.pathExtensions) {
+                if (!exts.empty()) exts += ", ";
+                exts += e.displayName() + " (." + e.ext + ")";
+            }
+            return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
+                p, l, desc, defPath, exts.empty() ? "-" : exts, r);
+        }
+        case FieldType::IVec2: case FieldType::IVec3: case FieldType::IVec4: {
+            int n = type == FieldType::IVec2 ? 2 : type == FieldType::IVec3 ? 3 : 4;
+            return std::format("| `{}` | {} | {} | IVec{} | - | - | {} |", p, l, desc, n, r);
+        }
+        case FieldType::Vec2: case FieldType::Vec3: case FieldType::Vec4: {
+            int n = type == FieldType::Vec2 ? 2 : type == FieldType::Vec3 ? 3 : 4;
+            return std::format("| `{}` | {} | {} | Vec{} | - | - | {} |", p, l, desc, n, r);
+        }
+        default: return "";
+    }
 }

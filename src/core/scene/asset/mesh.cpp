@@ -252,7 +252,7 @@ size_t MeshAsset::buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<ui
     };
 
     glm::vec3 extent = centroidMax - centroidMin;
-    if (count <= LEAF_SIZE || (extent.x < 1e-3f && extent.y < 1e-3f && extent.z < 1e-3f)) {
+    if (count <= kLeafSize || (extent.x < 1e-3f && extent.y < 1e-3f && extent.z < 1e-3f)) {
         makeLeaf();
         return nodeIndex;
     }
@@ -266,32 +266,32 @@ size_t MeshAsset::buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<ui
 
     for (int axis = 0; axis < 3; axis++) {
         if (extent[axis] < 1e-3f) continue;
-        float scale = SAH_K / extent[axis];
+        float scale = kSahK / extent[axis];
 
-        std::vector<TriangleBin> bins(SAH_K);
+        std::vector<TriangleBin> bins(kSahK);
         for (size_t i = 0; i < count; i++) {
             const TriBounds& tb = triBounds[triIndices[start + i]];
-            int b = std::clamp(int((tb.centroid[axis] - centroidMin[axis]) * scale), 0, SAH_K - 1);
+            int b = std::clamp(int((tb.centroid[axis] - centroidMin[axis]) * scale), 0, kSahK - 1);
             bins[b].aabbMax = glm::max(bins[b].aabbMax, tb.max);
             bins[b].aabbMin = glm::min(bins[b].aabbMin, tb.min);
             bins[b].count++;
         }
 
-        std::vector<TriangleBin> lSweep(SAH_K - 1), rSweep(SAH_K - 1);
+        std::vector<TriangleBin> lSweep(kSahK - 1), rSweep(kSahK - 1);
         lSweep[0] = bins[0];
-        rSweep[0] = bins[SAH_K - 1];
-        for (int i = 1; i < SAH_K - 1; i++) {
+        rSweep[0] = bins[kSahK - 1];
+        for (int i = 1; i < kSahK - 1; i++) {
             lSweep[i].aabbMax = glm::max(lSweep[i-1].aabbMax, bins[i].aabbMax);
             lSweep[i].aabbMin = glm::min(lSweep[i-1].aabbMin, bins[i].aabbMin);
             lSweep[i].count   = lSweep[i-1].count + bins[i].count;
-            rSweep[i].aabbMax = glm::max(rSweep[i-1].aabbMax, bins[SAH_K-1-i].aabbMax);
-            rSweep[i].aabbMin = glm::min(rSweep[i-1].aabbMin, bins[SAH_K-1-i].aabbMin);
-            rSweep[i].count   = rSweep[i-1].count + bins[SAH_K-1-i].count;
+            rSweep[i].aabbMax = glm::max(rSweep[i-1].aabbMax, bins[kSahK-1-i].aabbMax);
+            rSweep[i].aabbMin = glm::min(rSweep[i-1].aabbMin, bins[kSahK-1-i].aabbMin);
+            rSweep[i].count   = rSweep[i-1].count + bins[kSahK-1-i].count;
         }
 
-        for (int i = 0; i < SAH_K - 1; i++) {
+        for (int i = 0; i < kSahK - 1; i++) {
             float cost = SurfaceAreaHeuristic(lSweep[i].aabbMin, lSweep[i].aabbMax) * lSweep[i].count
-                       + SurfaceAreaHeuristic(rSweep[SAH_K-2-i].aabbMin, rSweep[SAH_K-2-i].aabbMax) * rSweep[SAH_K-2-i].count;
+                       + SurfaceAreaHeuristic(rSweep[kSahK-2-i].aabbMin, rSweep[kSahK-2-i].aabbMax) * rSweep[kSahK-2-i].count;
             if (cost < bestCost) {
                 bestCost  = cost;
                 bestBin   = i;
@@ -313,7 +313,7 @@ size_t MeshAsset::buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<ui
         triIndices.begin() + start,
         triIndices.begin() + start + count,
         [&](uint32_t tri) {
-            int b = std::clamp(int((triBounds[tri].centroid[bestAxis] - centroidMin[bestAxis]) * bestScale), 0, SAH_K - 1);
+            int b = std::clamp(int((triBounds[tri].centroid[bestAxis] - centroidMin[bestAxis]) * bestScale), 0, kSahK - 1);
             return b <= bestBin;
         }
     );
