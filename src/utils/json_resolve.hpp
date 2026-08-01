@@ -23,3 +23,5 @@ glm::vec3 resolveVec3(const nlohmann::ordered_json& v, const ResolveCtx& ctx);
 // - `{n}`, `{row}`, `{col}` and `{spp}` will be resolved as numerical values
 // - `{TOKEN:NAME1,NAME2,...}` will be resolved as `NAME1` or `NAME2` (or ...) based on the index
 std::string resolveTemplate(std::string tmpl, const ResolveCtx& ctx);
+
+std::string trimmed(const std::string& s);

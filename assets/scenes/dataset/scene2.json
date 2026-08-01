@@ -3,15 +3,6 @@
 
     "light": "empty",
 
-    "camera": {
-        "name":      "Camera",
-        "radius":    { "rand": { "min": 8,  "max": 12 } },
-        "azimuth":   { "rand": { "min": -30, "max": 30 } },
-        "elevation": { "rand": { "min": 15,  "max": 35 } },
-        "target": [0, 2, 0],
-        "fov":       { "rand": { "min": 30,  "max": 60 } }
-    },
-
     "materials": [
         {
             "name": "Floor",
@@ -20,18 +11,8 @@
             "roughness": { "rand": { "min": 0.0, "max": 0.4 } },
             "ior": 1.5
         },
-        {
-            "name": "KeyLight",
-            "type": "emissive",
-            "albedo": [1.0, 0.9, 0.8],
-            "emission_strength": 6
-        },
-        {
-            "name": "FillLight",
-            "type": "emissive",
-            "albedo": [0.7, 0.8, 1.0],
-            "emission_strength": 2
-        },
+        { "name": "KeyLight",  "type": "emissive", "albedo": [1.0, 0.9, 0.8], "emission_strength": 6 },
+        { "name": "FillLight", "type": "emissive", "albedo": [0.7, 0.8, 1.0], "emission_strength": 2 },
         {
             "name": "Lucy",
             "type": "dielectric",
@@ -48,43 +29,52 @@
         }
     ],
 
-    "objects": [
-        { "name": "Floor", "type": "plane", "material": "Floor", "point": [0, 0, 0], "normal": [0, 1, 0] },
-
+    "entities": [
         {
-            "name": "KeyLight",
-            "type": "quad",
+            "camera": { "fov": { "rand": { "min": 30, "max": 60 } } },
+            "name": { "value": "Camera" },
+            "spherical": {
+                "radius":    { "rand": { "min": 8, "max": 12 } },
+                "azimuth":   { "rand": { "min": -30, "max": 30 } },
+                "elevation": { "rand": { "min": 15, "max": 35 } },
+                "target":    [0, 2, 0]
+            }
+        },
+        {
+            "plane": {},
+            "material": "Floor",
+            "name": { "value": "Floor" }
+        },
+        {
+            "quad": {},
             "material": "KeyLight",
-            "center": [0, 7, 0],
-            "normal": [0, -1, 0],
-            "scale": [5, 5]
+            "name": { "value": "KeyLight" },
+            "transform": { "position": [0, 7, 0], "rotation": [90, 0, 0], "scale": [5, 5, 1] }
         },
         {
-            "name": "FillLight",
-            "type": "quad",
+            "quad": {},
             "material": "FillLight",
-            "center": [-5, 3, 0],
-            "normal": [1, 0, 0],
-            "scale": [4, 4]
+            "name": { "value": "FillLight" },
+            "transform": { "position": [-5, 3, 0], "rotation": [0, 90, 0], "scale": [4, 4, 1] }
         },
-
         {
-            "name": "Lucy",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/lucy-centered.obj" },
             "material": "Lucy",
-            "path": "./assets/models/lucy-centered.obj",
-            "position": [-1.5, 0, -0.5],
-            "rotation": [0, { "rand": { "min": 150, "max": 210 } }, 0],
-            "scale": [1.0, 1.0, 1.0]
+            "name": { "value": "Lucy" },
+            "transform": {
+                "position": [-1.5, 0, -0.5],
+                "rotation": [0, { "rand": { "min": 150, "max": 210 } }, 0]
+            }
         },
         {
-            "name": "Bunny",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/bunny.obj" },
             "material": "Bunny",
-            "path": "./assets/models/bunny.obj",
-            "position": [1.5, 0.86, 0.5],
-            "rotation": [0, { "rand": { "min": -30, "max": 30 } }, 0],
-            "scale": [2.0, 2.0, 2.0]
+            "name": { "value": "Bunny" },
+            "transform": {
+                "position": [1.5, 0.86, 0.5],
+                "rotation": [0, { "rand": { "min": -30, "max": 30 } }, 0],
+                "scale": [2, 2, 2]
+            }
         }
     ]
 }

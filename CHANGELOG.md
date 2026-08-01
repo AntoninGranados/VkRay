@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.2]
+
+### Added
+- Keyframe animation: typed `Track` with `map<int, Keyframe>` and six interpolation modes (linear, step, cubic, ease-in, ease-out, ease-in-out); `AnimationStore` maps `(entity, componentType, fieldId)` and `(materialHandle, fieldId)` to tracks; `evaluate()` applies all tracks in one pass
+- `"anim"` keyframe arrays on any numeric field in scene files; `"spherical"` camera placement; `"repeat"` / `"grid"` entity spawning with `{n}`, `{row}`, `{col}` expression variables
+- `ComponentType` builder with `field<T>(id, default, metadata)`, `privateField`, and `animatable` flags; `description` field on each component type
+- `ComponentSerializer::saveDocumentation()` generates `docs/components.md` from the live component registry
+
+### Changed
+- `Field` / `FieldType` / `FieldValue` / `FieldMetadata` unified across ECS components, materials, and parameters; `ui::drawField` shared widget used by all three
+- `SceneSerializer` rewritten as private static class methods
+- `docs/scene-format.md` and `docs/expressions.md` updated
+
+---
+
 ## [0.4.1]
 
 ### Added

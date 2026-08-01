@@ -4,20 +4,23 @@ Shared expression syntax used in scene and job JSON files.
 
 ## Value expressions
 
-Any numeric field accepts a `rand` or `lerp` object instead of a literal value. Works for scalars, vec2, and vec3.
+Any numeric field accepts a `rand`, `lerp`, or `anim` object instead of a literal value. Works for scalars, vec2, and vec3.
 
 ```json
 "radius": { "rand": { "min": 0.5, "max": 1.5 } }
 
-"center": { "rand": { "min": [-5, 0, -5], "max": [5, 0, 5] } }
+"position": { "rand": { "min": [-5, 0, -5], "max": [5, 0, 5] } }
 
 "roughness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } }
+
+"position": { "anim": [{ "frame": 0, "value": [0, 0, -5] }, { "frame": 24, "value": [0, 0, 5], "ease": "ease_in_out" }] }
 ```
 
 | Expression | Description |
 |------------|-------------|
 | `rand` | Uniform random value between `min` and `max`. Re-evaluated each instance. |
 | `lerp` | Linearly interpolates `from` → `to` across an index axis. |
+| `anim` | Keyframe animation. Array of `{ "frame", "value", "ease" }` objects. See [scene-format](scene-format.md#animation). |
 
 `lerp` `axis`: `"col"` `"row"` `"n"` — maps the value across the grid column, grid row, or repeat index respectively.
 

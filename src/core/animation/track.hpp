@@ -6,15 +6,7 @@
 
 class Track {
 public:
-    template<typename T>
-    void setKeyframe(int frame, const T& value) {
-        FieldValue f = FieldValue::make(value);
-        auto it = keyframes.find(frame);
-        if (it != keyframes.end())
-            it->second.setValue(std::move(f));
-        else
-            keyframes.emplace(frame, Keyframe(frame, std::move(f)));
-    }
+    void setKeyframe(int frame, FieldValue value, Interpolation interp = Interpolation::Linear);
 
     template<typename T>
     T sample(float frame) const {

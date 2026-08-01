@@ -123,3 +123,9 @@ std::string resolveTemplate(std::string tmpl, const ResolveCtx& ctx) {
         tmpl = substituteToken(tmpl, token, indexCount.first, indexCount.second);
     return tmpl;
 }
+
+std::string trimmed(const std::string& s) {
+    const auto pos = s.find('\0');
+    return pos != std::string::npos ? s.substr(0, pos) : s;
+}
+

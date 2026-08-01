@@ -3,27 +3,21 @@
 
     "light": "day",
 
-    "camera": {
-        "position": [0, 3, -5],
-        "target": [0, 3, 0],
-        "fov": 70
-    },
-
     "materials": [
-        {
-            "name": "Sponza",
-            "type": "lambertian",
-            "albedo": [1, 1, 1]
-        }
+        { "name": "Sponza", "type": "lambertian", "albedo": [1, 1, 1] }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Sponza",
-            "type": "mesh",
+            "camera": { "fov": 70 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 3, -5], "rotation": [0, 180, 0] }
+        },
+        {
+            "mesh": { "path": "./assets/models/sponza.obj" },
             "material": "Sponza",
-            "path": "./assets/models/sponza.obj",
-            "scale": [0.04, 0.04, 0.04]
+            "name": { "value": "Sponza" },
+            "transform": { "scale": [0.04, 0.04, 0.04] }
         }
     ]
 }

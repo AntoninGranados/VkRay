@@ -3,62 +3,32 @@
 
     "light": "empty",
 
-    "camera": {
-        "position": [0, 5, 10],
-        "target": [0, 1, 0],
-        "fov": 35,
-        "aperture": 1.0,
-        "focus_depth": 10.6
-    },
-
     "materials": [
-        {
-            "name": "Base",
-            "type": "lambertian",
-            "albedo": [1.0, 1.0, 1.0]
-        },
-        {
-            "name": "Fire",
-            "type": "emissive",
-            "albedo": [1.0, 1.0, 1.0],
-            "emission_strength": 50
-        },
-        {
-            "name": "Fireflies",
-            "type": "emissive",
-            "albedo": [1.0, 1.0, 1.0],
-            "emission_strength": 5
-        }
+        { "name": "Base",      "type": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "Fire",      "type": "emissive",   "albedo": [1, 1, 1], "emission_strength": 50 },
+        { "name": "Fireflies", "type": "emissive",   "albedo": [1, 1, 1], "emission_strength": 5 }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Campsite",
-            "type": "mesh",
+            "camera": { "fov": 35, "aperture": 1.0, "focus_depth": 10.6 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
+        },
+        {
+            "mesh": { "path": "./assets/models/campfire/campsite.obj" },
             "material": "Base",
-            "path": "./assets/models/campfire/campsite.obj",
-            "position": [0, 0, 0],
-            "rotation": [0, 0, 0],
-            "scale": [1, 1, 1]
+            "name": { "value": "Campsite" }
         },
         {
-            "name": "Fire",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/campfire/fire.obj" },
             "material": "Fire",
-            "path": "./assets/models/campfire/fire.obj",
-            "position": [0, 0, 0],
-            "rotation": [0, 0, 0],
-            "scale": [1, 1, 1]
+            "name": { "value": "Fire" }
         },
         {
-            "name": "Fireflies",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/campfire/fireflies.obj" },
             "material": "Fireflies",
-            "path": "./assets/models/campfire/fireflies.obj",
-            "position": [0, 0, 0],
-            "rotation": [0, 0, 0],
-            "scale": [1, 1, 1]
+            "name": { "value": "Fireflies" }
         }
-        
     ]
 }

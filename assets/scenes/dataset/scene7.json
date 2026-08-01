@@ -3,15 +3,6 @@
 
     "light": "empty",
 
-    "camera": {
-        "name":      "Camera",
-        "radius":    { "rand": { "min": 4,   "max": 8   } },
-        "azimuth":   { "rand": { "min": 0,   "max": 360 } },
-        "elevation": { "rand": { "min": -10, "max": 35  } },
-        "target": [0, 1, 0],
-        "fov":       { "rand": { "min": 60,  "max": 95  } }
-    },
-
     "materials": [
         {
             "name": "MirrorLeft",
@@ -25,32 +16,11 @@
             "albedo":    [0.98, 0.98, 0.98],
             "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
         },
-        {
-            "name": "WallBack",
-            "type": "lambertian",
-            "albedo": [0.88, 0.86, 0.82]
-        },
-        {
-            "name": "WallFront",
-            "type": "lambertian",
-            "albedo": [0.88, 0.86, 0.82]
-        },
-        {
-            "name": "Floor",
-            "type": "lambertian",
-            "albedo": [0.90, 0.88, 0.84]
-        },
-        {
-            "name": "Ceiling",
-            "type": "lambertian",
-            "albedo": [0.92, 0.90, 0.88]
-        },
-        {
-            "name": "CeilLight",
-            "type": "emissive",
-            "albedo": [1.0, 0.97, 0.92],
-            "emission_strength": 35
-        },
+        { "name": "WallBack",  "type": "lambertian", "albedo": [0.88, 0.86, 0.82] },
+        { "name": "WallFront", "type": "lambertian", "albedo": [0.88, 0.86, 0.82] },
+        { "name": "Floor",     "type": "lambertian", "albedo": [0.90, 0.88, 0.84] },
+        { "name": "Ceiling",   "type": "lambertian", "albedo": [0.92, 0.90, 0.88] },
+        { "name": "CeilLight", "type": "emissive",   "albedo": [1.0, 0.97, 0.92], "emission_strength": 35 },
         {
             "name": "GlassLarge",
             "type": "dielectric",
@@ -67,76 +37,70 @@
         }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Floor",
-            "type": "quad",
+            "camera": { "fov": { "rand": { "min": 60, "max": 95 } } },
+            "name": { "value": "Camera" },
+            "spherical": {
+                "radius":    { "rand": { "min": 4, "max": 8 } },
+                "azimuth":   { "rand": { "min": 0, "max": 360 } },
+                "elevation": { "rand": { "min": -10, "max": 35 } },
+                "target":    [0, 1, 0]
+            }
+        },
+        {
+            "quad": {},
             "material": "Floor",
-            "center": [0, 0, 0],
-            "normal": [0, 1, 0],
-            "scale": [6, 6]
+            "name": { "value": "Floor" },
+            "transform": { "rotation": [-90, 0, 0], "scale": [6, 6, 1] }
         },
         {
-            "name": "Ceiling",
-            "type": "quad",
+            "quad": {},
             "material": "Ceiling",
-            "center": [0, 4, 0],
-            "normal": [0, -1, 0],
-            "scale": [6, 6]
+            "name": { "value": "Ceiling" },
+            "transform": { "position": [0, 4, 0], "rotation": [90, 0, 0], "scale": [6, 6, 1] }
         },
         {
-            "name": "WallBack",
-            "type": "quad",
+            "quad": {},
             "material": "WallBack",
-            "center": [0, 2, -3],
-            "normal": [0, 0, 1],
-            "scale": [6, 4]
+            "name": { "value": "WallBack" },
+            "transform": { "position": [0, 2, -3], "scale": [6, 4, 1] }
         },
         {
-            "name": "WallFront",
-            "type": "quad",
+            "quad": {},
             "material": "WallFront",
-            "center": [0, 2, 3],
-            "normal": [0, 0, -1],
-            "scale": [6, 4]
+            "name": { "value": "WallFront" },
+            "transform": { "position": [0, 2, 3], "rotation": [180, 0, 0], "scale": [6, 4, 1] }
         },
         {
-            "name": "MirrorLeft",
-            "type": "quad",
+            "quad": {},
             "material": "MirrorLeft",
-            "center": [-3, 2, 0],
-            "normal": [1, 0, 0],
-            "scale": [6, 4]
+            "name": { "value": "MirrorLeft" },
+            "transform": { "position": [-3, 2, 0], "rotation": [0, 90, 0], "scale": [6, 4, 1] }
         },
         {
-            "name": "MirrorRight",
-            "type": "quad",
+            "quad": {},
             "material": "MirrorRight",
-            "center": [3, 2, 0],
-            "normal": [-1, 0, 0],
-            "scale": [6, 4]
+            "name": { "value": "MirrorRight" },
+            "transform": { "position": [3, 2, 0], "rotation": [0, -90, 0], "scale": [6, 4, 1] }
         },
         {
-            "name": "CeilLight",
-            "type": "quad",
+            "quad": {},
             "material": "CeilLight",
-            "center": [1, 3.9, -0.5],
-            "normal": [0, -1, 0],
-            "scale": [1.5, 1.5]
+            "name": { "value": "CeilLight" },
+            "transform": { "position": [1, 3.9, -0.5], "rotation": [90, 0, 0], "scale": [1.5, 1.5, 1] }
         },
         {
-            "name": "GlassBall",
-            "type": "sphere",
+            "sphere": { "radius": 1.0 },
             "material": "GlassLarge",
-            "center": [-0.5, 1.1, 0],
-            "radius": 1.0
+            "name": { "value": "GlassBall" },
+            "transform": { "position": [-0.5, 1.1, 0] }
         },
         {
-            "name": "GlassSmall",
-            "type": "sphere",
+            "sphere": { "radius": 0.5 },
             "material": "GlassSmall",
-            "center": [1.4, 0.6, 0.8],
-            "radius": 0.5
+            "name": { "value": "GlassSmall" },
+            "transform": { "position": [1.4, 0.6, 0.8] }
         }
     ]
 }

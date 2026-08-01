@@ -7,8 +7,13 @@ ComponentType::Builder ComponentType::builder(std::string id) {
 }
 
 ComponentType::Builder::Builder(std::string id) {
-    type.label = deriveLabel(id);
+    type.label = ComponentType::deriveLabel(id);
     type.id = std::move(id);
+}
+
+ComponentType::Builder& ComponentType::Builder::description(std::string description) {
+    type.description = std::move(description);
+    return *this;
 }
 
 ComponentType::Builder& ComponentType::Builder::icon(std::string icon) {
@@ -27,12 +32,18 @@ const std::vector<ComponentType>& ComponentType::all() {
     return storage;
 }
 
+std::optional<std::reference_wrapper<const ComponentType>> ComponentType::find(const std::string& id) {
+    for (const auto& t : storage)
+        if (t.getId() == id) return t;
+    return std::nullopt;
+}
+
 ComponentType& ComponentType::Builder::build() {
     ComponentType::storage.push_back(std::move(type));
     return ComponentType::storage.back();
 }
 
-std::string ComponentType::Builder::deriveLabel(const std::string& id) {
+std::string ComponentType::deriveLabel(const std::string& id) {
     std::string result;
     bool capitalize = true;
     for (const auto& c : id) {

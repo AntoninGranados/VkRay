@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -29,6 +30,7 @@ public:
 
     const std::string& getId() const { return id; }
     const std::string& getLabel() const { return label; }
+    const std::string& getDescription() const { return description; }
     const std::string& getIcon() const { return icon; }
     const std::string& getGroup() const { return group; }
     const std::vector<std::string>& getNeeds() const { return needs; }
@@ -37,7 +39,10 @@ public:
     const std::vector<ComponentField>& getFields() const { return fields; }
     const ComponentField& getField(const std::string& id) const { return fields[fieldIndex.at(id)]; }
 
+    static std::string deriveLabel(const std::string& id);
+
     static const std::vector<ComponentType>& all();
+    static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
 
 private:
     friend class ComponentType::Builder;
@@ -46,6 +51,7 @@ private:
 
     std::string id;
     std::string label;
+    std::string description;
     std::string icon;
     std::string group;
 
@@ -59,6 +65,7 @@ class ComponentType::Builder {
 public:
     explicit Builder(std::string id);
 
+    Builder& description(std::string description);
     Builder& icon(std::string icon);
     Builder& group(std::string group);
 
@@ -87,8 +94,6 @@ public:
     ComponentType& build();
 
 private:
-    std::string deriveLabel(const std::string& id);
-
     template <typename T>
     Builder& addField(std::string id, T defaultValue, FieldMetadata metadata, bool isPrivate, bool animatable = false) {
         if (type.fieldIndex.contains(id))

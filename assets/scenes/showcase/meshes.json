@@ -3,53 +3,48 @@
 
     "light": "sunset",
 
-    "camera": {
-        "position": [0, 5, -10],
-        "target": [0, 1.5, 0],
-        "fov": 32,
-        "aperture": 0.2
-    },
-
     "materials": [
-        { "name": "Sun",          "type": "emissive",   "albedo": [1.0, 0.8, 0.8], "emission_strength": 50 },
-        { "name": "Floor",        "type": "ggx_glossy",     "albedo": [0.75, 0.70, 0.62], "roughness": 0.1, "ior": 1.5 },
-        { "name": "BunnyMat",      "type": "dielectric", "albedo": [0.30, 0.62, 1.0], "roughness": 0.1, "ior": 1.5, "density": 3.5 },
-        { "name": "LucyMat",     "type": "lambertian",  "albedo": [0.15, 0.52, 0.22] },
-        { "name": "ArmadilloMat", "type": "ggx_metal", "albedo": [0.85, 0.22, 0.18], "roughness": 0.35 }
+        { "name": "Sun",         "type": "emissive",  "albedo": [1.0, 0.8, 0.8], "emission_strength": 50 },
+        { "name": "Floor",       "type": "ggx_glossy","albedo": [0.75, 0.70, 0.62], "roughness": 0.1, "ior": 1.5 },
+        { "name": "BunnyMat",    "type": "dielectric","albedo": [0.30, 0.62, 1.0], "roughness": 0.1, "ior": 1.5, "density": 3.5 },
+        { "name": "LucyMat",     "type": "lambertian","albedo": [0.15, 0.52, 0.22] },
+        { "name": "ArmadilloMat","type": "ggx_metal", "albedo": [0.85, 0.22, 0.18], "roughness": 0.35 }
     ],
 
-    "objects": [
-        { "name": "Sun", "type": "sphere", "material": "Sun", "center": [-200, 100, -400], "radius": 50 },
-        { "name": "Floor", "type": "plane", "material": "Floor", "point": [0, 0, 0], "normal": [0, 1, 0] },
+    "entities": [
         {
-            "name": "Bunny",
-            "type": "mesh",
+            "camera": { "fov": 32, "aperture": 0.2 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 5, -10], "rotation": [-19.29, 180, 0] }
+        },
+        {
+            "sphere": { "radius": 50 },
+            "material": "Sun",
+            "name": { "value": "Sun" },
+            "transform": { "position": [-200, 100, -400] }
+        },
+        {
+            "plane": {},
+            "material": "Floor",
+            "name": { "value": "Floor" }
+        },
+        {
+            "mesh": { "path": "./assets/models/bunny.obj", "smooth": true },
             "material": "BunnyMat",
-            "path": "./assets/models/bunny.obj",
-            "position": [-3.5, 0.94, -0.2],
-            "rotation": [0, 140, 0],
-            "scale": [2.2, 2.2, 2.2],
-            "smooth": true
+            "name": { "value": "Bunny" },
+            "transform": { "position": [-3.5, 0.94, -0.2], "rotation": [0, 140, 0], "scale": [2.2, 2.2, 2.2] }
         },
         {
-            "name": "Lucy",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/lucy-centered.obj", "smooth": true },
             "material": "LucyMat",
-            "path": "./assets/models/lucy-centered.obj",
-            "position": [0, 0, 0.2],
-            "rotation": [0, -15, 0],
-            "scale": [1, 1, 1],
-            "smooth": true
+            "name": { "value": "Lucy" },
+            "transform": { "position": [0, 0, 0.2], "rotation": [0, -15, 0] }
         },
         {
-            "name": "Armadillo",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/armadillo.obj", "smooth": true },
             "material": "ArmadilloMat",
-            "path": "./assets/models/armadillo.obj",
-            "position": [3.5, 1.05, -0.2],
-            "rotation": [0, 40, 0],
-            "scale": [0.02, 0.02, 0.02],
-            "smooth": true
+            "name": { "value": "Armadillo" },
+            "transform": { "position": [3.5, 1.05, -0.2], "rotation": [0, 40, 0], "scale": [0.02, 0.02, 0.02] }
         }
     ]
 }

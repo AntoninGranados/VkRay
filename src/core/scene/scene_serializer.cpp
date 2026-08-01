@@ -1,7 +1,8 @@
 #include "scene_serializer.hpp"
 
+#include <cmath>
+#include <filesystem>
 #include <fstream>
-#include <optional>
 #include <random>
 #include <unordered_map>
 #include <utility>
@@ -10,33 +11,139 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include "nlohmann/json.hpp"
 
-#include "scene.hpp"
 #include "core/core.hpp"
-#include "core/scene/object/material.hpp"
-#include "utils/json_resolve.hpp"
+#include "scene.hpp"
 #include "utils/log.hpp"
-
-using json = nlohmann::ordered_json;
 
 static constexpr int SCENE_VERSION = 1;
 
-// Fixes an issue when writing a std::string created from a C string to a JSON file
-static std::string trimmed(const std::string& s) {
-    const auto pos = s.find('\0');
-    return pos != std::string::npos ? s.substr(0, pos) : s;
+namespace {
+
+constexpr std::pair<const char*, MaterialType> kMaterialTypes[] = {
+    {"principled", MaterialType::Principled},
+    {"emissive", MaterialType::Emissive},
+    {"lambertian", MaterialType::Lambertian},
+    {"ggx_metal", MaterialType::GgxMetal},
+    {"ggx_glossy", MaterialType::GgxGlossy},
+    {"dielectric", MaterialType::Dielectric},
+    {"volume", MaterialType::Volume},
+    {"programmable", MaterialType::Programmable},
+};
+constexpr std::pair<const char*, LightMode> kLightModes[] = {
+    {"day", LightMode::Day},
+    {"sunset", LightMode::Sunset},
+    {"night", LightMode::Night},
+    {"empty", LightMode::Empty},
+};
+constexpr std::pair<const char*, Interpolation> kInterpolations[] = {
+    {"linear", Interpolation::Linear},
+    {"step", Interpolation::Step},
+    {"cubic", Interpolation::Cubic},
+    {"ease_in", Interpolation::EaseIn},
+    {"ease_out", Interpolation::EaseOut},
+    {"ease_in_out", Interpolation::EaseInOut},
+};
+
+template<typename T, size_t N>
+T fromStr(const std::pair<const char*, T> (&table)[N], const std::string& s, T fallback) {
+    for (const auto& [name, val] : table) if (s == name) return val;
+    return fallback;
+}
+template<typename T, size_t N>
+T fromStr(const std::pair<const char*, T> (&table)[N], const std::string& s) {
+    for (const auto& [name, val] : table) if (s == name) return val;
+    std::unreachable();
+}
+template<typename T, size_t N>
+const char* toStr(const std::pair<const char*, T> (&table)[N], T e) {
+    for (const auto& [name, val] : table) if (e == val) return name;
+    std::unreachable();
 }
 
-static bool isVector(const json& j) {
-    return j.is_array() && std::all_of(j.begin(), j.end(), [](const json& v){ return v.is_number(); });
+} // namespace
+
+void SceneSerializer::applyFieldFromJson(Field& f, const json& j, const ResolveCtx& ctx) {
+    switch (f.getType()) {
+        case FieldType::Bool:  f.set<bool>(j.get<bool>()); break;
+        case FieldType::Int:
+        case FieldType::Enum:  f.set<int>(j.get<int>()); break;
+        case FieldType::IVec2:
+            if (j.is_array() && j.size() >= 2)
+                f.set<glm::ivec2>({j[0].get<int>(), j[1].get<int>()});
+            break;
+        case FieldType::IVec3:
+            if (j.is_array() && j.size() >= 3)
+                f.set<glm::ivec3>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>()});
+            break;
+        case FieldType::IVec4:
+            if (j.is_array() && j.size() >= 4)
+                f.set<glm::ivec4>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>(), j[3].get<int>()});
+            break;
+        case FieldType::Float: f.set<float>(resolveFloat(j, ctx)); break;
+        case FieldType::Vec2:  f.set<glm::vec2>(resolveVec2(j, ctx)); break;
+        case FieldType::Vec3:  f.set<glm::vec3>(resolveVec3(j, ctx)); break;
+        case FieldType::Vec4:
+            if (j.is_array() && j.size() >= 4)
+                f.set<glm::vec4>({resolveFloat(j[0], ctx), resolveFloat(j[1], ctx),
+                                  resolveFloat(j[2], ctx), resolveFloat(j[3], ctx)});
+            break;
+        case FieldType::Quat:
+            if (j.is_array() && j.size() >= 4)
+                f.set<glm::quat>(glm::quat(j[3].get<float>(), j[0].get<float>(),
+                                           j[1].get<float>(), j[2].get<float>()));
+            break;
+        case FieldType::String: f.set<std::string>(resolveTemplate(j.get<std::string>(), ctx)); break;
+        case FieldType::Path:   f.set<std::filesystem::path>(j.get<std::string>()); break;
+    }
 }
 
-static bool isExpression(const json& j) {
-    return j.is_object() && j.size() == 1 && (j.contains("rand") || j.contains("lerp"));
+json SceneSerializer::fieldToJson(const Field& f) {
+    switch (f.getType()) {
+        case FieldType::Bool:   return f.get<bool>();
+        case FieldType::Int:
+        case FieldType::Enum:   return f.get<int>();
+        case FieldType::Float:  return f.get<float>();
+        case FieldType::IVec2: { auto v = f.get<glm::ivec2>(); return json{v.x, v.y}; }
+        case FieldType::IVec3: { auto v = f.get<glm::ivec3>(); return json{v.x, v.y, v.z}; }
+        case FieldType::IVec4: { auto v = f.get<glm::ivec4>(); return json{v.x, v.y, v.z, v.w}; }
+        case FieldType::Vec2:  { auto v = f.get<glm::vec2>(); return json{v.x, v.y}; }
+        case FieldType::Vec3:  { auto v = f.get<glm::vec3>(); return json{v.x, v.y, v.z}; }
+        case FieldType::Vec4:  { auto v = f.get<glm::vec4>(); return json{v.x, v.y, v.z, v.w}; }
+        case FieldType::Quat:  { auto v = f.get<glm::quat>(); return json{v.x, v.y, v.z, v.w}; }
+        case FieldType::String: return trimmed(f.get<std::string>());
+        case FieldType::Path:   return f.get<std::filesystem::path>().string();
+    }
+    std::unreachable();
 }
 
-static std::string inlineJson(const json& j) {
+FieldValue SceneSerializer::jsonToFieldValue(FieldType type, const json& v) {
+    switch (type) {
+        case FieldType::Bool:  return FieldValue::make(v.get<bool>());
+        case FieldType::Int:
+        case FieldType::Enum:  return FieldValue::make(v.get<int>());
+        case FieldType::Float: return FieldValue::make(v.get<float>());
+        case FieldType::Vec2:  return FieldValue::make(glm::vec2{v[0].get<float>(), v[1].get<float>()});
+        case FieldType::Vec3:  return FieldValue::make(glm::vec3{v[0].get<float>(), v[1].get<float>(), v[2].get<float>()});
+        case FieldType::Vec4:  return FieldValue::make(glm::vec4{v[0].get<float>(), v[1].get<float>(), v[2].get<float>(), v[3].get<float>()});
+        default:               return FieldValue::make(false);
+    }
+}
+
+json SceneSerializer::fieldValueToJson(const FieldValue& fv) {
+    switch (fv.getType()) {
+        case FieldType::Bool:  return fv.get<bool>();
+        case FieldType::Int:
+        case FieldType::Enum:  return fv.get<int>();
+        case FieldType::Float: return fv.get<float>();
+        case FieldType::Vec2:  { auto v = fv.get<glm::vec2>(); return json{v.x, v.y}; }
+        case FieldType::Vec3:  { auto v = fv.get<glm::vec3>(); return json{v.x, v.y, v.z}; }
+        case FieldType::Vec4:  { auto v = fv.get<glm::vec4>(); return json{v.x, v.y, v.z, v.w}; }
+        default:               return nullptr;
+    }
+}
+
+std::string SceneSerializer::inlineJson(const json& j) {
     if (j.is_object()) {
         std::string s = "{ ";
         bool first = true;
@@ -47,7 +154,6 @@ static std::string inlineJson(const json& j) {
         }
         return s + " }";
     }
-
     if (j.is_array()) {
         std::string s = "[";
         for (size_t i = 0; i < j.size(); i++) {
@@ -59,8 +165,15 @@ static std::string inlineJson(const json& j) {
     return j.dump();
 }
 
-static std::string prettify(const json& j, int indent = 0) {
-    if (isVector(j) || isExpression(j)) return inlineJson(j);
+std::string SceneSerializer::prettify(const json& j, int indent) {
+    auto isVector = [](const json& v) { return v.is_array() && std::all_of(v.begin(), v.end(), [](const json& e){ return e.is_number(); }); };
+    auto isExpression = [](const json& v) { return v.is_object() && v.size() == 1 && (v.contains("rand") || v.contains("lerp")); };
+    auto isKeyframe = [](const json& v) {
+        if (!v.is_object()) return false;
+        const size_t n = v.size();
+        return (n == 2 || n == 3) && v.contains("frame") && v.contains("value") && (n == 2 || v.contains("ease"));
+    };
+    if (isVector(j) || isExpression(j) || isKeyframe(j)) return inlineJson(j);
 
     const std::string pad(indent * 4, ' ');
     const std::string inner((indent + 1) * 4, ' ');
@@ -74,7 +187,6 @@ static std::string prettify(const json& j, int indent = 0) {
         }
         return s + pad + "]";
     }
-
     if (j.is_object()) {
         std::string s = "{\n";
         size_t i = 0;
@@ -85,173 +197,183 @@ static std::string prettify(const json& j, int indent = 0) {
         }
         return s + pad + "}";
     }
-
     return j.dump();
 }
 
-static json fromVec3(glm::vec3 v) { return { v.x, v.y, v.z }; }
-static json fromVec2(glm::vec2 v) { return { v.x, v.y }; }
-
-static MaterialType parseMaterialType(const std::string& s) {
-    if (s == "principled")   return MaterialType::Principled;
-    if (s == "emissive")     return MaterialType::Emissive;
-    if (s == "lambertian")   return MaterialType::Lambertian;
-    if (s == "ggx_metal")    return MaterialType::GgxMetal;
-    if (s == "ggx_glossy")   return MaterialType::GgxGlossy;
-    if (s == "dielectric")   return MaterialType::Dielectric;
-    if (s == "volume")       return MaterialType::Volume;
-    if (s == "programmable") return MaterialType::Programmable;
-    Log::error("SceneSerializer", std::format("Unknown material type '{}'", s));
-    std::unreachable();
-}
-
-static std::string toString(MaterialType t) {
-    switch (t) {
-        case MaterialType::Principled:   return "principled";
-        case MaterialType::Emissive:     return "emissive";
-        case MaterialType::Lambertian:   return "lambertian";
-        case MaterialType::GgxMetal:     return "ggx_metal";
-        case MaterialType::GgxGlossy:    return "ggx_glossy";
-        case MaterialType::Dielectric:   return "dielectric";
-        case MaterialType::Volume:       return "volume";
-        case MaterialType::Programmable: return "programmable";
+json SceneSerializer::serializeKeyframes(const std::map<int, Keyframe>& kfs) {
+    json arr = json::array();
+    for (const auto& [frame, kf] : kfs) {
+        json kfj;
+        kfj["frame"] = frame;
+        kfj["value"] = fieldValueToJson(kf.getValue());
+        if (kf.getInterpolation() != Interpolation::Linear)
+            kfj["ease"] = toStr(kInterpolations, kf.getInterpolation());
+        arr.push_back(kfj);
     }
-    std::unreachable();
+    return arr;
 }
 
-static LightMode parseLightMode(const std::string& s) {
-    if (s == "day")    return LightMode::Day;
-    if (s == "sunset") return LightMode::Sunset;
-    if (s == "night")  return LightMode::Night;
-    if (s == "empty")  return LightMode::Empty;
-    Log::error("SceneSerializer", std::format("Unknown light mode '{}'", s));
-    std::unreachable();
-}
-
-static std::string toString(LightMode m) {
-    switch (m) {
-        case LightMode::Day:    return "day";
-        case LightMode::Sunset: return "sunset";
-        case LightMode::Night:  return "night";
-        case LightMode::Empty:  return "empty";
+void SceneSerializer::applyComponentFromJson(ecs::Component& comp, const json& obj, const ResolveCtx& ctx) {
+    for (auto& f : comp.getFields()) {
+        if (f.isPrivate() || !obj.contains(f.getId())) continue;
+        applyFieldFromJson(f, obj[f.getId()], ctx);
     }
-    std::unreachable();
 }
 
-static Material parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName = "Unnamed") {
+void SceneSerializer::applyAnimFromJson(ecs::Component& comp, const json& obj, ecs::Entity e, AnimationStore& animStore) {
+    for (const auto& f : comp.getFields()) {
+        if (f.isPrivate() || !obj.contains(f.getId())) continue;
+        const json& val = obj[f.getId()];
+        if (!val.is_object() || !val.contains("anim") || !val["anim"].is_array()) continue;
+        for (const auto& kf : val["anim"]) {
+            if (!kf.contains("frame") || !kf.contains("value")) continue;
+            const Interpolation interp = kf.contains("ease") ? fromStr(kInterpolations, kf["ease"].get<std::string>(), Interpolation::Linear) : Interpolation::Linear;
+            animStore.insert(e, comp.getType(), f.getId(), kf["frame"].get<int>(), jsonToFieldValue(f.getType(), kf["value"]), interp);
+        }
+    }
+}
+
+void SceneSerializer::applyMatAnimFromJson(const json& m, MaterialHandle handle, AnimationStore& animStore) {
+    auto applyField = [&](const char* jsonKey, const char* fieldId, FieldType type) {
+        if (!m.contains(jsonKey)) return;
+        const json& val = m[jsonKey];
+        if (!val.is_object() || !val.contains("anim") || !val["anim"].is_array()) return;
+        for (const auto& kf : val["anim"]) {
+            if (!kf.contains("frame") || !kf.contains("value")) continue;
+            const Interpolation interp = kf.contains("ease") ? fromStr(kInterpolations, kf["ease"].get<std::string>(), Interpolation::Linear) : Interpolation::Linear;
+            animStore.insert(handle, fieldId, kf["frame"].get<int>(), jsonToFieldValue(type, kf["value"]), interp);
+        }
+    };
+    applyField("albedo", "albedo", FieldType::Vec3);
+    applyField("roughness", "roughness", FieldType::Float);
+    applyField("metalness", "metalness", FieldType::Float);
+    applyField("ior", "ior", FieldType::Float);
+    applyField("transmission", "transmission", FieldType::Float);
+    applyField("emission_strength", "emissionStrength", FieldType::Float);
+    applyField("density", "density", FieldType::Float);
+    applyField("anisotropic", "anisotropic", FieldType::Float);
+}
+
+json SceneSerializer::serializeComponentWithAnim(const ecs::Component& comp, ecs::Entity e, const AnimationStore& animStore) {
+    json j = json::object();
+    for (const auto& f : comp.getFields()) {
+        if (f.isPrivate()) continue;
+        const auto& kfs = animStore.keyframes(e, comp.getType(), f.getId());
+        if (!kfs.empty())
+            j[f.getId()] = json{{"anim", serializeKeyframes(kfs)}};
+        else
+            j[f.getId()] = fieldToJson(f);
+    }
+    return j;
+}
+
+Material SceneSerializer::parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName) {
     Material mat = Material::make();
     mat.setName(resolveTemplate(m.value("name", fallbackName), ctx));
-    mat.setType(parseMaterialType(m.value("type", "lambertian")));
-    if (m.contains("albedo"))           mat.set<glm::vec3>("albedo",          resolveVec3(m["albedo"], ctx));
-    if (m.contains("roughness"))        mat.set<float>("roughness",           resolveFloat(m["roughness"],        ctx));
-    if (m.contains("metalness"))        mat.set<float>("metalness",           resolveFloat(m["metalness"],        ctx));
-    if (m.contains("ior"))              mat.set<float>("ior",                 resolveFloat(m["ior"],              ctx));
-    if (m.contains("transmission"))     mat.set<float>("transmission",        resolveFloat(m["transmission"],     ctx));
-    if (m.contains("emission_strength")) mat.set<float>("emissionStrength",   resolveFloat(m["emission_strength"], ctx));
-    if (m.contains("density"))          mat.set<float>("density",             resolveFloat(m["density"],          ctx));
-    if (m.contains("anisotropic"))      mat.set<float>("anisotropic",         resolveFloat(m["anisotropic"],      ctx));
+    mat.setType(fromStr(kMaterialTypes, m.value("type", "lambertian")));
+    if (m.contains("albedo")) mat.set<glm::vec3>("albedo", resolveVec3(m["albedo"], ctx));
+    if (m.contains("roughness")) mat.set<float>("roughness", resolveFloat(m["roughness"], ctx));
+    if (m.contains("metalness")) mat.set<float>("metalness", resolveFloat(m["metalness"], ctx));
+    if (m.contains("ior")) mat.set<float>("ior", resolveFloat(m["ior"], ctx));
+    if (m.contains("transmission")) mat.set<float>("transmission", resolveFloat(m["transmission"], ctx));
+    if (m.contains("emission_strength")) mat.set<float>("emissionStrength", resolveFloat(m["emission_strength"], ctx));
+    if (m.contains("density")) mat.set<float>("density", resolveFloat(m["density"], ctx));
+    if (m.contains("anisotropic")) mat.set<float>("anisotropic", resolveFloat(m["anisotropic"], ctx));
     return mat;
 }
 
-static MaterialHandle resolveMaterial(
-    const json& matField,
-    const std::unordered_map<std::string, MaterialHandle>& matMap,
-    Scene& scene,
-    const ResolveCtx& ctx,
-    const std::string& fallbackName)
-{
-    if (matField.is_string()) {
-        const std::string name = resolveTemplate(matField.get<std::string>(), ctx);
-        auto it = matMap.find(name);
-        if (it == matMap.end()) {
-            
-            Log::error("SceneSerializer", std::format("Material '{}' is referenced but not defined", name));
-            return 0;
-        }
-        return it->second;
-    }
-    if (matField.is_object())
-        return scene.pushMaterial(parseMaterial(matField, ctx, fallbackName));
-    return 0;
+json SceneSerializer::serializeMaterial(const Material& m, MaterialHandle h, const AnimationStore& animStore) {
+    json mj;
+    mj["name"] = trimmed(m.getName());
+    mj["type"] = toStr(kMaterialTypes, m.getType());
+
+    auto field = [&](const char* jsonKey, const char* fieldId, FieldType type, const json& plain, bool include) {
+        const auto& kfs = animStore.keyframes(h, fieldId);
+        if (!kfs.empty())
+            mj[jsonKey] = json{{"anim", serializeKeyframes(kfs)}};
+        else if (include)
+            mj[jsonKey] = plain;
+    };
+
+    const glm::vec3 albedo = m.get<glm::vec3>("albedo");
+    field("albedo", "albedo", FieldType::Vec3, json{albedo.x, albedo.y, albedo.z}, true);
+    field("roughness", "roughness", FieldType::Float, m.get<float>("roughness"), m.get<float>("roughness") != 0.0f);
+    field("metalness", "metalness", FieldType::Float, m.get<float>("metalness"), m.get<float>("metalness") != 0.0f);
+    field("ior", "ior", FieldType::Float, m.get<float>("ior"), m.get<float>("ior") != 0.0f);
+    field("transmission", "transmission", FieldType::Float, m.get<float>("transmission"), m.get<float>("transmission") != 0.0f);
+    field("emission_strength", "emissionStrength", FieldType::Float, m.get<float>("emissionStrength"), m.get<float>("emissionStrength") != 0.0f);
+    field("density", "density", FieldType::Float, m.get<float>("density"), m.get<float>("density") != 1.0f);
+    field("anisotropic", "anisotropic", FieldType::Float, m.get<float>("anisotropic"), m.get<float>("anisotropic") != 0.0f);
+    return mj;
 }
 
-static void spawnOne(
-    const json& obj,
-    Scene& scene,
-    const std::unordered_map<std::string, MaterialHandle>& matMap,
-    const ResolveCtx& ctx,
-    const glm::vec3& posOffset = glm::vec3(0.0f))
-{
-    const std::string name = resolveTemplate(obj.value("name", "Object"), ctx);
-    const std::string type = obj.value("type", "");
-
-    MaterialHandle mat = 0;
-    if (obj.contains("material"))
-        mat = resolveMaterial(obj["material"], matMap, scene, ctx, name + "_mat");
-
-    if (type == "sphere") {
-        const glm::vec3 center = (obj.contains("center") ? resolveVec3(obj["center"], ctx) : glm::vec3(0.0f)) + posOffset;
-        const float radius = obj.contains("radius") ? resolveFloat(obj["radius"], ctx) : 1.0f;
-        scene.pushSphere(name, center, radius, mat);
-
-    } else if (type == "plane") {
-        const glm::vec3 point  = (obj.contains("point")  ? resolveVec3(obj["point"],  ctx) : glm::vec3(0.0f)) + posOffset;
-        const glm::vec3 normal =  obj.contains("normal") ? resolveVec3(obj["normal"], ctx) : glm::vec3(0,1,0);
-        scene.pushPlane(name, point, normal, mat);
-
-    } else if (type == "box") {
-        const glm::vec3 mn = (obj.contains("min") ? resolveVec3(obj["min"], ctx) : glm::vec3(-1.0f)) + posOffset;
-        const glm::vec3 mx = (obj.contains("max") ? resolveVec3(obj["max"], ctx) : glm::vec3( 1.0f)) + posOffset;
-        scene.pushBox(name, mn, mx, mat);
-
-    } else if (type == "quad") {
-        const glm::vec3 center = (obj.contains("center") ? resolveVec3(obj["center"], ctx) : glm::vec3(0.0f)) + posOffset;
-        const glm::vec3 normal =  obj.contains("normal") ? resolveVec3(obj["normal"], ctx) : glm::vec3(0,1,0);
-        const glm::vec2 scale  =  obj.contains("scale")  ? resolveVec2(obj["scale"],  ctx) : glm::vec2(1.0f);
-        const float rotation   =  obj.contains("rotation") ? resolveFloat(obj["rotation"], ctx) : 0.0f;
-        scene.pushQuad(name, center, normal, scale, rotation, mat);
-
-    } else if (type == "mesh") {
-        const std::string meshPath = obj.value("path", "");
-        if (meshPath.empty()) { 
-            Log::error("SceneSerializer", std::format("'{}': missing 'path'", name));  return; }
-        const glm::vec3 pos    = (obj.contains("position") ? resolveVec3(obj["position"], ctx) : glm::vec3(0.0f)) + posOffset;
-        const glm::vec3 rotDeg =  obj.contains("rotation") ? resolveVec3(obj["rotation"], ctx) : glm::vec3(0.0f);
-        const glm::vec3 scale  =  obj.contains("scale")    ? resolveVec3(obj["scale"],    ctx) : glm::vec3(1.0f);
-        const bool smooth      =  obj.value("smooth", false);
-        glm::mat4 t = glm::translate(glm::mat4(1.0f), pos);
-        t = t * glm::toMat4(glm::quat(glm::radians(rotDeg)));
-        t = glm::scale(t, scale);
-        scene.pushMesh(name, meshPath, t, mat, smooth);
-
+void SceneSerializer::spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs::Registry& registry) {
+    if (!ej.contains("mesh") || !ej["mesh"].is_object()) return;
+    const auto& mj = ej["mesh"];
+    const std::string meshPath = mj.value("path", "");
+    if (meshPath.empty()) return;
+    const MeshHandle handle = static_cast<MeshHandle>(scene.getMeshAssets().size());
+    scene.getMeshAssets().emplace_back(MeshAsset::nameFromPath(meshPath));
+    MeshAsset& asset = scene.getMeshAssets().back();
+    asset.setSmoothShading(mj.value("smooth", false));
+    if (asset.loadFromObj(meshPath)) {
+        registry.add(e, ecs::MeshRef).set<int>("handle", handle);
     } else {
-        Log::error("SceneSerializer", std::format("Unknown object type '{}'", type));
-        return;
+        scene.getMeshAssets().pop_back();
+        Log::error("SceneSerializer", std::format("Failed to load mesh: {}", meshPath));
     }
+}
 
-    const auto& entities = scene.getEntities();
-    if (entities.empty()) return;
-    const ecs::Entity last = entities.back();
-    auto& reg = scene.getRegistry();
+void SceneSerializer::spawnMaterialRef(const json& ej, ecs::Entity e, ecs::Registry& registry,
+                                       const std::unordered_map<std::string, MaterialHandle>& matMap,
+                                       const ResolveCtx& ctx) {
+    if (!ej.contains("material") || !ej["material"].is_string()) return;
+    const std::string matName = resolveTemplate(ej["material"].get<std::string>(), ctx);
+    const auto it = matMap.find(matName);
+    if (it != matMap.end())
+        registry.add(e, ecs::MaterialRef).set<int>("handle", it->second);
+    else
+        Log::error("SceneSerializer", std::format("Material '{}' not found", matName));
+}
 
-    if (obj.contains("collider") && !reg.has(last, ecs::Collider)) {
-        const auto& cj = obj["collider"];
-        ecs::Component& c = reg.add(last, ecs::Collider);
-        if (cj.is_object()) {
-            if (cj.contains("restitution")) c.set<float>("restitution", resolveFloat(cj["restitution"], ctx));
-            if (cj.contains("friction"))    c.set<float>("friction",    resolveFloat(cj["friction"],    ctx));
-        }
-    }
+void SceneSerializer::spawnSpherical(const json& ej, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx) {
+    if (!ej.contains("spherical")) return;
+    const auto& sj = ej["spherical"];
+    const float radius = resolveFloat(sj["radius"], ctx);
+    const float azDeg = resolveFloat(sj["azimuth"], ctx);
+    const float elDeg = resolveFloat(sj["elevation"], ctx);
+    const glm::vec3 target = sj.contains("target") ? resolveVec3(sj["target"], ctx) : glm::vec3{0, 0, 0};
 
-    if (obj.contains("rigid_body") && !reg.has(last, ecs::RigidBody)) {
-        const auto& rbj = obj["rigid_body"];
-        ecs::Component& rb = reg.add(last, ecs::RigidBody);
-        if (rbj.is_object()) {
-            if (rbj.contains("use_gravity"))      rb.set<bool>("use_gravity",            rbj["use_gravity"].get<bool>());
-            if (rbj.contains("density"))          rb.set<float>("density",               resolveFloat(rbj["density"], ctx));
-            if (rbj.contains("linear_velocity"))  rb.set<glm::vec3>("linear_velocity",   resolveVec3(rbj["linear_velocity"],  ctx));
-            if (rbj.contains("angular_velocity")) rb.set<glm::vec3>("angular_velocity",  resolveVec3(rbj["angular_velocity"], ctx));
-        }
+    const float az = glm::radians(azDeg);
+    const float el = glm::radians(elDeg);
+    const glm::vec3 pos = target + radius * glm::vec3(std::cos(el) * std::sin(az), std::sin(el), std::cos(el) * std::cos(az));
+    const glm::vec3 dir = glm::normalize(target - pos);
+
+    auto ttype = ecs::ComponentType::find("transform");
+    if (!ttype) return;
+    ecs::Component& t = registry.add(e, ttype->get());
+    t.set<glm::vec3>("position", pos);
+    t.set<glm::vec3>("rotation", {glm::degrees(std::asin(glm::clamp(dir.y, -1.0f, 1.0f))), glm::degrees(std::atan2(dir.x, -dir.z)), 0.0f});
+}
+
+void SceneSerializer::initCameraFromEntities(Scene& scene, ecs::Registry& registry) {
+    auto& camStorage = registry.storage(ecs::Camera);
+    auto& transformStorage = registry.storage(ecs::Transform);
+    for (const ecs::Entity& ce : scene.getEntities()) {
+        if (!camStorage.has(ce) || !transformStorage.has(ce)) continue;
+        const ecs::Component& cam = camStorage.get(ce);
+        if (cam.get<bool>("is_preview")) continue;
+        const ecs::Component& t = transformStorage.get(ce);
+        const glm::vec3 pos = t.get<glm::vec3>("position");
+        const glm::vec3 dir = glm::normalize(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));
+        const float focusDepth = glm::max(0.1f, cam.get<float>("focus_depth"));
+        Camera& orbiting = scene.getCamera();
+        orbiting.setPosition(pos);
+        orbiting.setTarget(pos + dir * focusDepth);
+        orbiting.setFov(cam.get<float>("fov"));
+        orbiting.setAperture(cam.get<float>("aperture"));
+        orbiting.setFocusDepth(focusDepth);
+        break;
     }
 }
 
@@ -282,301 +404,120 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         j.contains("seed") ? j["seed"].get<uint32_t>() : static_cast<uint32_t>(std::random_device{}())
     );
     std::mt19937 rng(seed);
+    ResolveCtx ctx{ rng, {} };
 
     if (j.contains("light"))
-        lightMode = parseLightMode(j["light"].get<std::string>());
-
-    if (j.contains("camera")) {
-        const auto& c = j["camera"];
-        ResolveCtx camCtx{ rng, {} };
-
-        const bool hasPosition = c.contains("position");
-        const bool hasOrbital  = c.contains("radius") || c.contains("azimuth") || c.contains("elevation");
-        if (hasPosition && hasOrbital)
-            Log::error("SceneSerializer", "Camera: 'position' and orbital fields ('radius', 'azimuth', 'elevation') are mutually exclusive");
-
-        const glm::vec3 target = c.contains("target") ? resolveVec3(c["target"], camCtx) : glm::vec3(0.0f);
-
-        glm::vec3 pos;
-        if (hasOrbital) {
-            const float radius    = c.contains("radius")    ? resolveFloat(c["radius"],    camCtx) : 5.0f;
-            const float azimuth   = c.contains("azimuth")   ? resolveFloat(c["azimuth"],   camCtx) : 0.0f;
-            const float elevation = c.contains("elevation") ? resolveFloat(c["elevation"], camCtx) : 0.0f;
-            const float az  = glm::radians(azimuth);
-            const float el  = glm::radians(elevation);
-            pos = target + radius * glm::vec3(std::cos(el) * std::sin(az), std::sin(el), std::cos(el) * std::cos(az));
-        } else {
-            pos = hasPosition ? resolveVec3(c["position"], camCtx) : glm::vec3(0.0f, 0.0f, -10.0f);
-        }
-
-        const float fov        = c.contains("fov")        ? resolveFloat(c["fov"],        camCtx) : 60.0f;
-        const float aperture   = c.contains("aperture")   ? resolveFloat(c["aperture"],   camCtx) : 0.0f;
-        const float focusDepth = c.contains("focus_depth") ? resolveFloat(c["focus_depth"], camCtx) : 10.0f;
-        const std::string name = c.value("name", "Camera");
-
-        Camera& cam = scene.getCamera();
-        cam.setPosition(pos);
-        cam.setTarget(target);
-        cam.setFov(fov);
-        cam.setAperture(aperture);
-        cam.setFocusDepth(focusDepth);
-
-        const glm::vec3 dir = glm::length(target - pos) > 1e-6f
-            ? glm::normalize(target - pos) : glm::vec3(0.0f, 0.0f, -1.0f);
-        const glm::vec3 up  = std::abs(glm::dot(dir, glm::vec3(0,1,0))) < 0.99f
-            ? glm::vec3(0,1,0) : glm::vec3(1,0,0);
-        const glm::quat rot = glm::quatLookAt(dir, up);
-        glm::mat4 mat       = glm::toMat4(rot);
-        mat[3]              = glm::vec4(pos, 1.0f);
-        scene.pushCamera(name, mat);
-
-        const auto& allEntities = scene.getEntities();
-        if (!allEntities.empty()) {
-            auto& camStorage = scene.getRegistry().storage(ecs::Camera);
-            const ecs::Entity& last = allEntities.back();
-            if (camStorage.has(last)) {
-                camStorage.get(last).set<float>("fov", fov);
-                camStorage.get(last).set<float>("aperture", aperture);
-                camStorage.get(last).set<float>("focus_depth", focusDepth);
-            }
-        }
-    }
+        lightMode = fromStr(kLightModes, j["light"].get<std::string>());
 
     std::unordered_map<std::string, MaterialHandle> matMap;
     if (j.contains("materials")) {
         for (const auto& m : j["materials"]) {
+            auto push = [&](const ResolveCtx& matCtx) {
+                Material mat = parseMaterial(m, matCtx);
+                const MaterialHandle h = scene.pushMaterial(mat);
+                matMap[mat.getName()] = h;
+                applyMatAnimFromJson(m, h, scene.getAnimationStore());
+            };
             if (m.contains("repeat")) {
                 const int count = m["repeat"].value("count", 1);
-                for (int n = 0; n < count; n++) {
-                    ResolveCtx ctx{ rng, {{"n", {n, count}}} };
-                    Material mat = parseMaterial(m, ctx);
-                    matMap[mat.getName()] = scene.pushMaterial(mat);
-                }
+                for (int n = 0; n < count; n++)
+                    push(ResolveCtx{ rng, {{"n", {n, count}}} });
+            } else if (m.contains("grid")) {
+                const auto& g = m["grid"];
+                const int rows = g.value("rows", 1);
+                const int cols = g.value("cols", 1);
+                for (int r = 0; r < rows; r++)
+                    for (int c = 0; c < cols; c++)
+                        push(ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}} });
             } else {
-                ResolveCtx ctx{ rng, {} };
-                Material mat = parseMaterial(m, ctx);
-                matMap[mat.getName()] = scene.pushMaterial(mat);
+                push(ctx);
             }
         }
     }
 
-    if (!j.contains("objects")) return true;
+    if (!j.contains("entities")) return true;
 
-    for (const auto& obj : j["objects"]) {
-        if (obj.contains("grid")) {
-            const auto& g  = obj["grid"];
+    ecs::Registry& registry = scene.getRegistry();
+    auto spawnEntity = [&](const json& ej, const ResolveCtx& spawnCtx) {
+        ecs::Entity e = registry.createEntity();
+        scene.getEntities().push_back(e);
+        spawnMesh(ej, e, scene, registry);
+        spawnMaterialRef(ej, e, registry, matMap, spawnCtx);
+        for (const auto& [key, value] : ej.items()) {
+            if (key == "material" || key == "mesh" || key == "repeat" || key == "grid" || key == "spherical") continue;
+            auto type = ecs::ComponentType::find(key);
+            if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
+            ecs::Component& comp = registry.add(e, type->get());
+            if (value.is_object()) {
+                applyComponentFromJson(comp, value, spawnCtx);
+                applyAnimFromJson(comp, value, e, scene.getAnimationStore());
+            }
+        }
+        spawnSpherical(ej, e, registry, spawnCtx);
+    };
+
+    for (const auto& ej : j["entities"]) {
+        if (!ej.is_object()) continue;
+        if (ej.contains("repeat")) {
+            const int count = ej["repeat"].value("count", 1);
+            for (int n = 0; n < count; n++)
+                spawnEntity(ej, ResolveCtx{ rng, {{"n", {n, count}}} });
+        } else if (ej.contains("grid")) {
+            const auto& g = ej["grid"];
             const int rows = g.value("rows", 1);
             const int cols = g.value("cols", 1);
-            ResolveCtx fixedCtx{ rng, {} };
-            const glm::vec3 origin     = g.contains("origin")      ? resolveVec3(g["origin"],      fixedCtx) : glm::vec3(0.0f);
-            const glm::vec3 rowSpacing = g.contains("row_spacing") ? resolveVec3(g["row_spacing"], fixedCtx) : glm::vec3(0,0,1);
-            const glm::vec3 colSpacing = g.contains("col_spacing") ? resolveVec3(g["col_spacing"], fixedCtx) : glm::vec3(1,0,0);
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < cols; c++) {
-                    const glm::vec3 offset = origin + static_cast<float>(r) * rowSpacing + static_cast<float>(c) * colSpacing;
-                    ResolveCtx ctx{ rng, {{"n", {r * cols + c, rows * cols}}, {"row", {r, rows}}, {"col", {c, cols}}} };
-                    spawnOne(obj, scene, matMap, ctx, offset);
-                }
-            }
-
-        } else if (obj.contains("repeat")) {
-            const auto& rep   = obj["repeat"];
-            const int count   = rep.value("count", 1);
-            ResolveCtx fixedCtx{ rng, {} };
-            const glm::vec3 step = rep.contains("offset") ? resolveVec3(rep["offset"], fixedCtx) : glm::vec3(0.0f);
-            for (int n = 0; n < count; n++) {
-                ResolveCtx ctx{ rng, {{"n", {n, count}}} };
-                spawnOne(obj, scene, matMap, ctx, static_cast<float>(n) * step);
-            }
-
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                    spawnEntity(ej, ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}} });
         } else {
-            const std::string name = obj.value("name", "Object");
-            if (!obj.contains("type")) {
-                Log::warn("SceneSerializer", std::format("'{}': missing 'type' field, skipping", name));
-                continue;
-            }
-            ResolveCtx ctx{ rng, {} };
-            spawnOne(obj, scene, matMap, ctx);
+            spawnEntity(ej, ctx);
         }
     }
 
+    AnimationStore& animStore = scene.getAnimationStore();
+    animStore.evaluate(registry, 0.0f);
+    animStore.evaluate(scene.getMaterials(), 0.0f);
+    initCameraFromEntities(scene, registry);
     return true;
 }
 
 bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string& path) {
     json j;
     j["version"] = SCENE_VERSION;
-    j["light"]   = toString(lightMode);
+    j["light"] = toStr(kLightModes, lightMode);
 
-    auto& reg        = scene.getRegistry();
-    auto& transforms = reg.storage(ecs::Transform);
-    auto& names      = reg.storage(ecs::Name);
-    auto& camObjects = reg.storage(ecs::Camera);
-
-    bool savedCameraEntity = false;
-    for (const ecs::Entity& e : scene.getEntities()) {
-        if (!camObjects.has(e) || !transforms.has(e)) continue;
-        const ecs::Component& c = camObjects.get(e);
-        if (c.get<bool>("is_preview")) continue;
-
-        const ecs::Component& t = transforms.get(e);
-        const glm::quat rot     = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-        const glm::vec3 pos     = t.get<glm::vec3>("position");
-        const glm::vec3 dir     = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));
-        const glm::vec3 target  = pos + dir * glm::max(0.1f, c.get<float>("focus_depth"));
-
-        json cam;
-        cam["name"] = names.has(e)
-            ? names.get(e).get<std::string>("value")
-            : "Camera";
-        cam["position"] = fromVec3(pos);
-        cam["target"] = fromVec3(target);
-        cam["fov"] = c.get<float>("fov");
-        cam["aperture"] = c.get<float>("aperture");
-        cam["focus_depth"] = c.get<float>("focus_depth");
-        j["camera"] = cam;
-        savedCameraEntity = true;
-        break;
-    }
-    if (!savedCameraEntity) {
-        const Camera& cam = scene.getCamera();
-        json c;
-        c["position"] = fromVec3(cam.getPosition());
-        c["target"] = fromVec3(cam.getTarget());
-        c["fov"] = cam.getFov();
-        c["aperture"] = cam.getAperture();
-        c["focus_depth"] = cam.getFocusDepth();
-        j["camera"] = c;
-    }
-
-    json matsJson = json::array();
     const auto& mats = scene.getMaterials();
-    for (size_t i = 1; i < mats.size(); i++) {
-        const Material& m = mats[i];
-        json mj;
-        mj["name"]   = trimmed(m.getName());
-        mj["type"]   = toString(m.getType());
-        mj["albedo"] = fromVec3(m.get<glm::vec3>("albedo"));
-        if (m.get<float>("roughness")        != 0.0f) mj["roughness"]        = m.get<float>("roughness");
-        if (m.get<float>("metalness")        != 0.0f) mj["metalness"]        = m.get<float>("metalness");
-        if (m.get<float>("ior")              != 0.0f) mj["ior"]              = m.get<float>("ior");
-        if (m.get<float>("transmission")     != 0.0f) mj["transmission"]     = m.get<float>("transmission");
-        if (m.get<float>("emissionStrength") != 0.0f) mj["emission_strength"] = m.get<float>("emissionStrength");
-        if (m.get<float>("density")          != 1.0f) mj["density"]          = m.get<float>("density");
-        if (m.get<float>("anisotropic")      != 0.0f) mj["anisotropic"]      = m.get<float>("anisotropic");
-        matsJson.push_back(mj);
-    }
+    const AnimationStore& animStore = scene.getAnimationStore();
+    json matsJson = json::array();
+    for (size_t i = 1; i < mats.size(); i++)
+        matsJson.push_back(serializeMaterial(mats[i], static_cast<MaterialHandle>(i), animStore));
     j["materials"] = matsJson;
 
-    auto& materialRefs = reg.storage(ecs::MaterialRef);
-    auto& planes   = reg.storage(ecs::Plane);
-    auto& boxes    = reg.storage(ecs::Box);
-    auto& quads    = reg.storage(ecs::Quad);
-    auto& meshes = reg.storage(ecs::MeshRef);
-
-    auto getMatName = [&](ecs::Entity e) -> std::string {
-        if (!materialRefs.has(e)) return "";
-        const int h = materialRefs.get(e).get<int>("handle");
-        if (h > 0 && h < (int)mats.size()) return trimmed(mats[h].getName());
-        return "";
-    };
-
-    json objsJson = json::array();
+    ecs::Registry& reg = scene.getRegistry();
+    const auto& assets = scene.getMeshAssets();
+    json entitiesJson = json::array();
     for (const ecs::Entity& e : scene.getEntities()) {
-        if (camObjects.has(e))  continue;
-        if (!transforms.has(e)) continue;
-
-        const ecs::Component& t      = transforms.get(e);
-        const std::string entityName = names.has(e)
-            ? names.get(e).get<std::string>("value")
-            : "Object";
-        const std::string matName    = getMatName(e);
-
-        json obj;
-        obj["name"] = entityName;
-
-        if (reg.has(e, ecs::Sphere)) {
-            obj["type"]   = "sphere";
-            if (!matName.empty()) obj["material"] = matName;
-            obj["center"] = fromVec3(t.get<glm::vec3>("position"));
-            obj["radius"] = reg.get(e, ecs::Sphere).get<float>("radius");
-
-        } else if (planes.has(e)) {
-            obj["type"]   = "plane";
-            if (!matName.empty()) obj["material"] = matName;
-            const glm::quat pRot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-            obj["point"]  = fromVec3(t.get<glm::vec3>("position"));
-            obj["normal"] = fromVec3(glm::normalize(pRot * glm::vec3(0.0f, 1.0f, 0.0f)));
-
-        } else if (boxes.has(e)) {
-            obj["type"] = "box";
-            if (!matName.empty()) obj["material"] = matName;
-            const glm::vec3 bPos   = t.get<glm::vec3>("position");
-            const glm::vec3 bScale = t.get<glm::vec3>("scale");
-            obj["min"]  = fromVec3(bPos - bScale);
-            obj["max"]  = fromVec3(bPos + bScale);
-
-        } else if (quads.has(e)) {
-            const glm::quat qRot      = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-            const glm::vec3 qScale    = t.get<glm::vec3>("scale");
-            const glm::vec3 center    = t.get<glm::vec3>("position");
-            const glm::vec3 u_hat     = qRot * glm::vec3(1.0f, 0.0f, 0.0f);
-            const glm::vec3 normal    = qRot * glm::vec3(0.0f, 0.0f, 1.0f);
-            const glm::vec2 scale     = { qScale.x, qScale.y };
-            const glm::vec3 ref       = std::abs(glm::dot(normal, glm::vec3(0,1,0))) < 0.99f
-                                        ? glm::vec3(0,1,0) : glm::vec3(1,0,0);
-            const glm::vec3 tangent   = glm::normalize(glm::cross(ref, normal));
-            const glm::vec3 bitangent = glm::normalize(glm::cross(normal, tangent));
-            const float rotation      = std::atan2(glm::dot(u_hat, bitangent), glm::dot(u_hat, tangent));
-
-            obj["type"]     = "quad";
-            if (!matName.empty()) obj["material"] = matName;
-            obj["center"]   = fromVec3(center);
-            obj["normal"]   = fromVec3(glm::normalize(normal));
-            obj["scale"]    = fromVec2(scale);
-            obj["rotation"] = rotation;
-
-        } else if (meshes.has(e)) {
-            const ecs::Component& ref = meshes.get(e);
-            const int handle          = ref.get<int>("handle");
-            const auto& assets = scene.getMeshAssets();
-            if (handle < 0 || handle >= (int)assets.size()) continue;
-            const std::string meshPath = assets[handle].getPath();
-            if (meshPath.empty()) continue;
-
-            obj["type"]     = "mesh";
-            if (!matName.empty()) obj["material"] = matName;
-            obj["path"]     = meshPath;
-            obj["smooth"]   = assets[handle].getSmoothShading();
-            obj["position"] = fromVec3(t.get<glm::vec3>("position"));
-            obj["rotation"] = fromVec3(t.get<glm::vec3>("rotation"));
-            obj["scale"]    = fromVec3(t.get<glm::vec3>("scale"));
-
-        } else {
-            continue;
+        json ej = json::object();
+        for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
+            if (!reg.has(e, type)) continue;
+            const ecs::Component& comp = reg.get(e, type);
+            if (type.getId() == "material") {
+                const int handle = comp.get<int>("handle");
+                if (handle > 0 && handle < (int)mats.size())
+                    ej["material"] = trimmed(mats[handle].getName());
+                continue;
+            }
+            if (type.getId() == "mesh") {
+                const int handle = comp.get<int>("handle");
+                if (handle >= 0 && handle < (int)assets.size() && !assets[handle].getPath().empty())
+                    ej["mesh"] = json{{"path", assets[handle].getPath()}, {"smooth", assets[handle].getSmoothShading()}};
+                continue;
+            }
+            ej[type.getId()] = serializeComponentWithAnim(comp, e, animStore);
         }
-
-        if (reg.has(e, ecs::Collider)) {
-            const ecs::Component& c = reg.get(e, ecs::Collider);
-            json cj;
-            if (c.get<float>("restitution") != 0.4f) cj["restitution"] = c.get<float>("restitution");
-            if (c.get<float>("friction")    != 0.4f) cj["friction"]    = c.get<float>("friction");
-            obj["collider"] = cj;
-        }
-
-        if (reg.has(e, ecs::RigidBody)) {
-            const ecs::Component& rb = reg.get(e, ecs::RigidBody);
-            json rbj;
-            if (!rb.get<bool>("use_gravity"))                                    rbj["use_gravity"]      = rb.get<bool>("use_gravity");
-            if (rb.get<float>("density") != 50.0f)                               rbj["density"]          = rb.get<float>("density");
-            if (rb.get<glm::vec3>("linear_velocity")  != glm::vec3(0.0f))       rbj["linear_velocity"]  = fromVec3(rb.get<glm::vec3>("linear_velocity"));
-            if (rb.get<glm::vec3>("angular_velocity") != glm::vec3(0.0f))       rbj["angular_velocity"] = fromVec3(rb.get<glm::vec3>("angular_velocity"));
-            obj["rigid_body"] = rbj;
-        }
-
-        objsJson.push_back(obj);
+        entitiesJson.push_back(ej);
     }
-    j["objects"] = objsJson;
+    j["entities"] = entitiesJson;
 
     std::ofstream out(path);
     if (!out.is_open()) {

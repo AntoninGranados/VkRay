@@ -2,12 +2,22 @@
 
 void AnimationStore::capture(ecs::Entity e, ecs::Component& component, const std::string& fieldId, int frame) {
     Track& track = entityTracks[{e, &component.getType(), fieldId}];
-    component.getField(fieldId).dispatch([&]<typename T>(T v) { track.setKeyframe(frame, v); });
+    track.setKeyframe(frame, component.getField(fieldId));
 }
 
 void AnimationStore::capture(MaterialHandle handle, const std::string& fieldId, int frame, Material& material) {
     Track& track = materialTracks[{handle, fieldId}];
-    material.getField(fieldId).dispatch([&]<typename T>(T v) { track.setKeyframe(frame, v); });
+    track.setKeyframe(frame, material.getField(fieldId));
+}
+
+void AnimationStore::insert(ecs::Entity e, const ecs::ComponentType& type, const std::string& fieldId, int frame, FieldValue value, Interpolation interp) {
+    Track& track = entityTracks[{e, &type, fieldId}];
+    track.setKeyframe(frame, std::move(value), interp);
+}
+
+void AnimationStore::insert(MaterialHandle handle, const std::string& fieldId, int frame, FieldValue value, Interpolation interp) {
+    Track& track = materialTracks[{handle, fieldId}];
+    track.setKeyframe(frame, std::move(value), interp);
 }
 
 bool AnimationStore::has(ecs::Entity e, const ecs::ComponentType& type, const std::string& fieldId, int frame) const {

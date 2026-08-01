@@ -3,90 +3,55 @@
 
     "light": "empty",
 
-    "camera": {
-        "position": [0, 5, -15],
-        "target": [0, 1, 0],
-        "fov": 35
-    },
-
     "materials": [
-        {
-            "name": "Object",
-            "type": "ggx_glossy",
-            "albedo": [0.1, 0.3, 0.6],
-            "roughness": 0.1,
-            "ior": 4.0
-        },
-        {
-            "name": "Light",
-            "type": "emissive",
-            "albedo": [1, 1, 1],
-            "emission_strength": 50
-        },
-        {
-            "name": "Large Light",
-            "type": "emissive",
-            "albedo": [0.6, 0.6, 0.9],
-            "emission_strength": 5
-        },
-        {
-            "name": "Base",
-            "type": "ggx_glossy",
-            "albedo": [1, 1, 1],
-            "roughness": 0.05,
-            "ior": 1.5
-        },
-        {
-            "name": "Floor",
-            "type": "lambertian",
-            "albedo": [0.04, 0.04, 0.04]
-        }
+        { "name": "Object",      "type": "ggx_glossy", "albedo": [0.1, 0.3, 0.6], "roughness": 0.1, "ior": 4.0 },
+        { "name": "Light",       "type": "emissive",   "albedo": [1, 1, 1], "emission_strength": 50 },
+        { "name": "Large Light", "type": "emissive",   "albedo": [0.6, 0.6, 0.9], "emission_strength": 5 },
+        { "name": "Base",        "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
+        { "name": "Floor",       "type": "lambertian", "albedo": [0.04, 0.04, 0.04] }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Object",
-            "type": "mesh",
+            "camera": { "fov": 35, "focus_depth": 15.52 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 5, -15], "rotation": [-14.93, 180, 0] }
+        },
+        {
+            "mesh": { "path": "./assets/models/dragon.obj" },
             "material": "Object",
-            "path": "./assets/models/dragon.obj",
-            "position": [0, 1.2, 0],
-            "rotation": [0, 180, 0],
-            "scale": [4.7, 4.7, 4.7]
+            "name": { "value": "Object" },
+            "transform": { "position": [0, 1.2, 0], "rotation": [0, 180, 0], "scale": [4.7, 4.7, 4.7] }
         },
         {
-            "name": "Light",
-            "type": "box",
+            "box": {},
             "material": "Light",
-            "min": [-2, 14.99, -2],
-            "max": [ 2, 15.01,  2]
+            "name": { "value": "Light" },
+            "transform": { "position": [0, 15.0, 0], "scale": [2, 0.01, 2] }
         },
         {
-            "name": "Large Light",
-            "type": "box",
+            "box": {},
             "material": "Large Light",
-            "min": [-20, 49.99, -20],
-            "max": [ 20, 50.01,  20]
+            "name": { "value": "Large Light" },
+            "transform": { "position": [0, 50.0, 0], "scale": [20, 0.01, 20] }
         },
         {
-            "name": "Base",
-            "type": "box",
+            "box": {},
             "material": "Base",
-            "min": [-3, -3, -2],
-            "max": [ 3, -0.45, 2]
+            "name": { "value": "Base" },
+            "transform": { "position": [0, -1.725, 0], "scale": [3, 1.275, 2] }
         },
         {
-            "name": "Base Border",
-            "type": "box",
+            "box": {},
             "material": "Floor",
-            "min": [-3.1, -3,    -2.1],
-            "max": [ 3.1, -0.46,  2.1]
+            "name": { "value": "Base Border" },
+            "transform": { "position": [0, -1.73, 0], "scale": [3.1, 1.27, 2.1] }
         },
         {
-            "name": "Floor",
-            "type": "plane",
+            "plane": {},
             "material": "Floor",
-            "point": [0, -2, 0],
-            "normal": [0, 1, 0]
+            "name": { "value": "Floor" },
+            "transform": { "position": [0, -2, 0] }
         }
     ]
 }

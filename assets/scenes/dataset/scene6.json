@@ -3,15 +3,6 @@
 
     "light": "empty",
 
-    "camera": {
-        "name":      "Camera",
-        "radius":    { "rand": { "min": 2.5, "max": 4.5 } },
-        "azimuth":   { "rand": { "min": -60, "max": 240 } },
-        "elevation": { "rand": { "min": 5,   "max": 28  } },
-        "target": [0, 1, 0],
-        "fov":       { "rand": { "min": 55,  "max": 80  } }
-    },
-
     "materials": [
         {
             "name": "Floor",
@@ -20,50 +11,20 @@
             "roughness": { "rand": { "min": 0.25, "max": 0.55 } },
             "ior": 1.5
         },
-        {
-            "name": "Ceiling",
-            "type": "lambertian",
-            "albedo": [0.92, 0.90, 0.88]
-        },
-        {
-            "name": "WallBack",
-            "type": "lambertian",
-            "albedo": { "rand": { "min": [0.80, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } }
-        },
-        {
-            "name": "WallLeft",
-            "type": "lambertian",
-            "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.20] } }
-        },
-        {
-            "name": "WallRight",
-            "type": "lambertian",
-            "albedo": { "rand": { "min": [0.72, 0.70, 0.65], "max": [0.88, 0.86, 0.80] } }
-        },
-        {
-            "name": "Window",
-            "type": "emissive",
-            "albedo": [0.82, 0.88, 1.0],
-            "emission_strength": 30
-        },
-        {
-            "name": "Lamp",
-            "type": "emissive",
-            "albedo": [1.0, 0.65, 0.25],
-            "emission_strength": 600
-        },
+        { "name": "Ceiling",   "type": "lambertian", "albedo": [0.92, 0.90, 0.88] },
+        { "name": "WallBack",  "type": "lambertian", "albedo": { "rand": { "min": [0.80, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } } },
+        { "name": "WallLeft",  "type": "lambertian", "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.20] } } },
+        { "name": "WallRight", "type": "lambertian", "albedo": { "rand": { "min": [0.72, 0.70, 0.65], "max": [0.88, 0.86, 0.80] } } },
+        { "name": "Window",    "type": "emissive",   "albedo": [0.82, 0.88, 1.0], "emission_strength": 30 },
+        { "name": "Lamp",      "type": "emissive",   "albedo": [1.0, 0.65, 0.25], "emission_strength": 600 },
         {
             "name": "Glass",
             "type": "dielectric",
-            "albedo": [0.96, 0.97, 0.99],
+            "albedo":    [0.96, 0.97, 0.99],
             "roughness": 0.0,
-            "ior": { "rand": { "min": 1.45, "max": 1.65 } }
+            "ior":       { "rand": { "min": 1.45, "max": 1.65 } }
         },
-        {
-            "name": "Pedestal",
-            "type": "lambertian",
-            "albedo": { "rand": { "min": [0.82, 0.80, 0.78], "max": [0.95, 0.93, 0.90] } }
-        },
+        { "name": "Pedestal",  "type": "lambertian", "albedo": { "rand": { "min": [0.82, 0.80, 0.78], "max": [0.95, 0.93, 0.90] } } },
         {
             "name": "BunnyMat",
             "type": "principled",
@@ -73,90 +34,85 @@
         }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Floor",
-            "type": "plane",
+            "camera": { "fov": { "rand": { "min": 55, "max": 80 } } },
+            "name": { "value": "Camera" },
+            "spherical": {
+                "radius":    { "rand": { "min": 2.5, "max": 4.5 } },
+                "azimuth":   { "rand": { "min": -60, "max": 240 } },
+                "elevation": { "rand": { "min": 5, "max": 28 } },
+                "target":    [0, 1, 0]
+            }
+        },
+        {
+            "plane": {},
             "material": "Floor",
-            "point": [0, 0, 0],
-            "normal": [0, 1, 0]
+            "name": { "value": "Floor" }
         },
         {
-            "name": "Ceiling",
-            "type": "quad",
+            "quad": {},
             "material": "Ceiling",
-            "center": [0, 4, 0],
-            "normal": [0, -1, 0],
-            "scale": [8, 8]
+            "name": { "value": "Ceiling" },
+            "transform": { "position": [0, 4, 0], "rotation": [90, 0, 0], "scale": [8, 8, 1] }
         },
         {
-            "name": "WallBack",
-            "type": "quad",
+            "quad": {},
             "material": "WallBack",
-            "center": [0, 2, -4],
-            "normal": [0, 0, 1],
-            "scale": [8, 4]
+            "name": { "value": "WallBack" },
+            "transform": { "position": [0, 2, -4], "scale": [8, 4, 1] }
         },
         {
-            "name": "WallLeft",
-            "type": "quad",
+            "quad": {},
             "material": "WallLeft",
-            "center": [-4, 2, 0],
-            "normal": [1, 0, 0],
-            "scale": [8, 4]
+            "name": { "value": "WallLeft" },
+            "transform": { "position": [-4, 2, 0], "rotation": [0, 90, 0], "scale": [8, 4, 1] }
         },
         {
-            "name": "WallRight",
-            "type": "quad",
+            "quad": {},
             "material": "WallRight",
-            "center": [4, 2, 0],
-            "normal": [-1, 0, 0],
-            "scale": [8, 4]
+            "name": { "value": "WallRight" },
+            "transform": { "position": [4, 2, 0], "rotation": [0, -90, 0], "scale": [8, 4, 1] }
         },
         {
-            "name": "Window",
-            "type": "quad",
+            "quad": {},
             "material": "Window",
-            "center": [-3.9, 2, -0.5],
-            "normal": [1, 0, 0],
-            "scale": [2.5, 2]
+            "name": { "value": "Window" },
+            "transform": { "position": [-3.9, 2, -0.5], "rotation": [0, 90, 0], "scale": [2.5, 2, 1] }
         },
         {
-            "name": "Lamp",
-            "type": "sphere",
+            "sphere": { "radius": 0.08 },
             "material": "Lamp",
-            "center": [3, 1, 2],
-            "radius": 0.08
+            "name": { "value": "Lamp" },
+            "transform": { "position": [3, 1, 2] }
         },
         {
-            "name": "BunnyPedestal",
-            "type": "box",
+            "box": {},
             "material": "Pedestal",
-            "min": [-0.5, 0, -1.3],
-            "max": [0.5, 0.9, -0.3]
+            "name": { "value": "BunnyPedestal" },
+            "transform": { "position": [0, 0.45, -0.8], "scale": [0.5, 0.45, 0.5] }
         },
         {
-            "name": "Bunny",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/bunny.obj" },
             "material": "BunnyMat",
-            "path": "./assets/models/bunny.obj",
-            "position": [0, 1.55, -0.8],
-            "rotation": [0, { "rand": { "min": -60, "max": 60 } }, 0],
-            "scale": [1.5, 1.5, 1.5]
+            "name": { "value": "Bunny" },
+            "transform": {
+                "position": [0, 1.55, -0.8],
+                "rotation": [0, { "rand": { "min": -60, "max": 60 } }, 0],
+                "scale": [1.5, 1.5, 1.5]
+            }
         },
         {
-            "name": "GlassPedestal",
-            "type": "box",
+            "box": {},
             "material": "Pedestal",
-            "min": [-0.7, 0, 0.1],
-            "max": [0.7, 0.9, 1.5]
+            "name": { "value": "GlassPedestal" },
+            "transform": { "position": [0, 0.45, 0.8], "scale": [0.7, 0.45, 0.7] }
         },
         {
-            "name": "GlassSphere",
-            "type": "sphere",
+            "sphere": { "radius": 0.6 },
             "material": "Glass",
-            "center": [0, 1.5, 0.8],
-            "radius": 0.6
+            "name": { "value": "GlassSphere" },
+            "transform": { "position": [0, 1.5, 0.8] }
         }
     ]
 }

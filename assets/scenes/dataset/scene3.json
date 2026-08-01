@@ -3,22 +3,8 @@
 
     "light": "sunset",
 
-    "camera": {
-        "name":      "Camera",
-        "radius":    { "rand": { "min": 6,   "max": 9  } },
-        "azimuth":   { "rand": { "min": -70, "max": 70 } },
-        "elevation": { "rand": { "min": 5,   "max": 60 } },
-        "target": [0, 1, 0],
-        "fov":       { "rand": { "min": 45,  "max": 70 } }
-    },
-
     "materials": [
-        {
-            "name": "Sun",
-            "type": "emissive",
-            "albedo": [1.0, 0.75, 0.25],
-            "emission_strength": 2000
-        },
+        { "name": "Sun", "type": "emissive", "albedo": [1.0, 0.75, 0.25], "emission_strength": 2000 },
         {
             "name": "Floor",
             "type": "ggx_glossy",
@@ -46,47 +32,57 @@
         }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Sun",
-            "type": "sphere",
+            "camera": { "fov": { "rand": { "min": 45, "max": 70 } } },
+            "name": { "value": "Camera" },
+            "spherical": {
+                "radius":    { "rand": { "min": 6, "max": 9 } },
+                "azimuth":   { "rand": { "min": -70, "max": 70 } },
+                "elevation": { "rand": { "min": 5, "max": 60 } },
+                "target":    [0, 1, 0]
+            }
+        },
+        {
+            "sphere": { "radius": 50 },
             "material": "Sun",
-            "center": [0, 200, 1000],
-            "radius": 50
+            "name": { "value": "Sun" },
+            "transform": { "position": [0, 200, 1000] }
         },
         {
-            "name": "Floor",
-            "type": "plane",
+            "plane": {},
             "material": "Floor",
-            "point": [0, 0, 0],
-            "normal": [0, 1, 0]
+            "name": { "value": "Floor" }
         },
         {
-            "name": "MetalArmadillo",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/armadillo.obj" },
             "material": "Metal",
-            "path": "./assets/models/armadillo.obj",
-            "position": [-2.5, 1.1, 0],
-            "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
-            "scale": [0.02, 0.02, 0.02]
+            "name": { "value": "MetalArmadillo" },
+            "transform": {
+                "position": [-2.5, 1.1, 0],
+                "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
+                "scale": [0.02, 0.02, 0.02]
+            }
         },
         {
-            "name": "MatteArmadillo",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/armadillo.obj" },
             "material": "Matte",
-            "path": "./assets/models/armadillo.obj",
-            "position": [0, 1.1, 0],
-            "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
-            "scale": [0.02, 0.02, 0.02]
+            "name": { "value": "MatteArmadillo" },
+            "transform": {
+                "position": [0, 1.1, 0],
+                "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
+                "scale": [0.02, 0.02, 0.02]
+            }
         },
         {
-            "name": "GlassArmadillo",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/armadillo.obj" },
             "material": "Glass",
-            "path": "./assets/models/armadillo.obj",
-            "position": [2.5, 1.1, 0],
-            "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
-            "scale": [0.02, 0.02, 0.02]
+            "name": { "value": "GlassArmadillo" },
+            "transform": {
+                "position": [2.5, 1.1, 0],
+                "rotation": [0, { "rand": { "min": 0, "max": 360 } }, 0],
+                "scale": [0.02, 0.02, 0.02]
+            }
         }
     ]
 }

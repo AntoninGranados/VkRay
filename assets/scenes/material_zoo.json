@@ -3,12 +3,6 @@
 
     "light": "empty",
 
-    "camera": {
-        "position": [0, 4, -7],
-        "target": [0, 0, 0],
-        "fov": 60
-    },
-
     "materials": [
         {
             "name": "Light",
@@ -20,43 +14,51 @@
             "name": "Floor",
             "type": "programmable",
             "albedo": [0.59, 0.27, 0.09]
+        },
+        {
+            "name": "Mat_{row}_{col}",
+            "type": "ggx_glossy",
+            "albedo": [0.0, 0.8, 0.0],
+            "roughness": { "lerp": { "from": 0.0, "to": 0.7, "axis": "col" } },
+            "ior":       { "lerp": { "from": 1.0, "to": 2.0, "axis": "row" } },
+            "grid": { "rows": 5, "cols": 5 }
         }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Sphere_{row}_{col}",
-            "type": "sphere",
-            "radius": 0.4,
-            "material": {
-                "name": "Mat_{row}_{col}",
-                "type": "ggx_glossy",
-                "albedo": [0.0, 0.8, 0.0],
-                "roughness": { "lerp": { "from": 0.0, "to": 0.7, "axis": "col" } },
-                "ior":       { "lerp": { "from": 1.0, "to": 2.0, "axis": "row" } }
+            "camera": { "fov": 60, "focus_depth": 8.06 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 4, -7], "rotation": [-29.74, 180, 0] }
+        },
+        {
+            "sphere": { "radius": 0.4 },
+            "material": "Mat_{row}_{col}",
+            "name": { "value": "Sphere_{row}_{col}" },
+            "transform": {
+                "position": [
+                    { "lerp": { "from": -2, "to": 2, "axis": "col" } },
+                    0,
+                    { "lerp": { "from": -2, "to": 2, "axis": "row" } }
+                ]
             },
-            "grid": {
-                "rows": 5,
-                "cols": 5,
-                "origin": [-2, 0, -2],
-                "row_spacing": [0, 0, 1],
-                "col_spacing": [1, 0, 0]
-            }
+            "grid": { "rows": 5, "cols": 5 }
         },
         {
-            "name": "Light_{n}",
-            "type": "box",
+            "box": {},
             "material": "Light",
-            "min": [-2.0, 2.995, -2.1],
-            "max": [ 2.0, 3.005, -1.9],
-            "repeat": { "count": 5, "offset": [0, 0, 1] }
+            "name": { "value": "Light_{n}" },
+            "transform": {
+                "position": [0, 3, { "lerp": { "from": -2.0, "to": 2.0, "axis": "n" } }],
+                "scale": [2, 0.005, 0.1]
+            },
+            "repeat": { "count": 5 }
         },
         {
-            "name": "Floor",
-            "type": "plane",
+            "plane": {},
             "material": "Floor",
-            "point": [0, -1, 0],
-            "normal": [0, 1, 0]
+            "name": { "value": "Floor" },
+            "transform": { "position": [0, -1, 0] }
         }
     ]
 }

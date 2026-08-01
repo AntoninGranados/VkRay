@@ -1,132 +1,77 @@
 {
     "version": 1,
+
     "light": "empty",
-    "camera": {
-        "position": [0, 4, 11],
-        "target": [0, 0.65, 0],
-        "fov": 20,
-        "aperture": 0.0,
-        "focus_depth": 10.0
-    },
+
     "materials": [
-        {
-            "name": "Floor",
-            "type": "ggx_glossy",
-            "albedo": [0.6, 0.6, 0.6],
-            "roughness": 0.2,
-            "ior": 1.5
-        },
-        {
-            "name": "Light",
-            "type": "emissive",
-            "albedo": [0.75, 0.85, 1.0],
-            "emission_strength": 100
-        },
-        {
-            "name": "Matte",
-            "type": "lambertian",
-            "albedo": [1, 1, 1]
-        },
-        {
-            "name": "Plastic",
-            "type": "ggx_glossy",
-            "albedo": [1, 1, 1],
-            "roughness": 0.4,
-            "ior": 2.0
-        },
-        {
-            "name": "Ceramic",
-            "type": "ggx_glossy",
-            "albedo": [1, 1, 1],
-            "roughness": 0.05,
-            "ior": 1.5
-        },
-        {
-            "name": "Metal",
-            "type": "ggx_metal",
-            "albedo": [1, 1, 1],
-            "roughness": 0.10
-        },
-        {
-            "name": "RoughMetal",
-            "type": "ggx_metal",
-            "albedo": [1, 1, 1],
-            "roughness": 0.3
-        },
-        {
-            "name": "Glass",
-            "type": "dielectric",
-            "albedo": [1, 1, 1],
-            "ior": 1.5
-        }
+        { "name": "Floor",     "type": "ggx_glossy", "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 },
+        { "name": "Light",     "type": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 },
+        { "name": "Matte",     "type": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "Plastic",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 },
+        { "name": "Ceramic",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
+        { "name": "Metal",     "type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
+        { "name": "RoughMetal","type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.3 },
+        { "name": "Glass",     "type": "dielectric", "albedo": [1, 1, 1], "ior": 1.5 }
     ],
-    "objects": [
+
+    "entities": [
         {
-            "name": "Floor",
-            "type": "plane",
+            "camera": { "fov": 20 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 4, 11], "rotation": [-16.92, 0, 0] }
+        },
+        {
+            "plane": {},
             "material": "Floor",
-            "point": [0.0, 0.0, 0.0],
-            "normal": [0.0, 1.0, 0.0]
+            "name": { "value": "Floor" }
         },
         {
-            "name": "KeyLight",
-            "type": "quad",
+            "quad": {},
             "material": "Light",
-            "center": [0, 10, -5],
-            "normal": [0.0, -0.9284767508506775, 0.371390700340271],
-            "scale": [10, 5],
-            "rotation": 0.0
+            "name": { "value": "KeyLight" },
+            "transform": { "position": [0, 10, -5], "rotation": [68.2, 0, 0], "scale": [10, 5, 1] }
         },
         {
-            "name": "FillLight",
-            "type": "quad",
+            "quad": {},
             "material": "Light",
-            "center": [-9.6, 7, 1],
-            "normal": [0.9805806875228882, -0.1961161345243454, 0.0],
-            "scale": [4.0, 4.0],
-            "rotation": 0.0
+            "name": { "value": "FillLight" },
+            "transform": { "position": [-9.6, 7, 1], "rotation": [11.31, 90, 0], "scale": [4, 4, 1] }
         },
         {
-            "name": "Matte",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "Matte",
-            "center": [-5, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "Matte" },
+            "transform": { "position": [-5, 0.65, 0] }
         },
         {
-            "name": "Plastic",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "Plastic",
-            "center": [-3, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "Plastic" },
+            "transform": { "position": [-3, 0.65, 0] }
         },
         {
-            "name": "Ceramic",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "Ceramic",
-            "center": [-1, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "Ceramic" },
+            "transform": { "position": [-1, 0.65, 0] }
         },
         {
-            "name": "Metal",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "Metal",
-            "center": [1, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "Metal" },
+            "transform": { "position": [1, 0.65, 0] }
         },
         {
-            "name": "RoughMetal",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "RoughMetal",
-            "center": [3, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "RoughMetal" },
+            "transform": { "position": [3, 0.65, 0] }
         },
         {
-            "name": "Glass",
-            "type": "sphere",
+            "sphere": { "radius": 0.65 },
             "material": "Glass",
-            "center": [5, 0.65, 0],
-            "radius": 0.65
+            "name": { "value": "Glass" },
+            "transform": { "position": [5, 0.65, 0] }
         }
     ]
 }

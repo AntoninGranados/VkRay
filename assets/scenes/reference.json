@@ -3,13 +3,6 @@
 
     "light": "empty",
 
-    "camera": {
-        "name": "Camera",
-        "position": [0, 0, -15],
-        "target": [0, 0, 0],
-        "fov": 40
-    },
-
     "materials": [
         { "name": "Floor",       "type": "programmable", "albedo": [0.32, 0.32, 0.32] },
         { "name": "Top",         "type": "lambertian",   "albedo": [0.90, 0.90, 0.90] },
@@ -21,125 +14,92 @@
         { "name": "Smoke",       "type": "volume",       "albedo": [0.6, 0.6, 0.6],    "density": 0.03 },
         { "name": "DragonGlass", "type": "dielectric",   "albedo": [0.88, 0.38, 0.82], "roughness": 0.10, "ior": 1.45 },
         { "name": "Pedestal",    "type": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.0,  "ior": 12.0 },
-        { "name": "Metal",       "type": "ggx_metal",    "albedo": [1, 1, 1],           "roughness": 0.10 },
-        { "name": "Matte",       "type": "lambertian",   "albedo": [1, 1, 1] },
-        { "name": "FrostedGlass","type": "dielectric",   "albedo": [1, 1, 1],           "roughness": 0.08, "ior": 1.45 },
-        { "name": "Glossy",      "type": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.04, "ior": 2.0 }
+        { "name": "SphereMat_0", "type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
+        { "name": "SphereMat_1", "type": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "SphereMat_2", "type": "dielectric", "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.45 },
+        { "name": "SphereMat_3", "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.04, "ior": 2.0 }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Bottom",
-            "type": "quad",
-            "material": "Floor",
-            "center": [0, -4, 0],
-            "normal": [0, 1, 0],
-            "scale": [8, 8]
+            "camera": { "fov": 40, "focus_depth": 15 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 0, -15], "rotation": [0, 180, 0] }
         },
         {
-            "name": "Top",
-            "type": "quad",
+            "quad": {},
+            "material": "Floor",
+            "name": { "value": "Bottom" },
+            "transform": { "position": [0, -4, 0], "rotation": [-90, 0, 0], "scale": [8, 8, 1] }
+        },
+        {
+            "quad": {},
             "material": "Top",
-            "center": [0, 4, 0],
-            "normal": [0, -1, 0],
-            "scale": [8, 8]
+            "name": { "value": "Top" },
+            "transform": { "position": [0, 4, 0], "rotation": [90, 0, 0], "scale": [8, 8, 1] }
         },
         {
-            "name": "Back",
-            "type": "quad",
+            "quad": {},
             "material": "Back",
-            "center": [0, 0, 4],
-            "normal": [0, 0, -1],
-            "scale": [8, 8]
+            "name": { "value": "Back" },
+            "transform": { "position": [0, 0, 4], "rotation": [180, 0, 0], "scale": [8, 8, 1] }
         },
         {
-            "name": "Left",
-            "type": "quad",
+            "quad": {},
             "material": "Left",
-            "center": [-4, 0, 0],
-            "normal": [1, 0, 0],
-            "scale": [8, 8]
+            "name": { "value": "Left" },
+            "transform": { "position": [-4, 0, 0], "rotation": [0, 90, 0], "scale": [8, 8, 1] }
         },
         {
-            "name": "Right",
-            "type": "quad",
+            "quad": {},
             "material": "Right",
-            "center": [4, 0, 0],
-            "normal": [-1, 0, 0],
-            "scale": [8, 8]
+            "name": { "value": "Right" },
+            "transform": { "position": [4, 0, 0], "rotation": [0, -90, 0], "scale": [8, 8, 1] }
         },
         {
-            "name": "Front",
-            "type": "quad",
+            "quad": {},
             "material": "Front",
-            "center": [0, 0, -4],
-            "normal": [0, 0, 1],
-            "scale": [8, 8]
+            "name": { "value": "Front" },
+            "transform": { "position": [0, 0, -4], "scale": [8, 8, 1] }
         },
         {
-            "name": "Light",
-            "type": "box",
+            "box": {},
             "material": "Light",
-            "min": [-0.3, 3.98, -0.3],
-            "max": [ 0.3, 4.0,   0.3]
+            "name": { "value": "Light" },
+            "transform": { "position": [0, 3.99, 0], "scale": [0.3, 0.01, 0.3] }
         },
         {
-            "name": "Smoke",
-            "type": "box",
+            "box": {},
             "material": "Smoke",
-            "min": [-4.01, -4.01, -4.01],
-            "max": [ 4.01,  4.01,  4.01]
+            "name": { "value": "Smoke" },
+            "transform": { "scale": [4.01, 4.01, 4.01] }
         },
         {
-            "name": "Dragon",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/dragon.obj" },
             "material": "DragonGlass",
-            "path": "./assets/models/dragon.obj",
-            "position": [0, -1.4, 1],
-            "rotation": [0, 205, 0],
-            "scale": [5.2, 5.2, 5.2]
+            "name": { "value": "Dragon" },
+            "transform": { "position": [0, -1.4, 1], "rotation": [0, 205, 0], "scale": [5.2, 5.2, 5.2] }
         },
         {
-            "name": "Pedestal",
-            "type": "box",
+            "box": {},
             "material": "Pedestal",
-            "min": [-3.25, -4.0, -1.6],
-            "max": [ 3.25, -3.1,  3.2]
+            "name": { "value": "Pedestal" },
+            "transform": { "position": [0, -3.55, 0.8], "scale": [3.25, 0.45, 2.4] }
         },
         {
-            "name": "PedestalBorder",
-            "type": "box",
+            "box": {},
             "material": "Floor",
-            "min": [-3.29, -4.0,  -1.64],
-            "max": [ 3.29, -3.12,  3.24]
+            "name": { "value": "PedestalBorder" },
+            "transform": { "position": [0, -3.56, 0.8], "scale": [3.29, 0.44, 2.44] }
         },
         {
-            "name": "Metal",
-            "type": "sphere",
-            "material": "Metal",
-            "center": [-2.91, -2.35, -2],
-            "radius": 0.85
-        },
-        {
-            "name": "Matte",
-            "type": "sphere",
-            "material": "Matte",
-            "center": [-0.97, -2.35, -2],
-            "radius": 0.85
-        },
-        {
-            "name": "FrostedGlass",
-            "type": "sphere",
-            "material": "FrostedGlass",
-            "center": [0.97, -2.35, -2],
-            "radius": 0.85
-        },
-        {
-            "name": "Glossy",
-            "type": "sphere",
-            "material": "Glossy",
-            "center": [2.91, -2.35, -2],
-            "radius": 0.85
+            "sphere": { "radius": 0.85 },
+            "material": "SphereMat_{n}",
+            "name": { "value": "Sphere_{n}" },
+            "transform": {
+                "position": [{ "lerp": { "from": -2.91, "to": 2.91, "axis": "n" } }, -2.35, -2]
+            },
+            "repeat": { "count": 4 }
         }
     ]
 }

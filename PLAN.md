@@ -2,25 +2,6 @@
 
 This plan will most likely be subjected to heavy modifications.
 
-## v0.4 Renderer Architecture
-
-- [X] **[0.4.0] Renderer / editor separation**: decouple the render pipeline from the editor and display
-  - Renderer owns pathtracing and compositing compute passes only; produces `OutputImage`
-  - Windowed mode blits `OutputImage` to the swap chain independently of the renderer
-  - Editor renders its ImGui overlay on top of the swap chain image, orthogonal to the renderer
-  - Headless mode runs the renderer loop directly with no display layer
-- [X] **[0.4.1] Parameter system**: JSON-driven parameter system with a full type-safe API
-  - Parameters defined in `assets/parameters/parameters.json` with hierarchical paths
-  - Template getter/setter/binder with constrained overloads (scalar, enum, vec)
-  - Vec parameter types (ivec2–4, vec2–4) in editor, parser, and job overrides
-  - Partial constraint display (omits type-limit bounds); adaptive float precision
-- [ ] **[0.4.2] Data-driven ECS components**: define components in JSON rather than hardcoded C++
-  - `src/config/components.json` declares each component: id, group, field list (name / type / label / range), requirements, conflicts
-  - C++ component structs stay as-is; a thin registration call wires each struct to its schema entry (factory, has, serialise/deserialise, UI draw)
-  - `components.hpp` X-macro and hard-coded group/label/restrictions maps replaced by the registry populated from JSON at startup
-  - Inspector UI generated from field schemas (same pattern as `ParameterUI`); per-component hand-written UI lambdas removed
-  - Scene serialiser accepts both the current shorthand format (`"type": "sphere", ...`) and a new explicit component list format (`"components": ["Transform", "Sphere", ...], "sphere": { ... }`); both expand to the same in-memory entity
-
 ## v0.5 Camera & Lens
 
 - [ ] **[0.5.1] Arbitrary aperture shape**: replace the disk sample with a user-defined shape

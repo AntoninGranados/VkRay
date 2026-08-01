@@ -1,4 +1,6 @@
 #include "core.hpp"
+
+#include "core/ecs/components/component_serializer.hpp"
 #include "core/parameters/parameter_serializer.hpp"
 
 Core& Core::get() {
@@ -14,6 +16,7 @@ void Core::init(Platform& p, uint32_t version) {
     c.coreRenderer.bindParameters();
     // TODO: move that to a meta programm
     ParameterSerializer::saveDocumentation("./docs/parameters.md");
+    ComponentSerializer::saveDocumentation("./docs/components.md");
 }
 
 void Core::terminate() {

@@ -3,124 +3,89 @@
 
     "light": "day",
 
-    "camera": {
-        "position": [-5.5, 2, -5],
-        "target": [0, 0, 0],
-        "fov": 25
-    },
-
     "materials": [
-        {
-            "name": "Wall",
-            "type": "ggx_glossy",
-            "albedo": [1, 1, 1],
-            "roughness": 0.2,
-            "ior": 2.0
-        },
-        {
-            "name": "Sun",
-            "type": "emissive",
-            "albedo": [1, 0.9, 0.9],
-            "emission_strength": 5000
-        },
-        {
-            "name": "Dragon",
-            "type": "dielectric",
-            "albedo": [0.3, 0.9, 0.2],
-            "ior": 1.3,
-            "rougness": 0.1,
-            "density": 10,
-            "transmission": 1
-        }
+        { "name": "Wall",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.2, "ior": 2.0 },
+        { "name": "Sun",    "type": "emissive",   "albedo": [1, 0.9, 0.9], "emission_strength": 5000 },
+        { "name": "Dragon", "type": "dielectric", "albedo": [0.3, 0.9, 0.2], "ior": 1.3, "roughness": 0.1, "density": 10, "transmission": 1 }
     ],
 
-    "objects": [
+    "entities": [
         {
-            "name": "Sun",
-            "type": "sphere",
+            "camera": { "fov": 25, "focus_depth": 7.70 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [-5.5, 2, -5], "rotation": [-15.05, 132.27, 0] }
+        },
+        {
+            "sphere": { "radius": 10 },
             "material": "Sun",
-            "center": [-1000, 500, 1000],
-            "radius": 10
+            "name": { "value": "Sun" },
+            "transform": { "position": [-1000, 500, 1000] }
         },
         {
-            "name": "Dragon",
-            "type": "mesh",
+            "mesh": { "path": "./assets/models/dragon.obj" },
             "material": "Dragon",
-            "path": "./assets/models/dragon.obj",
-            "smooth_shading": true,
-            "position": [4.5, -1, 2],
-            "rotation": [0, -90, 0],
-            "scale": [2, 2, 2]
+            "name": { "value": "Dragon" },
+            "transform": { "position": [4.5, -1, 2], "rotation": [0, -90, 0], "scale": [2, 2, 2] }
         },
         {
-            "name": "Floor",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-8, -4.1, -8],
-            "max": [ 8, -3.9,  8]
+            "name": { "value": "Floor" },
+            "transform": { "position": [0, -4.0, 0], "scale": [8, 0.1, 8] }
         },
         {
-            "name": "Ceiling",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-8, 3.9, -8],
-            "max": [ 8, 4.1,  8]
+            "name": { "value": "Ceiling" },
+            "transform": { "position": [0, 4.0, 0], "scale": [8, 0.1, 8] }
         },
         {
-            "name": "Left",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [ 5.9, -3.9, -8],
-            "max": [ 6.1,  3.9,  8]
+            "name": { "value": "Left" },
+            "transform": { "position": [6.0, 0, 0], "scale": [0.1, 3.9, 8] }
         },
         {
-            "name": "Right",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-6.1, -3.9, -8],
-            "max": [-5.9,  3.9,  8]
+            "name": { "value": "Right" },
+            "transform": { "position": [-6.0, 0, 0], "scale": [0.1, 3.9, 8] }
         },
         {
-            "name": "Back",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-8, -3.9, -6.1],
-            "max": [ 8,  3.9, -5.9]
+            "name": { "value": "Back" },
+            "transform": { "position": [0, 0, -6.0], "scale": [8, 3.9, 0.1] }
         },
         {
-            "name": "Front Left",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [ 2, -3.9, 5.9],
-            "max": [ 8,  3.9, 6.1]
+            "name": { "value": "Front Left" },
+            "transform": { "position": [5, 0, 6.0], "scale": [3, 3.9, 0.1] }
         },
         {
-            "name": "Front Right",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-8, -3.9, 5.9],
-            "max": [-2,  3.9, 6.1]
+            "name": { "value": "Front Right" },
+            "transform": { "position": [-5, 0, 6.0], "scale": [3, 3.9, 0.1] }
         },
         {
-            "name": "Front Top",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-2,  2.5, 5.9],
-            "max": [ 2,  3.9, 6.1]
+            "name": { "value": "Front Top" },
+            "transform": { "position": [0, 3.2, 6.0], "scale": [2, 0.7, 0.1] }
         },
         {
-            "name": "Front Bottom",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [-2, -3.9, 5.9],
-            "max": [ 2, -1.5, 6.1]
+            "name": { "value": "Front Bottom" },
+            "transform": { "position": [0, -2.7, 6.0], "scale": [2, 1.2, 0.1] }
         },
         {
-            "name": "Pedestal",
-            "type": "box",
+            "box": {},
             "material": "Wall",
-            "min": [3.5, -3.9, 0.8],
-            "max": [  6, -1.7, 3.2]
+            "name": { "value": "Pedestal" },
+            "transform": { "position": [4.75, -2.8, 2.0], "scale": [1.25, 1.1, 1.2] }
         }
     ]
 }

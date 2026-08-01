@@ -9,6 +9,7 @@
 namespace ecs {
 
 inline const ComponentType Sphere = ComponentType::builder("sphere")
+    .description("Sphere primitive.")
     .icon(ICON_FA_CIRCLE)
     .group("object")
     .needs("transform")
@@ -17,6 +18,7 @@ inline const ComponentType Sphere = ComponentType::builder("sphere")
     .build();
 
 inline const ComponentType Plane = ComponentType::builder("plane")
+    .description("Infinite plane primitive.")
     .icon(ICON_FA_SQUARE)
     .group("object")
     .needs("transform")
@@ -24,6 +26,7 @@ inline const ComponentType Plane = ComponentType::builder("plane")
     .build();
 
 inline const ComponentType Box = ComponentType::builder("box")
+    .description("Box primitive.")
     .icon(ICON_FA_BOX)
     .group("object")
     .needs("transform")
@@ -31,6 +34,7 @@ inline const ComponentType Box = ComponentType::builder("box")
     .build();
 
 inline const ComponentType Quad = ComponentType::builder("quad")
+    .description("Single face quad primitive.")
     .icon(ICON_FA_SQUARE)
     .group("object")
     .needs("transform")
@@ -38,6 +42,7 @@ inline const ComponentType Quad = ComponentType::builder("quad")
     .build();
 
 inline const ComponentType MeshRef = ComponentType::builder("mesh")
+    .description("Loaded mesh asset.")
     .icon(ICON_FA_CUBE)
     .group("object")
     .needs("transform")
@@ -46,6 +51,7 @@ inline const ComponentType MeshRef = ComponentType::builder("mesh")
     .build();
 
 inline const ComponentType Camera = ComponentType::builder("camera")
+    .description("Perspective camera.")
     .icon(ICON_FA_VIDEO)
     .group("object")
     .needs("transform")
@@ -57,6 +63,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     .build();
 
 inline const ComponentType Collider = ComponentType::builder("collider")
+    .description("Physics collider shape.")
     .icon(ICON_FA_SQUARE)
     .group("physics")
     .field<float>("restitution", 0.4f, { .min = 0.0f, .max = 1.0f, .step = 0.01f })
@@ -64,6 +71,7 @@ inline const ComponentType Collider = ComponentType::builder("collider")
     .build();
 
 inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
+    .description("Physics rigid body.")
     .icon(ICON_FA_CUBES_STACKED)
     .group("physics")
     .field<bool>("use_gravity", true)
@@ -73,12 +81,14 @@ inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
     .build();
 
 inline const ComponentType Name = ComponentType::builder("name")
+    .description("Display name.")
     .icon(ICON_FA_TAG)
     .group("other")
     .field<std::string>("value")
     .build();
 
 inline const ComponentType Transform = ComponentType::builder("transform")
+    .description("World-space transform.")
     .icon(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT)
     .group("movement")
     .field<glm::vec3>("position", glm::vec3(0.0f), {}, true)
@@ -87,6 +97,7 @@ inline const ComponentType Transform = ComponentType::builder("transform")
     .build();
 
 inline const ComponentType MaterialRef = ComponentType::builder("material")
+    .description("Material reference.")
     .icon(ICON_FA_PALETTE)
     .group("other")
     .field<int>("handle")

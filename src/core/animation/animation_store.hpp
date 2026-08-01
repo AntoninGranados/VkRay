@@ -19,6 +19,9 @@ public:
     void capture(ecs::Entity e, ecs::Component& component, const std::string& fieldId, int frame);
     void capture(MaterialHandle handle, const std::string& fieldId, int frame, Material& material);
 
+    void insert(ecs::Entity e, const ecs::ComponentType& type, const std::string& fieldId, int frame, FieldValue value, Interpolation interp = Interpolation::Linear);
+    void insert(MaterialHandle handle, const std::string& fieldId, int frame, FieldValue value, Interpolation interp = Interpolation::Linear);
+    
     bool has(ecs::Entity e, const ecs::ComponentType& type, const std::string& fieldId, int frame) const;
     bool has(MaterialHandle handle, const std::string& fieldId, int frame) const;
 
