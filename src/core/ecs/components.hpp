@@ -57,9 +57,17 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     .needs("transform")
     .conflicts("sphere", "plane", "box", "quad", "mesh")
     .field<float>("fov", 80.0f, { .min = 1.0f, .max = 160.0f, .step = 0.1f }, true)
+    .field<float>("shutter_speed", 0.0f, { .min = 0.0f, .max = 1.0f, .step = 0.01f })
+    .privateField<bool>("is_preview")
+    .build();
+
+inline const ComponentType ThinLensCamera = ComponentType::builder("thin_lens_camera")
+    .description("Depth-of-field via thin lens approximation.")
+    .icon(ICON_FA_CIRCLE_DOT)
+    .group("object")
+    .needs("camera")
     .field<float>("aperture", 0.0f, { .min = 0.0f, .max = 10.0f, .step = 0.01f }, true)
     .field<float>("focus_depth", 10.0f, { .min = 0.0f, .step = 0.01f }, true)
-    .privateField<bool>("is_preview")
     .build();
 
 inline const ComponentType Collider = ComponentType::builder("collider")

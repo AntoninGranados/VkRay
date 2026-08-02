@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.1]
+
+### Added
+- Motion blur: stochastic temporal sampling with centered shutter; `shutter_speed` on the `Camera` component
+- `ThinLensCamera` component: opt-in depth-of-field with `aperture` and `focus_depth`
+
+### Fixed
+- Emissive objects inside volumes appeared black (broken MIS weight after volume surface crossing)
+
+---
+
 ## [0.4.2]
 
 ### Added

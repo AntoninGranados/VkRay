@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
+#include <unordered_map>
 #include <limits>
 #include <numeric>
 
@@ -52,6 +53,9 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
     indices.clear();
     vertexColorLoaded = false;
 
+    std::vector<int> vertexMaterial(vertices.size(), -1);
+    std::unordered_map<uint64_t, unsigned int> splitVertices;
+
     for (const tinyobj::shape_t& shape : shapes) {
         size_t indexOffset = 0;
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
@@ -62,21 +66,42 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
             }
 
             int matId = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[f];
-            if (matId >= 0 && matId < (int)materials.size()) {
+            const bool hasMat = matId >= 0 && matId < (int)materials.size();
+
+            glm::vec3 faceColor(0.0f);
+            if (hasMat) {
                 const auto& kd = materials[matId].diffuse;
-                glm::vec3 faceColor(kd[0], kd[1], kd[2]);
-                for (int v = 0; v < fv; v++) {
-                    const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
-                    if (idx.vertex_index < 0) continue;
-                    indices.push_back(static_cast<unsigned int>(idx.vertex_index));
-                    vertices[idx.vertex_index].color = faceColor;
-                }
+                faceColor = glm::vec3(kd[0], kd[1], kd[2]);
                 vertexColorLoaded = true;
-            } else {
-                for (int v = 0; v < fv; v++) {
-                    const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
-                    if (idx.vertex_index < 0) continue;
-                    indices.push_back(static_cast<unsigned int>(idx.vertex_index));
+            }
+
+            for (int v = 0; v < fv; v++) {
+                const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
+                if (idx.vertex_index < 0) continue;
+                const int origIdx = idx.vertex_index;
+
+                if (!hasMat) {
+                    indices.push_back(static_cast<unsigned int>(origIdx));
+                    continue;
+                }
+
+                if (vertexMaterial[origIdx] == -1) {
+                    vertices[origIdx].color = faceColor;
+                    vertexMaterial[origIdx] = matId;
+                    indices.push_back(static_cast<unsigned int>(origIdx));
+                } else if (vertexMaterial[origIdx] == matId) {
+                    indices.push_back(static_cast<unsigned int>(origIdx));
+                } else {
+                    const uint64_t key = static_cast<uint64_t>(origIdx) | (static_cast<uint64_t>(matId) << 32);
+                    auto it = splitVertices.find(key);
+                    if (it != splitVertices.end()) {
+                        indices.push_back(it->second);
+                    } else {
+                        const unsigned int newIdx = static_cast<unsigned int>(vertices.size());
+                        vertices.push_back(Vertex{ .position = vertices[origIdx].position, .color = faceColor });
+                        splitVertices[key] = newIdx;
+                        indices.push_back(newIdx);
+                    }
                 }
             }
             indexOffset += fv;

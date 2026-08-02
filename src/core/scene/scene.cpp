@@ -157,8 +157,6 @@ void Scene::pushCamera(std::string name, const glm::mat4& transform) {
     
     ecs::Component& cam = registry.add(e, ecs::Camera);
     cam.set<float>("fov", 60.0f);
-    cam.set<float>("aperture", 0.0f);
-    cam.set<float>("focus_depth", 1.0f);
 
     addTransformFromMatrix(e, transform);
 
@@ -232,6 +230,35 @@ void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
     t.set<glm::vec3>("position", translation);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(rotation))));
     t.set<glm::vec3>("scale", scale);
+}
+
+void Scene::syncCameraFromEntities() {
+    auto& camStorage = registry.storage(ecs::Camera);
+    auto& transformStorage = registry.storage(ecs::Transform);
+    auto& thinLensStorage = registry.storage(ecs::ThinLensCamera);
+    for (const ecs::Entity& ce : entities) {
+        if (!camStorage.has(ce) || !transformStorage.has(ce)) continue;
+        const ecs::Component& cam = camStorage.get(ce);
+        if (cam.get<bool>("is_preview")) continue;
+        const ecs::Component& t = transformStorage.get(ce);
+        const glm::vec3 pos = t.get<glm::vec3>("position");
+        const glm::vec3 dir = glm::normalize(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));
+        camera.setPosition(pos);
+        camera.setFov(cam.get<float>("fov"));
+        camera.setShutterSpeed(cam.get<float>("shutter_speed"));
+        if (thinLensStorage.has(ce)) {
+            const ecs::Component& tl = thinLensStorage.get(ce);
+            const float focusDepth = glm::max(0.1f, tl.get<float>("focus_depth"));
+            camera.setTarget(pos + dir * focusDepth);
+            camera.setAperture(tl.get<float>("aperture"));
+            camera.setFocusDepth(focusDepth);
+        } else {
+            camera.setTarget(pos + dir * 10.0f);
+            camera.setAperture(0.0f);
+            camera.setFocusDepth(10.0f);
+        }
+        break;
+    }
 }
 
 void Scene::resetSceneState() {

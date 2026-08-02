@@ -4,13 +4,14 @@ This plan will most likely be subjected to heavy modifications.
 
 ## v0.5 Camera & Lens
 
-- [ ] **[0.5.1] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
+- [x] **[0.5.1] Motion blur**
+- [ ] **[0.5.2] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
   - Support polygon apertures (square, hex, ...) and custom mask textures
   - Controls bokeh blade count and rotation
-- [ ] **[0.5.2] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
+- [ ] **[0.5.3] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
   - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
   - Enables oblique focus planes and tilt-shift miniature effects
-- [ ] **[0.5.3] Spectral rendering**: replace RGB with wavelength-sampled radiance
+- [ ] **[0.5.4] Spectral rendering**: replace RGB with wavelength-sampled radiance
   - Sample a hero wavelength per ray; carry a small spectral packet (e.g. 4 wavelengths) through the path
   - Spectral sensitivity curves (CIE XYZ or camera RGB primaries) used at accumulation time to convert to display RGB
   - Enables wavelength-dependent effects: dispersion (glass prisms, caustic rainbows), iridescence (thin-film interference), fluorescence
@@ -19,13 +20,6 @@ This plan will most likely be subjected to heavy modifications.
 ## v0.6 Light Tracing
 
 - [ ] **[0.6.0] BDPT**: trace paths from emitters and connect to the camera
-
-## v0.X Animation
-
-- [ ] **[0.X.0] Arbitrary interpolation curves**:
-  - Add support for multiple animation curves (for now they have to be hardcoded); lerp (already), slerp, ease-in/out/in-out, ...
-- [ ] **[0.X.1] Motion blur**: time-sampled rays in the pathtracing shader
-- [ ] **[0.X.2] UI Overhaull**
 
 ## v0.X Denoising
 

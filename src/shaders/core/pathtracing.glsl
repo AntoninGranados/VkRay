@@ -222,6 +222,8 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             prevBsdf = bsdf;
             prevHit = hit;
             prevIsSkipped = isSkipped;
+        } else {
+            prevIsSkipped = true;
         }
 
         ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);

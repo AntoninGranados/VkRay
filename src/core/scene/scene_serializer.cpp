@@ -356,26 +356,6 @@ void SceneSerializer::spawnSpherical(const json& ej, ecs::Entity e, ecs::Registr
     t.set<glm::vec3>("rotation", {glm::degrees(std::asin(glm::clamp(dir.y, -1.0f, 1.0f))), glm::degrees(std::atan2(dir.x, -dir.z)), 0.0f});
 }
 
-void SceneSerializer::initCameraFromEntities(Scene& scene, ecs::Registry& registry) {
-    auto& camStorage = registry.storage(ecs::Camera);
-    auto& transformStorage = registry.storage(ecs::Transform);
-    for (const ecs::Entity& ce : scene.getEntities()) {
-        if (!camStorage.has(ce) || !transformStorage.has(ce)) continue;
-        const ecs::Component& cam = camStorage.get(ce);
-        if (cam.get<bool>("is_preview")) continue;
-        const ecs::Component& t = transformStorage.get(ce);
-        const glm::vec3 pos = t.get<glm::vec3>("position");
-        const glm::vec3 dir = glm::normalize(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));
-        const float focusDepth = glm::max(0.1f, cam.get<float>("focus_depth"));
-        Camera& orbiting = scene.getCamera();
-        orbiting.setPosition(pos);
-        orbiting.setTarget(pos + dir * focusDepth);
-        orbiting.setFov(cam.get<float>("fov"));
-        orbiting.setAperture(cam.get<float>("aperture"));
-        orbiting.setFocusDepth(focusDepth);
-        break;
-    }
-}
 
 bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::ifstream file(path);
@@ -477,7 +457,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     AnimationStore& animStore = scene.getAnimationStore();
     animStore.evaluate(registry, 0.0f);
     animStore.evaluate(scene.getMaterials(), 0.0f);
-    initCameraFromEntities(scene, registry);
+    scene.syncCameraFromEntities();
     return true;
 }
 

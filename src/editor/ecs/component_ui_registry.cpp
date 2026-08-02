@@ -115,6 +115,7 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
+    ui_reg.add(ecs::ThinLensCamera);
     ui_reg.add(ecs::Transform);
 
     ui_reg.add(MaterialRef, [](Component& c, Registry& r, Entity e) {

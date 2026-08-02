@@ -1,0 +1,101 @@
+{
+    "version": 1,
+    "light": "sunset",
+    "materials": [
+        {
+            "name": "VertexColor",
+            "type": "lambertian",
+            "albedo": [1.0, 1.0, 1.0]
+        },
+        {
+            "name": "Material-uid[1168279879]",
+            "type": "emissive",
+            "albedo": [0.9302325248718262, 0.284553587436676, 0.03461332991719246],
+            "emission_strength": 2000.0
+        }
+    ],
+    "entities": [
+        {
+            "camera": {
+                "fov": 50.0,
+                "shutter_speed": 0.6000000238418579
+            },
+            "thin_lens_camera": {
+                "aperture": 0.05000000074505806,
+                "focus_depth": 6.130000114440918
+            },
+            "name": {
+                "value": "Camera"
+            },
+            "transform": {
+                "position": [3.0, 3.0, 5.0],
+                "rotation": [-15.0, 35.0, 0.0],
+                "scale": [1.0, 1.0, 1.0]
+            }
+        },
+        {
+            "mesh": {
+                "path": "./assets/models/police/car1.obj",
+                "smooth": false
+            },
+            "name": {
+                "value": "Car 1"
+            },
+            "transform": {
+                "position": [0.0, 0.0, 0.0],
+                "rotation": [-5.833000183105469, -7.448999881744385, 2.8269999027252197],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "material": "VertexColor"
+        },
+        {
+            "mesh": {
+                "path": "./assets/models/police/car2.obj",
+                "smooth": false
+            },
+            "name": {
+                "value": "Car 2"
+            },
+            "transform": {
+                "position": [-5.0, 0.0, 0.0],
+                "rotation": [6.486000061035156, 5.091727256774902, 0.9329786896705627],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "material": "VertexColor"
+        },
+        {
+            "mesh": {
+                "path": "./assets/models/police/road.obj",
+                "smooth": false
+            },
+            "name": {
+                "value": "Road"
+            },
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame": 0, "value": [-15.0, 0.0, 0.0] },
+                        { "frame": 1, "value": [-19.0, 0.0, 0.0] }
+                    ]
+                },
+                "rotation": [0.0, 0.0, 0.0],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "material": "VertexColor"
+        },
+        {
+            "sphere": {
+                "radius": 20.0
+            },
+            "name": {
+                "value": "Entity-uid[143558780]"
+            },
+            "transform": {
+                "position": [200.0, 20.0, -100.0],
+                "rotation": [0.0, -0.0, 0.0],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "material": "Material-uid[1168279879]"
+        }
+    ]
+}

@@ -38,5 +38,4 @@ private:
     static void spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs::Registry& registry);
     static void spawnMaterialRef(const json& ej, ecs::Entity e, ecs::Registry& registry, const std::unordered_map<std::string, MaterialHandle>& matMap, const ResolveCtx& ctx);
     static void spawnSpherical(const json& ej, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx);
-    static void initCameraFromEntities(Scene& scene, ecs::Registry& registry);
 };

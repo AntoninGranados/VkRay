@@ -56,6 +56,15 @@ Perspective camera.
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `fov` | float | 80 | 1 ... 160 | yes |
+| `shutter_speed` | float | 0 | 0 ... 1 | no |
+
+### Thin Lens Camera
+Depth-of-field via thin lens approximation.
+
+**Needs:** `camera`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
 | `aperture` | float | 0 | 0 ... 10 | yes |
 | `focus_depth` | float | 10 | ≥ 0 | yes |
 

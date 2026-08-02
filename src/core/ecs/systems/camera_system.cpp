@@ -30,8 +30,17 @@ void cameraPreUpdateSystem(Registry& registry) {
     sceneCamera.setPosition(pos);
     sceneCamera.setTarget(pos + glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)) * dist);
     sceneCamera.setFov(c.get<float>("fov"));
-    sceneCamera.setAperture(c.get<float>("aperture"));
-    sceneCamera.setFocusDepth(c.get<float>("focus_depth"));
+    sceneCamera.setShutterSpeed(c.get<float>("shutter_speed"));
+
+    auto& thinLensCameras = registry.storage(ThinLensCamera);
+    if (thinLensCameras.has(previewEnt)) {
+        const Component& tl = thinLensCameras.get(previewEnt);
+        sceneCamera.setAperture(tl.get<float>("aperture"));
+        sceneCamera.setFocusDepth(tl.get<float>("focus_depth"));
+    } else {
+        sceneCamera.setAperture(0.0f);
+        sceneCamera.setFocusDepth(10.0f);
+    }
 }
 
 void cameraPostUpdateSystem(Registry& registry) {

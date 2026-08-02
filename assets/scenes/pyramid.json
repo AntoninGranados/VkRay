@@ -11,7 +11,7 @@
 
     "entities": [
         {
-            "camera": { "fov": 60, "focus_depth": 12.37 },
+            "camera": { "fov": 60 },
             "name": { "value": "Camera" },
             "transform": { "position": [0, 4, -12], "rotation": [-14.04, 180, 0] }
         },

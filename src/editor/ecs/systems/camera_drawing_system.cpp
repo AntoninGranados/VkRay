@@ -19,6 +19,7 @@ void cameraDrawingSystem(Registry& registry) {
 
     auto& cameras = registry.storage(Camera);
     auto& transforms = registry.storage(Transform);
+    auto& thinLensCameras = registry.storage(ThinLensCamera);
 
     if (ImGui::GetCurrentContext() == nullptr) return;
 
@@ -136,7 +137,7 @@ void cameraDrawingSystem(Registry& registry) {
             drawClipped(clipNear[i], clipFar[i]);
         }
 
-        const float apertureRadius = c.get<float>("aperture") * 0.5f;
+        const float apertureRadius = thinLensCameras.has(e) ? thinLensCameras.get(e).get<float>("aperture") * 0.5f : 0.0f;
         if (apertureRadius > 1e-4f) {
             const int ringSegments = 32;
             glm::vec3 prevPoint = camPos + camRight * apertureRadius;

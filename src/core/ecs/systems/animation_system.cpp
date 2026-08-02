@@ -1,6 +1,9 @@
 #include "animation_system.hpp"
 
+#include <random>
+
 #include "core/animation/animation_store.hpp"
+#include "core/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
@@ -8,15 +11,31 @@ namespace ecs {
 
 void animationSystem(Registry& registry) {
     static int prevFrame = -1;
+    static std::mt19937 rng(std::random_device{}());
+
     const int currFrame = Core::getAnimation().getFrame();
-    if (currFrame == prevFrame && !Core::isAccumulationRestartPending()) return;
-    prevFrame = currFrame;
+    const bool frameChanged = currFrame != prevFrame;
 
     AnimationStore& store = Core::getScene().getAnimationStore();
     if (store.isEmpty()) return;
-    store.evaluate(registry, float(currFrame));
-    store.evaluate(Core::getScene().getMaterials(), float(currFrame));
-    Core::requestAccumulationRestart();
+
+    if (frameChanged) {
+        prevFrame = currFrame;
+        store.evaluate(registry, float(currFrame));
+        store.evaluate(Core::getScene().getMaterials(), float(currFrame));
+        Core::requestAccumulationRestart();
+        return;
+    }
+
+    if (Core::getRenderMode() == RenderMode::Preview) return;
+
+    const float shutterSpeed = Core::getScene().getCamera().getShutterSpeed();
+    if (shutterSpeed <= 0.0f) return;
+
+    std::uniform_real_distribution<float> dist(-shutterSpeed * 0.5f, shutterSpeed * 0.5f);
+    const float t = static_cast<float>(currFrame) + dist(rng);
+    store.evaluate(registry, t);
+    store.evaluate(Core::getScene().getMaterials(), t);
 }
 
 } // namespace ecs

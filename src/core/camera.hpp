@@ -32,9 +32,12 @@ public:
 
     float getAperture() const { return aperture; };
     void setAperture(float newAperture) { aperture = newAperture; }
-    
+
     float getFocusDepth() const { return focusDepth; };
     void setFocusDepth(float newFocusDepth) { focusDepth = newFocusDepth; }
+
+    float getShutterSpeed() const { return shutterSpeed; }
+    void setShutterSpeed(float newShutterSpeed) { shutterSpeed = newShutterSpeed; }
 
     float getOrbitDistance() const { return orbitDistance; }
 
@@ -64,6 +67,7 @@ private:
     float fov = 80.0f;
     float aperture = 0.0f;
     float focusDepth = 10.0f;
+    float shutterSpeed = 0.0f;
 
     float yaw   = 90.0f;
     float pitch = 0.0f;
