@@ -28,6 +28,15 @@ void Core::terminate() {
     c.engine.terminate();
 }
 
+void Core::restartAccumulation() {
+    Core& c = get();
+    c.coreRenderer.restartAccumulation();
+    if (c.renderMode == RenderMode::Preview) {
+        const int n = c.parameters.get<int>("renderer/viewport/max_samples");
+        c.coreRenderer.setTargetSampleCount(n > 0 ? n : -1);
+    }
+}
+
 bool Core::consumeAccumulationRestart() {
     Core& c = get();
     if (!c.restartPending) return false;

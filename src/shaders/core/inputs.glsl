@@ -76,4 +76,6 @@ layout(set = 0, binding = 13) buffer readonly QuadBuffer {
     Quad quads[];
 } quadBuffer;
 
+layout(set = 0, binding = 15) uniform sampler2D lensSampler;
+
 #endif

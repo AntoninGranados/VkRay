@@ -5,9 +5,9 @@
 
 #include "imgui/imgui.h"
 
-#include "core/core.hpp"
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
+#include "core/scene/object/material.hpp"
 
 class MeshAsset;
 
@@ -24,12 +24,11 @@ public:
             if (!registry.has(e, type)) return false;
 
             Component& component = registry.get(e, type);
-            ComponentUiRegistry::beginDraw(&component, [&]() {
-                registry.remove(e, type);
-            });
-            bool update = func(component, registry, e);
+            bool remove = ComponentUiRegistry::beginDraw(&component);
+            if (remove) registry.remove(e, type);
+            bool update = !remove && func(component, registry, e);
             ComponentUiRegistry::endDraw();
-            return update;
+            return remove || update;
         });
     }
 
@@ -52,7 +51,7 @@ private:
 
     static bool drawField(Component& component, const ComponentField& schema);
 
-    static void beginDraw(void* id, std::function<void()> remove) {
+    static bool beginDraw(void* id) {
         ImGui::PushID(id);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
@@ -60,11 +59,9 @@ private:
         ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_Separator));
         ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 
-        if (ImGui::Button("-##Remove", { 32, 0 })) {
-            remove();
-            Core::requestAccumulationRestart();
-        }
+        bool remove = ImGui::Button("-##Remove", { 32, 0 });
         ImGui::SameLine();
+        return remove;
     }
 
     static void endDraw() {

@@ -6,31 +6,31 @@
     "materials": [
         {
             "name": "MirrorLeft",
-            "type": "ggx_metal",
+            "bsdf": "ggx_metal",
             "albedo":    [0.98, 0.98, 0.98],
             "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
         },
         {
             "name": "MirrorRight",
-            "type": "ggx_metal",
+            "bsdf": "ggx_metal",
             "albedo":    [0.98, 0.98, 0.98],
             "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
         },
-        { "name": "WallBack",  "type": "lambertian", "albedo": [0.88, 0.86, 0.82] },
-        { "name": "WallFront", "type": "lambertian", "albedo": [0.88, 0.86, 0.82] },
-        { "name": "Floor",     "type": "lambertian", "albedo": [0.90, 0.88, 0.84] },
-        { "name": "Ceiling",   "type": "lambertian", "albedo": [0.92, 0.90, 0.88] },
-        { "name": "CeilLight", "type": "emissive",   "albedo": [1.0, 0.97, 0.92], "emission_strength": 35 },
+        { "name": "WallBack",  "bsdf": "lambertian", "albedo": [0.88, 0.86, 0.82] },
+        { "name": "WallFront", "bsdf": "lambertian", "albedo": [0.88, 0.86, 0.82] },
+        { "name": "Floor",     "bsdf": "lambertian", "albedo": [0.90, 0.88, 0.84] },
+        { "name": "Ceiling",   "bsdf": "lambertian", "albedo": [0.92, 0.90, 0.88] },
+        { "name": "CeilLight", "bsdf": "emissive",   "albedo": [1.0, 0.97, 0.92], "emission_strength": 35 },
         {
             "name": "GlassLarge",
-            "type": "dielectric",
+            "bsdf": "dielectric",
             "albedo":    { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
             "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
             "ior":       { "rand": { "min": 1.4, "max": 1.9  } }
         },
         {
             "name": "GlassSmall",
-            "type": "dielectric",
+            "bsdf": "dielectric",
             "albedo":    { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
             "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
             "ior":       { "rand": { "min": 1.4, "max": 1.9  } }

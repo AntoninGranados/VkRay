@@ -4,14 +4,14 @@
     "light": "empty",
 
     "materials": [
-        { "name": "Floor",     "type": "ggx_glossy", "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 },
-        { "name": "Light",     "type": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 },
-        { "name": "Matte",     "type": "lambertian", "albedo": [1, 1, 1] },
-        { "name": "Plastic",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 },
-        { "name": "Ceramic",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
-        { "name": "Metal",     "type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
-        { "name": "RoughMetal","type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.3 },
-        { "name": "Glass",     "type": "dielectric", "albedo": [1, 1, 1], "ior": 1.5 }
+        { "name": "Floor",     "bsdf": "ggx_glossy", "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 },
+        { "name": "Light",     "bsdf": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 },
+        { "name": "Matte",     "bsdf": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "Plastic",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 },
+        { "name": "Ceramic",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
+        { "name": "Metal",     "bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
+        { "name": "RoughMetal","bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.3 },
+        { "name": "Glass",     "bsdf": "dielectric", "albedo": [1, 1, 1], "ior": 1.5 }
     ],
 
     "entities": [

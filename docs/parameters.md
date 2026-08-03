@@ -80,6 +80,12 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 | `renderer/sampling/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | - |
 | `renderer/sampling/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | - |
 
+### Viewport
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+| `renderer/viewport/max_samples` | Max Samples | - | Integer | 0 | 0 ... 4096 | - |
+| `renderer/viewport/pixel_scale` | Pixel Scale | Render at reduced resolution per axis. | Integer | 2 | 1 ... 8 | - |
+
 ### Output
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|

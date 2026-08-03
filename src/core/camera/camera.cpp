@@ -54,7 +54,7 @@ bool Camera::cursorPosCallback(double x, double y) {
     if (xoffset != 0 || yoffset != 0) change = true;
     lastX = x;
     lastY = y;
-    
+
     const glm::vec3 dir = getDirection();
     const glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
     const glm::vec3 camUp = glm::normalize(glm::cross(right, dir));

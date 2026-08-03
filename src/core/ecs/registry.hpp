@@ -3,6 +3,8 @@
 #include <cassert>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "core/ecs/components/component_storage.hpp"
 #include "entity.hpp"
@@ -44,8 +46,16 @@ public:
         return storages.at(type.getId());
     }
 
-    Component& add(const Entity& e, const ComponentType& prototype) {
-        return storages[prototype.getId()].add(e, prototype);
+    bool add(const Entity& e, const ComponentType& type) {
+        if (has(e, type)) return true;
+        for (const auto& id : type.getConflicts())
+            if (hasById(e, id)) return false;
+
+        for (const auto& id : type.getNeeds())
+            if (auto t = ComponentType::find(id); t && !has(e, t->get())) add(e, t->get());
+
+        storages[type.getId()].add(e, type);
+        return true;
     }
 
     bool has(const Entity& e, const ComponentType& type) const {
@@ -62,15 +72,31 @@ public:
     }
 
     void remove(const Entity& e, const ComponentType& type) {
-        auto it = storages.find(type.getId());
-        if (it != storages.end())
-            it->second.remove(e);
+        for (auto& [id, s] : storages) {
+            if (id == type.getId() || !s.has(e)) continue;
+            if (auto t = ComponentType::find(id))
+                for (const auto& needed : t->get().getNeeds())
+                    if (needed == type.getId()) return;
+        }
+        removalQueue.emplace_back(e, type.getId());
+    }
+
+    void flush() {
+        for (const auto& [e, id] : removalQueue)
+            storages.at(id).remove(e);
+        removalQueue.clear();
     }
 
 private:
     std::unordered_map<std::string, ComponentStorage> storages;
     std::vector<uint32_t> generations;
     std::vector<uint32_t> freeIds;
+    std::vector<std::pair<Entity, std::string>> removalQueue;
+
+    bool hasById(const Entity& e, const std::string& id) const {
+        auto it = storages.find(id);
+        return it != storages.end() && it->second.has(e);
+    }
 };
 
 } // namespace ecs

@@ -3,7 +3,7 @@
 #include <random>
 
 #include "core/animation/animation_store.hpp"
-#include "core/camera.hpp"
+#include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
@@ -32,7 +32,7 @@ void animationSystem(Registry& registry) {
     const float shutterSpeed = Core::getScene().getCamera().getShutterSpeed();
     if (shutterSpeed <= 0.0f) return;
 
-    std::uniform_real_distribution<float> dist(-shutterSpeed * 0.5f, shutterSpeed * 0.5f);
+    std::uniform_real_distribution<float> dist(0.0f, shutterSpeed);
     const float t = static_cast<float>(currFrame) + dist(rng);
     store.evaluate(registry, t);
     store.evaluate(Core::getScene().getMaterials(), t);

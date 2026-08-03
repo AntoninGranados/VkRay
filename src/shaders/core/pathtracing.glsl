@@ -15,6 +15,15 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
 
 
+vec2 sampleLens(inout uint seed) {
+    for (int i = 0; i < 16; i++) {
+        vec2 p = vec2(rand(seed), rand(seed)) * 2.0 - 1.0;
+        float mask = texture(lensSampler, p * 0.5 + 0.5).r;
+        if (rand(seed) < mask) return p;
+    }
+    return vec2(0.0);
+}
+
 Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
     vec3 forward = normalize(camera.dir);
     vec3 right   = normalize(cross(forward, camera.up));
@@ -28,8 +37,7 @@ Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
 
     vec3 offset = vec3(0.0);
     if (enableFocus) {
-        vec2 p = randomInDisk(seed);
-        // vec2 p = vec2(rand(seed), rand(seed)) * 2.0 - 1.0;
+        vec2 p = sampleLens(seed);
         float lens_r = ubo.camera.aperture * 0.5;
         offset = lens_r * (right * p.x + up * p.y);
     }

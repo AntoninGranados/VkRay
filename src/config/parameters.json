@@ -31,12 +31,19 @@
             }
         },
 
+        "viewport": {
+            "label": "Viewport",
+            "max_samples": { "label": "Max Samples", "default": 0, "min": 0, "max": 4096, "step": 1 },
+            "pixel_scale": { "label": "Pixel Scale", "description": "Render at reduced resolution per axis.", "default": 2, "min": 1, "max": 8, "step": 1 }
+        },
+
         "output": {
             "label": "Output",
             "render_size": { "label": "Render Size", "default": [1920, 1080], "min": [1, 1], "step": 1.0 },
             "output_image": {
                 "label": "Image",
                 "default": "outputs/render.png",
+                "save": true,
                 "extensions": [
                     { "ext": "png", "name": "PNG Image" },
                     { "ext": "exr", "name": "OpenEXR Image" }
@@ -45,6 +52,7 @@
             "output_video": {
                 "label": "Video",
                 "default": "outputs/render.mp4",
+                "save": true,
                 "extensions": [
                     { "ext": "mp4", "name": "MP4 Video" }
                 ]

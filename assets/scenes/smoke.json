@@ -4,9 +4,9 @@
     "light": "empty",
 
     "materials": [
-        { "name": "Smoke", "type": "volume",    "albedo": [1, 1, 1], "density": 0.005 },
-        { "name": "Light", "type": "emissive",  "albedo": [1, 1, 1], "emission_strength": 4000 },
-        { "name": "Glass", "type": "dielectric","albedo": [0.676, 1.0, 0.695], "roughness": 0.05, "ior": 1.4 }
+        { "name": "Smoke", "bsdf": "volume",    "albedo": [1, 1, 1], "density": 0.005 },
+        { "name": "Light", "bsdf": "emissive",  "albedo": [1, 1, 1], "emission_strength": 4000 },
+        { "name": "Glass", "bsdf": "dielectric","albedo": [0.676, 1.0, 0.695], "roughness": 0.05, "ior": 1.4 }
     ],
 
     "entities": [

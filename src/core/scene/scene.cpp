@@ -14,6 +14,7 @@
 #include "utils/log.hpp"
 #include "core/scene/object/material.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
+#include "core/ecs/systems/aperture_system.hpp"
 #include "core/ecs/systems/camera_system.hpp"
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
@@ -56,12 +57,13 @@ MaterialHandle Scene::pushMaterial(const Material& mat) {
 void Scene::pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    ecs::Component& sphere = registry.add(e, ecs::Sphere);
-    sphere.set<float>("radius", radius);
+    assert(registry.add(e, ecs::Sphere));
+    registry.get(e, ecs::Sphere).set<float>("radius", radius);
 
     addMaterialRef(e, materialHandle);
 
-    ecs::Component& t = registry.add(e, ecs::Transform);
+    assert(registry.add(e, ecs::Transform));
+    auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("scale", glm::vec3(1.0f));
 
@@ -71,12 +73,13 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    registry.add(e, ecs::Plane);
+    assert(registry.add(e, ecs::Plane));
 
     addMaterialRef(e, materialHandle);
 
     const glm::quat q = glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal);
-    ecs::Component& t = registry.add(e, ecs::Transform);
+    assert(registry.add(e, ecs::Transform));
+    auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", point);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
     t.set<glm::vec3>("scale", glm::vec3(1.0f));
@@ -89,11 +92,12 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    registry.add(e, ecs::Box);
+    assert(registry.add(e, ecs::Box));
 
     addMaterialRef(e, materialHandle);
 
-    ecs::Component& t = registry.add(e, ecs::Transform);
+    assert(registry.add(e, ecs::Transform));
+    auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("scale", halfExtents);
 
@@ -113,12 +117,13 @@ void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::
     const glm::vec3 u_hat = std::cos(rotation) * tangent + std::sin(rotation) * bitangent;
     const glm::vec3 v_hat = -std::sin(rotation) * tangent + std::cos(rotation) * bitangent;
 
-    registry.add(e, ecs::Quad);
+    assert(registry.add(e, ecs::Quad));
 
     addMaterialRef(e, materialHandle);
 
     const glm::quat q = glm::quat_cast(glm::mat3(u_hat, v_hat, normal));
-    ecs::Component& t = registry.add(e, ecs::Transform);
+    assert(registry.add(e, ecs::Transform));
+    auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
     t.set<glm::vec3>("scale", glm::vec3(scale.x, scale.y, 1.0f));
@@ -143,8 +148,8 @@ void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4&
 void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    ecs::Component& mesh = registry.add(e, ecs::MeshRef);
-    mesh.set<int>("handle", meshHandle);
+    assert(registry.add(e, ecs::MeshRef));
+    registry.get(e, ecs::MeshRef).set<int>("handle", meshHandle);
 
     addMaterialRef(e, materialHandle);
     addTransformFromMatrix(e, transform);
@@ -155,8 +160,8 @@ void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& t
 void Scene::pushCamera(std::string name, const glm::mat4& transform) {
     ecs::Entity e = createNamedEntity(std::move(name));
     
-    ecs::Component& cam = registry.add(e, ecs::Camera);
-    cam.set<float>("fov", 60.0f);
+    assert(registry.add(e, ecs::Camera));
+    registry.get(e, ecs::Camera).set<float>("fov", 60.0f);
 
     addTransformFromMatrix(e, transform);
 
@@ -192,6 +197,7 @@ void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::animationSystem);
     preUpdateScheduler.add(ecs::physicsSystem);
+    preUpdateScheduler.add(ecs::apertureSystem);
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
     onRenderScheduler.clear();
@@ -211,14 +217,14 @@ void Scene::initSystems() {
 
 ecs::Entity Scene::createNamedEntity(std::string name) {
     ecs::Entity e = registry.createEntity();
-    ecs::Component& nameComp = registry.add(e, ecs::Name);
-    nameComp.set<std::string>("value", name);
+    assert(registry.add(e, ecs::Name));
+    registry.get(e, ecs::Name).set<std::string>("value", name);
     return e;
 }
 
 void Scene::addMaterialRef(ecs::Entity e, MaterialHandle materialHandle) {
-    ecs::Component& mat = registry.add(e, ecs::MaterialRef);
-    mat.set<int>("handle", materialHandle);
+    assert(registry.add(e, ecs::MaterialRef));
+    registry.get(e, ecs::MaterialRef).set<int>("handle", materialHandle);
 }
 
 void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
@@ -226,7 +232,8 @@ void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
     glm::vec4 perspective;
     glm::quat rotation;
     glm::decompose(transform, scale, rotation, translation, skew, perspective);
-    ecs::Component& t = registry.add(e, ecs::Transform);
+    assert(registry.add(e, ecs::Transform));
+    auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", translation);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(rotation))));
     t.set<glm::vec3>("scale", scale);
@@ -239,7 +246,7 @@ void Scene::syncCameraFromEntities() {
     for (const ecs::Entity& ce : entities) {
         if (!camStorage.has(ce) || !transformStorage.has(ce)) continue;
         const ecs::Component& cam = camStorage.get(ce);
-        if (cam.get<bool>("is_preview")) continue;
+        if (cam.get<bool>("_is_preview")) continue;
         const ecs::Component& t = transformStorage.get(ce);
         const glm::vec3 pos = t.get<glm::vec3>("position");
         const glm::vec3 dir = glm::normalize(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));

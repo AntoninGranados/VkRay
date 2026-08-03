@@ -8,6 +8,8 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 #include "VkSmol/image/image.hpp"
 
+#include "core/camera/aperture.hpp"
+
 #include "utils/log.hpp"
 #include "core/core.hpp"
 #include "core/parameters/parameters.hpp"
@@ -34,6 +36,14 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
         "OutputImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
         engine.getExtent().width, engine.getExtent().height
+    );
+    lensImageHandle = builder.createImage(
+        "LensTexture",
+        VK_FORMAT_R8_UNORM,
+        aperture::kSize, aperture::kSize, 1,
+        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT
     );
 
     VkExtent2D ext        = engine.getExtent();
@@ -77,6 +87,7 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     pathtrace.readBuffer(12, resources.sceneHandles.light.handle,    BufferUsageType::Storage);
     pathtrace.readBuffer(13, resources.sceneHandles.quad.handle,     BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle,  ImageUsageType::Storage);
+    pathtrace.readImage (15, lensImageHandle,                ImageUsageType::Sampled);
     pathtracingPipelineHandle = pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
 
     // Compositing pass
@@ -131,21 +142,23 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.camera.aperture   = camera.getAperture();
     pathtracerUBO.camera.focusDepth = camera.getFocusDepth();
 
-    pathtracerUBO.sampleCount = ++sampleCount;
-    pathtracerUBO.selectedObjectId = selectedObjectId;
+    const bool paused = isRenderFinished();
+
+    if (!paused) {
+        pathtracerUBO.sampleCount = ++sampleCount;
+        engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
+    }
 
     const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : frameContext.extent;
     pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
-
-    engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);
 
     CommandBuffer& commandBuffer = engine.beginRecording(coreGroupHandle);
 
-    {   // Pathtrace (compute)
+    if (!paused) {   // Pathtrace (compute)
         ComputePipeline& ptPipeline = engine.getComputePipeline(pathtracingPipelineHandle);
         engine.emitBarriers(commandBuffer, pathtracePassHandle);
         engine.bindDescriptors(commandBuffer, pathtracePassHandle);
@@ -185,6 +198,7 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
     exportService.resize(engine, width, height);
 }
 
+
 void CoreRenderer::bindParameters() {
     ParameterRegistry& parameters = Core::getParameters();
     parameters.bind<bool>("renderer/denoising", [this](bool v) {
@@ -205,6 +219,11 @@ void CoreRenderer::bindParameters() {
 
     parameters.bind<bool>("renderer/sampling/adaptive_sampling", [this](bool v) {
         pathtracerUBO.render.varianceSampling = static_cast<int>(v);
+    });
+
+    parameters.bind<int>("renderer/viewport/max_samples", [this](int n) {
+        if (Core::getRenderMode() == RenderMode::Preview)
+            setTargetSampleCount(n > 0 ? n : -1);
     });
 
     parameters.bind<glm::ivec2>("renderer/output/render_size", [](glm::ivec2 size) {

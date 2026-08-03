@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.2]
+
+### Added
+- Aperture mask images: heart, cat eye, star, ring
+- Viewport parameters: `max_samples` caps accumulation in Preview mode; `pixel_scale` renders at reduced resolution
+
+### Changed
+- `Registry::add` enforces conflicts and auto-adds needs
+- `Registry::remove` queues removal; `Registry::flush` commits the queue
+- Add Component tooltip always shows description, conflicts, and needs; button only disabled on actual conflicts
+
+### Fixed
+- Segfault on component removal; path field opened a folder picker instead of a file picker
+
+---
+
 ## [0.5.1]
 
 ### Added

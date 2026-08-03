@@ -6,12 +6,12 @@
     "materials": [
         {
             "name": "Floor",
-            "type": "programmable",
+            "bsdf": "programmable",
             "albedo": [0.75, 0.75, 0.78]
         },
         {
             "name": "Cube",
-            "type": "principled",
+            "bsdf": "principled",
             "albedo": [1.0, 0.05, 0.10],
             "roughness": 0.02,
             "ior": 1.5

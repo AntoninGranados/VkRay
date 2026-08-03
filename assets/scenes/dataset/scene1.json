@@ -4,17 +4,17 @@
     "light": "day",
 
     "materials": [
-        { "name": "Ground",  "type": "programmable", "albedo": [0.72, 0.72, 0.72] },
+        { "name": "Ground",  "bsdf": "programmable", "albedo": [0.72, 0.72, 0.72] },
         {
             "name": "Suzanne",
-            "type": "principled",
+            "bsdf": "principled",
             "albedo":    { "rand": { "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0] } },
             "roughness": { "rand": { "min": 0.05, "max": 0.75 } },
             "metalness": { "rand": { "min": 0.0,  "max": 1.0  } }
         },
         {
             "name": "Glass",
-            "type": "dielectric",
+            "bsdf": "dielectric",
             "albedo":    { "rand": { "min": [0.8, 0.8, 0.8], "max": [1.0, 1.0, 1.0] } },
             "roughness": 0.0,
             "ior":       { "rand": { "min": 1.2, "max": 1.4 } }

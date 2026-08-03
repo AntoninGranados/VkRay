@@ -184,6 +184,7 @@ void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& paramete
                 ext.name = e.value("name", "");
                 meta.pathExtensions.push_back(std::move(ext));
             }
+            meta.pathSave = obj.value("save", false);
             parameter = &parameters.add<std::filesystem::path>(path, label, def.get<std::string>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("items")) {
             std::string defName = def.get<std::string>();

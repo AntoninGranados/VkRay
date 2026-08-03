@@ -4,28 +4,28 @@
     "light": "sunset",
 
     "materials": [
-        { "name": "Sun", "type": "emissive", "albedo": [1.0, 0.75, 0.25], "emission_strength": 2000 },
+        { "name": "Sun", "bsdf": "emissive", "albedo": [1.0, 0.75, 0.25], "emission_strength": 2000 },
         {
             "name": "Floor",
-            "type": "ggx_glossy",
+            "bsdf": "ggx_glossy",
             "albedo":    { "rand": { "min": [0.55, 0.50, 0.42], "max": [0.82, 0.78, 0.68] } },
             "roughness": { "rand": { "min": 0.05, "max": 0.25 } },
             "ior": 1.5
         },
         {
             "name": "Metal",
-            "type": "ggx_metal",
+            "bsdf": "ggx_metal",
             "albedo":    { "rand": { "min": [0.55, 0.55, 0.55], "max": [1.0, 0.95, 0.85] } },
             "roughness": { "rand": { "min": 0.0, "max": 0.25 } }
         },
         {
             "name": "Matte",
-            "type": "lambertian",
+            "bsdf": "lambertian",
             "albedo": { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } }
         },
         {
             "name": "Glass",
-            "type": "dielectric",
+            "bsdf": "dielectric",
             "albedo":    { "rand": { "min": [0.88, 0.88, 0.88], "max": [1.0, 1.0, 1.0] } },
             "roughness": 0.0,
             "ior":       { "rand": { "min": 1.4, "max": 1.9 } }

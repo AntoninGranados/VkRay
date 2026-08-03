@@ -270,7 +270,7 @@ json SceneSerializer::serializeComponentWithAnim(const ecs::Component& comp, ecs
 Material SceneSerializer::parseMaterial(const json& m, const ResolveCtx& ctx, const std::string& fallbackName) {
     Material mat = Material::make();
     mat.setName(resolveTemplate(m.value("name", fallbackName), ctx));
-    mat.setType(fromStr(kMaterialTypes, m.value("type", "lambertian")));
+    mat.setType(fromStr(kMaterialTypes, m.value("bsdf", m.value("type", "lambertian"))));
     if (m.contains("albedo")) mat.set<glm::vec3>("albedo", resolveVec3(m["albedo"], ctx));
     if (m.contains("roughness")) mat.set<float>("roughness", resolveFloat(m["roughness"], ctx));
     if (m.contains("metalness")) mat.set<float>("metalness", resolveFloat(m["metalness"], ctx));
@@ -285,7 +285,7 @@ Material SceneSerializer::parseMaterial(const json& m, const ResolveCtx& ctx, co
 json SceneSerializer::serializeMaterial(const Material& m, MaterialHandle h, const AnimationStore& animStore) {
     json mj;
     mj["name"] = trimmed(m.getName());
-    mj["type"] = toStr(kMaterialTypes, m.getType());
+    mj["bsdf"] = toStr(kMaterialTypes, m.getType());
 
     auto field = [&](const char* jsonKey, const char* fieldId, FieldType type, const json& plain, bool include) {
         const auto& kfs = animStore.keyframes(h, fieldId);
@@ -317,7 +317,8 @@ void SceneSerializer::spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs
     MeshAsset& asset = scene.getMeshAssets().back();
     asset.setSmoothShading(mj.value("smooth", false));
     if (asset.loadFromObj(meshPath)) {
-        registry.add(e, ecs::MeshRef).set<int>("handle", handle);
+        if (registry.add(e, ecs::MeshRef))
+            registry.get(e, ecs::MeshRef).set<int>("handle", handle);
     } else {
         scene.getMeshAssets().pop_back();
         Log::error("SceneSerializer", std::format("Failed to load mesh: {}", meshPath));
@@ -330,8 +331,8 @@ void SceneSerializer::spawnMaterialRef(const json& ej, ecs::Entity e, ecs::Regis
     if (!ej.contains("material") || !ej["material"].is_string()) return;
     const std::string matName = resolveTemplate(ej["material"].get<std::string>(), ctx);
     const auto it = matMap.find(matName);
-    if (it != matMap.end())
-        registry.add(e, ecs::MaterialRef).set<int>("handle", it->second);
+    if (it != matMap.end() && registry.add(e, ecs::MaterialRef))
+        registry.get(e, ecs::MaterialRef).set<int>("handle", it->second);
     else
         Log::error("SceneSerializer", std::format("Material '{}' not found", matName));
 }
@@ -350,8 +351,8 @@ void SceneSerializer::spawnSpherical(const json& ej, ecs::Entity e, ecs::Registr
     const glm::vec3 dir = glm::normalize(target - pos);
 
     auto ttype = ecs::ComponentType::find("transform");
-    if (!ttype) return;
-    ecs::Component& t = registry.add(e, ttype->get());
+    if (!ttype || !registry.add(e, ttype->get())) return;
+    auto& t = registry.get(e, ttype->get());
     t.set<glm::vec3>("position", pos);
     t.set<glm::vec3>("rotation", {glm::degrees(std::asin(glm::clamp(dir.y, -1.0f, 1.0f))), glm::degrees(std::atan2(dir.x, -dir.z)), 0.0f});
 }
@@ -427,10 +428,9 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
             if (key == "material" || key == "mesh" || key == "repeat" || key == "grid" || key == "spherical") continue;
             auto type = ecs::ComponentType::find(key);
             if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
-            ecs::Component& comp = registry.add(e, type->get());
-            if (value.is_object()) {
-                applyComponentFromJson(comp, value, spawnCtx);
-                applyAnimFromJson(comp, value, e, scene.getAnimationStore());
+            if (registry.add(e, type->get()) && value.is_object()) {
+                applyComponentFromJson(registry.get(e, type->get()), value, spawnCtx);
+                applyAnimFromJson(registry.get(e, type->get()), value, e, scene.getAnimationStore());
             }
         }
         spawnSpherical(ej, e, registry, spawnCtx);

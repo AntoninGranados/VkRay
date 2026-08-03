@@ -4,12 +4,12 @@
     "light": "night",
 
     "materials": [
-        { "name": "Ground", "type": "lambertian", "albedo": [0.35, 0.35, 0.35] },
-        { "name": "KeyLight",  "type": "emissive", "albedo": [1.0, 0.97, 0.90], "emission_strength": 40 },
-        { "name": "FillLight", "type": "emissive", "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
+        { "name": "Ground", "bsdf": "lambertian", "albedo": [0.35, 0.35, 0.35] },
+        { "name": "KeyLight",  "bsdf": "emissive", "albedo": [1.0, 0.97, 0.90], "emission_strength": 40 },
+        { "name": "FillLight", "bsdf": "emissive", "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
         {
             "name": "SphereMat_{row}_{col}",
-            "type": "principled",
+            "bsdf": "principled",
             "albedo":    { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
             "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
             "metalness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } },

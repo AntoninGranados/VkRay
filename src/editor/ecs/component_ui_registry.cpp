@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "FontAwesome/IconsFontAwesome7.h"
 
+#include "core/core.hpp"
 #include "core/ecs/components.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "editor/field_ui.hpp"
@@ -27,20 +28,20 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
 
         Component& component = registry.get(e, type);
         const std::string header = component.getType().getIcon() + " " + component.getType().getLabel();
+        const auto& fields = component.getType().getFields();
 
-        ComponentUiRegistry::beginDraw(&component, [&]() {
-            registry.remove(e, type);
-        });
+        bool remove = ComponentUiRegistry::beginDraw(&component);
+        if (remove) registry.remove(e, type);
         bool update = false;
-        if (ImGui::CollapsingHeader(header.c_str(), component.getType().getFields().size() > 0 ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
-            for (const ecs::ComponentField& schema : component.getType().getFields()) {
+        if (!remove && ImGui::CollapsingHeader(header.c_str(), fields.size() > 0 ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
+            for (const ecs::ComponentField& schema : fields) {
                 if (schema.isPrivate()) continue;
                 if (schema.isAnimatable()) ui::drawKeyframeButton(e, component, schema.getId());
                 update |= ComponentUiRegistry::drawField(component, schema);
             }
         }
         ComponentUiRegistry::endDraw();
-        return update;
+        return remove || update;
     });
 }
 
@@ -104,9 +105,9 @@ void ComponentUiRegistry::init() {
             if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
                 auto& allCameras = r.storage(Camera);
                 for (const auto& other : allCameras.entities()) {
-                    allCameras.get(other).set<bool>("is_preview", false);
+                    allCameras.get(other).set<bool>("_is_preview", false);
                 }
-                c.set<bool>("is_preview", true);
+                c.set<bool>("_is_preview", true);
                 Core::getScene().getCamera().setPreviewCamera(e);
                 update = true;
             }
@@ -116,6 +117,8 @@ void ComponentUiRegistry::init() {
     });
 
     ui_reg.add(ecs::ThinLensCamera);
+    ui_reg.add(ecs::GeometricAperture);
+    ui_reg.add(ecs::ImageAperture);
     ui_reg.add(ecs::Transform);
 
     ui_reg.add(MaterialRef, [](Component& c, Registry& r, Entity e) {

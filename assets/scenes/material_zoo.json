@@ -6,18 +6,18 @@
     "materials": [
         {
             "name": "Light",
-            "type": "emissive",
+            "bsdf": "emissive",
             "albedo": [1, 1, 1],
             "emission_strength": 10
         },
         {
             "name": "Floor",
-            "type": "programmable",
+            "bsdf": "programmable",
             "albedo": [0.59, 0.27, 0.09]
         },
         {
             "name": "Mat_{row}_{col}",
-            "type": "ggx_glossy",
+            "bsdf": "ggx_glossy",
             "albedo": [0.0, 0.8, 0.0],
             "roughness": { "lerp": { "from": 0.0, "to": 0.7, "axis": "col" } },
             "ior":       { "lerp": { "from": 1.0, "to": 2.0, "axis": "row" } },

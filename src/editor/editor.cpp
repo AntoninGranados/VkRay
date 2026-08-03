@@ -1,5 +1,6 @@
 #include "editor.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <unordered_map>
 
@@ -43,8 +44,10 @@ void Editor::run() {
             static_cast<uint32_t>(vpSize.x * xscale),
             static_cast<uint32_t>(vpSize.y * yscale)
         };
-        if (Core::getRenderMode() == RenderMode::Preview && vpExtent.width > 0 && vpExtent.height > 0)
-            Core::requestResize(vpExtent.width, vpExtent.height);
+        if (Core::getRenderMode() == RenderMode::Preview && vpExtent.width > 0 && vpExtent.height > 0) {
+            const int pixelScale = std::max(1, Core::getParameters().get<int>("renderer/viewport/pixel_scale"));
+            Core::requestResize(vpExtent.width / pixelScale, vpExtent.height / pixelScale);
+        }
 
         if (Core::consumeResize()) {
             if (Core::getRenderMode() == RenderMode::Preview) {

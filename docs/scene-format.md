@@ -75,7 +75,7 @@ For randomized placement, use `spherical` instead of `transform`:
 ```json
 {
     "name": "Mat",
-    "type": "ggx_metal",
+    "bsdf": "ggx_metal",
     "albedo": [1, 0.8, 0.3],
     "roughness": 0.2
 }
@@ -83,7 +83,7 @@ For randomized placement, use `spherical` instead of `transform`:
 
 All types accept `albedo`. All numeric fields support [value expressions](expressions.md).
 
-| `type` | Description | Extra fields |
+| `bsdf` | Description | Extra fields |
 |--------|-------------|--------------|
 | `principled` | General-purpose | `roughness` $\in [0, 1]$<br>`metalness` $\in [0, 1]$<br>`transmission` $\in [0, 1]$<br>`anisotropic` $\in [0, 1]$ |
 | `emissive` | Light source | `emission_strength` $\ge 0$ |

@@ -4,11 +4,11 @@
     "light": "empty",
 
     "materials": [
-        { "name": "Object",      "type": "ggx_glossy", "albedo": [0.1, 0.3, 0.6], "roughness": 0.1, "ior": 4.0 },
-        { "name": "Light",       "type": "emissive",   "albedo": [1, 1, 1], "emission_strength": 50 },
-        { "name": "Large Light", "type": "emissive",   "albedo": [0.6, 0.6, 0.9], "emission_strength": 5 },
-        { "name": "Base",        "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
-        { "name": "Floor",       "type": "lambertian", "albedo": [0.04, 0.04, 0.04] }
+        { "name": "Object",      "bsdf": "ggx_glossy", "albedo": [0.1, 0.3, 0.6], "roughness": 0.1, "ior": 4.0 },
+        { "name": "Light",       "bsdf": "emissive",   "albedo": [1, 1, 1], "emission_strength": 50 },
+        { "name": "Large Light", "bsdf": "emissive",   "albedo": [0.6, 0.6, 0.9], "emission_strength": 5 },
+        { "name": "Base",        "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
+        { "name": "Floor",       "bsdf": "lambertian", "albedo": [0.04, 0.04, 0.04] }
     ],
 
     "entities": [

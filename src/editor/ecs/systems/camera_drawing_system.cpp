@@ -7,7 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "imgui/imgui.h"
-#include "core/camera.hpp"
+#include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
@@ -35,7 +35,7 @@ void cameraDrawingSystem(Registry& registry) {
         if (!transforms.has(e)) continue;
         const Component& c = cameras.get(e);
         const Component& t = transforms.get(e);
-        if (c.get<bool>("is_preview")) continue;
+        if (c.get<bool>("_is_preview")) continue;
 
         const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
         glm::vec3 dir = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));

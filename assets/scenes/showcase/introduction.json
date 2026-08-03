@@ -4,11 +4,11 @@
     "light": "night",
 
     "materials": [
-        { "name": "Light",   "type": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
-        { "name": "Floor",   "type": "programmable","albedo": [0.75, 0.75, 0.75] },
-        { "name": "Text",    "type": "ggx_glossy",  "albedo": [0.10, 0.85, 0.05], "roughness": 0.25, "ior": 1.5 },
-        { "name": "Dragon1", "type": "dielectric",  "albedo": [1.0, 0.25, 0.25], "roughness": 0.2, "ior": 1.5 },
-        { "name": "Dragon2", "type": "ggx_metal",   "albedo": [0.25, 0.25, 1.0], "roughness": 0.2 }
+        { "name": "Light",   "bsdf": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
+        { "name": "Floor",   "bsdf": "programmable","albedo": [0.75, 0.75, 0.75] },
+        { "name": "Text",    "bsdf": "ggx_glossy",  "albedo": [0.10, 0.85, 0.05], "roughness": 0.25, "ior": 1.5 },
+        { "name": "Dragon1", "bsdf": "dielectric",  "albedo": [1.0, 0.25, 0.25], "roughness": 0.2, "ior": 1.5 },
+        { "name": "Dragon2", "bsdf": "ggx_metal",   "albedo": [0.25, 0.25, 1.0], "roughness": 0.2 }
     ],
 
     "entities": [

@@ -9,7 +9,7 @@
 #include "VkSmol/engine.hpp"
 
 #include "core/animation/animation_store.hpp"
-#include "core/camera.hpp"
+#include "core/camera/camera.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/ecs/entity.hpp"

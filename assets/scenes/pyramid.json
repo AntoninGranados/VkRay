@@ -4,9 +4,9 @@
     "light": "sunset",
 
     "materials": [
-        { "name": "Floor",      "type": "lambertian", "albedo": [0.75, 0.75, 0.78] },
-        { "name": "PyramidBox", "type": "lambertian", "albedo": [0.75, 0.35, 0.25] },
-        { "name": "Ball",       "type": "ggx_metal",  "albedo": [1.0, 0.8, 0.3], "roughness": 0.05 }
+        { "name": "Floor",      "bsdf": "lambertian", "albedo": [0.75, 0.75, 0.78] },
+        { "name": "PyramidBox", "bsdf": "lambertian", "albedo": [0.75, 0.35, 0.25] },
+        { "name": "Ball",       "bsdf": "ggx_metal",  "albedo": [1.0, 0.8, 0.3], "roughness": 0.05 }
     ],
 
     "entities": [

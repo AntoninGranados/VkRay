@@ -11,7 +11,7 @@
 #include "VkSmol/platform/platform.hpp"
 
 #include "core/animation/animation_handler.hpp"
-#include "core/camera.hpp"
+#include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"

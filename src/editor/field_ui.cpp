@@ -141,9 +141,15 @@ bool drawField(Field& field, const std::string& widgetId) {
                 std::vector<nfdfilteritem_t> filters;
                 for (const auto& [name, ext] : extStrs)
                     filters.push_back({ name.c_str(), ext.c_str() });
-                std::string defaultName = std::filesystem::path(current).filename().string();
-                result = NFD::SaveDialog(outPath, filters.data(), (nfdfiltersize_t)filters.size(),
-                    nullptr, defaultName.empty() ? nullptr : defaultName.c_str());
+                if (metadata.pathSave) {
+                    std::string defaultName = std::filesystem::path(current).filename().string();
+                    result = NFD::SaveDialog(outPath, filters.data(), (nfdfiltersize_t)filters.size(),
+                        nullptr, defaultName.empty() ? nullptr : defaultName.c_str());
+                } else {
+                    std::string defaultDir = current.empty() ? "" : std::filesystem::path(current).parent_path().string();
+                    result = NFD::OpenDialog(outPath, filters.data(), (nfdfiltersize_t)filters.size(),
+                        defaultDir.empty() ? nullptr : defaultDir.c_str());
+                }
             }
             if (result != NFD_OKAY) return false;
             field.set<std::filesystem::path>(std::filesystem::path(outPath.get()));

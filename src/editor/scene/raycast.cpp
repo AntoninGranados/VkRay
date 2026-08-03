@@ -1,7 +1,7 @@
 #include "raycast.hpp"
 
 #include "core/scene/asset/mesh.hpp"
-#include "core/camera.hpp"
+#include "core/camera/camera.hpp"
 
 Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const Camera& camera) {
     const float invWidth = 1.0f / screenSize.x;

@@ -6,28 +6,28 @@
     "materials": [
         {
             "name": "Floor",
-            "type": "ggx_glossy",
+            "bsdf": "ggx_glossy",
             "albedo":    { "rand": { "min": [0.38, 0.25, 0.12], "max": [0.62, 0.42, 0.20] } },
             "roughness": { "rand": { "min": 0.25, "max": 0.55 } },
             "ior": 1.5
         },
-        { "name": "Ceiling",   "type": "lambertian", "albedo": [0.92, 0.90, 0.88] },
-        { "name": "WallBack",  "type": "lambertian", "albedo": { "rand": { "min": [0.80, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } } },
-        { "name": "WallLeft",  "type": "lambertian", "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.20] } } },
-        { "name": "WallRight", "type": "lambertian", "albedo": { "rand": { "min": [0.72, 0.70, 0.65], "max": [0.88, 0.86, 0.80] } } },
-        { "name": "Window",    "type": "emissive",   "albedo": [0.82, 0.88, 1.0], "emission_strength": 30 },
-        { "name": "Lamp",      "type": "emissive",   "albedo": [1.0, 0.65, 0.25], "emission_strength": 600 },
+        { "name": "Ceiling",   "bsdf": "lambertian", "albedo": [0.92, 0.90, 0.88] },
+        { "name": "WallBack",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.80, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } } },
+        { "name": "WallLeft",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.20] } } },
+        { "name": "WallRight", "bsdf": "lambertian", "albedo": { "rand": { "min": [0.72, 0.70, 0.65], "max": [0.88, 0.86, 0.80] } } },
+        { "name": "Window",    "bsdf": "emissive",   "albedo": [0.82, 0.88, 1.0], "emission_strength": 30 },
+        { "name": "Lamp",      "bsdf": "emissive",   "albedo": [1.0, 0.65, 0.25], "emission_strength": 600 },
         {
             "name": "Glass",
-            "type": "dielectric",
+            "bsdf": "dielectric",
             "albedo":    [0.96, 0.97, 0.99],
             "roughness": 0.0,
             "ior":       { "rand": { "min": 1.45, "max": 1.65 } }
         },
-        { "name": "Pedestal",  "type": "lambertian", "albedo": { "rand": { "min": [0.82, 0.80, 0.78], "max": [0.95, 0.93, 0.90] } } },
+        { "name": "Pedestal",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.82, 0.80, 0.78], "max": [0.95, 0.93, 0.90] } } },
         {
             "name": "BunnyMat",
-            "type": "principled",
+            "bsdf": "principled",
             "albedo":    { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.90, 0.90, 0.90] } },
             "roughness": { "rand": { "min": 0.05, "max": 0.6  } },
             "metalness": { "rand": { "min": 0.0,  "max": 1.0  } }

@@ -33,6 +33,7 @@ struct FieldMetadata {
     float step = 1e-5f;
     std::vector<std::string> enumItems;
     std::vector<PathExtension> pathExtensions;
+    bool pathSave = false;
 };
 
 class FieldValue {

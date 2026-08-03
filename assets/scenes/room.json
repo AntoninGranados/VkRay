@@ -4,16 +4,16 @@
     "light": "day",
 
     "materials": [
-        { "name": "Wall",   "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.2, "ior": 2.0 },
-        { "name": "Sun",    "type": "emissive",   "albedo": [1, 0.9, 0.9], "emission_strength": 5000 },
-        { "name": "Dragon", "type": "dielectric", "albedo": [0.3, 0.9, 0.2], "ior": 1.3, "roughness": 0.1, "density": 10, "transmission": 1 }
+        { "name": "Wall",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.2, "ior": 2.0 },
+        { "name": "Sun",    "bsdf": "emissive",   "albedo": [1, 0.9, 0.9], "emission_strength": 5000 },
+        { "name": "Dragon", "bsdf": "dielectric", "albedo": [0.3, 0.9, 0.2], "ior": 1.3, "roughness": 0.1, "density": 10, "transmission": 1 }
     ],
 
     "entities": [
         {
             "camera": { "fov": 25 },
             "name": { "value": "Camera" },
-            "transform": { "position": [-5.5, 2, -5], "rotation": [-15.05, 132.27, 0] }
+            "transform": { "position": [-5.5, 2, -5], "rotation": [-15, -130, 0] }
         },
         {
             "sphere": { "radius": 10 },

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 
 #include "VkSmol/engine.hpp"
@@ -34,7 +35,8 @@ public:
     VkExtent2D getRenderExtent() const { return renderExtent; }
 
     void bindParameters();
-    void setSelectedObjectId(int i) { selectedObjectId = i; }
+    void setSelectedObjectId(int i) { pathtracerUBO.selectedObjectId = i; }
+    ImageHandle getLensImageHandle() const { return lensImageHandle; }
 
 private:
     CoreResources resources = {};
@@ -42,7 +44,8 @@ private:
     ExportService exportService;
 
     ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
-    
+    ImageHandle lensImageHandle;
+
     PathtracerUBO  pathtracerUBO;
     CompositingUBO compositingUBO;
     BufferHandle pathtracingUBOHandle;
@@ -63,5 +66,4 @@ private:
 
     uint32_t sampleCount = 0;
     int      targetSampleCount = -1;
-    int      selectedObjectId = -1;
 };

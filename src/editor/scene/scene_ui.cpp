@@ -38,8 +38,14 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
             openNewComponentPopup = true;
         }
 
+        auto& reg = scene.getRegistry();
         auto& uiReg = ecs::ComponentUiRegistry::get();
-        if (uiReg.draw(scene.getRegistry(), e)) scene.update();
+        bool changed = uiReg.draw(reg, e);
+        reg.flush();
+        if (changed) {
+            Core::requestAccumulationRestart();
+            scene.update();
+        }
     }
     ImGui::End();
 
@@ -79,14 +85,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
                     conflicting.push_back(it->second->getLabel());
             }
 
-            std::vector<std::string> missing;
-            for (const auto& nid : type->getNeeds()) {
-                auto it = typeById.find(nid);
-                if (it == typeById.end() || !registry.has(e, *it->second))
-                    missing.push_back(it != typeById.end() ? it->second->getLabel() : nid);
-            }
-
-            const bool disabled = alreadyPresent || !conflicting.empty() || !missing.empty();
+            const bool disabled = alreadyPresent || !conflicting.empty();
             if (disabled) ImGui::BeginDisabled();
 
             const std::string label = type->getIcon() + " " + type->getLabel();
@@ -98,16 +97,30 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
 
             if (disabled) ImGui::EndDisabled();
 
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && disabled) {
+            const bool hasTooltip = alreadyPresent
+                || !type->getDescription().empty()
+                || !type->getConflicts().empty()
+                || !type->getNeeds().empty();
+
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && hasTooltip) {
                 ImGui::BeginTooltip();
-                if (alreadyPresent) {
-                    ImGui::Text("Already added");
-                } else if (!conflicting.empty()) {
-                    ImGui::Text("Conflicts with:");
-                    for (const auto& name : conflicting) ImGui::BulletText("%s", name.c_str());
-                } else {
-                    ImGui::Text("Requires:");
-                    for (const auto& name : missing) ImGui::BulletText("%s", name.c_str());
+                if (alreadyPresent)
+                    ImGui::TextDisabled("Already added");
+                if (!type->getDescription().empty())
+                    ImGui::TextUnformatted(type->getDescription().c_str());
+                if (!type->getConflicts().empty()) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Conflicts:");
+                    for (const auto& cid : type->getConflicts()) {
+                        auto it = typeById.find(cid);
+                        ImGui::BulletText("%s", it != typeById.end() ? it->second->getLabel().c_str() : cid.c_str());
+                    }
+                }
+                if (!type->getNeeds().empty()) {
+                    ImGui::TextColored(ImVec4(0.9f, 0.8f, 0.4f, 1.0f), "Needs:");
+                    for (const auto& nid : type->getNeeds()) {
+                        auto it = typeById.find(nid);
+                        ImGui::BulletText("%s", it != typeById.end() ? it->second->getLabel().c_str() : nid.c_str());
+                    }
                 }
                 ImGui::EndTooltip();
             }

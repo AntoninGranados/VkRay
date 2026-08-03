@@ -68,6 +68,25 @@ Depth-of-field via thin lens approximation.
 | `aperture` | float | 0 | 0 ... 10 | yes |
 | `focus_depth` | float | 10 | ≥ 0 | yes |
 
+### Geometric Aperture
+Polygon aperture blade shape.
+
+**Needs:** `thin_lens_camera` — **Conflicts:** `image_aperture`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `blades` | int | 6 | 3 ... 12 | no |
+| `rotation` | float | 0 | 0 ... 360 | no |
+
+### Image Aperture
+Custom image mask as aperture shape.
+
+**Needs:** `thin_lens_camera` — **Conflicts:** `geometric_aperture`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+
 ## Other
 
 ### Name

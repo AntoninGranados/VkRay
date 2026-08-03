@@ -4,7 +4,7 @@
     "light": "day",
 
     "materials": [
-        { "name": "Sponza", "type": "lambertian", "albedo": [1, 1, 1] }
+        { "name": "Sponza", "bsdf": "lambertian", "albedo": [1, 1, 1] }
     ],
 
     "entities": [

@@ -5,7 +5,7 @@ This plan will most likely be subjected to heavy modifications.
 ## v0.5 Camera & Lens
 
 - [x] **[0.5.1] Motion blur**
-- [ ] **[0.5.2] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
+- [x] **[0.5.2] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
   - Support polygon apertures (square, hex, ...) and custom mask textures
   - Controls bokeh blade count and rotation
 - [ ] **[0.5.3] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis

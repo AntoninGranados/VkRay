@@ -4,20 +4,20 @@
     "light": "empty",
 
     "materials": [
-        { "name": "Floor",       "type": "programmable", "albedo": [0.32, 0.32, 0.32] },
-        { "name": "Top",         "type": "lambertian",   "albedo": [0.90, 0.90, 0.90] },
-        { "name": "Back",        "type": "ggx_glossy",   "albedo": [0.10, 0.18, 0.72], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Left",        "type": "ggx_glossy",   "albedo": [0.06, 0.65, 0.08], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Right",       "type": "ggx_glossy",   "albedo": [0.82, 0.06, 0.04], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Front",       "type": "lambertian",   "albedo": [0.08, 0.08, 0.08] },
-        { "name": "Light",       "type": "emissive",     "albedo": [1.0, 0.72, 0.38],  "emission_strength": 400 },
-        { "name": "Smoke",       "type": "volume",       "albedo": [0.6, 0.6, 0.6],    "density": 0.03 },
-        { "name": "DragonGlass", "type": "dielectric",   "albedo": [0.88, 0.38, 0.82], "roughness": 0.10, "ior": 1.45 },
-        { "name": "Pedestal",    "type": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.0,  "ior": 12.0 },
-        { "name": "SphereMat_0", "type": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
-        { "name": "SphereMat_1", "type": "lambertian", "albedo": [1, 1, 1] },
-        { "name": "SphereMat_2", "type": "dielectric", "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.45 },
-        { "name": "SphereMat_3", "type": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.04, "ior": 2.0 }
+        { "name": "Floor",       "bsdf": "programmable", "albedo": [0.32, 0.32, 0.32] },
+        { "name": "Top",         "bsdf": "lambertian",   "albedo": [0.90, 0.90, 0.90] },
+        { "name": "Back",        "bsdf": "ggx_glossy",   "albedo": [0.10, 0.18, 0.72], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Left",        "bsdf": "ggx_glossy",   "albedo": [0.06, 0.65, 0.08], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Right",       "bsdf": "ggx_glossy",   "albedo": [0.82, 0.06, 0.04], "roughness": 0.20, "ior": 1.5 },
+        { "name": "Front",       "bsdf": "lambertian",   "albedo": [0.08, 0.08, 0.08] },
+        { "name": "Light",       "bsdf": "emissive",     "albedo": [1.0, 0.72, 0.38],  "emission_strength": 400 },
+        { "name": "Smoke",       "bsdf": "volume",       "albedo": [0.6, 0.6, 0.6],    "density": 0.03 },
+        { "name": "DragonGlass", "bsdf": "dielectric",   "albedo": [0.88, 0.38, 0.82], "roughness": 0.10, "ior": 1.45 },
+        { "name": "Pedestal",    "bsdf": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.0,  "ior": 12.0 },
+        { "name": "SphereMat_0", "bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
+        { "name": "SphereMat_1", "bsdf": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "SphereMat_2", "bsdf": "dielectric", "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.45 },
+        { "name": "SphereMat_3", "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.04, "ior": 2.0 }
     ],
 
     "entities": [

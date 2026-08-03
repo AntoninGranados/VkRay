@@ -2,6 +2,7 @@
 
 #include "FontAwesome/IconsFontAwesome7.h"
 
+#include <filesystem>
 #include <glm/glm.hpp>
 
 #include "core/ecs/components/component_type.hpp"
@@ -58,7 +59,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     .conflicts("sphere", "plane", "box", "quad", "mesh")
     .field<float>("fov", 80.0f, { .min = 1.0f, .max = 160.0f, .step = 0.1f }, true)
     .field<float>("shutter_speed", 0.0f, { .min = 0.0f, .max = 1.0f, .step = 0.01f })
-    .privateField<bool>("is_preview")
+    .privateField<bool>("_is_preview")
     .build();
 
 inline const ComponentType ThinLensCamera = ComponentType::builder("thin_lens_camera")
@@ -68,6 +69,25 @@ inline const ComponentType ThinLensCamera = ComponentType::builder("thin_lens_ca
     .needs("camera")
     .field<float>("aperture", 0.0f, { .min = 0.0f, .max = 10.0f, .step = 0.01f }, true)
     .field<float>("focus_depth", 10.0f, { .min = 0.0f, .step = 0.01f }, true)
+    .build();
+
+inline const ComponentType GeometricAperture = ComponentType::builder("geometric_aperture")
+    .description("Polygon aperture blade shape.")
+    .icon(ICON_FA_STAR)
+    .group("object")
+    .needs("thin_lens_camera")
+    .conflicts("image_aperture")
+    .field<int>("blades", 6, { .min = 3, .max = 12, .step = 1 })
+    .field<float>("rotation", 0.0f, { .min = 0.0f, .max = 360.0f, .step = 1.0f })
+    .build();
+
+inline const ComponentType ImageAperture = ComponentType::builder("image_aperture")
+    .description("Custom image mask as aperture shape.")
+    .icon(ICON_FA_IMAGE)
+    .group("object")
+    .needs("thin_lens_camera")
+    .conflicts("geometric_aperture")
+    .field<std::filesystem::path>("path", {}, { .pathExtensions = {{ .ext = "pgm,png,jpg,jpeg,hdr", .name = "Image" }} })
     .build();
 
 inline const ComponentType Collider = ComponentType::builder("collider")
@@ -84,8 +104,8 @@ inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
     .group("physics")
     .field<bool>("use_gravity", true)
     .field<float>("density", 50.0f, { .min = 0.1f, .max = 10000.0f, .step = 1.0f })
-    .privateField<glm::vec3>("linear_velocity")
-    .privateField<glm::vec3>("angular_velocity")
+    .privateField<glm::vec3>("_linear_velocity")
+    .privateField<glm::vec3>("_angular_velocity")
     .build();
 
 inline const ComponentType Name = ComponentType::builder("name")
@@ -99,9 +119,9 @@ inline const ComponentType Transform = ComponentType::builder("transform")
     .description("World-space transform.")
     .icon(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT)
     .group("movement")
-    .field<glm::vec3>("position", glm::vec3(0.0f), {}, true)
+    .field<glm::vec3>("position", glm::vec3(0.0f), { .step = 0.1f }, true)
     .field<glm::vec3>("rotation", glm::vec3(0.0f), { .step = 0.1f }, true)
-    .field<glm::vec3>("scale", glm::vec3(1.0f), {}, true)
+    .field<glm::vec3>("scale", glm::vec3(1.0f), { .step = 0.1f }, true)
     .build();
 
 inline const ComponentType MaterialRef = ComponentType::builder("material")

@@ -30,7 +30,7 @@ public:
     static void       setRenderMode(RenderMode m) { get().renderMode = m; }
 
     static void requestAccumulationRestart() { get().restartPending = true; }
-    static void restartAccumulation()        { get().coreRenderer.restartAccumulation(); }
+    static void restartAccumulation();
     static bool isAccumulationRestartPending()  { return get().restartPending; }
     static bool consumeAccumulationRestart();
 

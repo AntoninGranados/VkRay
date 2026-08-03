@@ -85,8 +85,8 @@ void syncFromBody(
     const glm::vec3 newPos = body.X - (newRot * localCenterScaled);
     transform.set<glm::vec3>("position", newPos);
     transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(newRot)));
-    rigidBody.set<glm::vec3>("linear_velocity", body.V);
-    rigidBody.set<glm::vec3>("angular_velocity", body.omega);
+    rigidBody.set<glm::vec3>("_linear_velocity", body.V);
+    rigidBody.set<glm::vec3>("_angular_velocity", body.omega);
 }
 
 FrameSnapshot captureFrameSnapshot(
@@ -98,8 +98,8 @@ FrameSnapshot captureFrameSnapshot(
         .body = captureBodySnapshot(body),
         .position = transform.get<glm::vec3>("position"),
         .rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))),
-        .linearVelocity = rigidBody.get<glm::vec3>("linear_velocity"),
-        .angularVelocity = rigidBody.get<glm::vec3>("angular_velocity"),
+        .linearVelocity = rigidBody.get<glm::vec3>("_linear_velocity"),
+        .angularVelocity = rigidBody.get<glm::vec3>("_angular_velocity"),
     };
 }
 
@@ -112,8 +112,8 @@ void applyFrameSnapshot(
     applyBodySnapshot(body, snapshot.body);
     transform.set<glm::vec3>("position", snapshot.position);
     transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snapshot.rotation))));
-    rigidBody.set<glm::vec3>("linear_velocity", snapshot.linearVelocity);
-    rigidBody.set<glm::vec3>("angular_velocity", snapshot.angularVelocity);
+    rigidBody.set<glm::vec3>("_linear_velocity", snapshot.linearVelocity);
+    rigidBody.set<glm::vec3>("_angular_velocity", snapshot.angularVelocity);
 }
 
 } // namespace physics_detail
@@ -193,8 +193,8 @@ void physicsSolverSystem(Registry& registry) {
             BodyState state;
             state.localCenterScaled = localCenter * tScale;
             const float density = rb.get<float>("density");
-            const glm::vec3 linVel = rb.get<glm::vec3>("linear_velocity");
-            const glm::vec3 angVel = rb.get<glm::vec3>("angular_velocity");
+            const glm::vec3 linVel = rb.get<glm::vec3>("_linear_velocity");
+            const glm::vec3 angVel = rb.get<glm::vec3>("_angular_velocity");
 
             if (hasSphere) {
                 const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
