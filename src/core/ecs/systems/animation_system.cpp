@@ -23,6 +23,7 @@ void animationSystem(Registry& registry) {
         prevFrame = currFrame;
         store.evaluate(registry, float(currFrame));
         store.evaluate(Core::getScene().getMaterials(), float(currFrame));
+        Core::getScene().update();
         Core::requestAccumulationRestart();
         return;
     }
@@ -36,6 +37,7 @@ void animationSystem(Registry& registry) {
     const float t = static_cast<float>(currFrame) + dist(rng);
     store.evaluate(registry, t);
     store.evaluate(Core::getScene().getMaterials(), t);
+    Core::getScene().update();
 }
 
 } // namespace ecs

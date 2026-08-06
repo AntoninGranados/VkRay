@@ -20,6 +20,10 @@ public:
     ImTextureID getDebugTexId()   const { return debugTexId; }
     ImTextureID getOutputTexId()  const { return outputTexId; }
 
+    TimestampHandle getDisplayTimestamp() const { return displayTimestamp; }
+    TimestampHandle getDebugTimestamp()   const { return debugTimestamp; }
+    TimestampHandle getUiTimestamp()      const { return uiTimestamp; }
+
 private:
     DebugUBO debugUBO{};
 
@@ -32,8 +36,9 @@ private:
 
     PassHandle displayPassHandle, debugPassHandle, uiPassHandle, presentPassHandle;
 
-    ComputePipelineHandle displayPipelineHandle;
-    ComputePipelineHandle debugPipelineHandle;
+    TimestampHandle displayTimestamp;
+    TimestampHandle debugTimestamp;
+    TimestampHandle uiTimestamp;
 
     SubmissionGroupHandle editorGroupHandle = {};
     SubmissionGroupHandle uiGroupHandle     = {};
@@ -43,7 +48,4 @@ private:
     ImTextureID displayTexId = 0;
     ImTextureID debugTexId   = 0;
     ImTextureID outputTexId  = 0;
-
-    void editorPass(const FrameContext& frameContext);
-    void uiPass();
 };

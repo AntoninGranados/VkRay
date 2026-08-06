@@ -1,5 +1,6 @@
 #include "gpu_packing_system.hpp"
 
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -39,6 +40,12 @@ void spherePackingSystem(Registry& registry, const FrameContext& frame) {
     auto& spheres = registry.storage(Sphere);
     auto& transforms = registry.storage(Transform);
     auto& materialRefs = registry.storage(MaterialRef);
+
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuSphere> gpuSpheres;
@@ -68,6 +75,12 @@ void planePackingSystem(Registry& registry, const FrameContext& frame) {
     auto& planes = registry.storage(Plane);
     auto& transforms = registry.storage(Transform);
     auto& materialRefs = registry.storage(MaterialRef);
+
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuPlane> gpuPlanes;
@@ -97,6 +110,12 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
     auto& boxes = registry.storage(Box);
     auto& transforms = registry.storage(Transform);
     auto& materialRefs = registry.storage(MaterialRef);
+
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuBox> gpuBoxes;
@@ -128,6 +147,12 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
     auto& quads = registry.storage(Quad);
     auto& transforms = registry.storage(Transform);
     auto& materialRefs = registry.storage(MaterialRef);
+
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuQuad> gpuQuads;
@@ -164,6 +189,12 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
     auto& meshRefs = registry.storage(MeshRef);
     auto& transforms = registry.storage(Transform);
     auto& materialRefs = registry.storage(MaterialRef);
+
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuMesh> meshTemplates;
@@ -251,6 +282,11 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void materialPackingSystem(Registry&, const FrameContext& frame) {
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     std::vector<GpuMaterial> materials;
 
     for (const auto& mat : Core::getScene().getMaterials()) {
@@ -271,6 +307,11 @@ void materialPackingSystem(Registry&, const FrameContext& frame) {
 }
 
 void objectPackingSystem(Registry& registry, const FrameContext& frame) {
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     const auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<ObjectHandle> objectHandles;
@@ -315,6 +356,11 @@ void objectPackingSystem(Registry& registry, const FrameContext& frame) {
 }
 
 void lightPackingSystem(Registry& registry, const FrameContext& frame) {
+    static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
+    const size_t gen = Core::getScene().getGeneration();
+    if (gen == lastGen[frame.currentFrame]) return;
+    lastGen[frame.currentFrame] = gen;
+
     auto& spheres = registry.storage(Sphere);
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);

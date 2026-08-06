@@ -26,6 +26,8 @@ public:
 
     bool     isRenderFinished()          { return targetSampleCount >= 0 && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
     uint32_t getSampleCount()            { return sampleCount; }
+    TimestampHandle getPathtracingTimestamp() const { return pathtracingTimestamp; }
+    TimestampHandle getCompositingTimestamp() const { return compositingTimestamp; }
     void     setTargetSampleCount(int n) { targetSampleCount = n; }
     void     restartAccumulation()       { sampleCount = 0; }
     void render(const FrameContext& frameContext);
@@ -57,8 +59,8 @@ private:
     PassHandle compositePassHandle;
     PassHandle exportPassHandle;
 
-    ComputePipelineHandle pathtracingPipelineHandle;
-    ComputePipelineHandle compositingPipelineHandle;
+    TimestampHandle pathtracingTimestamp;
+    TimestampHandle compositingTimestamp;
 
     SubmissionGroupHandle coreGroupHandle = {};
 

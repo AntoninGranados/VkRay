@@ -394,6 +394,7 @@ void physicsSystem(Registry& registry) {
     }
 
     if (changed) {
+        Core::getScene().update();
         Core::requestAccumulationRestart();
     }
 }

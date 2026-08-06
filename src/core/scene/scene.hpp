@@ -89,7 +89,8 @@ public:
 
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
-    void update() { updated = true; }
+    void update() { updated = true; ++generation; }
+    size_t getGeneration() const { return generation; }
 
 private:
     SceneGpuBuffers gpuBuffers;
@@ -108,6 +109,7 @@ private:
     AnimationStore animationStore;
 
     bool updated = false;
+    size_t generation = 1;
 
     void initSystems();
 

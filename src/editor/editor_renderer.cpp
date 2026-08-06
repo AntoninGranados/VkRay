@@ -49,7 +49,8 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     display.readImage ( 0, coreResources.outputImageHandle, ImageUsageType::Sampled);
     display.readBuffer( 1, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
     display.writeImage( 2, displayImageHandle, ImageUsageType::Storage);
-    displayPipelineHandle = display.setPipeline("./src/shaders/editor/display.glsl");
+    display.setPipeline("./src/shaders/editor/display.glsl");
+    displayTimestamp = display.setTimestamp();
 
     // Debug pass — debug view visualization (compute)
     ComputePassBuilder debug = builder.addComputePass("DebugPass");
@@ -58,7 +59,8 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     debug.readBuffer( 0, debugUBOHandle, BufferUsageType::Uniform);
     debug.readBuffer( 1, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
     debug.writeImage( 2, debugImageHandle, ImageUsageType::Storage);
-    debugPipelineHandle = debug.setPipeline("./src/shaders/editor/debug.glsl");
+    debug.setPipeline("./src/shaders/editor/debug.glsl");
+    debugTimestamp = debug.setTimestamp();
 
     // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers
     GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
@@ -68,6 +70,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     ui.readImage(1, debugImageHandle,   ImageUsageType::Sampled);
     ui.readImage(2, coreResources.outputImageHandle, ImageUsageType::Sampled);
     ui.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
+    uiTimestamp = ui.setTimestamp();
 
     PresentPassBuilder present = builder.addPresentPass("PresentPass");
     presentPassHandle = present.getHandle();
@@ -112,6 +115,7 @@ void EditorRenderer::resize(uint32_t width, uint32_t height) {
 
 void EditorRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
+    const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : frameContext.extent;
 
     debugUBO.debugView = Core::getParameters().get<DebugView>("renderer/debug_view");
 
@@ -123,55 +127,27 @@ void EditorRenderer::render(const FrameContext& frameContext) {
         engine.getSwapchainImageView(frameContext.imageIndex).get()
     );
 
-    editorPass(frameContext);
-    uiPass();
-}
-
-void EditorRenderer::editorPass(const FrameContext& frameContext) {
-    VkSmol& engine = Core::getEngine();
-    const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : frameContext.extent;
-    CommandBuffer& cmd = engine.beginRecording(editorGroupHandle);
-
     {
-        ComputePipeline& pipeline = engine.getComputePipeline(displayPipelineHandle);
-        engine.emitBarriers(cmd, displayPassHandle);
-        engine.bindDescriptors(cmd, displayPassHandle);
-        pipeline.bind(cmd);
-        pipeline.dispatch(cmd, (extent.width + 7) / 8, (extent.height + 7) / 8);
+        CommandBuffer& cmd = engine.beginRecording(editorGroupHandle);
+     
+        engine.dispatch(cmd, displayPassHandle, (extent.width + 7) / 8, (extent.height + 7) / 8);
+        engine.dispatch(cmd, debugPassHandle,   (extent.width + 7) / 8, (extent.height + 7) / 8);
+     
+        engine.endRecording(editorGroupHandle);
     }
+    
     {
-        ComputePipeline& pipeline = engine.getComputePipeline(debugPipelineHandle);
-        engine.emitBarriers(cmd, debugPassHandle);
-        engine.bindDescriptors(cmd, debugPassHandle);
-        pipeline.bind(cmd);
-        pipeline.dispatch(cmd, (extent.width + 7) / 8, (extent.height + 7) / 8);
+        CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
+     
+        engine.beginGraphics(commandBuffer, uiPassHandle, &ui::kDraculaBg.x);
+        Editor::getUi().draw(commandBuffer);
+        engine.endGraphics(commandBuffer, uiPassHandle);
+    
+        engine.emitBarriers(commandBuffer, presentPassHandle);
+    
+        // @warning this is out of place, but I need a command buffer
+        engine.emitOutputBarriers(commandBuffer);
+    
+        engine.endRecording(uiGroupHandle);
     }
-
-    engine.endRecording(editorGroupHandle);
-}
-
-void EditorRenderer::uiPass() {
-    VkSmol& engine = Core::getEngine();
-    CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
-
-    engine.emitBarriers(commandBuffer, uiPassHandle);
-    std::vector<AttachmentInfo> attachments = engine.getColorAttachment(uiPassHandle);
-    assert(attachments.size() == 1);
-    engine.beginDynamicRenderer(
-        commandBuffer,
-        attachments[0].view, attachments[0].layout,
-        attachments[0].loadOp, VK_ATTACHMENT_STORE_OP_STORE,
-        {{ ui::kDraculaBg.x, ui::kDraculaBg.y, ui::kDraculaBg.z, ui::kDraculaBg.w }}
-    );
-
-    Editor::getUi().draw(commandBuffer);
-
-    engine.endDynamicRenderer(commandBuffer);
-
-    engine.emitBarriers(commandBuffer, presentPassHandle);
-
-    // @warning this is out of place, but I need a command buffer
-    engine.emitOutputBarriers(commandBuffer);
-
-    engine.endRecording(uiGroupHandle);
 }

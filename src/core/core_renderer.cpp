@@ -88,7 +88,8 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     pathtrace.readBuffer(13, resources.sceneHandles.quad.handle,     BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle,  ImageUsageType::Storage);
     pathtrace.readImage (15, lensImageHandle,                ImageUsageType::Sampled);
-    pathtracingPipelineHandle = pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
+    pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
+    pathtracingTimestamp = pathtrace.setTimestamp();
 
     // Compositing pass
     ComputePassBuilder composite = builder.addComputePass("CompositionPass");
@@ -98,7 +99,8 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     composite.readBuffer(1, compositingUBOHandle, BufferUsageType::Uniform);
     composite.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
     composite.writeImage(3, resources.outputImageHandle, ImageUsageType::Storage);
-    compositingPipelineHandle = composite.setPipeline("./src/shaders/core/compositing.glsl");
+    composite.setPipeline("./src/shaders/core/compositing.glsl");
+    compositingTimestamp = composite.setTimestamp();
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
     exportPassHandle = exportPass.getHandle();
@@ -158,21 +160,10 @@ void CoreRenderer::render(const FrameContext& frameContext) {
 
     CommandBuffer& commandBuffer = engine.beginRecording(coreGroupHandle);
 
-    if (!paused) {   // Pathtrace (compute)
-        ComputePipeline& ptPipeline = engine.getComputePipeline(pathtracingPipelineHandle);
-        engine.emitBarriers(commandBuffer, pathtracePassHandle);
-        engine.bindDescriptors(commandBuffer, pathtracePassHandle);
-        ptPipeline.bind(commandBuffer);
-        ptPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
-    }
+    if (!paused)
+        engine.dispatch(commandBuffer, pathtracePassHandle, (extent.width + 7) / 8, (extent.height + 7) / 8);
 
-    {   // Compositing (compute)
-        ComputePipeline& coPipeline = engine.getComputePipeline(compositingPipelineHandle);
-        engine.emitBarriers(commandBuffer, compositePassHandle);
-        engine.bindDescriptors(commandBuffer, compositePassHandle);
-        coPipeline.bind(commandBuffer);
-        coPipeline.dispatch(commandBuffer, (extent.width + 7) / 8, (extent.height + 7) / 8);
-    }
+    engine.dispatch(commandBuffer, compositePassHandle, (extent.width + 7) / 8, (extent.height + 7) / 8);
 
     engine.emitBarriers(commandBuffer, exportPassHandle);
 

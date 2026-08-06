@@ -32,6 +32,7 @@ void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
 }
 
 void Scene::clear() {
+    ++generation;
     // Reset capacity so the next frame resizes buffers down to their initial size
     gpuBuffers.sphere.capacity   = 0;
     gpuBuffers.plane.capacity    = 0;
