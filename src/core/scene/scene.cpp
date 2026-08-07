@@ -1,6 +1,5 @@
 #include "scene.hpp"
 
-#include <cassert>
 #include <format>
 #include <utility>
 
@@ -58,12 +57,12 @@ MaterialHandle Scene::pushMaterial(const Material& mat) {
 void Scene::pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    assert(registry.add(e, ecs::Sphere));
+    registry.add(e, ecs::Sphere);
     registry.get(e, ecs::Sphere).set<float>("radius", radius);
 
     addMaterialRef(e, materialHandle);
 
-    assert(registry.add(e, ecs::Transform));
+    registry.add(e, ecs::Transform);
     auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("scale", glm::vec3(1.0f));
@@ -74,12 +73,12 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    assert(registry.add(e, ecs::Plane));
+    registry.add(e, ecs::Plane);
 
     addMaterialRef(e, materialHandle);
 
     const glm::quat q = glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal);
-    assert(registry.add(e, ecs::Transform));
+    registry.add(e, ecs::Transform);
     auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", point);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
@@ -93,11 +92,11 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    assert(registry.add(e, ecs::Box));
+    registry.add(e, ecs::Box);
 
     addMaterialRef(e, materialHandle);
 
-    assert(registry.add(e, ecs::Transform));
+    registry.add(e, ecs::Transform);
     auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("scale", halfExtents);
@@ -118,12 +117,12 @@ void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::
     const glm::vec3 u_hat = std::cos(rotation) * tangent + std::sin(rotation) * bitangent;
     const glm::vec3 v_hat = -std::sin(rotation) * tangent + std::cos(rotation) * bitangent;
 
-    assert(registry.add(e, ecs::Quad));
+    registry.add(e, ecs::Quad);
 
     addMaterialRef(e, materialHandle);
 
     const glm::quat q = glm::quat_cast(glm::mat3(u_hat, v_hat, normal));
-    assert(registry.add(e, ecs::Transform));
+    registry.add(e, ecs::Transform);
     auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", center);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
@@ -149,7 +148,7 @@ void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4&
 void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
-    assert(registry.add(e, ecs::MeshRef));
+    registry.add(e, ecs::MeshRef);
     registry.get(e, ecs::MeshRef).set<int>("handle", meshHandle);
 
     addMaterialRef(e, materialHandle);
@@ -161,7 +160,7 @@ void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& t
 void Scene::pushCamera(std::string name, const glm::mat4& transform) {
     ecs::Entity e = createNamedEntity(std::move(name));
     
-    assert(registry.add(e, ecs::Camera));
+    registry.add(e, ecs::Camera);
     registry.get(e, ecs::Camera).set<float>("fov", 60.0f);
 
     addTransformFromMatrix(e, transform);
@@ -212,19 +211,18 @@ void Scene::initSystems() {
     onRenderScheduler.add(ecs::lightPackingSystem);
 
     postUpdateScheduler.clear();
-    postUpdateScheduler.add(ecs::cameraPostUpdateSystem);
 }
 
 
 ecs::Entity Scene::createNamedEntity(std::string name) {
     ecs::Entity e = registry.createEntity();
-    assert(registry.add(e, ecs::Name));
+    registry.add(e, ecs::Name);
     registry.get(e, ecs::Name).set<std::string>("value", name);
     return e;
 }
 
 void Scene::addMaterialRef(ecs::Entity e, MaterialHandle materialHandle) {
-    assert(registry.add(e, ecs::MaterialRef));
+    registry.add(e, ecs::MaterialRef);
     registry.get(e, ecs::MaterialRef).set<int>("handle", materialHandle);
 }
 
@@ -233,40 +231,11 @@ void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
     glm::vec4 perspective;
     glm::quat rotation;
     glm::decompose(transform, scale, rotation, translation, skew, perspective);
-    assert(registry.add(e, ecs::Transform));
+    registry.add(e, ecs::Transform);
     auto& t = registry.get(e, ecs::Transform);
     t.set<glm::vec3>("position", translation);
     t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(rotation))));
     t.set<glm::vec3>("scale", scale);
-}
-
-void Scene::syncCameraFromEntities() {
-    auto& camStorage = registry.storage(ecs::Camera);
-    auto& transformStorage = registry.storage(ecs::Transform);
-    auto& thinLensStorage = registry.storage(ecs::ThinLensCamera);
-    for (const ecs::Entity& ce : entities) {
-        if (!camStorage.has(ce) || !transformStorage.has(ce)) continue;
-        const ecs::Component& cam = camStorage.get(ce);
-        if (cam.get<bool>("_is_preview")) continue;
-        const ecs::Component& t = transformStorage.get(ce);
-        const glm::vec3 pos = t.get<glm::vec3>("position");
-        const glm::vec3 dir = glm::normalize(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));
-        camera.setPosition(pos);
-        camera.setFov(cam.get<float>("fov"));
-        camera.setShutterSpeed(cam.get<float>("shutter_speed"));
-        if (thinLensStorage.has(ce)) {
-            const ecs::Component& tl = thinLensStorage.get(ce);
-            const float focusDepth = glm::max(0.1f, tl.get<float>("focus_depth"));
-            camera.setTarget(pos + dir * focusDepth);
-            camera.setAperture(tl.get<float>("aperture"));
-            camera.setFocusDepth(focusDepth);
-        } else {
-            camera.setTarget(pos + dir * 10.0f);
-            camera.setAperture(0.0f);
-            camera.setFocusDepth(10.0f);
-        }
-        break;
-    }
 }
 
 void Scene::resetSceneState() {

@@ -31,6 +31,8 @@ public:
     bool isKeyboardCaptured() { return capturesKeyboard; }
 
     void clearEntitySelection();
+    void setPreview();
+    void clearPreview();
 
     const SceneSelection& getSelection()     const { return selection; }
     ImVec2      getViewportSize()            const { return viewportPanel.getSize(); }

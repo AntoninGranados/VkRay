@@ -92,9 +92,10 @@ struct Mesh {
 
 // ============== PATH-TRACING  ==============
 struct Camera {
-    vec3 pos;
-    vec3 dir;
-    vec3 up;
+    vec3 eye;
+    vec3 U;
+    vec3 V;
+    vec3 W;
 };
 
 struct Ray {

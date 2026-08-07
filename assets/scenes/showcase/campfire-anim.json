@@ -1,0 +1,193 @@
+{
+    "version": 1,
+
+    "light": "empty",
+
+    "materials": [
+        { "name": "Base",  "bsdf": "lambertian", "albedo": [1, 1, 1] },
+        { "name": "Fire",  "bsdf": "emissive",   "albedo": [1, 1, 1],              "emission_strength": 50 },
+        { "name": "Ember", "bsdf": "emissive",   "albedo": [0.8, 0.082, 0.001],   "emission_strength": 50 }
+    ],
+
+    "entities": [
+        {
+            "camera": { "fov": 35 },
+            "thin_lens": { "f_stop": 0.5, "focal_distance": 11 },
+            "name": { "value": "Camera" },
+            "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
+        },
+        {
+            "mesh": { "path": "./assets/models/campfire/campsite.obj" },
+            "material": "Base",
+            "transform": {},
+            "name": { "value": "Campsite" }
+        },
+        {
+            "mesh": { "path": "./assets/models/campfire/fire-no-embers.obj" },
+            "material": "Fire",
+            "transform": {
+                "rotation": {
+                    "anim": [
+                        { "frame":  0, "value": [  1,   0,  -1], "ease": "step" },
+                        { "frame":  6, "value": [ -1, 218,   1], "ease": "step" },
+                        { "frame": 12, "value": [  1,  91,  -1], "ease": "step" },
+                        { "frame": 18, "value": [ -1, 302,   1], "ease": "step" },
+                        { "frame": 24, "value": [  1,   0,  -1] }
+                    ]
+                },
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [0,  0.000, 0], "ease": "ease_in_out" },
+                        { "frame": 12, "value": [0,  0.007, 0], "ease": "ease_in_out" },
+                        { "frame": 24, "value": [0,  0.000, 0] }
+                    ]
+                },
+                "scale": {
+                    "anim": [
+                        { "frame":  0, "value": [1.00, 1.00, 1.00], "ease": "ease_in_out" },
+                        { "frame": 12, "value": [1.00, 1.06, 1.00], "ease": "ease_in_out" },
+                        { "frame": 24, "value": [1.00, 1.00, 1.00] }
+                    ]
+                }
+            },
+            "name": { "value": "Fire" }
+        },
+
+        {
+            "sphere": {
+                "radius": {
+                    "anim": [
+                        { "frame":  0, "value": 0.025, "ease": "linear" },
+                        { "frame": 23, "value": 0.003, "ease": "step" },
+                        { "frame": 24, "value": 0.025 }
+                    ]
+                }
+            },
+            "material": "Ember",
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [-0.07, 0.55, 0.09], "ease": "ease_out" },
+                        { "frame": 23, "value": [-0.07, 3.50, 0.09], "ease": "step" },
+                        { "frame": 24, "value": [-0.07, 0.55, 0.09] }
+                    ]
+                }
+            },
+            "name": { "value": "Ember A" }
+        },
+
+        {
+            "sphere": {
+                "radius": {
+                    "anim": [
+                        { "frame":  0, "value": 0.018, "ease": "linear" },
+                        { "frame": 11, "value": 0.003, "ease": "step" },
+                        { "frame": 12, "value": 0.018, "ease": "linear" },
+                        { "frame": 23, "value": 0.003, "ease": "step" },
+                        { "frame": 24, "value": 0.018 }
+                    ]
+                }
+            },
+            "material": "Ember",
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [0.10, 0.60, -0.04], "ease": "ease_out" },
+                        { "frame": 11, "value": [0.10, 2.50, -0.04], "ease": "step" },
+                        { "frame": 12, "value": [0.10, 0.60, -0.04], "ease": "ease_out" },
+                        { "frame": 23, "value": [0.10, 3.20, -0.04], "ease": "step" },
+                        { "frame": 24, "value": [0.10, 0.60, -0.04] }
+                    ]
+                }
+            },
+            "name": { "value": "Ember B" }
+        },
+
+        {
+            "sphere": {
+                "radius": {
+                    "anim": [
+                        { "frame":  0, "value": 0.013, "ease": "linear" },
+                        { "frame":  7, "value": 0.003, "ease": "step" },
+                        { "frame":  8, "value": 0.013, "ease": "linear" },
+                        { "frame": 15, "value": 0.003, "ease": "step" },
+                        { "frame": 16, "value": 0.013, "ease": "linear" },
+                        { "frame": 23, "value": 0.003, "ease": "step" },
+                        { "frame": 24, "value": 0.013 }
+                    ]
+                }
+            },
+            "material": "Ember",
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [0.05, 0.70, 0.12], "ease": "ease_out" },
+                        { "frame":  7, "value": [0.05, 2.80, 0.12], "ease": "step" },
+                        { "frame":  8, "value": [0.05, 0.70, 0.12], "ease": "ease_out" },
+                        { "frame": 15, "value": [0.05, 2.40, 0.12], "ease": "step" },
+                        { "frame": 16, "value": [0.05, 0.70, 0.12], "ease": "ease_out" },
+                        { "frame": 23, "value": [0.05, 3.30, 0.12], "ease": "step" },
+                        { "frame": 24, "value": [0.05, 0.70, 0.12] }
+                    ]
+                }
+            },
+            "name": { "value": "Ember C" }
+        },
+
+        {
+            "sphere": {
+                "radius": {
+                    "anim": [
+                        { "frame":  0, "value": 0.014, "ease": "linear" },
+                        { "frame": 11, "value": 0.003, "ease": "step" },
+                        { "frame": 12, "value": 0.025, "ease": "linear" },
+                        { "frame": 23, "value": 0.003, "ease": "step" },
+                        { "frame": 24, "value": 0.014 }
+                    ]
+                }
+            },
+            "material": "Ember",
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [-0.09, 2.00, -0.05], "ease": "ease_out" },
+                        { "frame": 11, "value": [-0.09, 3.20, -0.05], "ease": "step" },
+                        { "frame": 12, "value": [-0.09, 0.50, -0.05], "ease": "ease_out" },
+                        { "frame": 23, "value": [-0.09, 3.60, -0.05], "ease": "step" },
+                        { "frame": 24, "value": [-0.09, 2.00, -0.05] }
+                    ]
+                }
+            },
+            "name": { "value": "Ember D" }
+        },
+
+        {
+            "sphere": {
+                "radius": {
+                    "anim": [
+                        { "frame":  0, "value": 0.010, "ease": "linear" },
+                        { "frame":  5, "value": 0.003, "ease": "step" },
+                        { "frame":  6, "value": 0.018, "ease": "linear" },
+                        { "frame": 17, "value": 0.003, "ease": "step" },
+                        { "frame": 18, "value": 0.018, "ease": "linear" },
+                        { "frame": 24, "value": 0.010 }
+                    ]
+                }
+            },
+            "material": "Ember",
+            "transform": {
+                "position": {
+                    "anim": [
+                        { "frame":  0, "value": [0.06, 1.80, -0.11], "ease": "ease_out" },
+                        { "frame":  5, "value": [0.06, 2.30, -0.11], "ease": "step" },
+                        { "frame":  6, "value": [0.06, 0.60, -0.11], "ease": "ease_out" },
+                        { "frame": 17, "value": [0.06, 2.60, -0.11], "ease": "step" },
+                        { "frame": 18, "value": [0.06, 0.60, -0.11], "ease": "ease_out" },
+                        { "frame": 24, "value": [0.06, 1.80, -0.11] }
+                    ]
+                }
+            },
+            "name": { "value": "Ember E" }
+        }
+    ]
+}

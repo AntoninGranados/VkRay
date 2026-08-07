@@ -26,11 +26,9 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
     bool openNewComponentPopup = false;
 
     bool open = true;
-    ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
-    ImGui::Begin(
-        "Entity",
-        &open,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    ImGui::SetNextWindowSizeConstraints({250.0f, 50.0f}, {FLT_MAX, FLT_MAX});
+    ImGui::SetNextWindowSize({300.0f, 400.0f}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Entity", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing);
     {
         ImGui::Text("Add Component");
         ImGui::SameLine();
@@ -141,8 +139,9 @@ void SceneUI::drawSelectedMaterialUI(Scene& scene, SceneSelection& selection) {
     if (selection.material < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
-    ImGui::Begin("Material", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    ImGui::SetNextWindowSizeConstraints({250.0f, 50.0f}, {FLT_MAX, FLT_MAX});
+    ImGui::SetNextWindowSize({300.0f, 400.0f}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Material", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing);
     {
         if (drawMaterialUI(selection.material)) scene.update();
     }
@@ -155,8 +154,9 @@ void SceneUI::drawSelectedMeshAssetUI(Scene& scene, SceneSelection& selection) {
     if (selection.meshAsset < 0) return;
 
     bool open = true;
-    ImGui::SetNextWindowSizeConstraints({250.0f, 0.0f}, {250.0f, 600.0f});
-    ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
+    ImGui::SetNextWindowSizeConstraints({250.0f, 50.0f}, {FLT_MAX, FLT_MAX});
+    ImGui::SetNextWindowSize({300.0f, 400.0f}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Mesh Asset", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing);
     {
         if (drawMeshAssetUI(scene.getMeshAssets()[static_cast<size_t>(selection.meshAsset)])) scene.update();
     }

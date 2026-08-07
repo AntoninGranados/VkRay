@@ -19,7 +19,7 @@ void cameraDrawingSystem(Registry& registry) {
 
     auto& cameras = registry.storage(Camera);
     auto& transforms = registry.storage(Transform);
-    auto& thinLensCameras = registry.storage(ThinLensCamera);
+    auto& thinLensCameras = registry.storage(ThinLens);
 
     if (ImGui::GetCurrentContext() == nullptr) return;
 
@@ -31,11 +31,12 @@ void cameraDrawingSystem(Registry& registry) {
     if (!drawList) return;
     drawList->PushClipRect(windowPos, ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y), true);
 
+    const ::Camera& activeCamera = Core::getScene().getCamera();
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
+        if (activeCamera.isPreviewEntity(e)) continue;
         const Component& c = cameras.get(e);
         const Component& t = transforms.get(e);
-        if (c.get<bool>("_is_preview")) continue;
 
         const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
         glm::vec3 dir = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));
@@ -45,7 +46,6 @@ void cameraDrawingSystem(Registry& registry) {
         const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
         const float fov = glm::radians(c.get<float>("fov"));
 
-        const ::Camera& activeCamera = Core::getScene().getCamera();
         const glm::mat4 view = activeCamera.getView();
         const glm::mat4 proj = activeCamera.getProjection(aspect);
         const glm::mat4 viewProj = proj * view;
@@ -137,7 +137,11 @@ void cameraDrawingSystem(Registry& registry) {
             drawClipped(clipNear[i], clipFar[i]);
         }
 
-        const float apertureRadius = thinLensCameras.has(e) ? thinLensCameras.get(e).get<float>("aperture") * 0.5f : 0.0f;
+        float apertureRadius = 0.0f;
+        if (thinLensCameras.has(e)) {
+            const auto& tl = thinLensCameras.get(e);
+            apertureRadius = ::Camera::lensRadiusFromFStop(tl.get<float>("focal_length"), tl.get<float>("f_stop"));
+        }
         if (apertureRadius > 1e-4f) {
             const int ringSegments = 32;
             glm::vec3 prevPoint = camPos + camRight * apertureRadius;

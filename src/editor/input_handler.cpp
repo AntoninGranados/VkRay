@@ -13,6 +13,7 @@
 #include "core/animation/animation_handler.hpp"
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
+#include "core/ecs/systems/camera_system.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
 #include "editor/editor_ui.hpp"
@@ -22,7 +23,10 @@ void InputHandler::initCallbacks() {
         const bool cameraLocked = Core::getScene().getCamera().isLocked();
         if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || Editor::getUi().isMouseCaptured() || ImGuizmo::IsUsing()))
             return;
-        if (Core::getScene().getCamera().cursorPosCallback(x, y)) Core::requestAccumulationRestart();
+        if (Core::getScene().getCamera().cursorPosCallback(x, y)) {
+            Core::requestAccumulationRestart();
+            ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
+        }
     });
 
     Core::getPlatform().setScrollCallback([](double xoffset, double yoffset){
@@ -57,19 +61,20 @@ void InputHandler::handlePreview(float dt) {
         else Editor::getUi().clearEntitySelection();
     }
 
-    if (!blockKeyboardInput && Core::getScene().getCamera().isLocked() && Core::getPlatform().getKey(GLFW_KEY_SPACE)) {
-        if (!spaceWasDown) Core::getAnimation().toggle();
-        spaceWasDown = true;
-    } else {
-        spaceWasDown = false;
+    if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
+        if (Core::getScene().getCamera().hasPreviewCamera()) Editor::getUi().clearPreview();
+        else Editor::getUi().setPreview();
     }
 
-    constexpr float kRepeatDelay = 0.4f;
+    if (!blockKeyboardInput && Core::getScene().getCamera().isLocked() && justPressed(GLFW_KEY_SPACE))
+        Core::getAnimation().toggle();
+
+    constexpr float kRepeatDelay    = 0.4f;
     constexpr float kRepeatInterval = 0.05f;
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_LEFT)) {
         AnimationHandler& anim = Core::getAnimation();
-        if (!leftWasDown) {
+        if (!prevKeys[GLFW_KEY_LEFT]) {
             anim.reset(std::max(0, anim.getFrame() - 1));
             anim.pause();
             Core::requestAccumulationRestart();
@@ -83,15 +88,15 @@ void InputHandler::handlePreview(float dt) {
                 leftRepeat += kRepeatInterval;
             }
         }
-        leftWasDown = true;
+        prevKeys[GLFW_KEY_LEFT] = true;
     } else {
-        leftWasDown = false;
+        prevKeys[GLFW_KEY_LEFT] = false;
         leftRepeat = 0.0f;
     }
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_RIGHT)) {
         AnimationHandler& anim = Core::getAnimation();
-        if (!rightWasDown) {
+        if (!prevKeys[GLFW_KEY_RIGHT]) {
             anim.reset(std::min(anim.getEndFrame() - 1, anim.getFrame() + 1));
             anim.pause();
             Core::requestAccumulationRestart();
@@ -105,23 +110,31 @@ void InputHandler::handlePreview(float dt) {
                 rightRepeat += kRepeatInterval;
             }
         }
-        rightWasDown = true;
+        prevKeys[GLFW_KEY_RIGHT] = true;
     } else {
-        rightWasDown = false;
+        prevKeys[GLFW_KEY_RIGHT] = false;
         rightRepeat = 0.0f;
     }
 
     if (!blockKeyboardInput) {
-        if (Core::getScene().getCamera().processInput(dt)) Core::requestAccumulationRestart();
+        if (Core::getScene().getCamera().processInput(dt)) {
+            Core::requestAccumulationRestart();
+            ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
+        }
     }
 
-    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R)) {
+    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R))
         Core::requestAccumulationRestart();
-    }
 
-    if (Core::getScene().checkUpdate()) {
+    if (Core::getScene().checkUpdate())
         Core::requestAccumulationRestart();
-    }
+}
+
+bool InputHandler::justPressed(int key) {
+    const bool down = Core::getPlatform().getKey(key);
+    const bool first = down && !prevKeys[key];
+    prevKeys[key] = down;
+    return first;
 }
 
 void InputHandler::handleRender(float dt) {

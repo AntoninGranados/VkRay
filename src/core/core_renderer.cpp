@@ -137,12 +137,6 @@ void CoreRenderer::buildPipelines() {
 
 void CoreRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
-    const Camera& camera = Core::getScene().getCamera();
-    pathtracerUBO.camera.pos        = camera.getPosition();
-    pathtracerUBO.camera.dir        = camera.getDirection();
-    pathtracerUBO.camera.tanHFov    = camera.getTanHFov();
-    pathtracerUBO.camera.aperture   = camera.getAperture();
-    pathtracerUBO.camera.focusDepth = camera.getFocusDepth();
 
     const bool paused = isRenderFinished();
 
@@ -154,6 +148,20 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : frameContext.extent;
     pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
+
+    const Camera& camera = Core::getScene().getCamera();
+    const glm::vec3 dir   = camera.getDirection();
+    const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 camUp = glm::cross(right, dir);
+    const float tanHFov   = camera.getTanHFov();
+    const float aspect    = pathtracerUBO.screen.aspect;
+
+    pathtracerUBO.camera.eye          = camera.getPosition();
+    pathtracerUBO.camera.U            = right * aspect * tanHFov;
+    pathtracerUBO.camera.V            = camUp * tanHFov;
+    pathtracerUBO.camera.W            = dir;
+    pathtracerUBO.camera.lensRadius   = camera.getLensRadius();
+    pathtracerUBO.camera.focusDistance = camera.getFocusDistance();
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);

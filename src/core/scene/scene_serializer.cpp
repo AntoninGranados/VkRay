@@ -457,7 +457,6 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     AnimationStore& animStore = scene.getAnimationStore();
     animStore.evaluate(registry, 0.0f);
     animStore.evaluate(scene.getMaterials(), 0.0f);
-    scene.syncCameraFromEntities();
     return true;
 }
 

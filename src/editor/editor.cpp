@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #include "core/core.hpp"
+#include "core/ecs/components.hpp"
 #include "core/export_service.hpp"
 
 Editor& Editor::get() {
@@ -92,18 +93,20 @@ void Editor::run() {
         if (sel.entity >= 0) {
             const ecs::Entity e = Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
             const ScenePackingMaps& maps = Core::getScene().getPackingMaps();
+            const ecs::Registry& registry = Core::getScene().getRegistry();
             int i = 0;
-            auto check = [&](const std::unordered_map<ecs::Entity, int>& m) {
-                for (const auto& [ent, _] : m) {
+            auto check = [&](const ecs::ComponentType& type, const std::unordered_map<ecs::Entity, int>& m) {
+                for (const auto& ent : registry.storage(type).entities()) {
+                    if (m.find(ent) == m.end()) continue;
                     if (ent == e) { flatIdx = i; return; }
                     i++;
                 }
             };
-            check(maps.sphereId);
-            if (flatIdx < 0) check(maps.planeId);
-            if (flatIdx < 0) check(maps.boxId);
-            if (flatIdx < 0) check(maps.quadId);
-            if (flatIdx < 0) check(maps.meshId);
+            check(ecs::Sphere, maps.sphereId);
+            if (flatIdx < 0) check(ecs::Plane, maps.planeId);
+            if (flatIdx < 0) check(ecs::Box, maps.boxId);
+            if (flatIdx < 0) check(ecs::Quad, maps.quadId);
+            if (flatIdx < 0) check(ecs::MeshRef, maps.meshId);
         }
         Core::getCoreRenderer().setSelectedObjectId(flatIdx);
 

@@ -5,11 +5,12 @@
 #include "materials/materials.glsl"
 
 struct CameraUBO {
-    vec3 pos;
-    vec3 dir;
-    float tanHFov;
-    float aperture;
-    float focusDepth;
+    vec3 eye;
+    vec3 U;
+    vec3 V;
+    vec3 W;
+    float lensRadius;
+    float focusDistance;
 };
 
 struct ScreenUBO {

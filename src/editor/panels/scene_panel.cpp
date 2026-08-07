@@ -72,9 +72,11 @@ void ScenePanel::content() {
                     }
                     if (displayName.empty()) displayName = "???";
 
-                    if (ImGui::Selectable(displayName.c_str(), selection.entity == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
-                        if (ImGui::IsMouseDoubleClicked(0)) {
+                    if (ImGui::Selectable(displayName.c_str(), selection.entity == static_cast<int>(i))) {
+                        if (selection.entity != static_cast<int>(i)) {
+                            scene.getCamera().clearPreviewCamera();
                             selection.entity = static_cast<int>(i);
+                            Core::requestAccumulationRestart();
                         }
                     }
                 }

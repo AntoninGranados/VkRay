@@ -25,29 +25,17 @@ vec2 sampleLens(inout uint seed) {
 }
 
 Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
-    vec3 forward = normalize(camera.dir);
-    vec3 right   = normalize(cross(forward, camera.up));
-    vec3 up      = cross(right, forward);
-
-    float scr_x = ndc_pos.x * 0.5f + 0.5f;
-    float scr_y = ndc_pos.y * 0.5f + 0.5f;
-
-    float cam_x = (2.f * scr_x - 1.f) * ubo.screen.aspect * ubo.camera.tanHFov;
-    float cam_y = (1.f - 2.f * scr_y) * ubo.camera.tanHFov;
-
     vec3 offset = vec3(0.0);
-    if (enableFocus) {
+    if (enableFocus && ubo.camera.lensRadius > 0.0) {
         vec2 p = sampleLens(seed);
-        float lens_r = ubo.camera.aperture * 0.5;
-        offset = lens_r * (right * p.x + up * p.y);
+        vec3 lensRight = normalize(camera.U);
+        vec3 lensUp    = normalize(camera.V);
+        offset = ubo.camera.lensRadius * (lensRight * p.x + lensUp * p.y);
     }
 
-    vec3 origin = camera.pos + offset;
-
-    vec3 target = camera.pos + (cam_x * right + cam_y * up + forward) * ubo.camera.focusDepth;
-    vec3 dir = normalize(target - origin);
-
-    return Ray(origin, dir);
+    vec3 origin     = camera.eye + offset;
+    vec3 focalPoint = camera.eye + (ndc_pos.x * camera.U - ndc_pos.y * camera.V + camera.W) * ubo.camera.focusDistance;
+    return Ray(origin, normalize(focalPoint - origin));
 }
 
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
@@ -75,17 +63,17 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
     mat.albedo     *= firstHit.vertexColor;
     float guideMix  = 1.0 / float(pixelInfo.count);
 
-    vec3 right = normalize(cross(camera.dir, camera.up));
-    vec3 up    = cross(right, camera.dir);
+    vec3 right = normalize(camera.U);
+    vec3 up    = normalize(camera.V);
 
-    vec3 normalW   = normalize(firstHit.normal);
+    vec3 normalW = normalize(firstHit.normal);
     vec3 positionW = firstHit.p;
-    vec3 albedo    = mat.albedo;
+    vec3 albedo = mat.albedo;
     float roughness = mat.type == mat_Lambertian ? 1.0 : mat.roughness;
-    vec3 hitOff    = positionW - camera.pos;
-    vec3 camDir    = normalize(camera.dir);
-    vec2 normal    = vec2(dot(normalW, right), dot(normalW, up));
-    vec3 position  = vec3(dot(hitOff, right), dot(hitOff, up), dot(hitOff, camDir));
+    vec3 hitOff = positionW - camera.eye;
+    vec3 camDir = camera.W;
+    vec2 normal = vec2(dot(normalW, right), dot(normalW, up));
+    vec3 position = vec3(dot(hitOff, right), dot(hitOff, up), dot(hitOff, camDir));
 
     if (pixelInfo.aov.hitValid != 0u) {
         pixelInfo.aov.positionW = mix(pixelInfo.aov.positionW, positionW, guideMix);
@@ -299,7 +287,7 @@ void main() {
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
-    Camera camera = Camera(ubo.camera.pos, ubo.camera.dir, vec3(0, 1, 0));
+    Camera camera = Camera(ubo.camera.eye, ubo.camera.U, ubo.camera.V, ubo.camera.W);
     uint seed = initSeed(uvec2(pixelCoord), uint(ubo.sampleCount));
 
     uint blockVarianceIndex = varianceIndexFromCoord(pixelCoord, texSize);

@@ -6,6 +6,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include "core/animation/animation_handler.hpp"
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
@@ -16,7 +17,7 @@ void cameraPreUpdateSystem(Registry& registry) {
     ::Camera& sceneCamera = Core::getScene().getCamera();
     auto& cameras = registry.storage(Camera);
     auto& transforms = registry.storage(Transform);
-    auto& thinLensCameras = registry.storage(ThinLensCamera);
+    auto& thinLensCameras = registry.storage(ThinLens);
 
     if (sceneCamera.hasPreviewCamera()) {
         const ecs::Entity previewEnt = sceneCamera.getPreviewCamera();
@@ -29,70 +30,68 @@ void cameraPreUpdateSystem(Registry& registry) {
         const float dist = glm::max(0.1f, glm::length(sceneCamera.getTarget() - sceneCamera.getPosition()));
         sceneCamera.setPosition(pos);
         sceneCamera.setTarget(pos + glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)) * dist);
-        sceneCamera.setFov(c.get<float>("fov"));
-        sceneCamera.setShutterSpeed(c.get<float>("shutter_speed"));
+        const float fps = static_cast<float>(Core::getAnimation().getFps());
+        sceneCamera.setShutterSpeed(::Camera::blurFractionFromShutter(c.get<float>("shutter_speed"), fps));
 
         if (thinLensCameras.has(previewEnt)) {
             const Component& tl = thinLensCameras.get(previewEnt);
-            sceneCamera.setAperture(tl.get<float>("aperture"));
-            sceneCamera.setFocusDepth(tl.get<float>("focus_depth"));
+            const float focalLength = tl.get<float>("focal_length");
+            sceneCamera.setFov(::Camera::fovFromFocalLength(focalLength));
+            sceneCamera.setLensRadius(::Camera::lensRadiusFromFStop(focalLength, tl.get<float>("f_stop")));
+            sceneCamera.setFocusDistance(tl.get<float>("focal_distance"));
         } else {
-            sceneCamera.setAperture(0.0f);
-            sceneCamera.setFocusDepth(10.0f);
+            sceneCamera.setFov(c.get<float>("fov"));
+            sceneCamera.setLensRadius(0.0f);
+            sceneCamera.setFocusDistance(10.0f);
         }
         return;
     }
 
     if (Core::getRenderMode() == RenderMode::Preview) {
-        sceneCamera.setAperture(0.0f);
+        sceneCamera.setLensRadius(0.0f);
         return;
     }
+
+    const float fps = static_cast<float>(Core::getAnimation().getFps());
 
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
         const Component& c = cameras.get(e);
-        if (c.get<bool>("_is_preview")) continue;
 
         const Component& t = transforms.get(e);
         const glm::vec3 pos = t.get<glm::vec3>("position");
         const glm::vec3 dir = glm::normalize(
             glm::quat(glm::radians(t.get<glm::vec3>("rotation"))) * glm::vec3(0.0f, 0.0f, -1.0f));
         sceneCamera.setPosition(pos);
-        sceneCamera.setFov(c.get<float>("fov"));
-        sceneCamera.setShutterSpeed(c.get<float>("shutter_speed"));
+        sceneCamera.setShutterSpeed(::Camera::blurFractionFromShutter(c.get<float>("shutter_speed"), fps));
 
         if (thinLensCameras.has(e)) {
             const Component& tl = thinLensCameras.get(e);
-            const float focusDepth = glm::max(0.1f, tl.get<float>("focus_depth"));
-            sceneCamera.setTarget(pos + dir * focusDepth);
-            sceneCamera.setAperture(tl.get<float>("aperture"));
-            sceneCamera.setFocusDepth(focusDepth);
+            const float focalLength = tl.get<float>("focal_length");
+            sceneCamera.setFov(::Camera::fovFromFocalLength(focalLength));
+            const float focalDistance = glm::max(0.1f, tl.get<float>("focal_distance"));
+            sceneCamera.setTarget(pos + dir * focalDistance);
+            sceneCamera.setLensRadius(::Camera::lensRadiusFromFStop(focalLength, tl.get<float>("f_stop")));
+            sceneCamera.setFocusDistance(focalDistance);
         } else {
+            sceneCamera.setFov(c.get<float>("fov"));
             sceneCamera.setTarget(pos + dir * 10.0f);
-            sceneCamera.setAperture(0.0f);
-            sceneCamera.setFocusDepth(10.0f);
+            sceneCamera.setLensRadius(0.0f);
+            sceneCamera.setFocusDistance(10.0f);
         }
         break;
     }
 }
 
-void cameraPostUpdateSystem(Registry& registry) {
-    ::Camera& sceneCamera = Core::getScene().getCamera();
-    if (!sceneCamera.hasPreviewCamera()) return;
-
-    const bool escapePressed = glfwGetKey(
-        static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), GLFW_KEY_ESCAPE
-    );
-    if (!escapePressed) return;
-
-    const ecs::Entity previewEnt = sceneCamera.getPreviewCamera();
-    auto& cameras = registry.storage(Camera);
-    if (cameras.has(previewEnt)) {
-        cameras.get(previewEnt).set<bool>("_is_preview", false);
-    }
-    sceneCamera.clearPreviewCamera();
-    sceneCamera.setAperture(0.0f);
-    Core::requestAccumulationRestart();
+void syncPreviewCameraToEntity(const ::Camera& cam, Registry& registry) {
+    if (!cam.hasPreviewCamera()) return;
+    const ecs::Entity e = cam.getPreviewCamera();
+    auto& transforms = registry.storage(Transform);
+    if (!transforms.has(e)) return;
+    Component& t = transforms.get(e);
+    const glm::quat q = glm::quatLookAt(glm::normalize(cam.getDirection()), cam.getUp());
+    t.set<glm::vec3>("position", cam.getPosition());
+    t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
 }
 
 } // namespace ecs

@@ -50,7 +50,7 @@ void apertureSystem(Registry& registry) {
         return;
     }
 
-    if (!defaultUploaded && !registry.storage(ThinLensCamera).entities().empty()) {
+    if (!defaultUploaded && !registry.storage(ThinLens).entities().empty()) {
         std::vector<uint8_t> data;
         aperture::makeCircle(data);
         upload(std::move(data));

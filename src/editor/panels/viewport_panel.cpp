@@ -53,7 +53,7 @@ void ViewportPanel::content() {
             float dist;
             int hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
             if (hit >= 0) {
-                scene.getCamera().setFocusDepth(dist);
+                scene.getCamera().setFocusDistance(dist);
                 Core::requestAccumulationRestart();
             }
         }
@@ -133,6 +133,7 @@ int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist
     auto& cameraStorage = scene.getRegistry().storage(ecs::Camera);
     auto& transformStorage = scene.getRegistry().storage(ecs::Transform);
 
+    const ::Camera& sceneCamera = scene.getCamera();
     for (size_t i = 0; i < scene.getEntities().size(); i++) {
         const ecs::Entity& e = scene.getEntities()[i];
         if (!transformStorage.has(e)) continue;
@@ -168,7 +169,7 @@ int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist
                 t = rayMeshIntersection(ray, local, asset.getVertices(), asset.getIndices());
             }
         } else if (includeCameras && cameraStorage.has(e)) {
-            if (cameraStorage.get(e).get<bool>("_is_preview")) continue;
+            if (sceneCamera.isPreviewEntity(e)) continue;
             constexpr float cameraSelectRadius = 0.6f;
             t = raySphereIntersection(ray, tPos, cameraSelectRadius);
         }

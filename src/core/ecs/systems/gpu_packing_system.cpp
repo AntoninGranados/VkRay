@@ -316,26 +316,19 @@ void objectPackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<ObjectHandle> objectHandles;
 
-    // Spheres
-    for (const auto& [e, id] : packingMaps.sphereId) {
-        objectHandles.push_back(ObjectHandle{ .type = ObjectType::Sphere, .id = id });
-    }
-    // Planes
-    for (const auto& [e, id] : packingMaps.planeId) {
-        objectHandles.push_back(ObjectHandle{ .type = ObjectType::Plane, .id = id });
-    }
-    // Boxes
-    for (const auto& [e, id] : packingMaps.boxId) {
-        objectHandles.push_back(ObjectHandle{ .type = ObjectType::Box, .id = id });
-    }
-    // Quads
-    for (const auto& [e, id] : packingMaps.quadId) {
-        objectHandles.push_back(ObjectHandle{ .type = ObjectType::Quad, .id = id });
-    }
-    // Meshes
-    for (const auto& [e, id] : packingMaps.meshId) {
-        objectHandles.push_back(ObjectHandle{ .type = ObjectType::Mesh, .id = id });
-    }
+    auto packType = [&](const ecs::ComponentStorage& storage,
+                        const std::unordered_map<ecs::Entity, int>& m, ObjectType type) {
+        for (const auto& e : storage.entities()) {
+            auto it = m.find(e);
+            if (it == m.end()) continue;
+            objectHandles.push_back(ObjectHandle{ .type = type, .id = it->second });
+        }
+    };
+    packType(registry.storage(Sphere),  packingMaps.sphereId, ObjectType::Sphere);
+    packType(registry.storage(Plane),   packingMaps.planeId,  ObjectType::Plane);
+    packType(registry.storage(Box),     packingMaps.boxId,    ObjectType::Box);
+    packType(registry.storage(Quad),    packingMaps.quadId,   ObjectType::Quad);
+    packType(registry.storage(MeshRef), packingMaps.meshId,   ObjectType::Mesh);
 
     SceneGpuBufferEntry& objectEntry = Core::getScene().getBuffers().object;
     size_t objectRequired = sceneCapacityFromCount(objectHandles.size());
@@ -374,7 +367,8 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     float totalArea = 0.0f;
 
     // Spheres
-    for (const auto& [e, _] : packingMaps.sphereId) {
+    for (const auto& e : registry.storage(Sphere).entities()) {
+        if (packingMaps.sphereId.find(e) == packingMaps.sphereId.end()) continue;
         objectId++;
         if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
@@ -387,9 +381,13 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Planes can't be used for importance sampling (infinite area)
-    objectId += packingMaps.planeId.size();
+    for (const auto& e : registry.storage(Plane).entities()) {
+        if (packingMaps.planeId.find(e) == packingMaps.planeId.end()) continue;
+        objectId++;
+    }
     // Boxes
-    for (const auto& [e, _] : packingMaps.boxId) {
+    for (const auto& e : registry.storage(Box).entities()) {
+        if (packingMaps.boxId.find(e) == packingMaps.boxId.end()) continue;
         objectId++;
         if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
@@ -412,7 +410,8 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Quads
-    for (const auto& [e, id] : packingMaps.quadId) {
+    for (const auto& e : registry.storage(Quad).entities()) {
+        if (packingMaps.quadId.find(e) == packingMaps.quadId.end()) continue;
         objectId++;
         if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 
@@ -431,7 +430,8 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Meshes
-    for (const auto& [e, _] : packingMaps.meshId) {
+    for (const auto& e : registry.storage(MeshRef).entities()) {
+        if (packingMaps.meshId.find(e) == packingMaps.meshId.end()) continue;
         objectId++;
         if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
 

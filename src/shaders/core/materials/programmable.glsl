@@ -9,7 +9,17 @@
 #include "ggx_metal.glsl"
 #include "ggx_glossy.glsl"
 
-#define SCALE 0.2
+#define SCALE 1.0
+#define FEATHER 0.02
+#define SMALL_FEATHER 0.01
+
+// #define PROGRAMMABLE_SMOOTH_RANDOM
+// #define PROGRAMMABLE_CHECKERBOARD
+#define PROGRAMMABLE_TEST_GRID
+
+#define MATERIAL_1 Material(mat_Lambertian, vec3(0.0), 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+#define MATERIAL_2 Material(mat_GgxGlossy, mat.albedo, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0);
+#define MATERIAL_3 Material(mat_GgxGlossy, mat.albedo*0.8, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0);
 
 vec2 planeCoords(in Hit hit) {
     vec3 up = abs(hit.normal.z) < (1.0 - EPS) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
@@ -27,6 +37,8 @@ float cubicCatmullRom(float p0, float p1, float p2, float p3, float t) {
 
 Material createProgrammableMaterial(in Material mat, in Hit hit) {
     vec2 p = planeCoords(hit);
+
+#if defined(PROGRAMMABLE_SMOOTH_RANDOM)
     vec2 cell = p / SCALE;
     ivec2 pos = ivec2(floor(cell));
     vec2 f = fract(cell);
@@ -63,18 +75,30 @@ Material createProgrammableMaterial(in Material mat, in Hit hit) {
     float r = clamp(cubicCatmullRom(cx0, cx1, cx2, cx3, f.y), 0.0, 1.0);
 
     if (r < 0.5) {
-        return Material(mat_Lambertian, mat.albedo * 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+        return MATERIAL_1;
     } else {
-        // return Material(mat_Lambertian, mat.albedo, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-        return Material(mat_GgxGlossy, mat.albedo, 0.1, 0.0, 1.5, 0.0, 0.0, 1.0, 0.0);
+        return MATERIAL_2;
     }
 
-    // if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {
-    //     return Material(mat_Lambertian, mat.albedo * 0.8, 0.0, 0.0, 0.0);
-    // } else {
-    //     return Material(mat_GgxGlossy, mat.albedo, 0.1, 0.2, 0.0);
-    // }
+#elif defined(PROGRAMMABLE_CHECKERBOARD)
+    if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {
+        return MATERIAL_1;
+    } else {
+        return MATERIAL_2;
+    }
 
+#elif defined(PROGRAMMABLE_TEST_GRID)
+    if (abs(p.x - round(p.x / SCALE) * SCALE) < FEATHER || abs(p.y - round(p.y / SCALE) * SCALE) < FEATHER) {
+        return MATERIAL_1;
+    } else if (int(round(p.x / SCALE + 0.5) + round(p.y / SCALE + 0.5) + 1) % 2 == 0) {
+        if (abs(p.x - round(p.x / SCALE * 2) * SCALE / 2) < SMALL_FEATHER || abs(p.y - round(p.y / SCALE * 2) * SCALE / 2) < SMALL_FEATHER) {
+            return MATERIAL_1;
+        }
+        return MATERIAL_2;
+    }
+    return MATERIAL_3;
+
+#endif
 }
 
 #endif // PROGRAMMABLE_GLSL

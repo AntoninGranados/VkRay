@@ -85,8 +85,6 @@ public:
     std::vector<ecs::Entity>& getEntities() { return entities; }
     ScenePackingMaps& getPackingMaps() { return packingMaps; }
 
-    void syncCameraFromEntities();
-
     // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
     void update() { updated = true; ++generation; }

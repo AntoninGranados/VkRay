@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <limits>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -27,13 +28,19 @@ struct PathExtension {
     std::string displayName() const { return name.empty() ? ext : name; }
 };
 
+struct FieldPreset {
+    std::string label;
+    std::variant<float, int, std::string> value;
+};
+
 struct FieldMetadata {
     float min = -std::numeric_limits<float>::infinity();
     float max =  std::numeric_limits<float>::infinity();
-    float step = 1e-5f;
+    float step = 0.0f;
     std::vector<std::string> enumItems;
     std::vector<PathExtension> pathExtensions;
     bool pathSave = false;
+    std::vector<FieldPreset> presets;
 };
 
 class FieldValue {
@@ -141,6 +148,39 @@ public:
 
     void reset() { value = defaultValue; }
     void copyValueFrom(const Field& other) { value = other.value; }
+
+    int findPreset() const {
+        for (int i = 0; i < (int)metadata.presets.size(); i++) {
+            bool m = std::visit([this](const auto& val) -> bool {
+                using V = std::decay_t<decltype(val)>;
+                if constexpr (std::is_same_v<V, std::string>) {
+                    if (type == FieldType::Path)   return get<std::filesystem::path>().string() == val;
+                    if (type == FieldType::String) return get<std::string>() == val;
+                } else if constexpr (std::is_same_v<V, int>) {
+                    if (type == FieldType::Int || type == FieldType::Enum) return get<int>() == val;
+                } else {
+                    if (type == FieldType::Float) return get<float>() == val;
+                }
+                return false;
+            }, metadata.presets[i].value);
+            if (m) return i;
+        }
+        return -1;
+    }
+
+    void applyPreset(int idx) {
+        std::visit([this](const auto& val) {
+            using V = std::decay_t<decltype(val)>;
+            if constexpr (std::is_same_v<V, std::string>) {
+                if (type == FieldType::Path)   set<std::filesystem::path>(std::filesystem::path(val));
+                if (type == FieldType::String) set<std::string>(val);
+            } else if constexpr (std::is_same_v<V, int>) {
+                if (type == FieldType::Int || type == FieldType::Enum) set<int>(val);
+            } else {
+                if (type == FieldType::Float) set<float>(val);
+            }
+        }, metadata.presets[idx].value);
+    }
 
 private:
     std::string id;

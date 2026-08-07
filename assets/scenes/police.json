@@ -18,11 +18,11 @@
         {
             "camera": {
                 "fov": 50.0,
-                "shutter_speed": 0.4
+                "shutter_speed": 0.016667
             },
-            "thin_lens_camera": {
-                "aperture": 0.05,
-                "focus_depth": 6.13
+            "thin_lens": {
+                "f_stop": 10.0,
+                "focal_distance": 6.13
             },
             "name": {
                 "value": "Camera"

@@ -10,13 +10,14 @@
 #include "imgui/imgui_internal.h"
 
 #include "core/core.hpp"
+#include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
 #include "ui_utils.hpp"
 
 EditorUi::EditorUi() {
     initStyle();
     viewportPanel.setOnEntitySelectionCallback(
-        [this](int id) { selection.entity = id; }
+        [this](int id) { clearPreview(); if (selection.entity != id) { selection.entity = id; Core::requestAccumulationRestart(); } }
     );
 }
 
@@ -64,7 +65,7 @@ void EditorUi::initStyle() {
     c[ImGuiCol_Button]                    = ui::kDraculaSurface;
     c[ImGuiCol_ButtonHovered]             = ui::kDraculaPurple;
     c[ImGuiCol_ButtonActive]              = ui::kDraculaPink;
-    c[ImGuiCol_Header]                    = ui::kDraculaSurface;
+    c[ImGuiCol_Header]                    = ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.35f);
     c[ImGuiCol_HeaderHovered]             = ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f);
     c[ImGuiCol_HeaderActive]              = ui::kDraculaPurple;
     c[ImGuiCol_Separator]                 = ImVec4(c[ImGuiCol_TextDisabled].x, c[ImGuiCol_TextDisabled].y, c[ImGuiCol_TextDisabled].z, 0.5f);
@@ -150,6 +151,22 @@ void EditorUi::setupDockspace() {
     }
 }
 
+void EditorUi::setPreview() {
+    if (selection.entity < 0) return;
+    Scene& scene = Core::getScene();
+    const size_t idx = static_cast<size_t>(selection.entity);
+    if (idx >= scene.getEntities().size()) return;
+    const ecs::Entity e = scene.getEntities()[idx];
+    if (!scene.getRegistry().has(e, ecs::Camera)) return;
+    scene.getCamera().setPreviewCamera(e);
+    Core::requestAccumulationRestart();
+}
+
+void EditorUi::clearPreview() {
+    if (Core::getScene().getCamera().clearPreviewCamera())
+        Core::requestAccumulationRestart();
+}
+
 void EditorUi::drawPreview() {
     Scene& scene = Core::getScene();
 
@@ -171,5 +188,6 @@ void EditorUi::drawRender() {
 }
 
 void EditorUi::clearEntitySelection() {
+    clearPreview();
     selection.entity = -1;
 }

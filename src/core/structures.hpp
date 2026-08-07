@@ -32,11 +32,12 @@ enum LightMode : int {
 };
 
 struct alignas(16) CameraUBO {
-    alignas(16) glm::vec3 pos;
-    alignas(16) glm::vec3 dir;
-    float tanHFov;
-    float aperture;
-    float focusDepth;
+    alignas(16) glm::vec3 eye;
+    alignas(16) glm::vec3 U;
+    alignas(16) glm::vec3 V;
+    alignas(16) glm::vec3 W;
+    float lensRadius;
+    float focusDistance;
 };
 
 struct alignas(16) ScreenUBO {

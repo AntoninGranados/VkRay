@@ -12,7 +12,7 @@
     "entities": [
         {
             "camera": { "fov": 35 },
-            "thin_lens_camera": { "aperture": 1.0, "focus_depth": 11 },
+            "thin_lens": { "f_stop": 0.5, "focal_distance": 11 },
             "name": { "value": "Camera" },
             "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
         },

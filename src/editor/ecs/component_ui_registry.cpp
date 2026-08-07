@@ -4,7 +4,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "FontAwesome/IconsFontAwesome7.h"
 
-#include "core/core.hpp"
 #include "core/ecs/components.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "editor/field_ui.hpp"
@@ -94,29 +93,9 @@ void ComponentUiRegistry::init() {
         return update;
     });
 
-    ui_reg.add(Camera, [](Component& c, Registry& r, Entity e) {
-        bool update = false;
-        if (ImGui::CollapsingHeader(ICON_FA_VIDEO " Camera")) {
-            for (const ecs::ComponentField& schema : c.getType().getFields()) {
-                if (schema.isPrivate()) continue;
-                if (schema.isAnimatable()) ui::drawKeyframeButton(e, c, schema.getId());
-                update |= drawField(c, schema);
-            }
-            if (ImGui::Button("Set as preview", ImVec2{ -FLT_MIN, 0 })) {
-                auto& allCameras = r.storage(Camera);
-                for (const auto& other : allCameras.entities()) {
-                    allCameras.get(other).set<bool>("_is_preview", false);
-                }
-                c.set<bool>("_is_preview", true);
-                Core::getScene().getCamera().setPreviewCamera(e);
-                update = true;
-            }
-        }
+    ui_reg.add(ecs::Camera);
 
-        return update;
-    });
-
-    ui_reg.add(ecs::ThinLensCamera);
+    ui_reg.add(ecs::ThinLens);
     ui_reg.add(ecs::GeometricAperture);
     ui_reg.add(ecs::ImageAperture);
     ui_reg.add(ecs::Transform);

@@ -16,6 +16,16 @@ public:
     bool processInput(float deltaTime);
 
     float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
+
+    static float fovFromFocalLength(float focalLength) {
+        return 2.0f * glm::degrees(glm::atan(0.5f / focalLength));
+    }
+    static float lensRadiusFromFStop(float focalLength, float fStop) {
+        return fStop > 0.0f ? focalLength / (2.0f * fStop) : 0.0f;
+    }
+    static float blurFractionFromShutter(float seconds, float fps) {
+        return seconds * fps;
+    }
     glm::vec3 getDirection() const { return glm::normalize(target - position); };
     glm::vec3 getUp() const { return up; }
     glm::mat4 getView() const { return glm::lookAt(position, target, getUp()); };
@@ -30,11 +40,11 @@ public:
     float getFov() const { return fov; }
     void setFov(const float newFov) { fov = glm::clamp(newFov, 1.0f, 160.0f); }
 
-    float getAperture() const { return aperture; };
-    void setAperture(float newAperture) { aperture = newAperture; }
+    float getLensRadius() const { return lensRadius; };
+    void setLensRadius(float newLensRadius) { lensRadius = newLensRadius; }
 
-    float getFocusDepth() const { return focusDepth; };
-    void setFocusDepth(float newFocusDepth) { focusDepth = newFocusDepth; }
+    float getFocusDistance() const { return focusDistance; };
+    void setFocusDistance(float newFocusDistance) { focusDistance = newFocusDistance; }
 
     float getShutterSpeed() const { return shutterSpeed; }
     void setShutterSpeed(float newShutterSpeed) { shutterSpeed = newShutterSpeed; }
@@ -47,9 +57,14 @@ public:
     void resetMouse() { firstMouse = true; }
 
     void setPreviewCamera(ecs::Entity e) { previewEntity = e; }
-    void clearPreviewCamera() { previewEntity.reset(); }
+    bool clearPreviewCamera() {
+        if (!previewEntity.has_value()) return false;
+        previewEntity.reset();
+        return true;
+    }
     bool hasPreviewCamera() const { return previewEntity.has_value(); }
     ecs::Entity getPreviewCamera() const { return *previewEntity; }
+    bool isPreviewEntity(ecs::Entity e) const { return previewEntity.has_value() && *previewEntity == e; }
 
 private:
     enum class DragMode {
@@ -65,8 +80,8 @@ private:
     glm::vec3 position;
     glm::vec3 target;
     float fov = 80.0f;
-    float aperture = 0.0f;
-    float focusDepth = 10.0f;
+    float lensRadius = 0.0f;
+    float focusDistance = 10.0f;
     float shutterSpeed = 0.0f;
 
     float yaw   = 90.0f;
@@ -87,5 +102,5 @@ private:
 
     static constexpr glm::vec3 up = { 0.0f, 1.0f, 0.0f };
 
-    void syncToPreviewTransform();
+    static void updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch);
 };

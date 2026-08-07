@@ -86,7 +86,6 @@ void Core::startRender() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    c.scene.syncCameraFromEntities();
     requestAccumulationRestart();
 }
 
@@ -97,7 +96,6 @@ void Core::startRenderAnim() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    c.scene.syncCameraFromEntities();
     requestAccumulationRestart();
     c.animation.reset(0);
 }
