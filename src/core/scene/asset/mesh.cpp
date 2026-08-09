@@ -13,7 +13,6 @@
 #include "utils/log.hpp"
 #include "mesh_simplify.hpp"
 
-// Public
 MeshAsset::MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
 name(name), vertices(vertices), indices(indices) {
     savedVertices = this->vertices;
@@ -240,7 +239,6 @@ bool MeshAsset::revertSimplification() {
     return true;
 }
 
-// Private helpers
 namespace {
     struct TriangleBin {
         glm::vec3 aabbMin = glm::vec3( std::numeric_limits<float>::infinity());

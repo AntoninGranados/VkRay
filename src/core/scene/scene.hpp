@@ -79,13 +79,12 @@ public:
     const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }
     void setGpuBufferHandles(SceneGpuBuffers handles);
 
-    std::vector<Material>& getMaterials() { return materials; };
-    std::vector<MeshAsset>& getMeshAssets() { return meshAssets; };
+    std::vector<Material>& getMaterials() { return materials; }
+    std::vector<MeshAsset>& getMeshAssets() { return meshAssets; }
     const std::vector<ecs::Entity>& getEntities() const { return entities; }
     std::vector<ecs::Entity>& getEntities() { return entities; }
     ScenePackingMaps& getPackingMaps() { return packingMaps; }
 
-    // Returns true if the scene have been updated since the last call of this function
     bool checkUpdate();
     void update() { updated = true; ++generation; }
     size_t getGeneration() const { return generation; }

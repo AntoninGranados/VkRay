@@ -37,6 +37,7 @@ struct FieldMetadata {
     float min = -std::numeric_limits<float>::infinity();
     float max =  std::numeric_limits<float>::infinity();
     float step = 0.0f;
+    bool color = false;
     std::vector<std::string> enumItems;
     std::vector<PathExtension> pathExtensions;
     bool pathSave = false;
@@ -147,7 +148,6 @@ public:
     template<typename T> void setDefault(const T& v) { writeBlob(defaultValue, v); }
 
     void reset() { value = defaultValue; }
-    void copyValueFrom(const Field& other) { value = other.value; }
 
     int findPreset() const {
         for (int i = 0; i < (int)metadata.presets.size(); i++) {

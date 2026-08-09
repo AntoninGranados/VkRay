@@ -153,24 +153,6 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
     return std::nullopt;
 }
 
-std::vector<AnimationPanel::MaterialField> AnimationPanel::materialAnimFields(MaterialType type) {
-    switch (type) {
-        case MaterialType::Principled:
-            return {{"albedo","Albedo"},{"roughness","Roughness"},{"metalness","Metalness"},{"ior","IoR"},{"transmission","Transmission"}};
-        case MaterialType::Emissive:
-            return {{"albedo","Albedo"},{"emissionStrength","Emission Strength"}};
-        case MaterialType::GgxMetal:
-            return {{"albedo","Albedo"},{"roughness","Roughness"}};
-        case MaterialType::GgxGlossy:
-            return {{"albedo","Albedo"},{"roughness","Roughness"},{"ior","IoR"}};
-        case MaterialType::Dielectric:
-            return {{"albedo","Albedo"},{"roughness","Roughness"},{"ior","IoR"},{"density","Density"},{"transmission","Transmission"},{"anisotropic","Anisotropic"}};
-        case MaterialType::Volume:
-            return {{"albedo","Albedo"},{"density","Density"},{"anisotropic","Anisotropic"}};
-        default:
-            return {{"albedo","Albedo"}};
-    }
-}
 
 void AnimationPanel::content() {
     Scene& scene = Core::getScene();
@@ -300,8 +282,10 @@ void AnimationPanel::content() {
                     if (handle >= 0 && handle < static_cast<int>(scene.getMaterials().size())) {
                         if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
                         ImGui::TextDisabled("Material");
-                        for (const auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[handle].getType())) {
-                            if (auto seg = drawRow(ctx, fieldLabel, fieldId, store.keyframes(handle, fieldId))) {
+                        const Material& hMat = scene.getMaterials()[handle];
+                        for (const auto& fieldId : Material::fieldsForType(hMat.getType())) {
+                            const char* fieldLabel = hMat.getField(fieldId).getLabel().c_str();
+                            if (auto seg = drawRow(ctx, fieldLabel, fieldId.c_str(), store.keyframes(handle, fieldId))) {
                                 pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ handle, fieldId } };
                                 ImGui::OpenPopup("##segment_interp");
                             }
@@ -312,8 +296,10 @@ void AnimationPanel::content() {
 
             if (!hasEntity && hasMaterial) {
                 ImGui::TextDisabled("Material");
-                for (const auto& [fieldId, fieldLabel] : materialAnimFields(scene.getMaterials()[sel.material].getType())) {
-                    if (auto seg = drawRow(ctx, fieldLabel, fieldId, store.keyframes(sel.material, fieldId))) {
+                const Material& selMat = scene.getMaterials()[sel.material];
+                for (const auto& fieldId : Material::fieldsForType(selMat.getType())) {
+                    const char* fieldLabel = selMat.getField(fieldId).getLabel().c_str();
+                    if (auto seg = drawRow(ctx, fieldLabel, fieldId.c_str(), store.keyframes(sel.material, fieldId))) {
                         pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ sel.material, fieldId } };
                         ImGui::OpenPopup("##segment_interp");
                     }

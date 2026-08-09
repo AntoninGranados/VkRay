@@ -18,7 +18,6 @@
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 
-// Public
 void Scene::init() {
     initSystems();
     ensureDefaultAssets();
@@ -192,7 +191,6 @@ bool Scene::checkUpdate() {
     return false;
 }
 
-// Private helpers
 void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::animationSystem);

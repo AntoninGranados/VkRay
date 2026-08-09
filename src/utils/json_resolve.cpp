@@ -4,7 +4,15 @@
 #include <sstream>
 #include <vector>
 
+#include "utils/log.hpp"
+
 using json = nlohmann::ordered_json;
+
+bool expectArray(const json& v, size_t n, const std::string& fieldId) {
+    if (v.is_array() && v.size() >= n) return true;
+    Log::error("SceneSerializer", std::format("Field '{}': expected array of {}, got: {}", fieldId, n, v.dump()));
+    return false;
+}
 
 static float randRange(float lo, float hi, const ResolveCtx& ctx) {
     return lo + std::uniform_real_distribution<float>(0.0f, 1.0f)(ctx.rng) * (hi - lo);

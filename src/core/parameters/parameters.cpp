@@ -34,8 +34,6 @@ Parameter& ParameterRegistry::getParam(const ParameterPath& path) {
     return *it->second;
 }
 
-// ===================== print =====================
-
 std::string Parameter::print() const {
     auto constraints = [&](auto mn, auto mx, auto sentinel_lo, auto sentinel_hi) -> std::string {
         bool hasMn = mn > sentinel_lo;

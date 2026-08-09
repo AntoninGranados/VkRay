@@ -110,7 +110,9 @@ bool drawField(Field& field, const std::string& widgetId) {
         case FieldType::Vec3: {
             setup();
             glm::vec3 v = field.get<glm::vec3>();
-            bool c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
+            bool c = metadata.color
+                ? ImGui::ColorEdit3(widgetId.c_str(), glm::value_ptr(v))
+                : ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
             if (c) { field.set<glm::vec3>(v); changed = true; }
             return changed;
         }

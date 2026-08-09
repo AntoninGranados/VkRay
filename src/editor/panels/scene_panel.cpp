@@ -8,6 +8,7 @@
 
 #include "utils/log.hpp"
 #include "core/core.hpp"
+#include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "editor/parameter_ui.hpp"
@@ -28,6 +29,16 @@ void ScenePanel::content() {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(scene, mode, outPath.get())) {
                     Core::getParameters().set("scene/light_mode", mode);
+                    scene.getCamera().clearPreviewCamera();
+                    selection.entity = -1;
+                    const auto& entities = scene.getEntities();
+                    for (size_t i = 0; i < entities.size(); i++) {
+                        if (scene.getRegistry().has(entities[i], ecs::Camera)) {
+                            selection.entity = static_cast<int>(i);
+                            scene.getCamera().setPreviewCamera(entities[i]);
+                            break;
+                        }
+                    }
                     Core::requestAccumulationRestart();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
                 }
@@ -130,6 +141,7 @@ void ScenePanel::content() {
                 selection.material < static_cast<int>(scene.getMaterials().size())) {
                 const int removed = selection.material;
                 scene.getMaterials().erase(scene.getMaterials().begin() + removed);
+                scene.getAnimationStore().remove(removed);
 
                 auto& matRefs = scene.getRegistry().storage(ecs::MaterialRef);
                 const auto& refEntities = matRefs.entities();

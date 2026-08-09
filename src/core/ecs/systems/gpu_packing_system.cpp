@@ -297,9 +297,10 @@ void materialPackingSystem(Registry&, const FrameContext& frame) {
             .metalness = mat.get<float>("metalness"),
             .ior = mat.get<float>("ior"),
             .transmission = mat.get<float>("transmission"),
-            .emissionStrength = mat.get<float>("emissionStrength"),
+            .emissionStrength = mat.get<float>("emission_strength"),
             .density = mat.get<float>("density"),
             .anisotropic = mat.get<float>("anisotropic"),
+            .alpha = mat.get<float>("alpha"),
         });
     }
 

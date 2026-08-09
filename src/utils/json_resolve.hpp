@@ -14,7 +14,8 @@ struct ResolveCtx {
     std::unordered_map<std::string, std::pair<int, int>> tokens;
 };
 
-// TODO add error/warning handling for missing or added fields
+bool expectArray(const nlohmann::ordered_json& v, size_t n, const std::string& fieldId);
+
 float     resolveFloat(const nlohmann::ordered_json& v, const ResolveCtx& ctx);
 glm::vec2 resolveVec2(const nlohmann::ordered_json& v, const ResolveCtx& ctx);
 glm::vec3 resolveVec3(const nlohmann::ordered_json& v, const ResolveCtx& ctx);

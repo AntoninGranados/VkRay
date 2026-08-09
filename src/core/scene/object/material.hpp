@@ -32,6 +32,7 @@ struct GpuMaterial {
     float emissionStrength;
     float density;
     float anisotropic;
+    float alpha;
 };
 
 struct Material {
@@ -52,20 +53,34 @@ struct Material {
         return fields[fieldIndex.at(id)];
     }
 
+    std::vector<Field>& getFields() { return fields; }
     const std::vector<Field>& getFields() const { return fields; }
+
+    static std::vector<std::string> fieldsForType(MaterialType type) {
+        switch (type) {
+            case MaterialType::Principled:  return {"albedo","roughness","metalness","ior","transmission","alpha"};
+            case MaterialType::Emissive:    return {"albedo","emission_strength"};
+            case MaterialType::GgxMetal:    return {"albedo","roughness"};
+            case MaterialType::GgxGlossy:   return {"albedo","roughness","ior"};
+            case MaterialType::Dielectric:  return {"albedo","roughness","ior","density","transmission","anisotropic"};
+            case MaterialType::Volume:      return {"albedo","density","anisotropic"};
+            default:                        return {"albedo"};
+        }
+    }
 
     static Material make(MaterialType type = MaterialType::Lambertian, std::string name = "") {
         Material m;
         m.name = std::move(name);
         m.type = type;
-        m.addField(Field::make<glm::vec3>("albedo", "Albedo", glm::vec3(0.0f)));
-        m.addField(Field::make<float>("roughness", "Roughness", 0.0f));
-        m.addField(Field::make<float>("metalness", "Metalness", 0.0f));
-        m.addField(Field::make<float>("ior", "IoR", 0.0f));
-        m.addField(Field::make<float>("transmission", "Transmission", 0.0f));
-        m.addField(Field::make<float>("emissionStrength", "Emission Strength", 0.0f));
-        m.addField(Field::make<float>("density", "Density", 1.0f));
-        m.addField(Field::make<float>("anisotropic", "Anisotropic", 0.0f));
+        m.addField(Field::make<glm::vec3>("albedo", "Albedo", glm::vec3(0.0f), { .color = true }));
+        m.addField(Field::make<float>("roughness", "Roughness", 0.0f, { .min = 0.0f, .max = 1.0f }));
+        m.addField(Field::make<float>("metalness", "Metalness", 0.0f, { .min = 0.0f, .max = 1.0f }));
+        m.addField(Field::make<float>("ior", "IoR", 0.0f, { .min = 1.0f }));
+        m.addField(Field::make<float>("transmission", "Transmission", 0.0f, { .min = 0.0f, .max = 1.0f }));
+        m.addField(Field::make<float>("emission_strength", "Emission Strength", 0.0f, { .min = 0.0f }));
+        m.addField(Field::make<float>("density", "Density", 1.0f, { .min = 0.0f }));
+        m.addField(Field::make<float>("anisotropic", "Anisotropic", 0.0f, { .min = -1.0f, .max = 1.0f }));
+        m.addField(Field::make<float>("alpha", "Alpha", 1.0f, { .min = 0.0f, .max = 1.0f }));
         return m;
     }
 

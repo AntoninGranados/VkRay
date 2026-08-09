@@ -68,6 +68,14 @@ void AnimationStore::remove(ecs::Entity e) {
 
 void AnimationStore::remove(MaterialHandle handle) {
     std::erase_if(materialTracks, [&](const auto& kv) { return kv.first.handle == handle; });
+
+    // Shifting the keys (material handles are decreased by one when needed to stay dense)
+    std::unordered_map<MaterialFieldKey, Track, MaterialFieldKeyHash> shifted;
+    for (auto& [key, track] : materialTracks) {
+        MaterialFieldKey newKey = key.handle > handle ? MaterialFieldKey{ key.handle - 1, key.fieldId } : key;
+        shifted[std::move(newKey)] = std::move(track);
+    }
+    materialTracks = std::move(shifted);
 }
 
 void AnimationStore::clear() {

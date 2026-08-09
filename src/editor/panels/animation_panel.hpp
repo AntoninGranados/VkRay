@@ -32,13 +32,10 @@ class AnimationPanel : public IPanel {
         std::variant<EntityTrack, MaterialTrack> track;
     };
 
-    using MaterialField = std::pair<const char*, const char*>;
-
     template<typename T> static std::vector<float> decompose(T v);
     static std::vector<float> decomposeInterpolation(const Keyframe& from, const Keyframe& to, float t);
     static void drawSegmentGraph(const std::string& label, const Keyframe& from, const Keyframe& to);
     static std::optional<std::pair<Keyframe, Keyframe>> drawRow(const RowContext& ctx, const char* label, const char* id, const std::map<int, Keyframe>& keyframes);
-    static std::vector<MaterialField> materialAnimFields(MaterialType type);
 
     std::optional<SegmentPopupState> pendingSegment;
 
