@@ -7,6 +7,19 @@
 
 #include "core/ecs/entity.hpp"
 
+struct ThinLensState {
+    float focalLength   = 0.0f;
+    float fStop         = 0.0f;
+    float focusDistance = 10.0f;
+};
+
+struct TiltShiftState {
+    bool      enabled = false;
+    glm::vec3 focusA  = { -1.0f, 0.0f, 5.0f };
+    glm::vec3 focusB  = {  1.0f, 0.0f, 5.0f };
+    glm::vec3 focusC  = {  0.0f, 1.0f, 5.0f };
+};
+
 class Camera {
 public:
     Camera(glm::vec3 position = glm::vec3(0.0f));
@@ -40,19 +53,24 @@ public:
     float getFov() const { return fov; }
     void setFov(const float newFov) { fov = glm::clamp(newFov, 1.0f, 160.0f); }
 
-    float getLensRadius() const { return lensRadius; };
-    void setLensRadius(float newLensRadius) { lensRadius = newLensRadius; }
+    float getLensRadius() const { return lensRadiusFromFStop(thinLens.focalLength, thinLens.fStop); }
+    float getFocusDistance() const { return thinLens.focusDistance; }
 
-    float getFocusDistance() const { return focusDistance; };
-    void setFocusDistance(float newFocusDistance) { focusDistance = newFocusDistance; }
+    void setDrawFocusPlane(bool v) { drawFocusPlane = v; }
+
+    void setThinLens(ThinLensState state) { thinLens = state; }
+    void setFocusDistance(float d) { thinLens.focusDistance = d; }
+
+    TiltShiftState getTiltShift() const { return tiltShift; }
+    void setTiltShift(glm::vec3 planePosition, glm::vec3 planeRotationEuler);
+    void clearTiltShift() { tiltShift = {}; }
+
+    void clearLens() { drawFocusPlane = false; thinLens = {}; tiltShift = {}; }
 
     float getShutterSpeed() const { return shutterSpeed; }
     void setShutterSpeed(float newShutterSpeed) { shutterSpeed = newShutterSpeed; }
 
-    float getOrbitDistance() const { return orbitDistance; }
-
     bool isLocked() { return locked; }
-    void toggleLock() { locked = !locked; }
 
     void resetMouse() { firstMouse = true; }
 
@@ -76,13 +94,14 @@ private:
     };
 
     float orbitDistance = 10.0f;
+    bool drawFocusPlane = false;
 
     glm::vec3 position;
     glm::vec3 target;
     float fov = 80.0f;
-    float lensRadius = 0.0f;
-    float focusDistance = 10.0f;
     float shutterSpeed = 0.0f;
+    ThinLensState thinLens;
+    TiltShiftState tiltShift;
 
     float yaw   = 90.0f;
     float pitch = 0.0f;

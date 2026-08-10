@@ -37,7 +37,6 @@ public:
     VkExtent2D getRenderExtent() const { return renderExtent; }
 
     void bindParameters();
-    void setSelectedObjectId(int i) { pathtracerUBO.selectedObjectId = i; }
     ImageHandle getLensImageHandle() const { return lensImageHandle; }
 
 private:

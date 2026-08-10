@@ -119,6 +119,33 @@ void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
         scene.update();
     }
     ImGuizmo::PopID();
+
+    if (!scene.getRegistry().has(e, ecs::TiltShiftLens)) return;
+    ecs::Component& ts = scene.getRegistry().get(e, ecs::TiltShiftLens);
+
+    glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("plane_position"))
+        * glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))));
+
+    ImGuizmo::PushID(selection.entity + 10000);
+    if (ImGuizmo::Manipulate(
+            glm::value_ptr(view),
+            glm::value_ptr(proj),
+            static_cast<ImGuizmo::OPERATION>(ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE),
+            ImGuizmo::MODE::WORLD,
+            glm::value_ptr(tsModel))) {
+        if (!isInvalid(tsModel)) {
+            glm::vec3 translation, rotationEuler, scale;
+            ImGuizmo::DecomposeMatrixToComponents(
+                glm::value_ptr(tsModel),
+                glm::value_ptr(translation),
+                glm::value_ptr(rotationEuler),
+                glm::value_ptr(scale));
+            ts.set<glm::vec3>("plane_position", translation);
+            ts.set<glm::vec3>("plane_rotation", rotationEuler);
+            scene.update();
+        }
+    }
+    ImGuizmo::PopID();
 }
 
 int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras) {

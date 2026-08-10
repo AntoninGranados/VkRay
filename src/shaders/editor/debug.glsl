@@ -51,7 +51,6 @@ void main() {
     else if (ubo.debugView == debug_Bounces)       { color = visualize(float(pix.bounces) / 8.0); }
     else if (ubo.debugView == debug_HitChecks)     { float bvh = float(pix.bvhChecks) / 256.0; float tri = float(pix.triangleChecks) / 256.0; color = max(bvh, tri) > 1.0 ? vec3(1.0) : vec3(tri, 0.0, bvh); }
     else if (ubo.debugView == debug_Variance)      { color = vec3(pix.varianceProba); }
-    else if (ubo.debugView == debug_SelectionMask) { color = vec3(pix.selectionMask != 0u ? 1.0 : 0.0); }
     else if (ubo.debugView == debug_SkyMask)       { color = visualize(pix.aov.skyMask); }
 
     imageStore(debugOut, coord, vec4(color, 1.0));

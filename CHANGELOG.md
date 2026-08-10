@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.3]
+
+### Added
+- `TiltShiftLens` component: tilted focal plane via Scheimpflug principle; `plane_position` and `plane_rotation` fields; gizmo in the viewport for direct manipulation
+- Focus plane overlay rendered in the display pass; toggled by `show_focus_plane` on the `ThinLens` component
+- `ThinLensState` and `TiltShiftState` camera structs; `Camera::setTiltShift(planePosition, planeRotationEuler)` computes the three focus-plane anchor points; `clearLens()` resets both
+
+### Changed
+- Display pass now runs at viewport resolution (was render resolution); `EditorRenderer::resize` takes separate render and viewport extents
+- `DisplayUBO` introduced for the display pass; selection highlight removed (was GPU-side, replaced by display shader approach)
+
+---
+
 ## [0.5.2]
 
 ### Added

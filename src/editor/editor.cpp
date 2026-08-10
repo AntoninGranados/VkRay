@@ -2,13 +2,11 @@
 
 #include <algorithm>
 #include <chrono>
-#include <unordered_map>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include "core/core.hpp"
-#include "core/ecs/components.hpp"
 #include "core/export_service.hpp"
 
 Editor& Editor::get() {
@@ -52,8 +50,7 @@ void Editor::run() {
 
         if (Core::consumeResize()) {
             if (Core::getRenderMode() == RenderMode::Preview) {
-                VkExtent2D e = Core::getCoreRenderer().getRenderExtent();
-                get().editorRenderer.resize(e.width, e.height);
+                get().editorRenderer.resize(Core::getCoreRenderer().getRenderExtent(), vpExtent);
             } else {
                 get().editorRenderer.registerImGuiTextures();
             }
@@ -87,28 +84,6 @@ void Editor::run() {
                 Core::requestAccumulationRestart();
             }
         }
-
-        const SceneSelection& sel = get().ui.getSelection();
-        int flatIdx = -1;
-        if (sel.entity >= 0) {
-            const ecs::Entity e = Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
-            const ScenePackingMaps& maps = Core::getScene().getPackingMaps();
-            const ecs::Registry& registry = Core::getScene().getRegistry();
-            int i = 0;
-            auto check = [&](const ecs::ComponentType& type, const std::unordered_map<ecs::Entity, int>& m) {
-                for (const auto& ent : registry.storage(type).entities()) {
-                    if (m.find(ent) == m.end()) continue;
-                    if (ent == e) { flatIdx = i; return; }
-                    i++;
-                }
-            };
-            check(ecs::Sphere, maps.sphereId);
-            if (flatIdx < 0) check(ecs::Plane, maps.planeId);
-            if (flatIdx < 0) check(ecs::Box, maps.boxId);
-            if (flatIdx < 0) check(ecs::Quad, maps.quadId);
-            if (flatIdx < 0) check(ecs::MeshRef, maps.meshId);
-        }
-        Core::getCoreRenderer().setSelectedObjectId(flatIdx);
 
         Core::renderFrame([&](FrameContext& frameContext) {
             if (frameContext.swapchainGeneration != lastSwapchainGeneration)

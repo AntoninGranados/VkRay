@@ -13,7 +13,7 @@ class EditorRenderer {
 public:
     void initGraph(RenderGraphBuilder& builder, CoreResources& coreResources);
     void registerImGuiTextures();
-    void resize(uint32_t width, uint32_t height);
+    void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
     void render(const FrameContext& frameContext);
 
     ImTextureID getDisplayTexId() const { return displayTexId; }
@@ -25,7 +25,8 @@ public:
     TimestampHandle getUiTimestamp()      const { return uiTimestamp; }
 
 private:
-    DebugUBO debugUBO{};
+    DebugUBO   debugUBO{};
+    DisplayUBO displayUBO{};
 
     ImageHandle swapchainImageHandle;
     ImageHandle displayImageHandle;
@@ -33,6 +34,7 @@ private:
     ImageHandle outputImageHandle;
 
     BufferHandle debugUBOHandle;
+    BufferHandle displayUBOHandle;
 
     PassHandle displayPassHandle, debugPassHandle, uiPassHandle, presentPassHandle;
 
@@ -43,7 +45,8 @@ private:
     SubmissionGroupHandle editorGroupHandle = {};
     SubmissionGroupHandle uiGroupHandle     = {};
 
-    VkExtent2D renderExtent = {};
+    VkExtent2D renderExtent   = {};
+    VkExtent2D viewportExtent = {};
 
     ImTextureID displayTexId = 0;
     ImTextureID debugTexId   = 0;

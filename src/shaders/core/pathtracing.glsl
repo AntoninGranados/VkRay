@@ -11,32 +11,9 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "random.glsl"
 #include "sky.glsl"
 #include "adaptive_sampling.glsl"
+#include "camera.glsl"
 
 layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
-
-
-vec2 sampleLens(inout uint seed) {
-    for (int i = 0; i < 16; i++) {
-        vec2 p = vec2(rand(seed), rand(seed)) * 2.0 - 1.0;
-        float mask = texture(lensSampler, p * 0.5 + 0.5).r;
-        if (rand(seed) < mask) return p;
-    }
-    return vec2(0.0);
-}
-
-Ray getRay(Camera camera, vec2 ndc_pos, in bool enableFocus, inout uint seed) {
-    vec3 offset = vec3(0.0);
-    if (enableFocus && ubo.camera.lensRadius > 0.0) {
-        vec2 p = sampleLens(seed);
-        vec3 lensRight = normalize(camera.U);
-        vec3 lensUp    = normalize(camera.V);
-        offset = ubo.camera.lensRadius * (lensRight * p.x + lensUp * p.y);
-    }
-
-    vec3 origin     = camera.eye + offset;
-    vec3 focalPoint = camera.eye + (ndc_pos.x * camera.U - ndc_pos.y * camera.V + camera.W) * ubo.camera.focusDistance;
-    return Ray(origin, normalize(focalPoint - origin));
-}
 
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     Hit bestHit = NO_HIT;
@@ -59,9 +36,9 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
         return;
     }
 
-    Material mat    = resolveMaterial(getMaterial(firstHit.object), firstHit);
-    mat.albedo     *= firstHit.vertexColor;
-    float guideMix  = 1.0 / float(pixelInfo.count);
+    Material mat   = resolveMaterial(getMaterial(firstHit.object), firstHit);
+    mat.albedo    *= firstHit.vertexColor;
+    float guideMix = 1.0 / float(pixelInfo.count);
 
     vec3 right = normalize(camera.U);
     vec3 up    = normalize(camera.V);
@@ -191,8 +168,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
         }
-        if (mat.type == mat_Volume || mat.type == mat_Dielectric) {
+        if (mat.type == mat_Volume || mat.type == mat_Dielectric || mat.type == mat_Principled) {
             currentMedium = bsdf.medium.isVolume ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
+        } else {
+            currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
         }
         bool isSkipped = false;
         if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
@@ -214,7 +193,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             if (rand(seed) > p) break;
             throughput /= p;
         }
-        if (mat.type != mat_Volume && !(mat.type == mat_Dielectric && bsdf.medium.isVolume)) {
+        if (mat.type != mat_Volume && !((mat.type == mat_Dielectric || mat.type == mat_Principled) && bsdf.medium.isVolume)) {
             prevBsdf = bsdf;
             prevHit = hit;
             prevIsSkipped = isSkipped;
@@ -240,7 +219,7 @@ vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, fl
     if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
         pixelInfo.count++;
         vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screen.size;
-        Ray ray = getRay(camera, fragPos + offset, true, seed);
+        Ray ray = getRay(camera, fragPos + offset, seed);
         collectGBuffer(ray, camera, pixelInfo);
         vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
         if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
@@ -283,7 +262,6 @@ void main() {
         initInfo.bvhChecks              = 0u;
         initInfo.triangleChecks         = 0u;
         initInfo.varianceProba          = 0.0;
-        initInfo.selectionMask          = 0u;
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
@@ -310,21 +288,6 @@ void main() {
     updatedInfo.triangleChecks  = pixelInfo.triangleChecks;
     updatedInfo.varianceProba   = pixelInfo.varianceProba;
     pixelInfoBuffer.pixels[blockVarianceIndex] = updatedInfo;
-
-    Ray primaryRay = getRay(camera, fragPos, false, seed);
-    Hit selectedHit = NO_HIT;
-    int selectedIntersection = 0;
-    if (ubo.selectedObjectId >= 0) {
-        Statistics selectionStats = Statistics(0, 0);
-        selectedHit = rayObjectIntersection(primaryRay, objectBuffer.objects[ubo.selectedObjectId], false, INFINITY, selectionStats);
-        if (foundIntersection(selectedHit)) {
-            selectedIntersection = 1;
-        }
-    }
-    uint selectionIndex = varianceIndexFromCoord(pixelCoord, texSize);
-    PixelInfo selectionInfo = pixelInfoBuffer.pixels[selectionIndex];
-    selectionInfo.selectionMask = uint(selectedIntersection);
-    pixelInfoBuffer.pixels[selectionIndex] = selectionInfo;
 
     float totalCount = prevCount + takenSamples;
     vec3 mixedColor = prevColor;

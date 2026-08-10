@@ -20,7 +20,6 @@ enum class DebugView : int {
     Bounces,
     HitChecks,
     Variance,
-    SelectionMask,
     SkyMask,
 };
 
@@ -31,13 +30,25 @@ enum LightMode : int {
     Empty,
 };
 
+struct alignas(16) ThinLensUBO {
+    float lensRadius;
+    float focusDistance;
+};
+
+struct alignas(16) TiltShiftUBO {
+    alignas(16) glm::vec3 focusA;
+    alignas(16) glm::vec3 focusB;
+    alignas(16) glm::vec3 focusC;
+    int enabled;
+};
+
 struct alignas(16) CameraUBO {
     alignas(16) glm::vec3 eye;
     alignas(16) glm::vec3 U;
     alignas(16) glm::vec3 V;
     alignas(16) glm::vec3 W;
-    float lensRadius;
-    float focusDistance;
+    ThinLensUBO thinLens;
+    TiltShiftUBO tiltShift;
 };
 
 struct alignas(16) ScreenUBO {
@@ -57,7 +68,6 @@ struct alignas(16) RenderUBO {
 
 struct PathtracerUBO {
     uint32_t  sampleCount;
-    int32_t   selectedObjectId = -1;
     CameraUBO camera;
     ScreenUBO screen;
     RenderUBO render;
@@ -99,6 +109,5 @@ struct PixelInfo {
     uint32_t bvhChecks;
     uint32_t triangleChecks;
     float    varianceProba;
-    uint32_t selectionMask;
 };
 

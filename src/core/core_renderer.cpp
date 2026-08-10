@@ -160,8 +160,14 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.camera.U            = right * aspect * tanHFov;
     pathtracerUBO.camera.V            = camUp * tanHFov;
     pathtracerUBO.camera.W            = dir;
-    pathtracerUBO.camera.lensRadius   = camera.getLensRadius();
-    pathtracerUBO.camera.focusDistance = camera.getFocusDistance();
+    pathtracerUBO.camera.thinLens.lensRadius = camera.getLensRadius();
+    pathtracerUBO.camera.thinLens.focusDistance = camera.getFocusDistance();
+
+    const TiltShiftState ts = camera.getTiltShift();
+    pathtracerUBO.camera.tiltShift.focusA  = ts.focusA;
+    pathtracerUBO.camera.tiltShift.focusB  = ts.focusB;
+    pathtracerUBO.camera.tiltShift.focusC  = ts.focusC;
+    pathtracerUBO.camera.tiltShift.enabled = ts.enabled ? 1 : 0;
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);

@@ -98,6 +98,16 @@ inline const ComponentType ThinLens = ComponentType::builder("thin_lens")
         {"f/22",  22.0f},
         {"f/32",  32.0f}
     } }, true)
+    .field<bool>("show_focus_plane", false)
+    .build();
+
+inline const ComponentType TiltShiftLens = ComponentType::builder("tilt_shift_lens")
+    .description("Tilted focal plane and lens shift (Scheimpflug principle).")
+    .icon(ICON_FA_EXPAND)
+    .group("object")
+    .needs("thin_lens")
+    .field<glm::vec3>("plane_position", glm::vec3(0.0f, 0.0f, 0.0f), { .step = 0.1f }, true)
+    .field<glm::vec3>("plane_rotation", glm::vec3(0.0f, 0.0f, 0.0f), { .step = 1.0f }, true)
     .build();
 
 inline const ComponentType GeometricAperture = ComponentType::builder("geometric_aperture")

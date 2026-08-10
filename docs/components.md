@@ -68,6 +68,17 @@ Depth-of-field via thin lens approximation.
 | `focal_length` | float | 1 | 0.05 ... 10 | yes |
 | `focal_distance` | float | 10 | ≥ 0.1 | yes |
 | `f_stop` | float | 0 | 0 ... 64 | yes |
+| `show_focus_plane` | bool | false |  | no |
+
+### Tilt Shift Lens
+Tilted focal plane and lens shift (Scheimpflug principle).
+
+**Needs:** `thin_lens`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `plane_position` | vec3 | [0, 0, 0] |  | yes |
+| `plane_rotation` | vec3 | [0, 0, 0] |  | yes |
 
 ### Geometric Aperture
 Polygon aperture blade shape.

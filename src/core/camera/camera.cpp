@@ -8,13 +8,41 @@
 
 #include "core/core.hpp"
 
+void Camera::setTiltShift(glm::vec3 planePosition, glm::vec3 planeRotationEuler) {
+    const glm::vec3 worldNormal = glm::normalize(
+        glm::quat(glm::radians(planeRotationEuler)) * glm::vec3(0.0f, 0.0f, 1.0f));
+
+    const glm::vec3 camDir = getDirection();
+    const glm::vec3 camRight = glm::normalize(glm::cross(camDir, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 camUp = glm::cross(camRight, camDir);
+    const glm::vec3 diff = planePosition - position;
+
+    const glm::vec3 center = glm::vec3(
+        glm::dot(diff, camRight),
+        glm::dot(diff, camUp),
+        glm::dot(diff, camDir));
+    const glm::vec3 normal = glm::normalize(glm::vec3(
+        glm::dot(worldNormal, camRight),
+        glm::dot(worldNormal, camUp),
+        glm::dot(worldNormal, camDir)));
+
+    const glm::vec3 arbUp = std::abs(glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f))) < 0.99f
+        ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
+    const glm::vec3 right = glm::normalize(glm::cross(normal, arbUp));
+    const glm::vec3 upOnPlane = glm::cross(normal, right);
+
+    tiltShift.enabled = true;
+    tiltShift.focusA = center + right;
+    tiltShift.focusB = center - right;
+    tiltShift.focusC = center + upOnPlane;
+}
+
 void Camera::updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch) {
     const glm::vec3 n = glm::normalize(dir);
     yaw = glm::degrees(atan2(n.z, n.x));
     pitch = glm::degrees(asin(n.y));
 }
 
-// Public
 Camera::Camera(glm::vec3 position)
     : position(position),
       target(glm::vec3(0.0f)) {

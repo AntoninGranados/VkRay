@@ -31,7 +31,6 @@ struct PixelInfo {
     uint  bvhChecks;
     uint  triangleChecks;
     float varianceProba;
-    uint  selectionMask;
 };
 
 #define debug_None          0
@@ -45,7 +44,6 @@ struct PixelInfo {
 #define debug_Bounces       8
 #define debug_HitChecks     9
 #define debug_Variance      10
-#define debug_SelectionMask 11
-#define debug_SkyMask       12
+#define debug_SkyMask       11
 
 #endif

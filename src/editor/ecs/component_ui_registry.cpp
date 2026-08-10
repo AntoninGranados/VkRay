@@ -96,6 +96,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Camera);
 
     ui_reg.add(ecs::ThinLens);
+    ui_reg.add(ecs::TiltShiftLens);
     ui_reg.add(ecs::GeometricAperture);
     ui_reg.add(ecs::ImageAperture);
     ui_reg.add(ecs::Transform);

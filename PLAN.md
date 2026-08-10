@@ -8,7 +8,7 @@ This plan will most likely be subjected to heavy modifications.
 - [x] **[0.5.2] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
   - Support polygon apertures (square, hex, ...) and custom mask textures
   - Controls bokeh blade count and rotation
-- [ ] **[0.5.3] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
+- [x] **[0.5.3] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
   - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
   - Enables oblique focus planes and tilt-shift miniature effects
 - [ ] **[0.5.4] Spectral rendering**: replace RGB with wavelength-sampled radiance

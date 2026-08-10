@@ -4,13 +4,25 @@
 #include "utils.glsl"
 #include "materials/materials.glsl"
 
+struct ThinLensUBO {
+    float lensRadius;
+    float focusDistance;
+};
+
+struct TiltShiftUBO {
+    vec3 focusA;
+    vec3 focusB;
+    vec3 focusC;
+    int enabled;
+};
+
 struct CameraUBO {
     vec3 eye;
     vec3 U;
     vec3 V;
     vec3 W;
-    float lensRadius;
-    float focusDistance;
+    ThinLensUBO thinLens;
+    TiltShiftUBO tiltShift;
 };
 
 struct ScreenUBO {
@@ -30,7 +42,6 @@ struct RenderUBO {
 
 layout(std140, set = 0, binding = 0) uniform UBO {
     int       sampleCount;
-    int       selectedObjectId;
     CameraUBO camera;
     ScreenUBO screen;
     RenderUBO render;

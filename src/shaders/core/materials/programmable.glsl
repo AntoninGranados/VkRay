@@ -16,10 +16,11 @@
 // #define PROGRAMMABLE_SMOOTH_RANDOM
 // #define PROGRAMMABLE_CHECKERBOARD
 #define PROGRAMMABLE_TEST_GRID
+// #define PROGRAMMABLE_POINT_GRID
 
-#define MATERIAL_1 Material(mat_Lambertian, vec3(0.0), 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-#define MATERIAL_2 Material(mat_GgxGlossy, mat.albedo, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0);
-#define MATERIAL_3 Material(mat_GgxGlossy, mat.albedo*0.8, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0);
+#define MATERIAL_NORMAL Material(mat_GgxGlossy, mat.albedo, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0);
+#define MATERIAL_DARK   Material(mat_GgxGlossy, mat.albedo*0.8, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0);
+#define MATERIAL_BLACK  Material(mat_Lambertian, vec3(0.02), 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0);
 
 vec2 planeCoords(in Hit hit) {
     vec3 up = abs(hit.normal.z) < (1.0 - EPS) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
@@ -75,28 +76,47 @@ Material createProgrammableMaterial(in Material mat, in Hit hit) {
     float r = clamp(cubicCatmullRom(cx0, cx1, cx2, cx3, f.y), 0.0, 1.0);
 
     if (r < 0.5) {
-        return MATERIAL_1;
+        return MATERIAL_BLACK;
+        return MATERIAL_NORMAL;
     } else {
-        return MATERIAL_2;
     }
 
 #elif defined(PROGRAMMABLE_CHECKERBOARD)
     if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {
-        return MATERIAL_1;
+        return MATERIAL_BLACK;
+        return MATERIAL_NORMAL;
     } else {
-        return MATERIAL_2;
     }
 
 #elif defined(PROGRAMMABLE_TEST_GRID)
     if (abs(p.x - round(p.x / SCALE) * SCALE) < FEATHER || abs(p.y - round(p.y / SCALE) * SCALE) < FEATHER) {
-        return MATERIAL_1;
+        return MATERIAL_BLACK;
     } else if (int(round(p.x / SCALE + 0.5) + round(p.y / SCALE + 0.5) + 1) % 2 == 0) {
         if (abs(p.x - round(p.x / SCALE * 2) * SCALE / 2) < SMALL_FEATHER || abs(p.y - round(p.y / SCALE * 2) * SCALE / 2) < SMALL_FEATHER) {
-            return MATERIAL_1;
+            return MATERIAL_BLACK;
         }
-        return MATERIAL_2;
+        return MATERIAL_NORMAL;
     }
-    return MATERIAL_3;
+    return MATERIAL_DARK;
+
+#elif defined(PROGRAMMABLE_POINT_GRID)
+    float x = abs(p.x - round(p.x / SCALE) * SCALE);
+    float y = abs(p.y - round(p.y / SCALE) * SCALE);
+    if (x*x + y*y < 0.08*0.08) {
+        return MATERIAL_NORMAL;
+    }
+    return MATERIAL_BLACK;
+
+    // if (abs(p.x - round(p.x / SCALE) * SCALE) < FEATHER || abs(p.y - round(p.y / SCALE) * SCALE) < FEATHER) {
+    //     return MATERIAL_BLACK;
+    // }
+    // } else if (int(round(p.x / SCALE + 0.5) + round(p.y / SCALE + 0.5) + 1) % 2 == 0) {
+    //     if (abs(p.x - round(p.x / SCALE * 2) * SCALE / 2) < SMALL_FEATHER || abs(p.y - round(p.y / SCALE * 2) * SCALE / 2) < SMALL_FEATHER) {
+    //         return MATERIAL_BLACK;
+    //     return MATERIAL_NORMAL;
+    //     }
+    // return MATERIAL_DARK;
+    // }
 
 #endif
 }
