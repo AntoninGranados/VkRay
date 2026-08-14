@@ -12,17 +12,15 @@
 #include "core/scene/scene.hpp"
 #include "editor/ecs/component_ui_registry.hpp"
 #include "editor/ui_utils.hpp"
-#include "material_ui.hpp"
 
 void SceneUI::drawInspectors(Scene& scene, SceneSelection& selection) {
     drawSelectedEntityUI(scene, selection);
-    drawSelectedMaterialUI(scene, selection);
     drawSelectedMeshAssetUI(scene, selection);
 }
 
 void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
-    if (selection.entity < 0) return;
-    ecs::Entity& e = scene.getEntities()[static_cast<size_t>(selection.entity)];
+    if (!selection.entity.has_value()) return;
+    ecs::Entity& e = *selection.entity;
     bool openNewComponentPopup = false;
 
     bool open = true;
@@ -53,7 +51,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
     if (ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
         std::vector<const ecs::ComponentType*> sortedTypes;
         for (const ecs::ComponentType& ct : ecs::ComponentType::all()) sortedTypes.push_back(&ct);
-        std::sort(sortedTypes.begin(), sortedTypes.end(),
+        std::stable_sort(sortedTypes.begin(), sortedTypes.end(),
             [](const ecs::ComponentType* a, const ecs::ComponentType* b) {
                 return a->getGroup() < b->getGroup();
             }
@@ -90,6 +88,7 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
             if (ImGui::Button(label.c_str(), ui::kButtonSize)) {
                 registry.add(e, *type);
                 Core::requestAccumulationRestart();
+                scene.update();
                 ImGui::CloseCurrentPopup();
             }
 
@@ -132,23 +131,9 @@ void SceneUI::drawSelectedEntityUI(Scene& scene, SceneSelection& selection) {
         ImGui::EndPopup();
     }
 
-    if (!open) selection.entity = -1;
+    if (!open) selection.entity.reset();
 }
 
-void SceneUI::drawSelectedMaterialUI(Scene& scene, SceneSelection& selection) {
-    if (selection.material < 0) return;
-
-    bool open = true;
-    ImGui::SetNextWindowSizeConstraints({250.0f, 50.0f}, {FLT_MAX, FLT_MAX});
-    ImGui::SetNextWindowSize({300.0f, 400.0f}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("Material", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing);
-    {
-        if (drawMaterialUI(selection.material)) scene.update();
-    }
-    ImGui::End();
-
-    if (!open) selection.material = -1;
-}
 
 void SceneUI::drawSelectedMeshAssetUI(Scene& scene, SceneSelection& selection) {
     if (selection.meshAsset < 0) return;

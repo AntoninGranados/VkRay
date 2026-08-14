@@ -5,26 +5,40 @@
 #include "../random.glsl"
 
 #include "material_utils.glsl"
-#include "ggx_metal.glsl"
-#include "ggx_glossy.glsl"
+#include "metal.glsl"
+#include "glossy.glsl"
 #include "dielectric.glsl"
 
+Material principledGlossyProxy(in Material mat) {
+    return mat_makeGlossy(mat_albedo(mat), mat_principled_roughness(mat), mat_principled_ior(mat));
+}
+
+Material principledDielectricProxy(in Material mat) {
+    Material proxy;
+    proxy.type = mat_Dielectric;
+    mat_setAlbedo(proxy, mat_albedo(mat));
+    proxy.payload[3] = mat_principled_roughness(mat);
+    proxy.payload[4] = mat_principled_ior(mat);
+    proxy.payload[6] = mat_principled_density(mat);
+    return proxy;
+}
+
 BSDFEval evalPrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
-    float pMetal = mat.metalness;
-    float pTrans = (1.0 - pMetal) * mat.transmission;
+    float pMetal  = mat_principled_metalness(mat);
+    float pTrans  = (1.0 - pMetal) * mat_principled_transmission(mat);
     float pGlossy = 1.0 - pMetal - pTrans;
 
-    BSDFEval evalMetal = evalGgxMetalBSDF(mat, hit, wo, wi);
-    BSDFEval evalGlossy = evalGgxGlossyBSDF(mat, hit, wo, wi);
+    BSDFEval eMetal  = evalMetalBSDF(mat, hit, wo, wi);
+    BSDFEval eGlossy = evalGlossyBSDF(principledGlossyProxy(mat), hit, wo, wi);
 
     return BSDFEval(
-        pMetal * evalMetal.f + pGlossy * evalGlossy.f,
-        pMetal * evalMetal.pdf + pGlossy * evalGlossy.pdf
+        pMetal * eMetal.f + pGlossy * eGlossy.f,
+        pMetal * eMetal.pdf + pGlossy * eGlossy.pdf
     );
 }
 
 BSDFSample samplePrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
-    if (mat.alpha < rand(seed)) {
+    if (mat_principled_alpha(mat) < rand(seed)) {
         BSDFSample bsdf;
         bsdf.wi      = -wo;
         bsdf.pdf     = 1.0;
@@ -35,24 +49,24 @@ BSDFSample samplePrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
         return bsdf;
     }
 
-    float pMetal = mat.metalness;
-    float pTrans = (1.0 - pMetal) * mat.transmission;
+    float pMetal  = mat_principled_metalness(mat);
+    float pTrans  = (1.0 - pMetal) * mat_principled_transmission(mat);
     float pGlossy = 1.0 - pMetal - pTrans;
 
     float r = rand(seed);
     BSDFSample bsdf;
     if (r < pMetal) {
-        bsdf = sampleGgxMetalBSDF(mat, hit, wo, seed);
+        bsdf = sampleMetalBSDF(mat, hit, wo, seed);
         bsdf.medium.isDielectric = false;
         bsdf.medium.isVolume     = false;
     } else if (r < pMetal + pTrans) {
-        bsdf = sampleDielectricBSDF(mat, hit, wo, seed);
-        bsdf.medium.absorption    = mat.albedo;
-        bsdf.medium.density       = mat.density;
+        bsdf = sampleDielectricBSDF(principledDielectricProxy(mat), hit, wo, seed);
+        bsdf.medium.absorption    = mat_albedo(mat);
+        bsdf.medium.density       = mat_principled_density(mat);
         bsdf.medium.scatterAlbedo = 0.0;
-        bsdf.medium.anisotropic   = mat.anisotropic;
+        bsdf.medium.anisotropic   = mat_principled_anisotropic(mat);
     } else {
-        bsdf = sampleGgxGlossyBSDF(mat, hit, wo, seed);
+        bsdf = sampleGlossyBSDF(principledGlossyProxy(mat), hit, wo, seed);
     }
 
     if (!bsdf.isDelta) {

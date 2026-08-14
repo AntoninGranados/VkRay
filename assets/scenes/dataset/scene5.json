@@ -1,54 +1,69 @@
 {
     "version": 1,
-
     "light": "night",
-
     "materials": [
-        { "name": "Ground", "bsdf": "lambertian", "albedo": [0.35, 0.35, 0.35] },
-        { "name": "KeyLight",  "bsdf": "emissive", "albedo": [1.0, 0.97, 0.90], "emission_strength": 40 },
-        { "name": "FillLight", "bsdf": "emissive", "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
         {
-            "name": "SphereMat_{row}_{col}",
-            "bsdf": "principled",
-            "albedo":    { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
-            "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
-            "metalness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } },
-            "ior": 1.5,
+            "name": { "value": "Ground" },
+            "diffuse": { "albedo": [0.35, 0.35, 0.35] }
+        },
+        {
+            "name": { "value": "KeyLight" },
+            "emissive": { "albedo": [1.0, 0.97, 0.9], "emission_strength": 40 }
+        },
+        {
+            "name": { "value": "FillLight" },
+            "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 }
+        },
+        {
+            "name": { "value": "SphereMat_{row}_{col}" },
+            "principled": {
+                "albedo": { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
+                "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
+                "metalness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } },
+                "ior": 1.5
+            },
             "grid": { "rows": 4, "cols": 4 }
         }
     ],
-
     "entities": [
         {
             "camera": { "fov": { "rand": { "min": 55, "max": 75 } } },
             "name": { "value": "Camera" },
             "spherical": {
-                "radius":    { "rand": { "min": 9, "max": 14 } },
-                "azimuth":   { "rand": { "min": -20, "max": 20 } },
+                "radius": { "rand": { "min": 9, "max": 14 } },
+                "azimuth": { "rand": { "min": -20, "max": 20 } },
                 "elevation": { "rand": { "min": 20, "max": 80 } },
-                "target":    [0, 1, 0]
+                "target": [0, 1, 0]
             }
         },
         {
             "plane": {},
-            "material": "Ground",
+            "material_ref": { "handle": "Ground" },
             "name": { "value": "Ground" }
         },
         {
             "quad": {},
-            "material": "KeyLight",
+            "material_ref": { "handle": "KeyLight" },
             "name": { "value": "KeyLight" },
-            "transform": { "position": [4, 20, -4], "rotation": [67.1, -45, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [4, 20, -4],
+                "rotation": [67.1, -45, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "FillLight",
+            "material_ref": { "handle": "FillLight" },
             "name": { "value": "FillLight" },
-            "transform": { "position": [-5, 6, 0], "rotation": [26.57, 90, 0], "scale": [4, 4, 1] }
+            "transform": {
+                "position": [-5, 6, 0],
+                "rotation": [26.57, 90, 0],
+                "scale": [4, 4, 1]
+            }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "SphereMat_{row}_{col}",
+            "material_ref": { "handle": "SphereMat_{row}_{col}" },
             "name": { "value": "Sphere_{row}_{col}" },
             "transform": {
                 "position": [

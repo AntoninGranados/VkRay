@@ -9,7 +9,6 @@
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/scene/object/material.hpp"
 
 namespace ui {
 
@@ -81,7 +80,6 @@ inline void PopTransparentStyleColor() {
 inline const ImVec4 kKeyframeOnColor = kDraculaOrange;
 
 void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fieldId);
-void drawKeyframeButton(MaterialHandle handle, const std::string& fieldId);
 
 inline void drawIndentLine(float x, float startY, float endY) {
     ImGui::GetWindowDrawList()->AddLine(

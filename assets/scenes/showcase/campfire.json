@@ -1,14 +1,20 @@
 {
     "version": 1,
-
     "light": "empty",
-
     "materials": [
-        { "name": "Base",      "bsdf": "lambertian", "albedo": [1, 1, 1] },
-        { "name": "Fire",      "bsdf": "emissive",   "albedo": [1, 1, 1], "emission_strength": 50 },
-        { "name": "Fireflies", "bsdf": "emissive",   "albedo": [1, 1, 1], "emission_strength": 5 }
+        {
+            "name": { "value": "Base" },
+            "diffuse": { "albedo": [1, 1, 1] }
+        },
+        {
+            "name": { "value": "Fire" },
+            "emissive": { "albedo": [1, 1, 1], "emission_strength": 50 }
+        },
+        {
+            "name": { "value": "Fireflies" },
+            "emissive": { "albedo": [1, 1, 1], "emission_strength": 5 }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 35 },
@@ -18,19 +24,19 @@
         },
         {
             "mesh": { "path": "./assets/models/campfire/campsite.obj" },
-            "material": "Base",
+            "material_ref": { "handle": "Base" },
             "transform": {},
             "name": { "value": "Campsite" }
         },
         {
             "mesh": { "path": "./assets/models/campfire/fire.obj" },
-            "material": "Fire",
+            "material_ref": { "handle": "Fire" },
             "transform": {},
             "name": { "value": "Fire" }
         },
         {
             "mesh": { "path": "./assets/models/campfire/fireflies.obj" },
-            "material": "Fireflies",
+            "material_ref": { "handle": "Fireflies" },
             "transform": {},
             "name": { "value": "Fireflies" }
         }

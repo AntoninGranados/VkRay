@@ -1,26 +1,26 @@
-#ifndef GGX_GLOSSY_GLSL
-#define GGX_GLOSSY_GLSL
+#ifndef GLOSSY_GLSL
+#define GLOSSY_GLSL
 
 #include "../utils.glsl"
 #include "../random.glsl"
 
 #include "material_utils.glsl"
-#include "lambertian.glsl"
+#include "diffuse.glsl"
 #include "ggx_utils.glsl"
 
-BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     if (dot(hit.normal, wi) <= 0.0) return BSDFEval(vec3(0.0), 0.0);
 
-    float alpha = max(mat.roughness * mat.roughness, EPS_HIGH);
+    float alpha = max(mat_glossy_roughness(mat) * mat_glossy_roughness(mat), EPS_HIGH);
     vec3 m = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
 
-    float F_VoH = fresnelDielectric(t.VoH,  1.0, mat.ior);
-    float F_NoL = fresnelDielectric(t.cosWi, 1.0, mat.ior);
-    float F_NoV = fresnelDielectric(t.cosWo, 1.0, mat.ior);
+    float F_VoH = fresnelDielectric(t.VoH,  1.0, mat_glossy_ior(mat));
+    float F_NoL = fresnelDielectric(t.cosWi, 1.0, mat_glossy_ior(mat));
+    float F_NoV = fresnelDielectric(t.cosWo, 1.0, mat_glossy_ior(mat));
 
     vec3 fSpec = F_VoH * ggxBRDF(t);
-    vec3 fDiff = (1.0 - F_NoL) * (1.0 - F_NoV) * mat.albedo / PI;
+    vec3 fDiff = (1.0 - F_NoL) * (1.0 - F_NoV) * mat_albedo(mat) / PI;
 
     return BSDFEval(
         fSpec + fDiff,
@@ -28,11 +28,11 @@ BSDFEval evalGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) 
     );
 }
 
-BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
-    float alpha = max(mat.roughness * mat.roughness, EPS_HIGH);
+BSDFSample sampleGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+    float alpha = max(mat_glossy_roughness(mat) * mat_glossy_roughness(mat), EPS_HIGH);
 
     float NoV = max(dot(hit.normal, wo), 0.0);
-    float pSpec = fresnelDielectric(NoV, 1.0, mat.ior);
+    float pSpec = fresnelDielectric(NoV, 1.0, mat_glossy_ior(mat));
 
     float xi = rand(seed);
 
@@ -44,7 +44,7 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
         wi = cosineScatter(mat, hit.normal, wo, seed);
     }
 
-    BSDFEval eval = evalGgxGlossyBSDF(mat, hit, wo, wi);
+    BSDFEval eval = evalGlossyBSDF(mat, hit, wo, wi);
 
     BSDFSample bsdf;
     float cosB = abs(dot(hit.normal, wi));
@@ -57,4 +57,4 @@ BSDFSample sampleGgxGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout ui
     return bsdf;
 }
 
-#endif // GGX_GLOSSY_GLSL
+#endif // GLOSSY_GLSL

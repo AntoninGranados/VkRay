@@ -22,7 +22,6 @@ void animationSystem(Registry& registry) {
     if (frameChanged) {
         prevFrame = currFrame;
         store.evaluate(registry, float(currFrame));
-        store.evaluate(Core::getScene().getMaterials(), float(currFrame));
         Core::getScene().update();
         Core::requestAccumulationRestart();
         return;
@@ -36,7 +35,6 @@ void animationSystem(Registry& registry) {
     std::uniform_real_distribution<float> dist(0.0f, shutterSpeed);
     const float t = static_cast<float>(currFrame) + dist(rng);
     store.evaluate(registry, t);
-    store.evaluate(Core::getScene().getMaterials(), t);
     Core::getScene().update();
 }
 

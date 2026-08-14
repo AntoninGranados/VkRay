@@ -91,7 +91,6 @@ void Application::initScene(const std::string& sceneFile) {
     Core::getScene().init();
 
     auto& uiReg = ecs::ComponentUiRegistry::get();
-    uiReg.setMaterials(&Core::getScene().getMaterials());
     uiReg.setMeshAssets(&Core::getScene().getMeshAssets());
     ecs::ComponentUiRegistry::init();
 

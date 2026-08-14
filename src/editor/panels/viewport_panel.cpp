@@ -13,7 +13,7 @@
 #include "core/core.hpp"
 #include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
-#include "core/scene/object/object.hpp"
+#include "core/scene/object.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"
@@ -45,14 +45,14 @@ void ViewportPanel::content() {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
             ImVec2 mp = ImGui::GetMousePos();
             float dist;
-            int entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
+            auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
             if (onEntitySelection) onEntitySelection(entityId);
         }
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
             ImVec2 mp = ImGui::GetMousePos();
             float dist;
-            int hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
-            if (hit >= 0) {
+            auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
+            if (hit.has_value()) {
                 scene.getCamera().setFocusDistance(dist);
                 Core::requestAccumulationRestart();
             }
@@ -72,9 +72,9 @@ void ViewportPanel::content() {
 }
 
 void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
-    if (selection.entity < 0) return;
+    if (!selection.entity.has_value()) return;
 
-    ecs::Entity e = scene.getEntities()[static_cast<size_t>(selection.entity)];
+    const ecs::Entity e = *selection.entity;
     if (!scene.getRegistry().has(e, ecs::Transform)) return;
 
     ecs::Component& t = scene.getRegistry().get(e, ecs::Transform);
@@ -93,7 +93,7 @@ void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
         opFlags &= ~ImGuizmo::OPERATION::SCALE;
     }
 
-    ImGuizmo::PushID(selection.entity);
+    ImGuizmo::PushID(static_cast<int>(e.getId()) * 2);
     if (ImGuizmo::Manipulate(
             glm::value_ptr(view),
             glm::value_ptr(proj),
@@ -126,7 +126,7 @@ void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
     glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("plane_position"))
         * glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))));
 
-    ImGuizmo::PushID(selection.entity + 10000);
+    ImGuizmo::PushID(static_cast<int>(e.getId()) * 2 + 1);
     if (ImGuizmo::Manipulate(
             glm::value_ptr(view),
             glm::value_ptr(proj),
@@ -148,10 +148,10 @@ void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
     ImGuizmo::PopID();
 }
 
-int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras) {
+std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras) {
     const Ray ray = getRay(screenPos, { size.x, size.y }, scene.getCamera());
     float tClosest = std::numeric_limits<float>::infinity();
-    int idClosest = -1;
+    std::optional<ecs::Entity> entityClosest;
 
     auto& planeStorage = scene.getRegistry().storage(ecs::Plane);
     auto& boxStorage = scene.getRegistry().storage(ecs::Box);
@@ -161,8 +161,7 @@ int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist
     auto& transformStorage = scene.getRegistry().storage(ecs::Transform);
 
     const ::Camera& sceneCamera = scene.getCamera();
-    for (size_t i = 0; i < scene.getEntities().size(); i++) {
-        const ecs::Entity& e = scene.getEntities()[i];
+    for (const ecs::Entity& e : scene.getEntities()) {
         if (!transformStorage.has(e)) continue;
 
         const ecs::Component& transform = transformStorage.get(e);
@@ -203,10 +202,10 @@ int ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist
 
         if (t >= 0.0f && t < tClosest) {
             tClosest = t;
-            idClosest = static_cast<int>(i);
+            entityClosest = e;
         }
     }
 
     dist = tClosest;
-    return idClosest;
+    return entityClosest;
 }

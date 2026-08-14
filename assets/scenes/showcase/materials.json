@@ -1,19 +1,40 @@
 {
     "version": 1,
-
     "light": "empty",
-
     "materials": [
-        { "name": "Floor",     "bsdf": "ggx_glossy", "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 },
-        { "name": "Light",     "bsdf": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 },
-        { "name": "Matte",     "bsdf": "lambertian", "albedo": [1, 1, 1] },
-        { "name": "Plastic",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 },
-        { "name": "Ceramic",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 },
-        { "name": "Metal",     "bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
-        { "name": "RoughMetal","bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.3 },
-        { "name": "Glass",     "bsdf": "dielectric", "albedo": [1, 1, 1], "ior": 1.5 }
+        {
+            "name": { "value": "Floor" },
+            "glossy": { "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 }
+        },
+        {
+            "name": { "value": "Light" },
+            "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 }
+        },
+        {
+            "name": { "value": "Matte" },
+            "diffuse": { "albedo": [1, 1, 1] }
+        },
+        {
+            "name": { "value": "Plastic" },
+            "glossy": { "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 }
+        },
+        {
+            "name": { "value": "Ceramic" },
+            "glossy": { "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 }
+        },
+        {
+            "name": { "value": "Metal" },
+            "metal": { "albedo": [1, 1, 1], "roughness": 0.1 }
+        },
+        {
+            "name": { "value": "RoughMetal" },
+            "metal": { "albedo": [1, 1, 1], "roughness": 0.3 }
+        },
+        {
+            "name": { "value": "Glass" },
+            "dielectric": { "albedo": [1, 1, 1], "ior": 1.5 }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 20 },
@@ -22,54 +43,62 @@
         },
         {
             "plane": {},
-            "material": "Floor",
+            "material_ref": { "handle": "Floor" },
             "name": { "value": "Floor" }
         },
         {
             "quad": {},
-            "material": "Light",
+            "material_ref": { "handle": "Light" },
             "name": { "value": "KeyLight" },
-            "transform": { "position": [0, 10, -5], "rotation": [68.2, 0, 0], "scale": [10, 5, 1] }
+            "transform": {
+                "position": [0, 10, -5],
+                "rotation": [68.2, 0, 0],
+                "scale": [10, 5, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Light",
+            "material_ref": { "handle": "Light" },
             "name": { "value": "FillLight" },
-            "transform": { "position": [-9.6, 7, 1], "rotation": [11.31, 90, 0], "scale": [4, 4, 1] }
+            "transform": {
+                "position": [-9.6, 7, 1],
+                "rotation": [11.31, 90, 0],
+                "scale": [4, 4, 1]
+            }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "Matte",
+            "material_ref": { "handle": "Matte" },
             "name": { "value": "Matte" },
             "transform": { "position": [-5, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "Plastic",
+            "material_ref": { "handle": "Plastic" },
             "name": { "value": "Plastic" },
             "transform": { "position": [-3, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "Ceramic",
+            "material_ref": { "handle": "Ceramic" },
             "name": { "value": "Ceramic" },
             "transform": { "position": [-1, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "Metal",
+            "material_ref": { "handle": "Metal" },
             "name": { "value": "Metal" },
             "transform": { "position": [1, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "RoughMetal",
+            "material_ref": { "handle": "RoughMetal" },
             "name": { "value": "RoughMetal" },
             "transform": { "position": [3, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
-            "material": "Glass",
+            "material_ref": { "handle": "Glass" },
             "name": { "value": "Glass" },
             "transform": { "position": [5, 0.65, 0] }
         }

@@ -1,16 +1,36 @@
 {
     "version": 1,
-
     "light": "night",
-
     "materials": [
-        { "name": "Light",   "bsdf": "emissive",   "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 },
-        { "name": "Floor",   "bsdf": "programmable","albedo": [0.75, 0.75, 0.75] },
-        { "name": "Text",    "bsdf": "ggx_glossy",  "albedo": [0.10, 0.85, 0.05], "roughness": 0.25, "ior": 1.5 },
-        { "name": "Dragon1", "bsdf": "dielectric",  "albedo": [1.0, 0.25, 0.25], "roughness": 0.2, "ior": 1.5 },
-        { "name": "Dragon2", "bsdf": "ggx_metal",   "albedo": [0.25, 0.25, 1.0], "roughness": 0.2 }
+        {
+            "name": { "value": "Light" },
+            "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 }
+        },
+        {
+            "name": { "value": "Floor" },
+            "programmable": { "albedo": [0.75, 0.75, 0.75] }
+        },
+        {
+            "name": { "value": "Text" },
+            "glossy": {
+                "albedo": [0.1, 0.85, 0.05],
+                "roughness": 0.25,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": { "value": "Dragon1" },
+            "dielectric": {
+                "albedo": [1.0, 0.25, 0.25],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": { "value": "Dragon2" },
+            "metal": { "albedo": [0.25, 0.25, 1.0], "roughness": 0.2 }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 40 },
@@ -20,33 +40,45 @@
         },
         {
             "sphere": { "radius": 5 },
-            "material": "Light",
+            "material_ref": { "handle": "Light" },
             "name": { "value": "Light" },
             "transform": { "position": [0, 20, 5] }
         },
         {
             "plane": {},
-            "material": "Floor",
+            "material_ref": { "handle": "Floor" },
             "name": { "value": "Floor" },
             "transform": { "position": [0, -3, 0] }
         },
         {
             "mesh": { "path": "./assets/models/vkray.obj" },
-            "material": "Text",
+            "material_ref": { "handle": "Text" },
             "name": { "value": "Text" },
-            "transform": { "position": [0, 0, -10], "rotation": [60, 0, 0], "scale": [2, 2, 2] }
+            "transform": {
+                "position": [0, 0, -10],
+                "rotation": [60, 0, 0],
+                "scale": [2, 2, 2]
+            }
         },
         {
             "mesh": { "path": "./assets/models/dragon.obj", "smooth": true },
-            "material": "Dragon1",
+            "material_ref": { "handle": "Dragon1" },
             "name": { "value": "Dragon1" },
-            "transform": { "position": [-8, -1.7, -9], "rotation": [180, 20, 180], "scale": [4, 4, 4] }
+            "transform": {
+                "position": [-8, -1.7, -9],
+                "rotation": [180, 20, 180],
+                "scale": [4, 4, 4]
+            }
         },
         {
             "mesh": { "path": "./assets/models/dragon.obj", "smooth": true },
-            "material": "Dragon2",
+            "material_ref": { "handle": "Dragon2" },
             "name": { "value": "Dragon2" },
-            "transform": { "position": [8, -1.7, -9], "rotation": [0, 20, 0], "scale": [4, 4, 4] }
+            "transform": {
+                "position": [8, -1.7, -9],
+                "rotation": [0, 20, 0],
+                "scale": [4, 4, 4]
+            }
         }
     ]
 }

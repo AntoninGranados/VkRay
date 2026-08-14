@@ -1,12 +1,12 @@
 {
     "version": 1,
-
     "light": "day",
-
     "materials": [
-        { "name": "Sponza", "bsdf": "lambertian", "albedo": [1, 1, 1] }
+        {
+            "name": { "value": "Sponza" },
+            "diffuse": { "albedo": [1, 1, 1] }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 70 },
@@ -15,7 +15,7 @@
         },
         {
             "mesh": { "path": "./assets/models/sponza.obj" },
-            "material": "Sponza",
+            "material_ref": { "handle": "Sponza" },
             "name": { "value": "Sponza" },
             "transform": { "scale": [0.04, 0.04, 0.04] }
         }

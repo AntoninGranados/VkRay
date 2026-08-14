@@ -15,10 +15,10 @@ BSDFEval evalDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi)
 
 BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
     float etaI = 1.0;   // TODO: keep track of the current IOR as we traverse the scene
-    float etaT = mat.ior;
+    float etaT = mat_dielectric_ior(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
-    vec3 normal = hit.normal + randomInSphere(seed) * mat.roughness;
+    vec3 normal = hit.normal + randomInSphere(seed) * mat_dielectric_roughness(mat);
     if (length(normal) < EPS) normal = hit.normal;
     else normal = normalize(normal);
 
@@ -51,11 +51,11 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     bsdf.pdf                  = pdf;
     bsdf.isDelta              = true;
     bsdf.medium.isDielectric  = entering;
-    bsdf.medium.isVolume      = entering && mat.density > 0.0;
-    bsdf.medium.absorption    = mat.albedo;
-    bsdf.medium.density       = mat.density;
-    bsdf.medium.scatterAlbedo = mat.transmission;
-    bsdf.medium.anisotropic   = mat.anisotropic;
+    bsdf.medium.isVolume      = entering && mat_dielectric_density(mat) > 0.0;
+    bsdf.medium.absorption    = mat_albedo(mat);
+    bsdf.medium.density       = mat_dielectric_density(mat);
+    bsdf.medium.scatterAlbedo = mat_dielectric_transmission(mat);
+    bsdf.medium.anisotropic   = mat_dielectric_anisotropic(mat);
     return bsdf;
 }
 

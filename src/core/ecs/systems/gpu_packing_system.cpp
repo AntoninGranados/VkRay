@@ -10,7 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "core/scene/object/object.hpp"
+#include "core/scene/object.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
@@ -46,26 +46,20 @@ void spherePackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    auto& packingMaps = Core::getScene().getPackingMaps();
-
     std::vector<GpuSphere> gpuSpheres;
-    packingMaps.sphereId.clear();
-    size_t sphereId = 0;
 
     for (const auto& e : spheres.entities()) {
         if (!transforms.has(e)) continue;
         const Component& s = spheres.get(e);
         const Component& t = transforms.get(e);
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
+        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
 
         gpuSpheres.push_back(GpuSphere{
             .center = t.get<glm::vec3>("position"),
             .radius = s.get<float>("radius"),
             .materialHandle = handle,
         });
-
-        packingMaps.sphereId[e] = sphereId++;
     }
 
     fillBufferWithPadding(frame, Core::getScene().getBuffers().sphere, gpuSpheres);
@@ -81,26 +75,20 @@ void planePackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    auto& packingMaps = Core::getScene().getPackingMaps();
-
     std::vector<GpuPlane> gpuPlanes;
-    packingMaps.planeId.clear();
-    size_t planeId = 0;
 
     for (const auto& e : planes.entities()) {
         if (!transforms.has(e)) continue;
         const Component& t = transforms.get(e);
         const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
+        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
 
         gpuPlanes.push_back(GpuPlane{
             .point = t.get<glm::vec3>("position"),
             .normal = glm::normalize(rot * glm::vec3(0.0f, 1.0f, 0.0f)),
             .materialHandle = handle,
         });
-
-        packingMaps.planeId[e] = planeId++;
     }
 
     fillBufferWithPadding(frame, Core::getScene().getBuffers().plane, gpuPlanes);
@@ -116,11 +104,7 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    auto& packingMaps = Core::getScene().getPackingMaps();
-
     std::vector<GpuBox> gpuBoxes;
-    packingMaps.boxId.clear();
-    size_t boxId = 0;
 
     for (const auto& e : boxes.entities()) {
         if (!transforms.has(e)) continue;
@@ -129,15 +113,13 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
             * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
             * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
+        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
 
         gpuBoxes.push_back(GpuBox{
             .transform = local,
             .invTransform = glm::inverse(local),
             .materialHandle = handle,
         });
-
-        packingMaps.boxId[e] = boxId++;
     }
 
     fillBufferWithPadding(frame, Core::getScene().getBuffers().box, gpuBoxes);
@@ -153,17 +135,13 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    auto& packingMaps = Core::getScene().getPackingMaps();
-
     std::vector<GpuQuad> gpuQuads;
-    packingMaps.quadId.clear();
-    size_t quadId = 0;
 
     for (const auto& e : quads.entities()) {
         if (!transforms.has(e)) continue;
         const Component& t = transforms.get(e);
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
+        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
 
         const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
         const glm::vec3 scale = t.get<glm::vec3>("scale");
@@ -178,8 +156,6 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
             .normal = glm::normalize(normal),
             .materialHandle = handle,
         });
-
-        packingMaps.quadId[e] = quadId++;
     }
 
     fillBufferWithPadding(frame, Core::getScene().getBuffers().quad, gpuQuads);
@@ -194,8 +170,6 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
     const size_t gen = Core::getScene().getGeneration();
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
-
-    auto& packingMaps = Core::getScene().getPackingMaps();
 
     std::vector<GpuMesh> meshTemplates;
     std::vector<Vertex> vertices;
@@ -247,8 +221,6 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
     fillBufferWithPadding(frame, Core::getScene().getBuffers().bvh, bvhNodes);
 
     std::vector<GpuMesh> meshes;
-    packingMaps.meshId.clear();
-    size_t meshId = 0;
 
     for (const auto& e : meshRefs.entities()) {
         if (!transforms.has(e)) continue;
@@ -259,7 +231,7 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
             * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
             * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
-        MaterialHandle handle = materialRefs.has(e) ? materialRefs.get(e).get<int>("handle") : 0;
+        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
 
         meshes.push_back(GpuMesh{
             .transform = local,
@@ -274,37 +246,88 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
             .smoothShading = meshTemplate.smoothShading,
             .hasVertexColor = meshTemplate.hasVertexColor,
         });
-
-        packingMaps.meshId[e] = meshId++;
     }
 
     fillBufferWithPadding(frame, Core::getScene().getBuffers().mesh, meshes);
 }
 
-void materialPackingSystem(Registry&, const FrameContext& frame) {
+void materialPackingSystem(Registry& registry, const FrameContext& frame) {
     static std::array<size_t, MAX_FRAME_IN_FLIGHT> lastGen = {};
     const size_t gen = Core::getScene().getGeneration();
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    std::vector<GpuMaterial> materials;
+    const auto& matEnts = registry.storage(ecs::Material).entities();
+    std::vector<GpuMaterial> gpuMaterials;
+    gpuMaterials.reserve(matEnts.size());
 
-    for (const auto& mat : Core::getScene().getMaterials()) {
-        materials.push_back(GpuMaterial{
-            .type = mat.getType(),
-            .albedo = mat.get<glm::vec3>("albedo"),
-            .roughness = mat.get<float>("roughness"),
-            .metalness = mat.get<float>("metalness"),
-            .ior = mat.get<float>("ior"),
-            .transmission = mat.get<float>("transmission"),
-            .emissionStrength = mat.get<float>("emission_strength"),
-            .density = mat.get<float>("density"),
-            .anisotropic = mat.get<float>("anisotropic"),
-            .alpha = mat.get<float>("alpha"),
-        });
+    for (int slot = 0; slot < static_cast<int>(matEnts.size()); ++slot) {
+        const ecs::Entity e = matEnts[slot];
+        GpuMaterial gpu{};
+
+        auto albedo = [&](const Component& c) {
+            const glm::vec3 a = c.get<glm::vec3>("albedo");
+            gpu.payload[0] = a.r; gpu.payload[1] = a.g; gpu.payload[2] = a.b;
+        };
+
+        if (registry.has(e, ecs::Principled)) {
+            const Component& c = registry.get(e, ecs::Principled);
+            gpu.type = 0;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("roughness");
+            gpu.payload[4] = c.get<float>("metalness");
+            gpu.payload[5] = c.get<float>("ior");
+            gpu.payload[6] = c.get<float>("transmission");
+            gpu.payload[7] = c.get<float>("density");
+            gpu.payload[8] = c.get<float>("anisotropic");
+            gpu.payload[9] = c.get<float>("alpha");
+        } else if (registry.has(e, ecs::Emissive)) {
+            const Component& c = registry.get(e, ecs::Emissive);
+            gpu.type = 1;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("emission_strength");
+        } else if (registry.has(e, ecs::Diffuse)) {
+            const Component& c = registry.get(e, ecs::Diffuse);
+            gpu.type = 2;
+            albedo(c);
+        } else if (registry.has(e, ecs::Metal)) {
+            const Component& c = registry.get(e, ecs::Metal);
+            gpu.type = 3;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("roughness");
+        } else if (registry.has(e, ecs::Glossy)) {
+            const Component& c = registry.get(e, ecs::Glossy);
+            gpu.type = 4;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("roughness");
+            gpu.payload[4] = c.get<float>("ior");
+        } else if (registry.has(e, ecs::Dielectric)) {
+            const Component& c = registry.get(e, ecs::Dielectric);
+            gpu.type = 5;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("roughness");
+            gpu.payload[4] = c.get<float>("ior");
+            gpu.payload[5] = c.get<float>("transmission");
+            gpu.payload[6] = c.get<float>("density");
+            gpu.payload[7] = c.get<float>("anisotropic");
+        } else if (registry.has(e, ecs::Volume)) {
+            const Component& c = registry.get(e, ecs::Volume);
+            gpu.type = 6;
+            albedo(c);
+            gpu.payload[3] = c.get<float>("density");
+            gpu.payload[4] = c.get<float>("anisotropic");
+        } else if (registry.has(e, ecs::ProgrammableMaterial)) {
+            const Component& c = registry.get(e, ecs::ProgrammableMaterial);
+            gpu.type = 7;
+            albedo(c);
+        } else if (slot > 0 && !gpuMaterials.empty()) {
+            gpu = gpuMaterials[0];
+        }
+
+        gpuMaterials.push_back(gpu);
     }
 
-    fillBufferWithPadding(frame, Core::getScene().getBuffers().material, materials);
+    fillBufferWithPadding(frame, Core::getScene().getBuffers().material, gpuMaterials);
 }
 
 void objectPackingSystem(Registry& registry, const FrameContext& frame) {
@@ -313,23 +336,23 @@ void objectPackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    const auto& packingMaps = Core::getScene().getPackingMaps();
+    const auto& transforms = registry.storage(Transform);
 
     std::vector<ObjectHandle> objectHandles;
 
-    auto packType = [&](const ecs::ComponentStorage& storage,
-                        const std::unordered_map<ecs::Entity, int>& m, ObjectType type) {
+    auto packType = [&](const ecs::ComponentStorage& storage, ObjectType type) {
+        int idx = 0;
         for (const auto& e : storage.entities()) {
-            auto it = m.find(e);
-            if (it == m.end()) continue;
-            objectHandles.push_back(ObjectHandle{ .type = type, .id = it->second });
+            if (!transforms.has(e)) continue;
+            objectHandles.push_back(ObjectHandle{ .type = type, .id = idx });
+            idx++;
         }
     };
-    packType(registry.storage(Sphere),  packingMaps.sphereId, ObjectType::Sphere);
-    packType(registry.storage(Plane),   packingMaps.planeId,  ObjectType::Plane);
-    packType(registry.storage(Box),     packingMaps.boxId,    ObjectType::Box);
-    packType(registry.storage(Quad),    packingMaps.quadId,   ObjectType::Quad);
-    packType(registry.storage(MeshRef), packingMaps.meshId,   ObjectType::Mesh);
+    packType(registry.storage(Sphere),  ObjectType::Sphere);
+    packType(registry.storage(Plane),   ObjectType::Plane);
+    packType(registry.storage(Box),     ObjectType::Box);
+    packType(registry.storage(Quad),    ObjectType::Quad);
+    packType(registry.storage(MeshRef), ObjectType::Mesh);
 
     SceneGpuBufferEntry& objectEntry = Core::getScene().getBuffers().object;
     size_t objectRequired = sceneCapacityFromCount(objectHandles.size());
@@ -359,9 +382,15 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
-    const auto& materials = Core::getScene().getMaterials();
     const auto& meshAssets = Core::getScene().getMeshAssets();
-    const auto& packingMaps = Core::getScene().getPackingMaps();
+
+    const auto& matEnts = registry.storage(ecs::Material).entities();
+    auto isEmissive = [&](ecs::Entity objEntity) -> bool {
+        if (!materialRefs.has(objEntity)) return false;
+        const int handle = materialRefs.get(objEntity).get<int>("handle");
+        if (handle < 0 || handle >= static_cast<int>(matEnts.size())) return false;
+        return registry.has(matEnts[handle], ecs::Emissive);
+    };
 
     std::vector<GpuLight> lights;
     int32_t objectId = 0;
@@ -369,9 +398,9 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
 
     // Spheres
     for (const auto& e : registry.storage(Sphere).entities()) {
-        if (packingMaps.sphereId.find(e) == packingMaps.sphereId.end()) continue;
+        if (!transforms.has(e)) continue;
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
+        if (!isEmissive(e)) continue;
 
         const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).get<float>("radius"), 2.0f);
         totalArea += area;
@@ -383,14 +412,14 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     }
     // Planes can't be used for importance sampling (infinite area)
     for (const auto& e : registry.storage(Plane).entities()) {
-        if (packingMaps.planeId.find(e) == packingMaps.planeId.end()) continue;
+        if (!transforms.has(e)) continue;
         objectId++;
     }
     // Boxes
     for (const auto& e : registry.storage(Box).entities()) {
-        if (packingMaps.boxId.find(e) == packingMaps.boxId.end()) continue;
+        if (!transforms.has(e)) continue;
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
+        if (!isEmissive(e)) continue;
 
         const Component& bt = transforms.get(e);
         const glm::mat4 local = glm::translate(glm::mat4(1.0f), bt.get<glm::vec3>("position"))
@@ -412,9 +441,9 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     }
     // Quads
     for (const auto& e : registry.storage(Quad).entities()) {
-        if (packingMaps.quadId.find(e) == packingMaps.quadId.end()) continue;
+        if (!transforms.has(e)) continue;
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
+        if (!isEmissive(e)) continue;
 
         const Component& qt = transforms.get(e);
         const glm::mat4 local = glm::translate(glm::mat4(1.0f), qt.get<glm::vec3>("position"))
@@ -432,9 +461,9 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     }
     // Meshes
     for (const auto& e : registry.storage(MeshRef).entities()) {
-        if (packingMaps.meshId.find(e) == packingMaps.meshId.end()) continue;
+        if (!transforms.has(e)) continue;
         objectId++;
-        if (!materialRefs.has(e) || materials[materialRefs.get(e).get<int>("handle")].getType() != MaterialType::Emissive) continue;
+        if (!isEmissive(e)) continue;
 
         const Component& mt = transforms.get(e);
         const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), mt.get<glm::vec3>("position"))

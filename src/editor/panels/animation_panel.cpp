@@ -10,7 +10,6 @@
 #include "core/animation/animation_handler.hpp"
 #include "core/animation/animation_store.hpp"
 #include "core/core.hpp"
-#include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
@@ -210,13 +209,13 @@ void AnimationPanel::content() {
     // Timeline
     {
         const SceneSelection& sel = Editor::getUi().getSelection();
-        const bool hasEntity = sel.entity >= 0 && sel.entity < static_cast<int>(scene.getEntities().size());
-        const bool hasMaterial = sel.material >= 0 && sel.material < static_cast<int>(scene.getMaterials().size());
 
-        if (!hasEntity && !hasMaterial) {
+        if (!sel.entity.has_value()) {
             ImGui::TextDisabled("No selection");
         } else {
             AnimationStore& store = scene.getAnimationStore();
+            ecs::Registry& registry = scene.getRegistry();
+            const ecs::Entity entity = *sel.entity;
 
             constexpr float labelWidth = 150.0f;
             constexpr float rowHeight = 18.0f;
@@ -250,57 +249,24 @@ void AnimationPanel::content() {
                 .tickSecond = tickSecond,
             };
 
-            if (hasEntity) {
-                ecs::Registry& registry = scene.getRegistry();
-                const ecs::Entity entity = scene.getEntities()[static_cast<size_t>(sel.entity)];
-                bool firstGroup = true;
+            bool firstGroup = true;
+            for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
+                if (!registry.has(entity, ct)) continue;
 
-                for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
-                    if (!registry.has(entity, ct)) continue;
+                bool hasAnim = false;
+                for (const ecs::ComponentField& f : ct.getFields())
+                    if (f.isAnimatable()) { hasAnim = true; break; }
+                if (!hasAnim) continue;
 
-                    bool hasAnim = false;
-                    for (const ecs::ComponentField& f : ct.getFields())
-                        if (f.isAnimatable()) { hasAnim = true; break; }
-                    if (!hasAnim) continue;
+                if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
+                firstGroup = false;
 
-                    if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
-                    firstGroup = false;
+                ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
-                    ImGui::TextDisabled("%s", ct.getLabel().c_str());
-
-                    for (const ecs::ComponentField& f : ct.getFields()) {
-                        if (!f.isAnimatable()) continue;
-                        if (auto seg = drawRow(ctx, f.getLabel().c_str(), f.getId().c_str(), store.keyframes(entity, ct, f.getId()))) {
-                            pendingSegment = { f.getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f.getId() } };
-                            ImGui::OpenPopup("##segment_interp");
-                        }
-                    }
-                }
-
-                if (registry.has(entity, ecs::MaterialRef)) {
-                    const int handle = registry.get(entity, ecs::MaterialRef).get<int>("handle");
-                    if (handle >= 0 && handle < static_cast<int>(scene.getMaterials().size())) {
-                        if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
-                        ImGui::TextDisabled("Material");
-                        const Material& hMat = scene.getMaterials()[handle];
-                        for (const auto& fieldId : Material::fieldsForType(hMat.getType())) {
-                            const char* fieldLabel = hMat.getField(fieldId).getLabel().c_str();
-                            if (auto seg = drawRow(ctx, fieldLabel, fieldId.c_str(), store.keyframes(handle, fieldId))) {
-                                pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ handle, fieldId } };
-                                ImGui::OpenPopup("##segment_interp");
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!hasEntity && hasMaterial) {
-                ImGui::TextDisabled("Material");
-                const Material& selMat = scene.getMaterials()[sel.material];
-                for (const auto& fieldId : Material::fieldsForType(selMat.getType())) {
-                    const char* fieldLabel = selMat.getField(fieldId).getLabel().c_str();
-                    if (auto seg = drawRow(ctx, fieldLabel, fieldId.c_str(), store.keyframes(sel.material, fieldId))) {
-                        pendingSegment = { fieldLabel, seg->first, seg->second, MaterialTrack{ sel.material, fieldId } };
+                for (const ecs::ComponentField& f : ct.getFields()) {
+                    if (!f.isAnimatable()) continue;
+                    if (auto seg = drawRow(ctx, f.getLabel().c_str(), f.getId().c_str(), store.keyframes(entity, ct, f.getId()))) {
+                        pendingSegment = { f.getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f.getId() } };
                         ImGui::OpenPopup("##segment_interp");
                     }
                 }
@@ -313,13 +279,8 @@ void AnimationPanel::content() {
                 if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
                     const Interpolation interpolation = static_cast<Interpolation>(current);
                     pendingSegment->from.setInterpolation(interpolation);
-                    std::visit([&](const auto& t) {
-                        using T = std::decay_t<decltype(t)>;
-                        if constexpr (std::is_same_v<T, EntityTrack>)
-                            store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
-                        else
-                            store.setInterpolation(t.handle, t.fieldId, pendingSegment->from.getFrame(), interpolation);
-                    }, pendingSegment->track);
+                    const EntityTrack& t = pendingSegment->track;
+                    store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
                 }
                 drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);
                 ImGui::EndPopup();

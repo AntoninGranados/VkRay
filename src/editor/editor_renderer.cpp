@@ -1,7 +1,5 @@
 #include "editor_renderer.hpp"
 
-#include <unordered_map>
-
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
@@ -140,10 +138,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     Scene& scene = Core::getScene();
     const ::Camera& cam = scene.getCamera();
     const SceneSelection& sel = Editor::getUi().getSelection();
-    const auto& entities = scene.getEntities();
     const ecs::Registry& reg = scene.getRegistry();
-    const ScenePackingMaps& maps = scene.getPackingMaps();
-
     {
         const glm::vec3 dir   = cam.getDirection();
         const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -160,23 +155,25 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane   = 0;
 
-    if (sel.entity >= 0 && static_cast<size_t>(sel.entity) < entities.size()) {
-        const ecs::Entity e = entities[static_cast<size_t>(sel.entity)];
+    if (sel.entity.has_value()) {
+        const ecs::Entity e = *sel.entity;
 
+        const auto& allTransforms = reg.storage(ecs::Transform);
         int flatIdx = -1;
         int i = 0;
-        auto check = [&](const ecs::ComponentType& type, const std::unordered_map<ecs::Entity, int>& m) {
+        auto check = [&](const ecs::ComponentType& type) {
+            if (flatIdx >= 0) return;
             for (const auto& ent : reg.storage(type).entities()) {
-                if (m.find(ent) == m.end()) continue;
+                if (!allTransforms.has(ent)) continue;
                 if (ent == e) { flatIdx = i; return; }
                 i++;
             }
         };
-        check(ecs::Sphere, maps.sphereId);
-        if (flatIdx < 0) check(ecs::Plane, maps.planeId);
-        if (flatIdx < 0) check(ecs::Box, maps.boxId);
-        if (flatIdx < 0) check(ecs::Quad, maps.quadId);
-        if (flatIdx < 0) check(ecs::MeshRef, maps.meshId);
+        check(ecs::Sphere);
+        check(ecs::Plane);
+        check(ecs::Box);
+        check(ecs::Quad);
+        check(ecs::MeshRef);
         displayUBO.selectedObjectId = flatIdx;
 
         if (reg.has(e, ecs::ThinLens) && reg.get(e, ecs::ThinLens).get<bool>("show_focus_plane")) {

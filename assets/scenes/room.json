@@ -1,14 +1,26 @@
 {
     "version": 1,
-
     "light": "day",
-
     "materials": [
-        { "name": "Wall",   "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.2, "ior": 2.0 },
-        { "name": "Sun",    "bsdf": "emissive",   "albedo": [1, 0.9, 0.9], "emission_strength": 5000 },
-        { "name": "Dragon", "bsdf": "dielectric", "albedo": [0.3, 0.9, 0.2], "ior": 1.3, "roughness": 0.1, "density": 10, "transmission": 1 }
+        {
+            "name": { "value": "Wall" },
+            "glossy": { "albedo": [1, 1, 1], "roughness": 0.2, "ior": 2.0 }
+        },
+        {
+            "name": { "value": "Sun" },
+            "emissive": { "albedo": [1, 0.9, 0.9], "emission_strength": 5000 }
+        },
+        {
+            "name": { "value": "Dragon" },
+            "dielectric": {
+                "albedo": [0.3, 0.9, 0.2],
+                "ior": 1.3,
+                "roughness": 0.1,
+                "density": 10,
+                "transmission": 1
+            }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 25 },
@@ -17,73 +29,77 @@
         },
         {
             "sphere": { "radius": 10 },
-            "material": "Sun",
+            "material_ref": { "handle": "Sun" },
             "name": { "value": "Sun" },
             "transform": { "position": [-1000, 500, 1000] }
         },
         {
             "mesh": { "path": "./assets/models/dragon.obj" },
-            "material": "Dragon",
+            "material_ref": { "handle": "Dragon" },
             "name": { "value": "Dragon" },
-            "transform": { "position": [4.5, -1, 2], "rotation": [0, -90, 0], "scale": [2, 2, 2] }
+            "transform": {
+                "position": [4.5, -1, 2],
+                "rotation": [0, -90, 0],
+                "scale": [2, 2, 2]
+            }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Floor" },
             "transform": { "position": [0, -4.0, 0], "scale": [8, 0.1, 8] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Ceiling" },
             "transform": { "position": [0, 4.0, 0], "scale": [8, 0.1, 8] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Left" },
             "transform": { "position": [6.0, 0, 0], "scale": [0.1, 3.9, 8] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Right" },
             "transform": { "position": [-6.0, 0, 0], "scale": [0.1, 3.9, 8] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Back" },
             "transform": { "position": [0, 0, -6.0], "scale": [8, 3.9, 0.1] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Front Left" },
             "transform": { "position": [5, 0, 6.0], "scale": [3, 3.9, 0.1] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Front Right" },
             "transform": { "position": [-5, 0, 6.0], "scale": [3, 3.9, 0.1] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Front Top" },
             "transform": { "position": [0, 3.2, 6.0], "scale": [2, 0.7, 0.1] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Front Bottom" },
             "transform": { "position": [0, -2.7, 6.0], "scale": [2, 1.2, 0.1] }
         },
         {
             "box": {},
-            "material": "Wall",
+            "material_ref": { "handle": "Wall" },
             "name": { "value": "Pedestal" },
             "transform": { "position": [4.75, -2.8, 2.0], "scale": [1.25, 1.1, 1.2] }
         }

@@ -4,13 +4,11 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "core/animation/keyframe.hpp"
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/scene/object/material.hpp"
 #include "panel.hpp"
 
 struct RowContext;
@@ -21,15 +19,11 @@ class AnimationPanel : public IPanel {
         const ecs::ComponentType* type;
         std::string fieldId;
     };
-    struct MaterialTrack {
-        MaterialHandle handle;
-        std::string fieldId;
-    };
     struct SegmentPopupState {
         std::string label;
         Keyframe from;
         Keyframe to;
-        std::variant<EntityTrack, MaterialTrack> track;
+        EntityTrack track;
     };
 
     template<typename T> static std::vector<float> decompose(T v);

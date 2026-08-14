@@ -1,10 +1,12 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 
 #include <glm/glm.hpp>
 #include "imgui/imgui.h"
 
+#include "core/ecs/entity.hpp"
 #include "editor/panels/panel.hpp"
 
 class Scene;
@@ -12,7 +14,7 @@ struct SceneSelection;
 
 class ViewportPanel: public IPanel {
 public:
-void setOnEntitySelectionCallback(std::function<void(int)> callback) { onEntitySelection = callback; }
+void setOnEntitySelectionCallback(std::function<void(std::optional<ecs::Entity>)> callback) { onEntitySelection = callback; }
 
 ImVec2      getSize()     const { return size; }
 ImVec2      getPos()      const { return pos; }
@@ -22,9 +24,9 @@ ImDrawList* getDrawList() const { return drawList; }
 private:
     void content() override;
     void drawGizmo(Scene& scene, const SceneSelection& selection);
-    int  raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras = true);
+    std::optional<ecs::Entity> raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras = true);
 
-    std::function<void(int)> onEntitySelection;
+    std::function<void(std::optional<ecs::Entity>)> onEntitySelection;
 
     ImVec2      size     = {0.0f, 0.0f};
     ImVec2      pos      = {0.0f, 0.0f};

@@ -5,25 +5,29 @@
 
 #include "imgui/imgui.h"
 
-#include "material.hpp"
+static constexpr int kMaterialPayloadSize = 12;
 
+struct GpuMaterial {
+    int   type;
+    float payload[kMaterialPayloadSize];
+};
 
 struct GpuSphere {
     alignas(16) glm::vec3 center;
     float radius;
-    MaterialHandle materialHandle;
+    uint32_t materialHandle;
 };
 
 struct GpuPlane {
     alignas(16) glm::vec3 point;
     alignas(16) glm::vec3 normal;
-    MaterialHandle materialHandle;
+    uint32_t materialHandle;
 };
 
 struct GpuBox {
     alignas(16) glm::mat4 transform;
     alignas(16) glm::mat4 invTransform;
-    MaterialHandle materialHandle;
+    uint32_t materialHandle;
 };
 
 struct GpuQuad {
@@ -31,7 +35,7 @@ struct GpuQuad {
     alignas(16) glm::vec3 u;
     alignas(16) glm::vec3 v;
     alignas(16) glm::vec3 normal;
-    MaterialHandle materialHandle;
+    uint32_t materialHandle;
 };
 
 struct GpuBvhChild {
@@ -55,7 +59,7 @@ struct GpuMesh {
     uint32_t bvhNodeCount;
     float aabbMinX, aabbMinY, aabbMinZ;
     float aabbMaxX, aabbMaxY, aabbMaxZ;
-    MaterialHandle materialHandle;
+    uint32_t materialHandle;
     uint32_t smoothShading;
     uint32_t hasVertexColor;
 };

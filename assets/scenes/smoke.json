@@ -1,14 +1,24 @@
 {
     "version": 1,
-
     "light": "empty",
-
     "materials": [
-        { "name": "Smoke", "bsdf": "volume",    "albedo": [1, 1, 1], "density": 0.005 },
-        { "name": "Light", "bsdf": "emissive",  "albedo": [1, 1, 1], "emission_strength": 4000 },
-        { "name": "Glass", "bsdf": "dielectric","albedo": [0.676, 1.0, 0.695], "roughness": 0.05, "ior": 1.4 }
+        {
+            "name": { "value": "Smoke" },
+            "volume": { "albedo": [1, 1, 1], "density": 0.005 }
+        },
+        {
+            "name": { "value": "Light" },
+            "emissive": { "albedo": [1, 1, 1], "emission_strength": 4000 }
+        },
+        {
+            "name": { "value": "Glass" },
+            "dielectric": {
+                "albedo": [0.676, 1.0, 0.695],
+                "roughness": 0.05,
+                "ior": 1.4
+            }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 28 },
@@ -17,19 +27,19 @@
         },
         {
             "sphere": { "radius": 0.2 },
-            "material": "Light",
+            "material_ref": { "handle": "Light" },
             "name": { "value": "Light" },
             "transform": { "position": [0, 9, 0] }
         },
         {
             "sphere": { "radius": 2.0 },
-            "material": "Glass",
+            "material_ref": { "handle": "Glass" },
             "name": { "value": "Ball" },
             "transform": { "position": [0, 2.8, 0] }
         },
         {
             "box": {},
-            "material": "Smoke",
+            "material_ref": { "handle": "Smoke" },
             "name": { "value": "Smoke" },
             "transform": { "position": [0, -2, 0], "scale": [15, 15, 15] }
         }

@@ -20,16 +20,6 @@ static constexpr int SCENE_VERSION = 1;
 
 namespace {
 
-constexpr std::pair<const char*, MaterialType> kMaterialTypes[] = {
-    {"principled", MaterialType::Principled},
-    {"emissive", MaterialType::Emissive},
-    {"lambertian", MaterialType::Lambertian},
-    {"ggx_metal", MaterialType::GgxMetal},
-    {"ggx_glossy", MaterialType::GgxGlossy},
-    {"dielectric", MaterialType::Dielectric},
-    {"volume", MaterialType::Volume},
-    {"programmable", MaterialType::Programmable},
-};
 constexpr std::pair<const char*, LightMode> kLightModes[] = {
     {"day", LightMode::Day},
     {"sunset", LightMode::Sunset},
@@ -86,7 +76,7 @@ void SceneSerializer::applyField(const json& j, Field& f, const ResolveCtx& ctx)
     switch (f.getType()) {
         case FieldType::Bool:   f.set<bool>(j.get<bool>()); break;
         case FieldType::Int:
-        case FieldType::Enum:   f.set<int>(j.get<int>()); break;
+        case FieldType::Enum:   f.set<int>(j.is_number_integer() ? j.get<int>() : static_cast<int>(std::round(resolveFloat(j, ctx)))); break;
         case FieldType::IVec2:  if (expectArray(j, 2, f.getId())) f.set<glm::ivec2>({j[0].get<int>(), j[1].get<int>()}); break;
         case FieldType::IVec3:  if (expectArray(j, 3, f.getId())) f.set<glm::ivec3>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>()}); break;
         case FieldType::IVec4:  if (expectArray(j, 4, f.getId())) f.set<glm::ivec4>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>(), j[3].get<int>()}); break;
@@ -183,30 +173,6 @@ void SceneSerializer::applyComponent(const json& obj, ecs::Component& comp, ecs:
     }
 }
 
-json SceneSerializer::serializeMaterial(const Material& m, MaterialHandle h, const AnimationStore& animStore) {
-    json mj;
-    mj["name"] = trimmed(m.getName());
-    mj["bsdf"] = toStr(kMaterialTypes, m.getType());
-    for (const auto& fieldId : Material::fieldsForType(m.getType())) {
-        const Field& f = m.getField(fieldId);
-        mj[fieldId] = serializeField(f, animStore.keyframes(h, fieldId));
-    }
-    return mj;
-}
-
-void SceneSerializer::applyMaterial(const json& m, MaterialHandle handle, AnimationStore& animStore, const ResolveCtx& ctx) {
-    Material& mat = Core::getScene().getMaterials()[static_cast<size_t>(handle)];
-    for (auto& f : mat.getFields()) {
-        if (!m.contains(f.getId())) continue;
-        const json& val = m[f.getId()];
-        if (val.is_object() && val.contains("anim") && val["anim"].is_array())
-            applyKeyframes(val["anim"], f.getType(), f.getId(), [&](int frame, FieldValue value, Interpolation interp) {
-                animStore.insert(handle, f.getId(), frame, std::move(value), interp);
-            });
-        else
-            applyField(val, f, ctx);
-    }
-}
 
 void SceneSerializer::spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs::Registry& registry) {
     if (!ej.contains("mesh") || !ej["mesh"].is_object()) return;
@@ -226,17 +192,6 @@ void SceneSerializer::spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs
     }
 }
 
-void SceneSerializer::spawnMaterialRef(const json& ej, ecs::Entity e, ecs::Registry& registry,
-                                       const std::unordered_map<std::string, MaterialHandle>& matMap,
-                                       const ResolveCtx& ctx) {
-    if (!ej.contains("material") || !ej["material"].is_string()) return;
-    const std::string matName = resolveTemplate(ej["material"].get<std::string>(), ctx);
-    const auto it = matMap.find(matName);
-    if (it != matMap.end() && registry.add(e, ecs::MaterialRef))
-        registry.get(e, ecs::MaterialRef).set<int>("handle", it->second);
-    else
-        Log::error("SceneSerializer", std::format("Material '{}' not found", matName));
-}
 
 void SceneSerializer::spawnSpherical(const json& ej, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx) {
     if (!ej.contains("spherical")) return;
@@ -289,6 +244,11 @@ std::string SceneSerializer::prettify(const json& j, int indent) {
         return (n == 2 || n == 3) && v.contains("frame") && v.contains("value") && (n == 2 || v.contains("ease"));
     };
     if (isVector(j) || isExpression(j) || isKeyframe(j)) return inlineJson(j);
+
+    if (j.is_object()) {
+        std::string inlined = inlineJson(j);
+        if (inlined.size() <= 60) return inlined;
+    }
 
     const std::string pad(indent * 4, ' ');
     const std::string inner((indent + 1) * 4, ' ');
@@ -347,15 +307,39 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     if (j.contains("light"))
         lightMode = fromStr(kLightModes, j["light"].get<std::string>());
 
-    std::unordered_map<std::string, MaterialHandle> matMap;
+    ecs::Registry& registry = scene.getRegistry();
+    AnimationStore& animStore = scene.getAnimationStore();
+
+    std::unordered_map<std::string, int> matNameToSlot;
+
+    auto spawnComponents = [&](const json& ej, ecs::Entity e, const ResolveCtx& spawnCtx) {
+        for (const auto& [key, value] : ej.items()) {
+            if (key == "mesh" || key == "repeat" || key == "grid" || key == "spherical" || key == "material") continue;
+            if (key == "material_ref" && value.is_object() && value.contains("handle") && value["handle"].is_string()) {
+                const std::string name = resolveTemplate(value["handle"].get<std::string>(), spawnCtx);
+                const auto it = matNameToSlot.find(name);
+                if (it != matNameToSlot.end()) {
+                    if (registry.add(e, ecs::MaterialRef))
+                        registry.get(e, ecs::MaterialRef).set<int>("handle", it->second);
+                } else {
+                    Log::warn("SceneSerializer", std::format("Material '{}' not found", name));
+                }
+                continue;
+            }
+            auto type = ecs::ComponentType::find(key);
+            if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
+            if (registry.add(e, type->get()) && value.is_object())
+                applyComponent(value, registry.get(e, type->get()), e, animStore, spawnCtx);
+        }
+    };
+
     if (j.contains("materials")) {
         for (const auto& m : j["materials"]) {
             auto push = [&](const ResolveCtx& matCtx) {
-                const std::string name = resolveTemplate(m.value("name", "Unnamed"), matCtx);
-                const MaterialType type = fromStr(kMaterialTypes, m.value("bsdf", m.value("type", "lambertian")));
-                const MaterialHandle h = scene.pushMaterial(Material::make(type, name));
-                matMap[name] = h;
-                applyMaterial(m, h, scene.getAnimationStore(), matCtx);
+                ecs::Entity e = registry.createEntity();
+                registry.add(e, ecs::Material);
+                scene.getEntities().push_back(e);
+                spawnComponents(m, e, matCtx);
             };
             if (m.contains("repeat")) {
                 const int count = m["repeat"].value("count", 1);
@@ -367,28 +351,31 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
                 const int cols = g.value("cols", 1);
                 for (int r = 0; r < rows; r++)
                     for (int c = 0; c < cols; c++)
-                        push(ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}} });
+                        push(ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}, {"n", {r * cols + c, rows * cols}}} });
             } else {
                 push(ctx);
             }
         }
     }
 
-    if (!j.contains("entities")) return true;
+    {
+        const auto& matEnts = registry.storage(ecs::Material).entities();
+        for (int i = 0; i < static_cast<int>(matEnts.size()); i++) {
+            if (registry.has(matEnts[i], ecs::Name))
+                matNameToSlot[trimmed(registry.get(matEnts[i], ecs::Name).get<std::string>("value"))] = i;
+        }
+    }
 
-    ecs::Registry& registry = scene.getRegistry();
+    if (!j.contains("entities")) {
+        animStore.evaluate(registry, 0.0f);
+        return true;
+    }
+
     auto spawnEntity = [&](const json& ej, const ResolveCtx& spawnCtx) {
         ecs::Entity e = registry.createEntity();
         scene.getEntities().push_back(e);
         spawnMesh(ej, e, scene, registry);
-        spawnMaterialRef(ej, e, registry, matMap, spawnCtx);
-        for (const auto& [key, value] : ej.items()) {
-            if (key == "material" || key == "mesh" || key == "repeat" || key == "grid" || key == "spherical") continue;
-            auto type = ecs::ComponentType::find(key);
-            if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
-            if (registry.add(e, type->get()) && value.is_object())
-                applyComponent(value, registry.get(e, type->get()), e, scene.getAnimationStore(), spawnCtx);
-        }
+        spawnComponents(ej, e, spawnCtx);
         spawnSpherical(ej, e, registry, spawnCtx);
     };
 
@@ -404,15 +391,13 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
             const int cols = g.value("cols", 1);
             for (int r = 0; r < rows; r++)
                 for (int c = 0; c < cols; c++)
-                    spawnEntity(ej, ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}} });
+                    spawnEntity(ej, ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}, {"n", {r * cols + c, rows * cols}}} });
         } else {
             spawnEntity(ej, ctx);
         }
     }
 
-    AnimationStore& animStore = scene.getAnimationStore();
     animStore.evaluate(registry, 0.0f);
-    animStore.evaluate(scene.getMaterials(), 0.0f);
     return true;
 }
 
@@ -421,36 +406,52 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
     j["version"] = SCENE_VERSION;
     j["light"] = toStr(kLightModes, lightMode);
 
-    const auto& mats = scene.getMaterials();
-    const AnimationStore& animStore = scene.getAnimationStore();
-    json matsJson = json::array();
-    for (size_t i = 1; i < mats.size(); i++)
-        matsJson.push_back(serializeMaterial(mats[i], static_cast<MaterialHandle>(i), animStore));
-    j["materials"] = matsJson;
-
     ecs::Registry& reg = scene.getRegistry();
+    const AnimationStore& animStore = scene.getAnimationStore();
     const auto& assets = scene.getMeshAssets();
-    json entitiesJson = json::array();
-    for (const ecs::Entity& e : scene.getEntities()) {
+
+    auto serializeEntity = [&](const ecs::Entity& e) -> json {
         json ej = json::object();
         for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
             if (!reg.has(e, type)) continue;
-            const ecs::Component& comp = reg.get(e, type);
-            if (type.getId() == "material") {
-                const int handle = comp.get<int>("handle");
-                if (handle > 0 && handle < (int)mats.size())
-                    ej["material"] = trimmed(mats[handle].getName());
-                continue;
-            }
+            if (type.getId() == "material") continue;
             if (type.getId() == "mesh") {
-                const int handle = comp.get<int>("handle");
+                const int handle = reg.get(e, type).get<int>("handle");
                 if (handle >= 0 && handle < (int)assets.size() && !assets[handle].getPath().empty())
                     ej["mesh"] = json{{"path", assets[handle].getPath()}, {"smooth", assets[handle].getSmoothShading()}};
                 continue;
             }
-            ej[type.getId()] = serializeComponentWithAnim(comp, e, animStore);
+            if (type.getId() == "material_ref") {
+                const int handle = reg.get(e, type).get<int>("handle");
+                const auto& matEnts = reg.storage(ecs::Material).entities();
+                if (handle >= 0 && handle < (int)matEnts.size()) {
+                    const ecs::Entity matE = matEnts[handle];
+                    if (reg.has(matE, ecs::Name)) {
+                        const std::string name = trimmed(reg.get(matE, ecs::Name).get<std::string>("value"));
+                        if (!name.empty()) {
+                            ej["material_ref"] = json{{"handle", name}};
+                            continue;
+                        }
+                    }
+                }
+                ej["material_ref"] = serializeComponentWithAnim(reg.get(e, type), e, animStore);
+                continue;
+            }
+            ej[type.getId()] = serializeComponentWithAnim(reg.get(e, type), e, animStore);
         }
-        entitiesJson.push_back(ej);
+        return ej;
+    };
+
+    const auto& matEnts = reg.storage(ecs::Material).entities();
+    json matsJson = json::array();
+    for (size_t i = 1; i < matEnts.size(); i++)
+        matsJson.push_back(serializeEntity(matEnts[i]));
+    j["materials"] = matsJson;
+
+    json entitiesJson = json::array();
+    for (const ecs::Entity& e : scene.getEntities()) {
+        if (reg.has(e, ecs::Material)) continue;
+        entitiesJson.push_back(serializeEntity(e));
     }
     j["entities"] = entitiesJson;
 

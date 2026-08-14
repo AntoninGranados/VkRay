@@ -85,7 +85,7 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
 
     light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
     Material lightMat = getMaterial(lightObj);
-    light.Le = lightMat.albedo * lightMat.emissionStrength;
+    light.Le = mat_albedo(lightMat) * mat_emissive_emissionStrength(lightMat);
     return light;
 }
 

@@ -7,7 +7,7 @@
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
-#include "core/scene/object/material.hpp"
+#include "core/scene/object.hpp"
 
 class MeshAsset;
 
@@ -41,12 +41,10 @@ public:
 
     static ComponentUiRegistry& get();
     static void init();
-    void setMaterials(std::vector<Material>* materials_) { materials = materials_; }
     void setMeshAssets(std::vector<MeshAsset>* meshAssets_) { meshAssets = meshAssets_; }
 
 private:
     std::vector<Drawer> drawers;
-    std::vector<Material>* materials = nullptr;
     std::vector<MeshAsset>* meshAssets = nullptr;
 
     static bool drawField(Component& component, const ComponentField& schema);

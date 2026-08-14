@@ -2,6 +2,103 @@
 
 Components are defined in `src/core/ecs/components.hpp`.
 
+## Material
+
+### Material
+Material marker.
+
+ **Conflicts:** `transform`
+
+### Diffuse
+Diffuse BSDF.
+
+**Needs:** `material` — **Conflicts:** `emissive` `metal` `glossy` `dielectric` `volume` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+
+### Emissive
+Emissive light source BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `metal` `glossy` `dielectric` `volume` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [1, 1, 1] | 0 ... 1 | yes |
+| `emission_strength` | float | 1 | ≥ 0 | yes |
+
+### Metal
+GGX metallic BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `glossy` `dielectric` `volume` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+| `roughness` | float | 0.5 | 0 ... 1 | yes |
+
+### Glossy
+GGX glossy dielectric BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `dielectric` `volume` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+| `roughness` | float | 0.5 | 0 ... 1 | yes |
+| `ior` | float | 1.5 | 1 ... 3 | yes |
+
+### Dielectric
+Dielectric refractive BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `volume` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [1, 1, 1] | 0 ... 1 | yes |
+| `roughness` | float | 0 | 0 ... 1 | yes |
+| `ior` | float | 1.5 | 1 ... 3 | yes |
+| `density` | float | 0 | ≥ 0 | yes |
+| `transmission` | float | 1 | 0 ... 1 | yes |
+| `anisotropic` | float | 0 | -1 ... 1 | yes |
+
+### Volume
+Homogeneous participating media BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `principled` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+| `density` | float | 1 | ≥ 0 | yes |
+| `anisotropic` | float | 0 | -1 ... 1 | yes |
+
+### Principled
+PBR principled BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `volume` `programmable`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+| `roughness` | float | 0.5 | 0 ... 1 | yes |
+| `metalness` | float | 0 | 0 ... 1 | yes |
+| `ior` | float | 1.5 | 1 ... 3 | yes |
+| `transmission` | float | 0 | 0 ... 1 | yes |
+| `density` | float | 0 | ≥ 0 | yes |
+| `anisotropic` | float | 0 | -1 ... 1 | yes |
+| `alpha` | float | 1 | 0 ... 1 | yes |
+
+### Programmable
+Programmable custom BSDF.
+
+**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `volume` `principled`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+
 ## Movement
 
 ### Transform
@@ -108,7 +205,7 @@ Display name.
 |-------|------|---------|-------------|------------|
 | `value` | string |  |  | no |
 
-### Material
+### Material Ref
 Material reference.
 
 | Field | Type | Default | Constraints | Animatable |

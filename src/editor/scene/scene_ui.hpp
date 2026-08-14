@@ -1,10 +1,13 @@
 #pragma once
 
+#include <optional>
+
+#include "core/ecs/entity.hpp"
+
 class Scene;
 
 struct SceneSelection {
-    int entity    = -1;
-    int material  = -1;
+    std::optional<ecs::Entity> entity;
     int meshAsset = -1;
 };
 
@@ -14,6 +17,5 @@ public:
 
 private:
     void drawSelectedEntityUI(Scene& scene, SceneSelection& selection);
-    void drawSelectedMaterialUI(Scene& scene, SceneSelection& selection);
     void drawSelectedMeshAssetUI(Scene& scene, SceneSelection& selection);
 };

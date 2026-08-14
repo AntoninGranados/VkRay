@@ -118,7 +118,7 @@ void cameraDrawingSystem(Registry& registry) {
         };
 
         const SceneSelection& sel = Editor::getUi().getSelection();
-        const bool isSelected = sel.entity >= 0 && e == Core::getScene().getEntities()[static_cast<size_t>(sel.entity)];
+        const bool isSelected = sel.entity.has_value() && e == *sel.entity;
         const ImU32 lineColor = isSelected ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
         const float distToCamera = glm::length(activeCamera.getPosition() - camPos);
         const float thickness = std::clamp(4.0f / (0.15f * distToCamera + 1.0f), 0.75f, 4.0f);

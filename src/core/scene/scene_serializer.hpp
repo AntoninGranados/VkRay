@@ -4,11 +4,11 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 #include "nlohmann/json.hpp"
 
 #include "core/animation/animation_store.hpp"
+#include "core/scene/object.hpp"
 #include "utils/json_resolve.hpp"
 
 using json = nlohmann::ordered_json;
@@ -33,11 +33,8 @@ private:
 
     static json    serializeComponentWithAnim(const ecs::Component& comp, ecs::Entity e, const AnimationStore& animStore);
     static void    applyComponent(const json& obj, ecs::Component& comp, ecs::Entity e, AnimationStore& animStore, const ResolveCtx& ctx);
-    static json    serializeMaterial(const Material& m, MaterialHandle h, const AnimationStore& animStore);
-    static void    applyMaterial(const json& m, MaterialHandle handle, AnimationStore& animStore, const ResolveCtx& ctx);
 
     static void    spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs::Registry& registry);
-    static void    spawnMaterialRef(const json& ej, ecs::Entity e, ecs::Registry& registry, const std::unordered_map<std::string, MaterialHandle>& matMap, const ResolveCtx& ctx);
     static void    spawnSpherical(const json& ej, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx);
 
     static std::string inlineJson(const json& j);

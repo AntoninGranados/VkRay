@@ -1,10 +1,12 @@
-#ifndef LAMBERTIAN_GLSL
-#define LAMBERTIAN_GLSL
+#ifndef DIFFUSE_GLSL
+#define DIFFUSE_GLSL
 
 #include "../utils.glsl"
 #include "../random.glsl"
 
 #include "material_utils.glsl"
+
+// Lambertian BSDF: perfectly diffuse with cosine-weighted importance sampling.
 
 vec3 cosineScatter(in Material mat, in vec3 normal, in vec3 wo, inout uint seed) {
     vec3 dir = normal + normalize(randomInSphere(seed));
@@ -12,17 +14,17 @@ vec3 cosineScatter(in Material mat, in vec3 normal, in vec3 wo, inout uint seed)
     return normalize(dir);
 }
 
-BSDFEval evalLambertianBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalDiffuseBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     return BSDFEval(
-        mat.albedo / PI,
+        mat_albedo(mat) / PI,
         max(dot(hit.normal, wi), 0.0) / PI
     );
 }
 
-BSDFSample sampleLambertianBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+BSDFSample sampleDiffuseBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
     vec3 wi = cosineScatter(mat, hit.normal, wo, seed);
-    BSDFEval eval = evalLambertianBSDF(mat, hit, wo, wi);
-    
+    BSDFEval eval = evalDiffuseBSDF(mat, hit, wo, wi);
+
     BSDFSample bsdf;
     float cosB = abs(dot(hit.normal, wi));
     bsdf.wi      = wi;
@@ -34,4 +36,4 @@ BSDFSample sampleLambertianBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     return bsdf;
 }
 
-#endif // LAMBERTIAN_GLSL
+#endif // DIFFUSE_GLSL

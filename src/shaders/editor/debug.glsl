@@ -20,9 +20,9 @@ vec3 visualize(uint v)  { return vec3(v != 0u ? 1.0 : 0.0); }
 vec3 visualizeMatType(uint t) {
     if (t == mat_Principled)   return vec3(0.8, 0.8, 0.8);
     if (t == mat_Emissive)     return vec3(1.0, 1.0, 0.2);
-    if (t == mat_Lambertian)   return vec3(0.9, 0.5, 0.2);
-    if (t == mat_GgxMetal)     return vec3(0.9, 0.8, 0.1);
-    if (t == mat_GgxGlossy)    return vec3(0.2, 0.5, 0.9);
+    if (t == mat_Diffuse)      return vec3(0.9, 0.5, 0.2);
+    if (t == mat_Metal)        return vec3(0.9, 0.8, 0.1);
+    if (t == mat_Glossy)       return vec3(0.2, 0.5, 0.9);
     if (t == mat_Dielectric)   return vec3(0.2, 0.9, 0.8);
     if (t == mat_Volume)       return vec3(0.7, 0.2, 0.9);
     if (t == mat_Programmable) return vec3(0.9, 0.2, 0.7);

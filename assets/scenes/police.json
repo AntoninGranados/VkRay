@@ -3,35 +3,27 @@
     "light": "sunset",
     "materials": [
         {
-            "name": "VertexColor",
-            "bsdf": "lambertian",
-            "albedo": [1.0, 1.0, 1.0]
+            "name": { "value": "VertexColor" },
+            "diffuse": { "albedo": [1.0, 1.0, 1.0] }
         },
         {
-            "name": "Sun",
-            "bsdf": "emissive",
-            "albedo": [0.95, 0.3, 0.035],
-            "emission_strength": 2000.0
+            "name": { "value": "Sun" },
+            "emissive": {
+                "albedo": [0.95, 0.3, 0.035],
+                "emission_strength": 2000.0
+            }
         }
     ],
     "entities": [
         {
-            "camera": {
-                "fov": 50.0,
-                "shutter_speed": 0.016667
-            },
-            "thin_lens": {
-                "f_stop": 10.0,
-                "focal_distance": 6.13
-            },
-            "name": {
-                "value": "Camera"
-            },
+            "camera": { "fov": 50.0, "shutter_speed": 0.016667 },
+            "thin_lens": { "f_stop": 10.0, "focal_distance": 6.13 },
+            "name": { "value": "Camera" },
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [ 3.0, 3.0, 5.0] },
-                        { "frame": 1, "value": [ 11.4, 3.0, 5.0] }
+                        { "frame": 0, "value": [3.0, 3.0, 5.0] },
+                        { "frame": 1, "value": [11.4, 3.0, 5.0] }
                     ]
                 },
                 "rotation": [-15.0, 35.0, 0.0],
@@ -43,70 +35,59 @@
                 "path": "./assets/models/police/car1.obj",
                 "smooth": false
             },
-            "name": {
-                "value": "Car 1"
-            },
+            "name": { "value": "Car 1" },
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [ 0.0, 0.0, 0.0] },
-                        { "frame": 1, "value": [ 9.0, 0.0, 0.0] }
+                        { "frame": 0, "value": [0.0, 0.0, 0.0] },
+                        { "frame": 1, "value": [9.0, 0.0, 0.0] }
                     ]
                 },
                 "rotation": [-5.8, -7.5, 2.8],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material": "VertexColor"
+            "material_ref": { "handle": "VertexColor" }
         },
         {
             "mesh": {
                 "path": "./assets/models/police/car2.obj",
                 "smooth": false
             },
-            "name": {
-                "value": "Car 2"
-            },
+            "name": { "value": "Car 2" },
             "transform": {
-                // "position": [-5.0, 0.0, 0.0],
                 "position": {
                     "anim": [
                         { "frame": 0, "value": [-5.0, 0.0, 0.0] },
-                        { "frame": 1, "value": [ 4.0, 0.0, 0.0] }
+                        { "frame": 1, "value": [4.0, 0.0, 0.0] }
                     ]
                 },
                 "rotation": [6.5, 5.0, 1.0],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material": "VertexColor"
+            "material_ref": { "handle": "VertexColor" }
         },
         {
             "mesh": {
                 "path": "./assets/models/police/road.obj",
                 "smooth": false
             },
-            "name": {
-                "value": "Road"
-            },
+            "name": { "value": "Road" },
             "transform": {
                 "position": [-15.0, 0.0, 0.0],
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material": "VertexColor"
+            "material_ref": { "handle": "VertexColor" }
         },
         {
-            "sphere": {
-                "radius": 20.0
-            },
-            "name": {
-                "value": "Sun"
-            },
+            "sphere": { "radius": 20.0 },
+            "name": { "value": "Sun" },
             "transform": {
                 "position": [200.0, 20.0, -100.0],
                 "rotation": [0.0, -0.0, 0.0],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material": "Sun"
+            "material_ref": { "handle": "Sun" }
         }
     ]
 }

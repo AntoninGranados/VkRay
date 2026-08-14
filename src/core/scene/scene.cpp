@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include <cassert>
 #include <format>
 #include <utility>
 
@@ -11,7 +12,6 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "utils/log.hpp"
-#include "core/scene/object/material.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
 #include "core/ecs/systems/camera_system.hpp"
@@ -20,7 +20,7 @@
 
 void Scene::init() {
     initSystems();
-    ensureDefaultAssets();
+    addDefaultAssets();
 }
 
 void Scene::destroy() {}
@@ -44,16 +44,18 @@ void Scene::clear() {
     gpuBuffers.object.capacity   = 0;
     gpuBuffers.light.capacity    = 0;
     resetSceneState();
-    ensureDefaultAssets();
+    addDefaultAssets();
 }
 
-MaterialHandle Scene::pushMaterial(const Material& mat) {
-    const MaterialHandle materialHandle = static_cast<int>(materials.size());
-    materials.push_back(mat);
-    return materialHandle;
+ecs::Entity Scene::pushMaterial(const ecs::ComponentType& bsdfType, std::string name) {
+    ecs::Entity e = createNamedEntity(std::move(name));
+    registry.add(e, ecs::Material);
+    registry.add(e, bsdfType);
+    entities.push_back(e);
+    return e;
 }
 
-void Scene::pushSphere(std::string name, glm::vec3 center, float radius, MaterialHandle materialHandle) {
+void Scene::pushSphere(std::string name, glm::vec3 center, float radius, uint32_t materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
     registry.add(e, ecs::Sphere);
@@ -69,7 +71,7 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, Materia
     entities.push_back(e);
 }
 
-void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, MaterialHandle materialHandle) {
+void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, uint32_t materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
     registry.add(e, ecs::Plane);
@@ -86,7 +88,7 @@ void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, Mater
     entities.push_back(e);
 }
 
-void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, MaterialHandle materialHandle) {
+void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, uint32_t materialHandle) {
     glm::vec3 center = (cornerMin + cornerMax) * 0.5f;
     glm::vec3 halfExtents = (cornerMax - cornerMin) * 0.5f;
     ecs::Entity e = createNamedEntity(std::move(name));
@@ -103,7 +105,7 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     entities.push_back(e);
 }
 
-void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation, MaterialHandle materialHandle) {
+void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation, uint32_t materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
     normal = glm::normalize(normal);
@@ -130,7 +132,7 @@ void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::
     entities.push_back(e);
 }
 
-void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4& transform, MaterialHandle materialHandle, bool smoothShading) {
+void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4& transform, uint32_t materialHandle, bool smoothShading) {
     MeshHandle handle = static_cast<MeshHandle>(meshAssets.size());
     meshAssets.emplace_back(MeshAsset(name));
     MeshAsset& asset = meshAssets.back();
@@ -144,7 +146,7 @@ void Scene::pushMesh(std::string name, const std::string& path, const glm::mat4&
     pushMesh(name, handle, transform, materialHandle);
 }
 
-void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, MaterialHandle materialHandle) {
+void Scene::pushMesh(std::string name, MeshHandle meshHandle, const glm::mat4& transform, uint32_t materialHandle) {
     ecs::Entity e = createNamedEntity(std::move(name));
 
     registry.add(e, ecs::MeshRef);
@@ -199,13 +201,13 @@ void Scene::initSystems() {
     preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
     onRenderScheduler.clear();
+    onRenderScheduler.add(ecs::materialPackingSystem);
     onRenderScheduler.add(ecs::spherePackingSystem);
     onRenderScheduler.add(ecs::planePackingSystem);
     onRenderScheduler.add(ecs::boxPackingSystem);
     onRenderScheduler.add(ecs::quadPackingSystem);
     onRenderScheduler.add(ecs::meshPackingSystem);
     onRenderScheduler.add(ecs::objectPackingSystem);
-    onRenderScheduler.add(ecs::materialPackingSystem);
     onRenderScheduler.add(ecs::lightPackingSystem);
 
     postUpdateScheduler.clear();
@@ -219,7 +221,7 @@ ecs::Entity Scene::createNamedEntity(std::string name) {
     return e;
 }
 
-void Scene::addMaterialRef(ecs::Entity e, MaterialHandle materialHandle) {
+void Scene::addMaterialRef(ecs::Entity e, uint32_t materialHandle) {
     registry.add(e, ecs::MaterialRef);
     registry.get(e, ecs::MaterialRef).set<int>("handle", materialHandle);
 }
@@ -237,17 +239,15 @@ void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
 }
 
 void Scene::resetSceneState() {
-    for (auto& e : entities) {
-        registry.destroyEntity(e);
-    }
-
+    for (auto& e : entities) registry.destroyEntity(e);
     entities.clear();
-    materials.clear();
     meshAssets.clear();
     animationStore.clear();
 }
 
-void Scene::ensureDefaultAssets() {
-    pushMaterial(DEFAULT_MATERIAL);
+void Scene::addDefaultAssets() {
+    assert(registry.storage(ecs::Material).empty() && meshAssets.empty());
+    ecs::Entity defaultMat = pushMaterial(ecs::Diffuse, "Default");
+    registry.get(defaultMat, ecs::Diffuse).set<glm::vec3>("albedo", glm::vec3(1.0f, 0.0f, 1.0f));
     meshAssets.push_back(makeDefaultMeshAsset());
 }

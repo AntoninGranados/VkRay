@@ -9,17 +9,55 @@ float luma(vec3 c) {
 
 
 struct Material {
-    Enum type;
-    vec3 albedo;
-    float roughness;
-    float metalness;
-    float ior;
-    float transmission;
-    float emissionStrength;
-    float density;
-    float anisotropic;
-    float alpha;
+    int   type;
+    float payload[12];
 };
+
+#define mat_albedo(m)                    vec3((m).payload[0], (m).payload[1], (m).payload[2])
+
+#define mat_emissive_emissionStrength(m) (m).payload[3]
+
+#define mat_metal_roughness(m)           (m).payload[3]
+
+#define mat_glossy_roughness(m)          (m).payload[3]
+#define mat_glossy_ior(m)                (m).payload[4]
+
+#define mat_dielectric_roughness(m)      (m).payload[3]
+#define mat_dielectric_ior(m)            (m).payload[4]
+#define mat_dielectric_transmission(m)   (m).payload[5]
+#define mat_dielectric_density(m)        (m).payload[6]
+#define mat_dielectric_anisotropic(m)    (m).payload[7]
+
+#define mat_volume_density(m)            (m).payload[3]
+#define mat_volume_anisotropic(m)        (m).payload[4]
+
+#define mat_principled_roughness(m)      (m).payload[3]
+#define mat_principled_metalness(m)      (m).payload[4]
+#define mat_principled_ior(m)            (m).payload[5]
+#define mat_principled_transmission(m)   (m).payload[6]
+#define mat_principled_density(m)        (m).payload[7]
+#define mat_principled_anisotropic(m)    (m).payload[8]
+#define mat_principled_alpha(m)          (m).payload[9]
+
+void mat_setAlbedo(inout Material m, vec3 v) {
+    m.payload[0] = v.r; m.payload[1] = v.g; m.payload[2] = v.b;
+}
+
+Material mat_makeDiffuse(vec3 albedo) {
+    Material m;
+    m.type = mat_Diffuse;
+    m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
+    return m;
+}
+
+Material mat_makeGlossy(vec3 albedo, float roughness, float ior) {
+    Material m;
+    m.type = mat_Glossy;
+    m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
+    m.payload[3] = roughness;
+    m.payload[4] = ior;
+    return m;
+}
 
 // ============== BSDF ==============
 struct BSDFMediumInfo {
@@ -44,7 +82,7 @@ struct BSDFEval {
     float pdf;
 };
 
-#define DEFAULT_MATERIAL Material(mat_Lambertian, vec3(1,0,1)*0.7, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0)
+#define DEFAULT_MATERIAL mat_makeDiffuse(vec3(0.7, 0.0, 0.7))
 
 // ============== REFRACTION/REFLECTION ==============
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
@@ -70,7 +108,7 @@ vec3 schlickAlbedo(float cosine, vec3 albedo) {
 
 bool isTransmissive(in Material mat) {
     if (mat.type == mat_Dielectric) return true;
-    if (mat.type == mat_Principled) return (1.0 - mat.metalness) * mat.transmission > EPS;
+    if (mat.type == mat_Principled) return (1.0 - mat_principled_metalness(mat)) * mat_principled_transmission(mat) > EPS;
     return false;
 }
 

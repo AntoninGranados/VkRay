@@ -56,26 +56,5 @@ void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fie
     ImGui::SameLine();
 }
 
-void drawKeyframeButton(MaterialHandle handle, const std::string& fieldId) {
-    AnimationStore& store = Core::getScene().getAnimationStore();
-    const int frame = Core::getAnimation().getFrame();
-    const bool has = store.has(handle, fieldId, frame);
-
-    constexpr float iconSize = 10.0f;
-    ImGui::PushID((fieldId + "_keyframe").c_str());
-    const bool clicked = ImGui::InvisibleButton("##keyframe", ImVec2(iconSize, ImGui::GetTextLineHeight()));
-    const bool hovered = ImGui::IsItemHovered();
-    const bool active = ImGui::IsItemActive();
-    ImGui::PopID();
-
-    if (clicked) {
-        if (has) store.remove(handle, fieldId, frame);
-        else store.capture(handle, fieldId, frame, Core::getScene().getMaterials()[handle]);
-        Core::requestAccumulationRestart();
-    }
-
-    drawKeyframeIcon(has, hovered, active);
-    ImGui::SameLine();
-}
 
 }   // namespace ui

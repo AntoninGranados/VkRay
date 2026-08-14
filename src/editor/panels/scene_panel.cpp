@@ -1,5 +1,6 @@
 #include "scene_panel.hpp"
 
+#include <algorithm>
 #include <format>
 
 #include <nfd.hpp>
@@ -30,12 +31,11 @@ void ScenePanel::content() {
                 if (SceneSerializer::load(scene, mode, outPath.get())) {
                     Core::getParameters().set("scene/light_mode", mode);
                     scene.getCamera().clearPreviewCamera();
-                    selection.entity = -1;
-                    const auto& entities = scene.getEntities();
-                    for (size_t i = 0; i < entities.size(); i++) {
-                        if (scene.getRegistry().has(entities[i], ecs::Camera)) {
-                            selection.entity = static_cast<int>(i);
-                            scene.getCamera().setPreviewCamera(entities[i]);
+                    selection.entity.reset();
+                    for (const ecs::Entity& e : scene.getEntities()) {
+                        if (scene.getRegistry().has(e, ecs::Camera)) {
+                            selection.entity = e;
+                            scene.getCamera().setPreviewCamera(e);
                             break;
                         }
                     }
@@ -73,20 +73,20 @@ void ScenePanel::content() {
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Entities");
             if (ImGui::BeginListBox("##Entities", ImVec2(-FLT_MIN, 0.0f))) {
+                ecs::Registry& reg = scene.getRegistry();
                 for (size_t i = 0; i < scene.getEntities().size(); i++) {
                     const ecs::Entity& e = scene.getEntities()[i];
+                    if (reg.has(e, ecs::Material)) continue;
 
                     std::string displayName = "???";
-                    if (scene.getRegistry().has(e, ecs::Name)) {
-                        const ecs::Component& n = scene.getRegistry().get(e, ecs::Name);
-                        displayName = n.get<std::string>("value");
-                    }
+                    if (reg.has(e, ecs::Name))
+                        displayName = reg.get(e, ecs::Name).get<std::string>("value");
                     if (displayName.empty()) displayName = "???";
 
-                    if (ImGui::Selectable(displayName.c_str(), selection.entity == static_cast<int>(i))) {
-                        if (selection.entity != static_cast<int>(i)) {
+                    if (ImGui::Selectable(displayName.c_str(), selection.entity == e)) {
+                        if (selection.entity != e) {
                             scene.getCamera().clearPreviewCamera();
-                            selection.entity = static_cast<int>(i);
+                            selection.entity = e;
                             Core::requestAccumulationRestart();
                         }
                     }
@@ -97,13 +97,14 @@ void ScenePanel::content() {
             ImGui::TableSetColumnIndex(1);
             ImGui::NewLine();
             if (ImGui::Button("+##Entity", ImVec2(32, 0))) openNewObjectPopup = true;
-            if (ImGui::Button("-##Entity", ImVec2(32, 0)) && selection.entity >= 0) {
-                ecs::Entity e = scene.getEntities()[static_cast<size_t>(selection.entity)];
+            if (ImGui::Button("-##Entity", ImVec2(32, 0)) && selection.entity.has_value()) {
+                const ecs::Entity e = *selection.entity;
                 scene.getAnimationStore().remove(e);
                 scene.getRegistry().destroyEntity(e);
-                scene.getEntities().erase(std::next(scene.getEntities().begin(), selection.entity));
+                auto& ents = scene.getEntities();
+                ents.erase(std::find(ents.begin(), ents.end(), e));
                 scene.update();
-                selection.entity = -1;
+                selection.entity.reset();
             }
 
             ImGui::EndTable();
@@ -117,12 +118,19 @@ void ScenePanel::content() {
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Materials");
             if (ImGui::BeginListBox("##Materials", ImVec2(-FLT_MIN, 0.0f))) {
-                for (size_t i = 0; i < scene.getMaterials().size(); i++) {
-                    const std::string& materialName = scene.getMaterials()[i].getName();
-                    const char* display = materialName.empty() ? "Material" : materialName.c_str();
-                    std::string label = std::string(display) + "##Material" + std::to_string(i);
-                    if (ImGui::Selectable(label.c_str(), selection.material == static_cast<int>(i), ImGuiSelectableFlags_AllowDoubleClick)) {
-                        if (ImGui::IsMouseDoubleClicked(0)) selection.material = static_cast<int>(i);
+                ecs::Registry& reg = scene.getRegistry();
+                const auto& matEnts = reg.storage(ecs::Material).entities();
+                for (size_t i = 0; i < matEnts.size(); i++) {
+                    const ecs::Entity matEntity = matEnts[i];
+                    std::string displayName = "Material";
+                    if (reg.has(matEntity, ecs::Name)) {
+                        const std::string& n = reg.get(matEntity, ecs::Name).get<std::string>("value");
+                        if (!n.empty()) displayName = n;
+                    }
+                    std::string label = displayName + "##Material" + std::to_string(i);
+                    if (ImGui::Selectable(label.c_str(), selection.entity == matEntity, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::IsMouseDoubleClicked(0))
+                            selection.entity = matEntity;
                     }
                 }
                 ImGui::EndListBox();
@@ -131,30 +139,39 @@ void ScenePanel::content() {
             ImGui::TableSetColumnIndex(1);
             ImGui::NewLine();
             if (ImGui::Button("+##Materials", ImVec2(32, 0))) {
-                Material mat = DEFAULT_MATERIAL;
-                mat.setName(std::format("Material-uid[{:02d}]", rand()));
-                scene.pushMaterial(mat);
+                scene.pushMaterial(ecs::Diffuse, std::format("Material-uid[{:02d}]", rand()));
                 scene.update();
             }
-            if (ImGui::Button("-##Materials", ImVec2(32, 0)) &&
-                selection.material > 0 &&
-                selection.material < static_cast<int>(scene.getMaterials().size())) {
-                const int removed = selection.material;
-                scene.getMaterials().erase(scene.getMaterials().begin() + removed);
-                scene.getAnimationStore().remove(removed);
-
-                auto& matRefs = scene.getRegistry().storage(ecs::MaterialRef);
-                const auto& refEntities = matRefs.entities();
-                for (size_t i = 0; i < matRefs.size(); i++) {
-                    ecs::Component& ref = matRefs.get(refEntities[i]);
-                    const int h = ref.get<int>("handle");
-                    if (h == removed)
-                        ref.set<int>("handle", 0);
-                    else if (h > removed)
-                        ref.set<int>("handle", h - 1);
+            if (ImGui::Button("-##Materials", ImVec2(32, 0))) {
+                ecs::Registry& reg = scene.getRegistry();
+                const auto& matEnts = reg.storage(ecs::Material).entities();
+                int selMatIdx = -1;
+                if (selection.entity.has_value()) {
+                    for (int i = 0; i < static_cast<int>(matEnts.size()); i++) {
+                        if (matEnts[i] == *selection.entity) { selMatIdx = i; break; }
+                    }
                 }
-                scene.update();
-                selection.material = -1;
+                if (selMatIdx > 0) {
+                    const ecs::Entity matEntity = matEnts[selMatIdx];
+                    const int lastSlot = static_cast<int>(matEnts.size()) - 1;
+                    scene.getAnimationStore().remove(matEntity);
+
+                    auto& entities = scene.getEntities();
+                    entities.erase(std::find(entities.begin(), entities.end(), matEntity));
+
+                    auto& matRefs = reg.storage(ecs::MaterialRef);
+                    for (size_t i = 0; i < matRefs.size(); i++) {
+                        ecs::Component& ref = matRefs.get(matRefs.entities()[i]);
+                        const int h = ref.get<int>("handle");
+                        if (h == selMatIdx)
+                            ref.set<int>("handle", 0);
+                        else if (h == lastSlot)
+                            ref.set<int>("handle", selMatIdx);
+                    }
+                    reg.destroyEntity(matEntity);
+                    scene.update();
+                    selection.entity.reset();
+                }
             }
 
             ImGui::EndTable();

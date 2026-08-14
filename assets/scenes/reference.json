@@ -1,25 +1,80 @@
 {
     "version": 1,
-
     "light": "empty",
-
     "materials": [
-        { "name": "Floor",       "bsdf": "programmable", "albedo": [0.32, 0.32, 0.32] },
-        { "name": "Top",         "bsdf": "lambertian",   "albedo": [0.90, 0.90, 0.90] },
-        { "name": "Back",        "bsdf": "ggx_glossy",   "albedo": [0.10, 0.18, 0.72], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Left",        "bsdf": "ggx_glossy",   "albedo": [0.06, 0.65, 0.08], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Right",       "bsdf": "ggx_glossy",   "albedo": [0.82, 0.06, 0.04], "roughness": 0.20, "ior": 1.5 },
-        { "name": "Front",       "bsdf": "lambertian",   "albedo": [0.08, 0.08, 0.08] },
-        { "name": "Light",       "bsdf": "emissive",     "albedo": [1.0, 0.72, 0.38],  "emission_strength": 400 },
-        { "name": "Smoke",       "bsdf": "volume",       "albedo": [0.6, 0.6, 0.6],    "density": 0.03 },
-        { "name": "DragonGlass", "bsdf": "dielectric",   "albedo": [0.88, 0.38, 0.82], "roughness": 0.10, "ior": 1.45 },
-        { "name": "Pedestal",    "bsdf": "ggx_glossy",   "albedo": [1, 1, 1],           "roughness": 0.0,  "ior": 12.0 },
-        { "name": "SphereMat_0", "bsdf": "ggx_metal",  "albedo": [1, 1, 1], "roughness": 0.10 },
-        { "name": "SphereMat_1", "bsdf": "lambertian", "albedo": [1, 1, 1] },
-        { "name": "SphereMat_2", "bsdf": "dielectric", "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.45 },
-        { "name": "SphereMat_3", "bsdf": "ggx_glossy", "albedo": [1, 1, 1], "roughness": 0.04, "ior": 2.0 }
+        {
+            "name": { "value": "Floor" },
+            "programmable": { "albedo": [0.32, 0.32, 0.32] }
+        },
+        {
+            "name": { "value": "Top" },
+            "diffuse": { "albedo": [0.9, 0.9, 0.9] }
+        },
+        {
+            "name": { "value": "Back" },
+            "glossy": {
+                "albedo": [0.1, 0.18, 0.72],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": { "value": "Left" },
+            "glossy": {
+                "albedo": [0.06, 0.65, 0.08],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": { "value": "Right" },
+            "glossy": {
+                "albedo": [0.82, 0.06, 0.04],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": { "value": "Front" },
+            "diffuse": { "albedo": [0.08, 0.08, 0.08] }
+        },
+        {
+            "name": { "value": "Light" },
+            "emissive": { "albedo": [1.0, 0.72, 0.38], "emission_strength": 400 }
+        },
+        {
+            "name": { "value": "Smoke" },
+            "volume": { "albedo": [0.6, 0.6, 0.6], "density": 0.03 }
+        },
+        {
+            "name": { "value": "DragonGlass" },
+            "dielectric": {
+                "albedo": [0.88, 0.38, 0.82],
+                "roughness": 0.1,
+                "ior": 1.45
+            }
+        },
+        {
+            "name": { "value": "Pedestal" },
+            "glossy": { "albedo": [1, 1, 1], "roughness": 0.0, "ior": 12.0 }
+        },
+        {
+            "name": { "value": "SphereMat_0" },
+            "metal": { "albedo": [1, 1, 1], "roughness": 0.1 }
+        },
+        {
+            "name": { "value": "SphereMat_1" },
+            "diffuse": { "albedo": [1, 1, 1] }
+        },
+        {
+            "name": { "value": "SphereMat_2" },
+            "dielectric": { "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.45 }
+        },
+        {
+            "name": { "value": "SphereMat_3" },
+            "glossy": { "albedo": [1, 1, 1], "roughness": 0.04, "ior": 2.0 }
+        }
     ],
-
     "entities": [
         {
             "camera": { "fov": 40 },
@@ -28,76 +83,103 @@
         },
         {
             "quad": {},
-            "material": "Floor",
+            "material_ref": { "handle": "Floor" },
             "name": { "value": "Bottom" },
-            "transform": { "position": [0, -4, 0], "rotation": [-90, 0, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, -4, 0],
+                "rotation": [-90, 0, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Top",
+            "material_ref": { "handle": "Top" },
             "name": { "value": "Top" },
-            "transform": { "position": [0, 4, 0], "rotation": [90, 0, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, 4, 0],
+                "rotation": [90, 0, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Back",
+            "material_ref": { "handle": "Back" },
             "name": { "value": "Back" },
-            "transform": { "position": [0, 0, 4], "rotation": [180, 0, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, 0, 4],
+                "rotation": [180, 0, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Left",
+            "material_ref": { "handle": "Left" },
             "name": { "value": "Left" },
-            "transform": { "position": [-4, 0, 0], "rotation": [0, 90, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [-4, 0, 0],
+                "rotation": [0, 90, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Right",
+            "material_ref": { "handle": "Right" },
             "name": { "value": "Right" },
-            "transform": { "position": [4, 0, 0], "rotation": [0, -90, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [4, 0, 0],
+                "rotation": [0, -90, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Front",
+            "material_ref": { "handle": "Front" },
             "name": { "value": "Front" },
             "transform": { "position": [0, 0, -4], "scale": [8, 8, 1] }
         },
         {
             "box": {},
-            "material": "Light",
+            "material_ref": { "handle": "Light" },
             "name": { "value": "Light" },
             "transform": { "position": [0, 3.99, 0], "scale": [0.3, 0.01, 0.3] }
         },
         {
             "box": {},
-            "material": "Smoke",
+            "material_ref": { "handle": "Smoke" },
             "name": { "value": "Smoke" },
             "transform": { "scale": [4.01, 4.01, 4.01] }
         },
         {
             "mesh": { "path": "./assets/models/dragon.obj" },
-            "material": "DragonGlass",
+            "material_ref": { "handle": "DragonGlass" },
             "name": { "value": "Dragon" },
-            "transform": { "position": [0, -1.4, 1], "rotation": [0, 205, 0], "scale": [5.2, 5.2, 5.2] }
+            "transform": {
+                "position": [0, -1.4, 1],
+                "rotation": [0, 205, 0],
+                "scale": [5.2, 5.2, 5.2]
+            }
         },
         {
             "box": {},
-            "material": "Pedestal",
+            "material_ref": { "handle": "Pedestal" },
             "name": { "value": "Pedestal" },
             "transform": { "position": [0, -3.55, 0.8], "scale": [3.25, 0.45, 2.4] }
         },
         {
             "box": {},
-            "material": "Floor",
+            "material_ref": { "handle": "Floor" },
             "name": { "value": "PedestalBorder" },
             "transform": { "position": [0, -3.56, 0.8], "scale": [3.29, 0.44, 2.44] }
         },
         {
             "sphere": { "radius": 0.85 },
-            "material": "SphereMat_{n}",
             "name": { "value": "Sphere_{n}" },
             "transform": {
-                "position": [{ "lerp": { "from": -2.91, "to": 2.91, "axis": "n" } }, -2.35, -2]
+                "position": [
+                    { "lerp": { "from": -2.91, "to": 2.91, "axis": "n" } },
+                    -2.35,
+                    -2
+                ]
             },
             "repeat": { "count": 4 }
         }

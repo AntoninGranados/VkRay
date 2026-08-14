@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <optional>
 
 #include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
@@ -17,7 +18,7 @@
 EditorUi::EditorUi() {
     initStyle();
     viewportPanel.setOnEntitySelectionCallback(
-        [this](int id) { clearPreview(); if (selection.entity != id) { selection.entity = id; Core::requestAccumulationRestart(); } }
+        [this](std::optional<ecs::Entity> id) { clearPreview(); if (selection.entity != id) { selection.entity = id; Core::requestAccumulationRestart(); } }
     );
 }
 
@@ -152,11 +153,9 @@ void EditorUi::setupDockspace() {
 }
 
 void EditorUi::setPreview() {
-    if (selection.entity < 0) return;
+    if (!selection.entity.has_value()) return;
     Scene& scene = Core::getScene();
-    const size_t idx = static_cast<size_t>(selection.entity);
-    if (idx >= scene.getEntities().size()) return;
-    const ecs::Entity e = scene.getEntities()[idx];
+    const ecs::Entity e = *selection.entity;
     if (!scene.getRegistry().has(e, ecs::Camera)) return;
     scene.getCamera().setPreviewCamera(e);
     Core::requestAccumulationRestart();
@@ -189,5 +188,5 @@ void EditorUi::drawRender() {
 
 void EditorUi::clearEntitySelection() {
     clearPreview();
-    selection.entity = -1;
+    selection.entity.reset();
 }

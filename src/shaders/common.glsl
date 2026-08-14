@@ -3,9 +3,9 @@
 
 #define mat_Principled   0
 #define mat_Emissive     1
-#define mat_Lambertian   2
-#define mat_GgxMetal     3
-#define mat_GgxGlossy    4
+#define mat_Diffuse      2
+#define mat_Metal        3
+#define mat_Glossy       4
 #define mat_Dielectric   5
 #define mat_Volume       6
 #define mat_Programmable 7

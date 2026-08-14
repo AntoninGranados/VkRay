@@ -1,52 +1,54 @@
 {
     "version": 1,
-
     "light": "day",
-
     "materials": [
-        { "name": "Ground",  "bsdf": "programmable", "albedo": [0.72, 0.72, 0.72] },
         {
-            "name": "Suzanne",
-            "bsdf": "principled",
-            "albedo":    { "rand": { "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0] } },
-            "roughness": { "rand": { "min": 0.05, "max": 0.75 } },
-            "metalness": { "rand": { "min": 0.0,  "max": 1.0  } }
+            "name": { "value": "Ground" },
+            "programmable": { "albedo": [0.72, 0.72, 0.72] }
         },
         {
-            "name": "Glass",
-            "bsdf": "dielectric",
-            "albedo":    { "rand": { "min": [0.8, 0.8, 0.8], "max": [1.0, 1.0, 1.0] } },
-            "roughness": 0.0,
-            "ior":       { "rand": { "min": 1.2, "max": 1.4 } }
+            "name": { "value": "Suzanne" },
+            "principled": {
+                "albedo": { "rand": { "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0] } },
+                "roughness": { "rand": { "min": 0.05, "max": 0.75 } },
+                "metalness": { "rand": { "min": 0.0, "max": 1.0 } }
+            }
+        },
+        {
+            "name": { "value": "Glass" },
+            "dielectric": {
+                "albedo": { "rand": { "min": [0.8, 0.8, 0.8], "max": [1.0, 1.0, 1.0] } },
+                "roughness": 0.0,
+                "ior": { "rand": { "min": 1.2, "max": 1.4 } }
+            }
         }
     ],
-
     "entities": [
         {
             "camera": { "fov": { "rand": { "min": 40, "max": 65 } } },
             "name": { "value": "Camera" },
             "spherical": {
-                "radius":    { "rand": { "min": 10, "max": 15 } },
-                "azimuth":   { "rand": { "min": -20, "max": 20 } },
+                "radius": { "rand": { "min": 10, "max": 15 } },
+                "azimuth": { "rand": { "min": -20, "max": 20 } },
                 "elevation": { "rand": { "min": -10, "max": 30 } },
-                "target":    [0, 0, -2]
+                "target": [0, 0, -2]
             }
         },
         {
             "plane": {},
-            "material": "Ground",
+            "material_ref": { "handle": "Ground" },
             "name": { "value": "Ground" },
             "transform": { "position": [0, -1, 0] }
         },
         {
             "mesh": { "path": "./assets/models/suzanne.obj" },
-            "material": "Suzanne",
+            "material_ref": { "handle": "Suzanne" },
             "name": { "value": "Suzanne" },
             "transform": { "position": [0, 0.5, -2], "scale": [1.5, 1.5, 1.5] }
         },
         {
             "sphere": { "radius": 1.5 },
-            "material": "Glass",
+            "material_ref": { "handle": "Glass" },
             "name": { "value": "GlassSphere" },
             "transform": { "position": [0, 0.5, 2] }
         }

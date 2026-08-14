@@ -1,116 +1,165 @@
 {
     "version": 1,
-
     "light": "empty",
-
     "materials": [
         {
-            "name": "Floor",
-            "bsdf": "ggx_glossy",
-            "albedo":    { "rand": { "min": [0.38, 0.25, 0.12], "max": [0.62, 0.42, 0.20] } },
-            "roughness": { "rand": { "min": 0.25, "max": 0.55 } },
-            "ior": 1.5
+            "name": { "value": "Floor" },
+            "glossy": {
+                "albedo": { "rand": { "min": [0.38, 0.25, 0.12], "max": [0.62, 0.42, 0.2] } },
+                "roughness": { "rand": { "min": 0.25, "max": 0.55 } },
+                "ior": 1.5
+            }
         },
-        { "name": "Ceiling",   "bsdf": "lambertian", "albedo": [0.92, 0.90, 0.88] },
-        { "name": "WallBack",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.80, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } } },
-        { "name": "WallLeft",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.20] } } },
-        { "name": "WallRight", "bsdf": "lambertian", "albedo": { "rand": { "min": [0.72, 0.70, 0.65], "max": [0.88, 0.86, 0.80] } } },
-        { "name": "Window",    "bsdf": "emissive",   "albedo": [0.82, 0.88, 1.0], "emission_strength": 30 },
-        { "name": "Lamp",      "bsdf": "emissive",   "albedo": [1.0, 0.65, 0.25], "emission_strength": 600 },
         {
-            "name": "Glass",
-            "bsdf": "dielectric",
-            "albedo":    [0.96, 0.97, 0.99],
-            "roughness": 0.0,
-            "ior":       { "rand": { "min": 1.45, "max": 1.65 } }
+            "name": { "value": "Ceiling" },
+            "diffuse": { "albedo": [0.92, 0.9, 0.88] }
         },
-        { "name": "Pedestal",  "bsdf": "lambertian", "albedo": { "rand": { "min": [0.82, 0.80, 0.78], "max": [0.95, 0.93, 0.90] } } },
         {
-            "name": "BunnyMat",
-            "bsdf": "principled",
-            "albedo":    { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.90, 0.90, 0.90] } },
-            "roughness": { "rand": { "min": 0.05, "max": 0.6  } },
-            "metalness": { "rand": { "min": 0.0,  "max": 1.0  } }
+            "name": { "value": "WallBack" },
+            "diffuse": {
+                "albedo": { "rand": { "min": [0.8, 0.75, 0.68], "max": [0.92, 0.88, 0.82] } }
+            }
+        },
+        {
+            "name": { "value": "WallLeft" },
+            "diffuse": {
+                "albedo": { "rand": { "min": [0.52, 0.28, 0.14], "max": [0.68, 0.38, 0.2] } }
+            }
+        },
+        {
+            "name": { "value": "WallRight" },
+            "diffuse": {
+                "albedo": { "rand": { "min": [0.72, 0.7, 0.65], "max": [0.88, 0.86, 0.8] } }
+            }
+        },
+        {
+            "name": { "value": "Window" },
+            "emissive": { "albedo": [0.82, 0.88, 1.0], "emission_strength": 30 }
+        },
+        {
+            "name": { "value": "Lamp" },
+            "emissive": { "albedo": [1.0, 0.65, 0.25], "emission_strength": 600 }
+        },
+        {
+            "name": { "value": "Glass" },
+            "dielectric": {
+                "albedo": [0.96, 0.97, 0.99],
+                "roughness": 0.0,
+                "ior": { "rand": { "min": 1.45, "max": 1.65 } }
+            }
+        },
+        {
+            "name": { "value": "Pedestal" },
+            "diffuse": {
+                "albedo": { "rand": { "min": [0.82, 0.8, 0.78], "max": [0.95, 0.93, 0.9] } }
+            }
+        },
+        {
+            "name": { "value": "BunnyMat" },
+            "principled": {
+                "albedo": { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.9, 0.9, 0.9] } },
+                "roughness": { "rand": { "min": 0.05, "max": 0.6 } },
+                "metalness": { "rand": { "min": 0.0, "max": 1.0 } }
+            }
         }
     ],
-
     "entities": [
         {
             "camera": { "fov": { "rand": { "min": 55, "max": 80 } } },
             "name": { "value": "Camera" },
             "spherical": {
-                "radius":    { "rand": { "min": 2.5, "max": 4.5 } },
-                "azimuth":   { "rand": { "min": -60, "max": 240 } },
+                "radius": { "rand": { "min": 2.5, "max": 4.5 } },
+                "azimuth": { "rand": { "min": -60, "max": 240 } },
                 "elevation": { "rand": { "min": 5, "max": 28 } },
-                "target":    [0, 1, 0]
+                "target": [0, 1, 0]
             }
         },
         {
             "plane": {},
-            "material": "Floor",
+            "material_ref": { "handle": "Floor" },
             "name": { "value": "Floor" }
         },
         {
             "quad": {},
-            "material": "Ceiling",
+            "material_ref": { "handle": "Ceiling" },
             "name": { "value": "Ceiling" },
-            "transform": { "position": [0, 4, 0], "rotation": [90, 0, 0], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, 4, 0],
+                "rotation": [90, 0, 0],
+                "scale": [8, 8, 1]
+            }
         },
         {
             "quad": {},
-            "material": "WallBack",
+            "material_ref": { "handle": "WallBack" },
             "name": { "value": "WallBack" },
             "transform": { "position": [0, 2, -4], "scale": [8, 4, 1] }
         },
         {
             "quad": {},
-            "material": "WallLeft",
+            "material_ref": { "handle": "WallLeft" },
             "name": { "value": "WallLeft" },
-            "transform": { "position": [-4, 2, 0], "rotation": [0, 90, 0], "scale": [8, 4, 1] }
+            "transform": {
+                "position": [-4, 2, 0],
+                "rotation": [0, 90, 0],
+                "scale": [8, 4, 1]
+            }
         },
         {
             "quad": {},
-            "material": "WallRight",
+            "material_ref": { "handle": "WallRight" },
             "name": { "value": "WallRight" },
-            "transform": { "position": [4, 2, 0], "rotation": [0, -90, 0], "scale": [8, 4, 1] }
+            "transform": {
+                "position": [4, 2, 0],
+                "rotation": [0, -90, 0],
+                "scale": [8, 4, 1]
+            }
         },
         {
             "quad": {},
-            "material": "Window",
+            "material_ref": { "handle": "Window" },
             "name": { "value": "Window" },
-            "transform": { "position": [-3.9, 2, -0.5], "rotation": [0, 90, 0], "scale": [2.5, 2, 1] }
+            "transform": {
+                "position": [-3.9, 2, -0.5],
+                "rotation": [0, 90, 0],
+                "scale": [2.5, 2, 1]
+            }
         },
         {
             "sphere": { "radius": 0.08 },
-            "material": "Lamp",
+            "material_ref": { "handle": "Lamp" },
             "name": { "value": "Lamp" },
             "transform": { "position": [3, 1, 2] }
         },
         {
             "box": {},
-            "material": "Pedestal",
+            "material_ref": { "handle": "Pedestal" },
             "name": { "value": "BunnyPedestal" },
             "transform": { "position": [0, 0.45, -0.8], "scale": [0.5, 0.45, 0.5] }
         },
         {
             "mesh": { "path": "./assets/models/bunny.obj" },
-            "material": "BunnyMat",
+            "material_ref": { "handle": "BunnyMat" },
             "name": { "value": "Bunny" },
             "transform": {
                 "position": [0, 1.55, -0.8],
-                "rotation": [0, { "rand": { "min": -60, "max": 60 } }, 0],
+                "rotation": [
+                    0,
+                    { "rand": { "min": -60, "max": 60 } },
+                    0
+                ],
                 "scale": [1.5, 1.5, 1.5]
             }
         },
         {
             "box": {},
-            "material": "Pedestal",
+            "material_ref": { "handle": "Pedestal" },
             "name": { "value": "GlassPedestal" },
             "transform": { "position": [0, 0.45, 0.8], "scale": [0.7, 0.45, 0.7] }
         },
         {
             "sphere": { "radius": 0.6 },
-            "material": "Glass",
+            "material_ref": { "handle": "Glass" },
             "name": { "value": "GlassSphere" },
             "transform": { "position": [0, 1.5, 0.8] }
         }

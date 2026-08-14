@@ -36,8 +36,8 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
         return;
     }
 
-    Material mat   = resolveMaterial(getMaterial(firstHit.object), firstHit);
-    mat.albedo    *= firstHit.vertexColor;
+    Material mat = resolveMaterial(getMaterial(firstHit.object), firstHit);
+    mat_setAlbedo(mat, mat_albedo(mat) * firstHit.vertexColor);
     float guideMix = 1.0 / float(pixelInfo.count);
 
     vec3 right = normalize(camera.U);
@@ -45,8 +45,9 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
 
     vec3 normalW = normalize(firstHit.normal);
     vec3 positionW = firstHit.p;
-    vec3 albedo = mat.albedo;
-    float roughness = mat.type == mat_Lambertian ? 1.0 : mat.roughness;
+    vec3 albedo = mat_albedo(mat);
+    float roughness = (mat.type == mat_Metal || mat.type == mat_Glossy || mat.type == mat_Dielectric || mat.type == mat_Principled)
+                      ? mat.payload[3] : 1.0;
     vec3 hitOff = positionW - camera.eye;
     vec3 camDir = camera.W;
     vec2 normal = vec2(dot(normalW, right), dot(normalW, up));
@@ -144,16 +145,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         }
 
         mat = getMaterial(hit.object);
-        mat.albedo *= hit.vertexColor;
+        mat_setAlbedo(mat, mat_albedo(mat) * hit.vertexColor);
 
-        // Light hit
-        if (mat.emissionStrength > 0) {
+        if (mat.type == mat_Emissive) {
             if (i == 0) {
-                radiance = mat.albedo * mat.emissionStrength;
+                radiance = mat_albedo(mat) * mat_emissive_emissionStrength(mat);
                 break;
             }
 
-            vec3 Le = mat.albedo * mat.emissionStrength;
+            vec3 Le = mat_albedo(mat) * mat_emissive_emissionStrength(mat);
             float w = 1.0;
             if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
                 float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);

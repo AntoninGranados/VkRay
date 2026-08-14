@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "core/scene/object/object.hpp"
+#include "core/scene/object.hpp"
 
 typedef int MeshHandle;
 

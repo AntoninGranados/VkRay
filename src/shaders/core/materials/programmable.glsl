@@ -5,9 +5,9 @@
 #include "../random.glsl"
 
 #include "material_utils.glsl"
-#include "lambertian.glsl"
-#include "ggx_metal.glsl"
-#include "ggx_glossy.glsl"
+#include "diffuse.glsl"
+#include "metal.glsl"
+#include "glossy.glsl"
 
 #define SCALE 1.0
 #define FEATHER 0.02
@@ -18,9 +18,9 @@
 #define PROGRAMMABLE_TEST_GRID
 // #define PROGRAMMABLE_POINT_GRID
 
-#define MATERIAL_NORMAL Material(mat_GgxGlossy, mat.albedo, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0);
-#define MATERIAL_DARK   Material(mat_GgxGlossy, mat.albedo*0.8, 0.1, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0);
-#define MATERIAL_BLACK  Material(mat_Lambertian, vec3(0.02), 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0);
+#define MATERIAL_NORMAL mat_makeGlossy(mat_albedo(mat), 0.1, 2.0)
+#define MATERIAL_DARK   mat_makeGlossy(mat_albedo(mat) * 0.8, 0.1, 2.0)
+#define MATERIAL_BLACK  mat_makeDiffuse(vec3(0.02))
 
 vec2 planeCoords(in Hit hit) {
     vec3 up = abs(hit.normal.z) < (1.0 - EPS) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
