@@ -3,7 +3,7 @@
 #include <cmath>
 
 AnimationHandler::AnimationHandler(int endFrame, double fps)
-    : endFrame(endFrame), frame(0), time(0.0), fps(fps), dt(0.0), fixedDt(1.0 / fps), paused(true) {}
+    : endFrame(endFrame), fps(fps), fixedDt(1.0 / fps) {}
 
 void AnimationHandler::reset(double t) {
     time = t;
@@ -37,4 +37,18 @@ void AnimationHandler::stepFixed() {
         time += fixedDt;
         frame = newFrame;
     }
+}
+
+bool AnimationHandler::sample(float jitterRange) {
+    frameChanged = frame != sampledFrame;
+    sampledFrame = frame;
+
+    if (frameChanged || jitterRange <= 0.0f) {
+        sampleFrame = static_cast<float>(frame);
+    } else {
+        std::uniform_real_distribution<float> dist(-jitterRange * 0.5f, jitterRange * 0.5f);
+        sampleFrame = static_cast<float>(frame) + dist(rng);
+    }
+
+    return frameChanged;
 }

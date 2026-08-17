@@ -1,17 +1,17 @@
 {
     "version": 1,
     "light": "night",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Light" },
+            "name": "Light",
             "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 }
         },
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "programmable": { "albedo": [0.75, 0.75, 0.75] }
         },
         {
-            "name": { "value": "Text" },
+            "name": "Text",
             "glossy": {
                 "albedo": [0.1, 0.85, 0.05],
                 "roughness": 0.25,
@@ -19,7 +19,7 @@
             }
         },
         {
-            "name": { "value": "Dragon1" },
+            "name": "Dragon1",
             "dielectric": {
                 "albedo": [1.0, 0.25, 0.25],
                 "roughness": 0.2,
@@ -27,33 +27,43 @@
             }
         },
         {
-            "name": { "value": "Dragon2" },
+            "name": "Dragon2",
             "metal": { "albedo": [0.25, 0.25, 1.0], "roughness": 0.2 }
         }
     ],
-    "entities": [
+    "Assets": [
+        {
+            "name": "vkray",
+            "mesh": { "path": "./assets/models/vkray.obj" }
+        },
+        {
+            "name": "dragon",
+            "mesh": { "path": "./assets/models/dragon.obj", "smooth": true }
+        }
+    ],
+    "Objects": [
         {
             "camera": { "fov": 40 },
             "thin_lens": { "f_stop": 2.5, "focal_distance": 14 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 6, 5], "rotation": [-26.57, 0, 0] }
         },
         {
             "sphere": { "radius": 5 },
             "material_ref": { "handle": "Light" },
-            "name": { "value": "Light" },
+            "name": "Light",
             "transform": { "position": [0, 20, 5] }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "transform": { "position": [0, -3, 0] }
         },
         {
-            "mesh": { "path": "./assets/models/vkray.obj" },
+            "mesh_ref": { "handle": "vkray" },
             "material_ref": { "handle": "Text" },
-            "name": { "value": "Text" },
+            "name": "Text",
             "transform": {
                 "position": [0, 0, -10],
                 "rotation": [60, 0, 0],
@@ -61,9 +71,9 @@
             }
         },
         {
-            "mesh": { "path": "./assets/models/dragon.obj", "smooth": true },
+            "mesh_ref": { "handle": "dragon" },
             "material_ref": { "handle": "Dragon1" },
-            "name": { "value": "Dragon1" },
+            "name": "Dragon1",
             "transform": {
                 "position": [-8, -1.7, -9],
                 "rotation": [180, 20, 180],
@@ -71,9 +81,9 @@
             }
         },
         {
-            "mesh": { "path": "./assets/models/dragon.obj", "smooth": true },
+            "mesh_ref": { "handle": "dragon" },
             "material_ref": { "handle": "Dragon2" },
-            "name": { "value": "Dragon2" },
+            "name": "Dragon2",
             "transform": {
                 "position": [8, -1.7, -9],
                 "rotation": [0, 20, 0],

@@ -11,14 +11,21 @@
 #include "imgui/imgui_internal.h"
 
 #include "core/core.hpp"
-#include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/editor.hpp"
 #include "ui_utils.hpp"
 
 EditorUi::EditorUi() {
     initStyle();
     viewportPanel.setOnEntitySelectionCallback(
-        [this](std::optional<ecs::Entity> id) { clearPreview(); if (selection.entity != id) { selection.entity = id; Core::requestAccumulationRestart(); } }
+        [this](std::optional<ecs::Entity> id) {
+            clearPreview();
+            if (Editor::getSelectedEntity() != id) {
+                if (id.has_value()) Editor::setSelectedEntity(*id);
+                else Editor::clearSelectedEntity();
+                Core::requestAccumulationRestart();
+            }
+        }
     );
 }
 
@@ -47,7 +54,7 @@ void EditorUi::initStyle() {
     c[ImGuiCol_WindowBg]                  = ui::kDraculaBg;
     c[ImGuiCol_ChildBg]                   = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     c[ImGuiCol_PopupBg]                   = ui::kDraculaBg;
-    c[ImGuiCol_Border]                    = ui::luma(ui::kDraculaBg, 0.5f);
+    c[ImGuiCol_Border]                    = ui::kDraculaSurface;
     c[ImGuiCol_BorderShadow]              = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     c[ImGuiCol_FrameBg]                   = ui::kDraculaSurface;
     c[ImGuiCol_FrameBgHovered]            = ImVec4(ui::kDraculaSurface.x, ui::kDraculaSurface.y, ui::kDraculaSurface.z, 0.7f);
@@ -69,7 +76,7 @@ void EditorUi::initStyle() {
     c[ImGuiCol_Header]                    = ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.35f);
     c[ImGuiCol_HeaderHovered]             = ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f);
     c[ImGuiCol_HeaderActive]              = ui::kDraculaPurple;
-    c[ImGuiCol_Separator]                 = ImVec4(c[ImGuiCol_TextDisabled].x, c[ImGuiCol_TextDisabled].y, c[ImGuiCol_TextDisabled].z, 0.5f);
+    c[ImGuiCol_Separator]                 = ui::kDraculaSurface;
     c[ImGuiCol_SeparatorHovered]          = ui::kDraculaPurple;
     c[ImGuiCol_SeparatorActive]           = ui::kDraculaPink;
     c[ImGuiCol_ResizeGrip]                = ui::kDraculaSurface;
@@ -90,7 +97,7 @@ void EditorUi::initStyle() {
     c[ImGuiCol_PlotHistogramHovered]      = ui::kDraculaPink;
     c[ImGuiCol_TableHeaderBg]             = ui::kDraculaBg;
     c[ImGuiCol_TableBorderStrong]         = ui::kDraculaSurface;
-    c[ImGuiCol_TableBorderLight]          = ImVec4(ui::kDraculaSurface.x, ui::kDraculaSurface.y, ui::kDraculaSurface.z, 0.5f);
+    c[ImGuiCol_TableBorderLight]          = ui::kDraculaSurface;
     c[ImGuiCol_TableRowBg]                = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     c[ImGuiCol_TableRowBgAlt]             = ImVec4(ui::kDraculaSurface.x, ui::kDraculaSurface.y, ui::kDraculaSurface.z, 0.3f);
     c[ImGuiCol_TextLink]                  = ui::kDraculaCyan;
@@ -138,24 +145,25 @@ void EditorUi::setupDockspace() {
         ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_None);
         ImGui::DockBuilderSetNodeSize(dockspace_id, vp->Size);
 
-        ImGuiID dock_bottom, dock_right, dock_center;
+        ImGuiID dock_left, dock_right, dock_bottom, dock_center;
         ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down,  0.15f, &dock_bottom, &dock_center);
-        ImGui::DockBuilderSplitNode(dock_center,  ImGuiDir_Right, 0.25f, &dock_right,  &dock_center);
+        ImGui::DockBuilderSplitNode(dock_center,  ImGuiDir_Left,  0.25f, &dock_left,   &dock_center);
+        ImGui::DockBuilderSplitNode(dock_center,  ImGuiDir_Right, 0.30f, &dock_right,  &dock_center);
 
         ImGui::DockBuilderDockWindow("Animation",                dock_bottom);
-        ImGui::DockBuilderDockWindow(ICON_FA_CAMERA " Renderer", dock_right);
-        ImGui::DockBuilderDockWindow(ICON_FA_VIDEO " Camera",    dock_right);
-        ImGui::DockBuilderDockWindow(ICON_FA_CUBES " Scene",     dock_right);
-        ImGui::DockBuilderDockWindow("FPS",                      dock_right);
+        ImGui::DockBuilderDockWindow(ICON_FA_CAMERA " Renderer", dock_left);
+        ImGui::DockBuilderDockWindow(ICON_FA_CUBES " Scene",     dock_left);
+        ImGui::DockBuilderDockWindow("Inspector",                dock_right);
         ImGui::DockBuilderDockWindow("Viewport",                 dock_center);
         ImGui::DockBuilderFinish(dockspace_id);
     }
 }
 
 void EditorUi::setPreview() {
-    if (!selection.entity.has_value()) return;
+    const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
+    if (!selectedEntity.has_value()) return;
     Scene& scene = Core::getScene();
-    const ecs::Entity e = *selection.entity;
+    const ecs::Entity e = *selectedEntity;
     if (!scene.getRegistry().has(e, ecs::Camera)) return;
     scene.getCamera().setPreviewCamera(e);
     Core::requestAccumulationRestart();
@@ -167,8 +175,6 @@ void EditorUi::clearPreview() {
 }
 
 void EditorUi::drawPreview() {
-    Scene& scene = Core::getScene();
-
     setupDockspace();
     viewportPanel.draw();
 
@@ -176,7 +182,7 @@ void EditorUi::drawPreview() {
     animationPanel.draw();
     scenePanel.draw();
     renderParameterPanel.draw();
-    sceneUI.drawInspectors(scene, selection);
+    inspectorPanel.draw();
     toastNotifications.draw();
     debugPanel.draw();
 }
@@ -188,5 +194,5 @@ void EditorUi::drawRender() {
 
 void EditorUi::clearEntitySelection() {
     clearPreview();
-    selection.entity.reset();
+    Editor::clearSelectedEntity();
 }

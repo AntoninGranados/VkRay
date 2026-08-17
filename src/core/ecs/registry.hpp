@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cassert>
+#include <algorithm>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -13,7 +14,7 @@ namespace ecs {
 
 class Registry {
 public:
-    Entity createEntity() {
+    Entity createEntity(Entity parent = {}) {
         uint32_t id;
         if (!freeIds.empty()) {
             id = freeIds.back();
@@ -22,7 +23,12 @@ public:
             id = static_cast<uint32_t>(generations.size());
             generations.push_back(0);
         }
-        return Entity{ id, generations[id] };
+        Entity e{ id, generations[id] };
+        if (parent != Entity{}) {
+            parentMap[e] = parent;
+            childrenMap[parent].push_back(e);
+        }
+        return e;
     }
 
     void destroyEntity(const Entity& e) {
@@ -32,10 +38,40 @@ public:
             storage.remove(e);
         generations[e.getId()]++;
         freeIds.push_back(e.getId());
+
+        auto parentIt = parentMap.find(e);
+        if (parentIt != parentMap.end()) {
+            auto& siblings = childrenMap[parentIt->second];
+            siblings.erase(std::remove(siblings.begin(), siblings.end(), e), siblings.end());
+            if (siblings.empty())
+                childrenMap.erase(parentIt->second);
+            parentMap.erase(parentIt);
+        }
+        childrenMap.erase(e);
+    }
+
+    void clear() {
+        storages.clear();
+        parentMap.clear();
+        childrenMap.clear();
+        generations.clear();
+        freeIds.clear();
     }
 
     bool isAlive(const Entity& e) const {
         return e.getId() < generations.size() && generations[e.getId()] == e.getGen();
+    }
+
+    std::optional<Entity> getParent(const Entity& child) const {
+        auto it = parentMap.find(child);
+        if (it == parentMap.end()) return {};
+        return it->second;
+    }
+
+    const std::vector<Entity>& getChildren(const Entity& parent) const {
+        static const std::vector<Entity> empty;
+        auto it = childrenMap.find(parent);
+        return it != childrenMap.end() ? it->second : empty;
     }
 
     ComponentStorage& storage(const ComponentType& type) {
@@ -89,6 +125,8 @@ public:
 
 private:
     std::unordered_map<std::string, ComponentStorage> storages;
+    std::unordered_map<Entity, Entity> parentMap;
+    std::unordered_map<Entity, std::vector<Entity>> childrenMap;
     std::vector<uint32_t> generations;
     std::vector<uint32_t> freeIds;
     std::vector<std::pair<Entity, std::string>> removalQueue;

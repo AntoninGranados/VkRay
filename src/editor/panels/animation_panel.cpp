@@ -208,14 +208,14 @@ void AnimationPanel::content() {
 
     // Timeline
     {
-        const SceneSelection& sel = Editor::getUi().getSelection();
+        const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
 
-        if (!sel.entity.has_value()) {
+        if (!selectedEntity.has_value()) {
             ImGui::TextDisabled("No selection");
         } else {
             AnimationStore& store = scene.getAnimationStore();
             ecs::Registry& registry = scene.getRegistry();
-            const ecs::Entity entity = *sel.entity;
+            const ecs::Entity entity = *selectedEntity;
 
             constexpr float labelWidth = 150.0f;
             constexpr float rowHeight = 18.0f;

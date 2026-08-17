@@ -4,13 +4,13 @@
 
 #include "editor/panels/animation_panel.hpp"
 #include "editor/panels/debug_panel.hpp"
+#include "editor/panels/inspector_panel.hpp"
 #include "editor/panels/render_progress_panel.hpp"
 #include "editor/panels/render_viewport_panel.hpp"
 #include "editor/panels/renderer_panel.hpp"
 #include "editor/panels/scene_panel.hpp"
 #include "editor/panels/stats_panel.hpp"
 #include "editor/panels/viewport_panel.hpp"
-#include "editor/scene/scene_ui.hpp"
 #include "toast_notifications.hpp"
 
 class Scene;
@@ -34,23 +34,20 @@ public:
     void setPreview();
     void clearPreview();
 
-    const SceneSelection& getSelection()     const { return selection; }
     ImVec2      getViewportSize()            const { return viewportPanel.getSize(); }
     ImVec2      getViewportPos()             const { return viewportPanel.getPos(); }
     ImDrawList* getViewportDrawList()        const { return viewportPanel.getDrawList(); }
 
 private:
-    SceneSelection      selection;
-
     StatsPanel          statsPanel;
     AnimationPanel      animationPanel;
     RenderProgressPanel renderPanel;
     RendererPanel       renderParameterPanel;
-    ScenePanel          scenePanel{selection};
+    ScenePanel          scenePanel;
+    InspectorPanel      inspectorPanel;
     DebugPanel          debugPanel;
     ViewportPanel       viewportPanel;
     RenderViewportPanel renderViewportPanel;
-    SceneUI             sceneUI;
     ToastNotifications  toastNotifications;
 
     bool toggled      = true;

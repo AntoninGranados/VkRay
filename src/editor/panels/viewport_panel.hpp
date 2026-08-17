@@ -10,20 +10,19 @@
 #include "editor/panels/panel.hpp"
 
 class Scene;
-struct SceneSelection;
 
-class ViewportPanel: public IPanel {
+class ViewportPanel : public IPanel {
 public:
-void setOnEntitySelectionCallback(std::function<void(std::optional<ecs::Entity>)> callback) { onEntitySelection = callback; }
+    void setOnEntitySelectionCallback(std::function<void(std::optional<ecs::Entity>)> callback) { onEntitySelection = callback; }
 
-ImVec2      getSize()     const { return size; }
-ImVec2      getPos()      const { return pos; }
-bool        isHovered()   const { return hovered; }
-ImDrawList* getDrawList() const { return drawList; }
+    ImVec2      getSize()     const { return size; }
+    ImVec2      getPos()      const { return pos; }
+    bool        isHovered()   const { return hovered; }
+    ImDrawList* getDrawList() const { return drawList; }
 
 private:
     void content() override;
-    void drawGizmo(Scene& scene, const SceneSelection& selection);
+    void drawGizmo(Scene& scene);
     std::optional<ecs::Entity> raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras = true);
 
     std::function<void(std::optional<ecs::Entity>)> onEntitySelection;

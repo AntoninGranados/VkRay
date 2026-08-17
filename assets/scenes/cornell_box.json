@@ -1,42 +1,48 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Object" },
+            "name": "Object",
             "dielectric": { "albedo": [1, 0.5, 0.5], "roughness": 0.1, "ior": 1.3 }
         },
         {
-            "name": { "value": "Left" },
+            "name": "Left",
             "programmable": { "albedo": [1.0, 0.1, 0.1] }
         },
         {
-            "name": { "value": "Right" },
+            "name": "Right",
             "programmable": { "albedo": [0.1, 1.0, 0.1] }
         },
         {
-            "name": { "value": "Wall" },
+            "name": "Wall",
             "programmable": { "albedo": [1.0, 1.0, 1.0] }
         },
         {
-            "name": { "value": "Back" },
+            "name": "Back",
             "programmable": { "albedo": [0.2, 0.2, 0.6] }
         },
         {
-            "name": { "value": "Light" },
+            "name": "Light",
             "emissive": { "albedo": [1.0, 0.7, 0.5], "emission_strength": 30 }
         }
     ],
-    "entities": [
+    "Assets": [
+        {
+            "name": "dragon",
+            "mesh": { "path": "./assets/models/dragon.obj" }
+        }
+    ],
+    "Objects": [
         {
             "camera": { "fov": 40 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 0, -15], "rotation": [0, 180, 0] }
         },
         {
-            "mesh": { "path": "./assets/models/dragon.obj" },
+            "mesh_ref": { "handle": "dragon" },
             "material_ref": { "handle": "Object" },
-            "name": { "value": "Object" },
+            "name": "Object",
             "transform": {
                 "position": [0, -2.2, 0],
                 "rotation": [0, 200, 0],
@@ -44,9 +50,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Left" },
-            "name": { "value": "Left" },
+            "name": "Left",
             "transform": {
                 "position": [-4, 0, 0],
                 "rotation": [0, 90, 0],
@@ -54,9 +60,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Right" },
-            "name": { "value": "Right" },
+            "name": "Right",
             "transform": {
                 "position": [4, 0, 0],
                 "rotation": [0, -90, 0],
@@ -64,9 +70,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Wall" },
-            "name": { "value": "Top" },
+            "name": "Top",
             "transform": {
                 "position": [0, 4, 0],
                 "rotation": [90, 0, 0],
@@ -74,9 +80,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Wall" },
-            "name": { "value": "Bottom" },
+            "name": "Bottom",
             "transform": {
                 "position": [0, -4, 0],
                 "rotation": [-90, 0, 0],
@@ -84,9 +90,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Back" },
-            "name": { "value": "Back" },
+            "name": "Back",
             "transform": {
                 "position": [0, 0, 4],
                 "rotation": [180, 0, 0],
@@ -94,15 +100,15 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Wall" },
-            "name": { "value": "Front" },
+            "name": "Front",
             "transform": { "position": [0, 0, -4], "scale": [8, 8, 1] }
         },
         {
-            "box": {},
+            "box": {  },
             "material_ref": { "handle": "Light" },
-            "name": { "value": "Light" },
+            "name": "Light",
             "transform": { "position": [0, 3.95, 0], "scale": [1, 0.05, 1] }
         }
     ]

@@ -13,4 +13,5 @@ template<> FieldType FieldValue::typeOf<glm::vec2>()   { return FieldType::Vec2;
 template<> FieldType FieldValue::typeOf<glm::vec3>()   { return FieldType::Vec3; }
 template<> FieldType FieldValue::typeOf<glm::vec4>()   { return FieldType::Vec4; }
 template<> FieldType FieldValue::typeOf<glm::quat>()   { return FieldType::Quat; }
+template<> FieldType FieldValue::typeOf<ecs::Entity>() { return FieldType::Entity; }
 template<> FieldType FieldValue::typeOf<std::string>() { return FieldType::String; }

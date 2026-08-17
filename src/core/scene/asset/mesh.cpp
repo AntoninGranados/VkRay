@@ -1,7 +1,6 @@
 #include "mesh.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <format>
 #include <unordered_map>
 #include <limits>
@@ -11,20 +10,37 @@
 #include "tinyobjloader/tiny_obj_loader.h"
 
 #include "utils/log.hpp"
-#include "mesh_simplify.hpp"
 
-MeshAsset::MeshAsset(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
-name(name), vertices(vertices), indices(indices) {
-    savedVertices = this->vertices;
-    savedIndices = this->indices;
-    baseVertices = this->vertices;
-    baseIndices = this->indices;
-    hasSaved = true;
+MeshAsset makeDefaultMeshAsset() {
+    return MeshAsset(
+        std::vector<Vertex>{
+            { glm::vec3(-0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f, -0.5f)) },
+            { glm::vec3( 0.5f, -0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f, -0.5f)) },
+            { glm::vec3( 0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f, -0.5f)) },
+            { glm::vec3(-0.5f,  0.5f, -0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f, -0.5f)) },
+            { glm::vec3(-0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f, -0.5f,  0.5f)) },
+            { glm::vec3( 0.5f, -0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f, -0.5f,  0.5f)) },
+            { glm::vec3( 0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3( 0.5f,  0.5f,  0.5f)) },
+            { glm::vec3(-0.5f,  0.5f,  0.5f), glm::normalize(glm::vec3(-0.5f,  0.5f,  0.5f)) },
+        },
+        std::vector<uint32_t>{
+            0, 1, 2, 2, 3, 0,
+            4, 5, 6, 6, 7, 4,
+            1, 5, 6, 6, 2, 1,
+            0, 3, 7, 7, 4, 0,
+            3, 2, 6, 6, 7, 3,
+            0, 4, 5, 5, 1, 0,
+        }
+    );
+}
+
+MeshAsset::MeshAsset(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices):
+vertices(vertices), indices(indices) {
     buildBvh();
 }
 
-bool MeshAsset::loadFromObj(const std::string& _path) {
-    path = _path;
+std::optional<MeshAsset> MeshAsset::load(const std::string& path) {
+    MeshAsset asset;
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -37,10 +53,12 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
     if (!err.empty())  Log::error("Mesh", std::format("Failed to load .obj: {}", err));
     if (!loaded) {
         Log::error("Mesh", std::format("Failed to load .obj: {}", path));
-        return false;
+        return std::nullopt;
     }
 
-    vertices.clear();
+    std::vector<Vertex>& vertices = asset.vertices;
+    std::vector<uint32_t>& indices = asset.indices;
+
     vertices.reserve(attrib.vertices.size() / 3);
     for (size_t i = 0; i + 2 < attrib.vertices.size(); i += 3) {
         vertices.push_back(Vertex{
@@ -48,9 +66,6 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
             .normal = glm::vec3(0.0f),
         });
     }
-
-    indices.clear();
-    vertexColorLoaded = false;
 
     std::vector<int> vertexMaterial(vertices.size(), -1);
     std::unordered_map<uint64_t, unsigned int> splitVertices;
@@ -71,7 +86,7 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
             if (hasMat) {
                 const auto& kd = materials[matId].diffuse;
                 faceColor = glm::vec3(kd[0], kd[1], kd[2]);
-                vertexColorLoaded = true;
+                asset.vertexColorLoaded = true;
             }
 
             for (int v = 0; v < fv; v++) {
@@ -118,15 +133,9 @@ bool MeshAsset::loadFromObj(const std::string& _path) {
     }
     for (Vertex& v : vertices) v.normal = glm::normalize(v.normal);
 
-    buildBvh();
-    savedVertices = vertices;
-    savedIndices = indices;
-    baseVertices = vertices;
-    baseIndices = indices;
-    hasSaved = true;
-    simplifyRatio = 1.0f;
+    asset.buildBvh();
 
-    return true;
+    return asset;
 }
 
 void MeshAsset::buildBvh() {
@@ -159,19 +168,6 @@ void MeshAsset::buildBvh() {
     indices.swap(reordered);
 }
 
-std::string MeshAsset::nameFromPath(const std::string& path) {
-    if (path.empty()) return "Mesh";
-    size_t end = path.find_last_of('.');
-    size_t slash = path.find_last_of("/\\");
-    if (end == std::string::npos || end < slash) end = path.size();
-    size_t start = (slash == std::string::npos) ? 0 : slash + 1;
-    if (start >= end) return "Mesh";
-
-    std::string name = path.substr(start, end - start);
-    name[0] = std::toupper(name[0]);
-    return name;
-}
-
 float MeshAsset::computeArea(const glm::mat4& transform) const {
     if (indices.empty()) return 0.0f;
     const glm::mat3 linear(transform);
@@ -190,53 +186,6 @@ float MeshAsset::computeArea(const glm::mat4& transform) const {
         area += 0.5 * glm::length(glm::cross(e1, e2));
     }
     return static_cast<float>(area);
-}
-
-bool MeshAsset::setSimplifyRatio(float ratio) {
-    ratio = glm::clamp(ratio, 0.01f, 1.0f);
-    if (std::abs(ratio - simplifyRatio) < 1e-6f) return false;
-
-    if (ratio >= 1.0f - 1e-6f) {
-        simplifyRatio = 1.0f;
-        if (baseVertices.empty() || baseIndices.empty()) return false;
-        vertices = baseVertices;
-        indices = baseIndices;
-        buildBvh();
-        return true;
-    }
-
-    if (baseVertices.empty() || baseIndices.empty()) {
-        baseVertices = vertices;
-        baseIndices = indices;
-    }
-
-    MeshAsset base(name, baseVertices, baseIndices);
-    base.setPath(path);
-    MeshAsset simplified = simplifyMesh(base, ratio);
-    vertices = simplified.getVertices();
-    indices = simplified.getIndices();
-    buildBvh();
-    simplifyRatio = ratio;
-    return true;
-}
-
-bool MeshAsset::applySimplification() {
-    if (std::abs(simplifyRatio - 1.0f) < 1e-6f) return false;
-    baseVertices = vertices;
-    baseIndices = indices;
-    simplifyRatio = 1.0f;
-    return true;
-}
-
-bool MeshAsset::revertSimplification() {
-    if (!hasSaved) return false;
-    baseVertices = savedVertices;
-    baseIndices = savedIndices;
-    vertices = baseVertices;
-    indices = baseIndices;
-    buildBvh();
-    simplifyRatio = 1.0f;
-    return true;
 }
 
 namespace {
@@ -361,61 +310,3 @@ size_t MeshAsset::buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<ui
     return nodeIndex;
 }
 
-bool drawMeshAssetUI(MeshAsset& mesh) {
-    bool updated = false;
-    std::string name = mesh.getName();
-    name.resize(128);
-
-    ImGui::PushItemWidth(-FLT_MIN);
-    ImGui::Text("Name:");
-    if (ImGui::InputText("##Name", name.data(), 128)) {
-        mesh.setName(name);
-        updated = true;
-    }
-    ImGui::PopItemWidth();
-    
-    if (!mesh.getPath().empty()) {
-        ImGui::Text("Path:");
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", mesh.getPath().c_str());
-    }
-
-    ImGui::Text("Vertices: %zu", mesh.getVertices().size());
-    ImGui::Text("Faces:    %zu", mesh.getIndices().size() / 3);
-
-    ImGui::Separator();
-
-    bool smooth = mesh.getSmoothShading();
-    if (ImGui::Checkbox("Smooth Shading", &smooth)) {
-        mesh.setSmoothShading(smooth);
-        updated = true;
-    }
-
-    ImGui::Separator();
-
-    float ratio = mesh.getSimplifyRatio();
-    ImGui::Text("Simplify Ratio:");
-    ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::SliderFloat("##SimplifyRatio", &ratio, 0.05f, 1.0f, "%.2f")) {
-        updated |= mesh.setSimplifyRatio(ratio);
-    }
-    ImGui::PopItemWidth();
-    if (ImGui::BeginTable("##SimplifyButtons", 2, ImGuiTableFlags_SizingStretchSame)) {
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        if (ImGui::Button("Apply", ImVec2(-FLT_MIN, 0.0f))) {
-            updated |= mesh.applySimplification();
-        }
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button("Revert", ImVec2(-FLT_MIN, 0.0f))) {
-            updated |= mesh.revertSimplification();
-        }
-        ImGui::PopStyleColor(3);
-        ImGui::EndTable();
-    }
-
-    return updated;
-}

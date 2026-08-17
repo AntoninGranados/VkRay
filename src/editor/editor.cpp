@@ -20,6 +20,10 @@ EditorUi&       Editor::getUi()             { return get().ui; }
 InputHandler&   Editor::getInputHandler()   { return get().inputHandler; }
 EditorRenderer& Editor::getEditorRenderer() { return get().editorRenderer; }
 
+std::optional<ecs::Entity> Editor::getSelectedEntity(){ return get().selectedEntity; }
+void Editor::setSelectedEntity(ecs::Entity entity) { get().selectedEntity = entity; }
+void Editor::clearSelectedEntity() { get().selectedEntity.reset(); }
+
 void Editor::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
     uint64_t lastSwapchainGeneration = 0;

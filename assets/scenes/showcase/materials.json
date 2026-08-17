@@ -1,55 +1,52 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "glossy": { "albedo": [0.6, 0.6, 0.6], "roughness": 0.2, "ior": 1.5 }
         },
         {
-            "name": { "value": "Light" },
+            "name": "Light",
             "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 100 }
         },
+        { "name": "Matte", "diffuse": { "albedo": [1, 1, 1] } },
         {
-            "name": { "value": "Matte" },
-            "diffuse": { "albedo": [1, 1, 1] }
-        },
-        {
-            "name": { "value": "Plastic" },
+            "name": "Plastic",
             "glossy": { "albedo": [1, 1, 1], "roughness": 0.4, "ior": 2.0 }
         },
         {
-            "name": { "value": "Ceramic" },
+            "name": "Ceramic",
             "glossy": { "albedo": [1, 1, 1], "roughness": 0.05, "ior": 1.5 }
         },
         {
-            "name": { "value": "Metal" },
+            "name": "Metal",
             "metal": { "albedo": [1, 1, 1], "roughness": 0.1 }
         },
         {
-            "name": { "value": "RoughMetal" },
+            "name": "RoughMetal",
             "metal": { "albedo": [1, 1, 1], "roughness": 0.3 }
         },
         {
-            "name": { "value": "Glass" },
+            "name": "Glass",
             "dielectric": { "albedo": [1, 1, 1], "ior": 1.5 }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": 20 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 4, 11], "rotation": [-16.92, 0, 0] }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" }
+            "name": "Floor"
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Light" },
-            "name": { "value": "KeyLight" },
+            "name": "KeyLight",
             "transform": {
                 "position": [0, 10, -5],
                 "rotation": [68.2, 0, 0],
@@ -57,9 +54,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Light" },
-            "name": { "value": "FillLight" },
+            "name": "FillLight",
             "transform": {
                 "position": [-9.6, 7, 1],
                 "rotation": [11.31, 90, 0],
@@ -69,37 +66,37 @@
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "Matte" },
-            "name": { "value": "Matte" },
+            "name": "Matte",
             "transform": { "position": [-5, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "Plastic" },
-            "name": { "value": "Plastic" },
+            "name": "Plastic",
             "transform": { "position": [-3, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "Ceramic" },
-            "name": { "value": "Ceramic" },
+            "name": "Ceramic",
             "transform": { "position": [-1, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "Metal" },
-            "name": { "value": "Metal" },
+            "name": "Metal",
             "transform": { "position": [1, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "RoughMetal" },
-            "name": { "value": "RoughMetal" },
+            "name": "RoughMetal",
             "transform": { "position": [3, 0.65, 0] }
         },
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "Glass" },
-            "name": { "value": "Glass" },
+            "name": "Glass",
             "transform": { "position": [5, 0.65, 0] }
         }
     ]

@@ -1,24 +1,21 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
+        { "name": "Floor", "diffuse": { "albedo": [1, 1, 1] } },
         {
-            "name": { "value": "Floor" },
-            "diffuse": { "albedo": [1, 1, 1] }
-        },
-        {
-            "name": { "value": "Light" },
+            "name": "Light",
             "emissive": { "albedo": [1, 1, 1], "emission_strength": 15 }
         },
         {
-            "name": { "value": "SphereMatteMat_{n}" },
+            "name": "SphereMatteMat_{n}",
             "diffuse": {
                 "albedo": { "rand": { "min": [0, 0, 0], "max": [1, 1, 1] } }
             },
             "repeat": { "count": 30 }
         },
         {
-            "name": { "value": "SphereGlassMat_{n}" },
+            "name": "SphereGlassMat_{n}",
             "dielectric": {
                 "albedo": { "rand": { "min": [0, 0, 0], "max": [1, 1, 1] } },
                 "ior": { "rand": { "min": 1.2, "max": 1.7 } },
@@ -27,28 +24,28 @@
             "repeat": { "count": 30 }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": 60 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 5, -20], "rotation": [-14.04, 180, 0] }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "transform": { "position": [0, -2, 0] }
         },
         {
             "sphere": { "radius": 3 },
             "material_ref": { "handle": "Light" },
-            "name": { "value": "Light" },
+            "name": "Light",
             "transform": { "position": [0, 15, 0] }
         },
         {
             "sphere": { "radius": { "rand": { "min": 0.8, "max": 1.0 } } },
             "material_ref": { "handle": "SphereMatteMat_{n}" },
-            "name": { "value": "SphereMatte_{n}" },
+            "name": "SphereMatte_{n}",
             "transform": {
                 "position": { "rand": { "min": [-15, 0, -15], "max": [15, 0, 15] } }
             },
@@ -57,7 +54,7 @@
         {
             "sphere": { "radius": { "rand": { "min": 0.8, "max": 1.0 } } },
             "material_ref": { "handle": "SphereGlassMat_{n}" },
-            "name": { "value": "SphereGlass_{n}" },
+            "name": "SphereGlass_{n}",
             "transform": {
                 "position": { "rand": { "min": [-15, 0, -15], "max": [15, 0, 15] } }
             },

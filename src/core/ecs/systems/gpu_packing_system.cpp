@@ -1,5 +1,6 @@
 #include "gpu_packing_system.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <vector>
@@ -21,6 +22,24 @@ size_t sceneCapacityFromCount(size_t count) {
     size_t cap = 16;
     while (cap < count) cap <<= 1;
     return cap;
+}
+
+uint32_t resolveMaterialSlot(const ComponentStorage& materialRefs, const Entity& entity) {
+    if (!materialRefs.has(entity)) return 0u;
+    const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
+    const auto& materialEntities = Core::getScene().getChildren(Core::getScene().getMaterialsRoot());
+    const auto found = std::find(materialEntities.begin(), materialEntities.end(), materialEntity);
+    if (found == materialEntities.end()) return 0u;
+    return static_cast<uint32_t>(found - materialEntities.begin());
+}
+
+uint32_t resolveMeshSlot(const ComponentStorage& meshRefs, const Entity& entity) {
+    if (!meshRefs.has(entity)) return 0u;
+    const Entity meshEntity = meshRefs.get(entity).get<Entity>("handle");
+    const auto& assetEntities = Core::getScene().getChildren(Core::getScene().getAssetsRoot());
+    const auto found = std::find(assetEntities.begin(), assetEntities.end(), meshEntity);
+    if (found == assetEntities.end()) return 0u;
+    return static_cast<uint32_t>(found - assetEntities.begin());
 }
 } // namespace
 
@@ -48,17 +67,15 @@ void spherePackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<GpuSphere> gpuSpheres;
 
-    for (const auto& e : spheres.entities()) {
-        if (!transforms.has(e)) continue;
-        const Component& s = spheres.get(e);
-        const Component& t = transforms.get(e);
-
-        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
+    for (const auto& entity : spheres.entities()) {
+        if (!transforms.has(entity)) continue;
+        const Component& sphere = spheres.get(entity);
+        const Component& transform = transforms.get(entity);
 
         gpuSpheres.push_back(GpuSphere{
-            .center = t.get<glm::vec3>("position"),
-            .radius = s.get<float>("radius"),
-            .materialHandle = handle,
+            .center = transform.get<glm::vec3>("position"),
+            .radius = sphere.get<float>("radius"),
+            .materialHandle = resolveMaterialSlot(materialRefs, entity),
         });
     }
 
@@ -77,17 +94,15 @@ void planePackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<GpuPlane> gpuPlanes;
 
-    for (const auto& e : planes.entities()) {
-        if (!transforms.has(e)) continue;
-        const Component& t = transforms.get(e);
-        const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-
-        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
+    for (const auto& entity : planes.entities()) {
+        if (!transforms.has(entity)) continue;
+        const Component& transform = transforms.get(entity);
+        const glm::quat rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
 
         gpuPlanes.push_back(GpuPlane{
-            .point = t.get<glm::vec3>("position"),
-            .normal = glm::normalize(rot * glm::vec3(0.0f, 1.0f, 0.0f)),
-            .materialHandle = handle,
+            .point = transform.get<glm::vec3>("position"),
+            .normal = glm::normalize(rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
+            .materialHandle = resolveMaterialSlot(materialRefs, entity),
         });
     }
 
@@ -106,19 +121,17 @@ void boxPackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<GpuBox> gpuBoxes;
 
-    for (const auto& e : boxes.entities()) {
-        if (!transforms.has(e)) continue;
-        const Component& t = transforms.get(e);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
-
-        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
+    for (const auto& entity : boxes.entities()) {
+        if (!transforms.has(entity)) continue;
+        const Component& transform = transforms.get(entity);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
 
         gpuBoxes.push_back(GpuBox{
             .transform = local,
             .invTransform = glm::inverse(local),
-            .materialHandle = handle,
+            .materialHandle = resolveMaterialSlot(materialRefs, entity),
         });
     }
 
@@ -137,24 +150,22 @@ void quadPackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<GpuQuad> gpuQuads;
 
-    for (const auto& e : quads.entities()) {
-        if (!transforms.has(e)) continue;
-        const Component& t = transforms.get(e);
+    for (const auto& entity : quads.entities()) {
+        if (!transforms.has(entity)) continue;
+        const Component& transform = transforms.get(entity);
 
-        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
-
-        const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-        const glm::vec3 scale = t.get<glm::vec3>("scale");
-        const glm::vec3 center = t.get<glm::vec3>("position");
-        const glm::vec3 u = rot * glm::vec3(1.0f, 0.0f, 0.0f) * scale.x;
-        const glm::vec3 v = rot * glm::vec3(0.0f, 1.0f, 0.0f) * scale.y;
-        const glm::vec3 normal = rot * glm::vec3(0.0f, 0.0f, 1.0f);
+        const glm::quat rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
+        const glm::vec3 scale = transform.get<glm::vec3>("scale");
+        const glm::vec3 center = transform.get<glm::vec3>("position");
+        const glm::vec3 u = rotation * glm::vec3(1.0f, 0.0f, 0.0f) * scale.x;
+        const glm::vec3 v = rotation * glm::vec3(0.0f, 1.0f, 0.0f) * scale.y;
+        const glm::vec3 normal = rotation * glm::vec3(0.0f, 0.0f, 1.0f);
         gpuQuads.push_back(GpuQuad{
             .point = center - 0.5f * (u + v),
             .u = u,
             .v = v,
             .normal = glm::normalize(normal),
-            .materialHandle = handle,
+            .materialHandle = resolveMaterialSlot(materialRefs, entity),
         });
     }
 
@@ -176,16 +187,22 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
     std::vector<uint32_t> indices;
     std::vector<GpuBvhNode> bvhNodes;
 
-    for (const auto& mesh : Core::getScene().getMeshAssets()) {
-        auto& meshVertices = mesh.getVertices();
-        auto& meshIndices = mesh.getIndices();
-        auto& meshBvhNodes = mesh.getBvhNodes();
+    const auto& assetEntities = Core::getScene().getChildren(Core::getScene().getAssetsRoot());
+    for (const ecs::Entity& assetEntity : assetEntities) {
+        const MeshAsset* mesh = Core::getScene().getMeshAsset(assetEntity);
+        static const MeshAsset kEmptyMeshAsset;
+        if (!mesh) mesh = &kEmptyMeshAsset;
+        auto& meshVertices = mesh->getVertices();
+        auto& meshIndices = mesh->getIndices();
+        auto& meshBvhNodes = mesh->getBvhNodes();
+
+        const bool smooth = registry.has(assetEntity, Mesh) && registry.get(assetEntity, Mesh).get<bool>("smooth");
 
         uint32_t vertexOffset = static_cast<uint32_t>(vertices.size());
         uint32_t indexOffset = static_cast<uint32_t>(indices.size());
         uint32_t bvhOffset = static_cast<uint32_t>(bvhNodes.size());
-        glm::vec3 meshAabbMin = mesh.getAabbMin();
-        glm::vec3 meshAabbMax = mesh.getAabbMax();
+        glm::vec3 meshAabbMin = mesh->getAabbMin();
+        glm::vec3 meshAabbMax = mesh->getAabbMax();
         meshTemplates.push_back(GpuMesh{
             .indexOffset = indexOffset,
             .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
@@ -193,8 +210,8 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
             .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
             .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
             .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
-            .smoothShading = mesh.getSmoothShading() ? 1u : 0u,
-            .hasVertexColor = mesh.hasVertexColor() ? 1u : 0u,
+            .smoothShading = smooth ? 1u : 0u,
+            .hasVertexColor = mesh->hasVertexColor() ? 1u : 0u,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
@@ -222,16 +239,15 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
 
     std::vector<GpuMesh> meshes;
 
-    for (const auto& e : meshRefs.entities()) {
-        if (!transforms.has(e)) continue;
-        const Component& mesh = meshRefs.get(e);
-        const GpuMesh& meshTemplate = meshTemplates[mesh.get<int>("handle")];
-        const Component& t = transforms.get(e);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
-
-        uint32_t handle = materialRefs.has(e) ? static_cast<uint32_t>(materialRefs.get(e).get<int>("handle")) : 0u;
+    for (const auto& entity : meshRefs.entities()) {
+        if (!transforms.has(entity)) continue;
+        const uint32_t meshSlot = resolveMeshSlot(meshRefs, entity);
+        if (meshSlot >= static_cast<uint32_t>(meshTemplates.size())) continue;
+        const GpuMesh& meshTemplate = meshTemplates[meshSlot];
+        const Component& transform = transforms.get(entity);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
 
         meshes.push_back(GpuMesh{
             .transform = local,
@@ -242,7 +258,7 @@ void meshPackingSystem(Registry& registry, const FrameContext& frame) {
             .bvhNodeCount = meshTemplate.bvhNodeCount,
             .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
             .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
-            .materialHandle = handle,
+            .materialHandle = resolveMaterialSlot(materialRefs, entity),
             .smoothShading = meshTemplate.smoothShading,
             .hasVertexColor = meshTemplate.hasVertexColor,
         });
@@ -257,12 +273,12 @@ void materialPackingSystem(Registry& registry, const FrameContext& frame) {
     if (gen == lastGen[frame.currentFrame]) return;
     lastGen[frame.currentFrame] = gen;
 
-    const auto& matEnts = registry.storage(ecs::Material).entities();
+    const auto& materialEntities = Core::getScene().getChildren(Core::getScene().getMaterialsRoot());
     std::vector<GpuMaterial> gpuMaterials;
-    gpuMaterials.reserve(matEnts.size());
+    gpuMaterials.reserve(materialEntities.size());
 
-    for (int slot = 0; slot < static_cast<int>(matEnts.size()); ++slot) {
-        const ecs::Entity e = matEnts[slot];
+    for (int slot = 0; slot < static_cast<int>(materialEntities.size()); ++slot) {
+        const ecs::Entity entity = materialEntities[slot];
         GpuMaterial gpu{};
 
         auto albedo = [&](const Component& c) {
@@ -270,8 +286,8 @@ void materialPackingSystem(Registry& registry, const FrameContext& frame) {
             gpu.payload[0] = a.r; gpu.payload[1] = a.g; gpu.payload[2] = a.b;
         };
 
-        if (registry.has(e, ecs::Principled)) {
-            const Component& c = registry.get(e, ecs::Principled);
+        if (registry.has(entity, ecs::Principled)) {
+            const Component& c = registry.get(entity, ecs::Principled);
             gpu.type = 0;
             albedo(c);
             gpu.payload[3] = c.get<float>("roughness");
@@ -281,28 +297,28 @@ void materialPackingSystem(Registry& registry, const FrameContext& frame) {
             gpu.payload[7] = c.get<float>("density");
             gpu.payload[8] = c.get<float>("anisotropic");
             gpu.payload[9] = c.get<float>("alpha");
-        } else if (registry.has(e, ecs::Emissive)) {
-            const Component& c = registry.get(e, ecs::Emissive);
+        } else if (registry.has(entity, ecs::Emissive)) {
+            const Component& c = registry.get(entity, ecs::Emissive);
             gpu.type = 1;
             albedo(c);
             gpu.payload[3] = c.get<float>("emission_strength");
-        } else if (registry.has(e, ecs::Diffuse)) {
-            const Component& c = registry.get(e, ecs::Diffuse);
+        } else if (registry.has(entity, ecs::Diffuse)) {
+            const Component& c = registry.get(entity, ecs::Diffuse);
             gpu.type = 2;
             albedo(c);
-        } else if (registry.has(e, ecs::Metal)) {
-            const Component& c = registry.get(e, ecs::Metal);
+        } else if (registry.has(entity, ecs::Metal)) {
+            const Component& c = registry.get(entity, ecs::Metal);
             gpu.type = 3;
             albedo(c);
             gpu.payload[3] = c.get<float>("roughness");
-        } else if (registry.has(e, ecs::Glossy)) {
-            const Component& c = registry.get(e, ecs::Glossy);
+        } else if (registry.has(entity, ecs::Glossy)) {
+            const Component& c = registry.get(entity, ecs::Glossy);
             gpu.type = 4;
             albedo(c);
             gpu.payload[3] = c.get<float>("roughness");
             gpu.payload[4] = c.get<float>("ior");
-        } else if (registry.has(e, ecs::Dielectric)) {
-            const Component& c = registry.get(e, ecs::Dielectric);
+        } else if (registry.has(entity, ecs::Dielectric)) {
+            const Component& c = registry.get(entity, ecs::Dielectric);
             gpu.type = 5;
             albedo(c);
             gpu.payload[3] = c.get<float>("roughness");
@@ -310,14 +326,14 @@ void materialPackingSystem(Registry& registry, const FrameContext& frame) {
             gpu.payload[5] = c.get<float>("transmission");
             gpu.payload[6] = c.get<float>("density");
             gpu.payload[7] = c.get<float>("anisotropic");
-        } else if (registry.has(e, ecs::Volume)) {
-            const Component& c = registry.get(e, ecs::Volume);
+        } else if (registry.has(entity, ecs::Volume)) {
+            const Component& c = registry.get(entity, ecs::Volume);
             gpu.type = 6;
             albedo(c);
             gpu.payload[3] = c.get<float>("density");
             gpu.payload[4] = c.get<float>("anisotropic");
-        } else if (registry.has(e, ecs::ProgrammableMaterial)) {
-            const Component& c = registry.get(e, ecs::ProgrammableMaterial);
+        } else if (registry.has(entity, ecs::ProgrammableMaterial)) {
+            const Component& c = registry.get(entity, ecs::ProgrammableMaterial);
             gpu.type = 7;
             albedo(c);
         } else if (slot > 0 && !gpuMaterials.empty()) {
@@ -342,8 +358,8 @@ void objectPackingSystem(Registry& registry, const FrameContext& frame) {
 
     auto packType = [&](const ecs::ComponentStorage& storage, ObjectType type) {
         int idx = 0;
-        for (const auto& e : storage.entities()) {
-            if (!transforms.has(e)) continue;
+        for (const auto& entity : storage.entities()) {
+            if (!transforms.has(entity)) continue;
             objectHandles.push_back(ObjectHandle{ .type = type, .id = idx });
             idx++;
         }
@@ -382,14 +398,11 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
-    const auto& meshAssets = Core::getScene().getMeshAssets();
 
-    const auto& matEnts = registry.storage(ecs::Material).entities();
-    auto isEmissive = [&](ecs::Entity objEntity) -> bool {
-        if (!materialRefs.has(objEntity)) return false;
-        const int handle = materialRefs.get(objEntity).get<int>("handle");
-        if (handle < 0 || handle >= static_cast<int>(matEnts.size())) return false;
-        return registry.has(matEnts[handle], ecs::Emissive);
+    auto isEmissive = [&](Entity objectEntity) -> bool {
+        if (!materialRefs.has(objectEntity)) return false;
+        const Entity materialEntity = materialRefs.get(objectEntity).get<Entity>("handle");
+        return registry.has(materialEntity, ecs::Emissive);
     };
 
     std::vector<GpuLight> lights;
@@ -397,12 +410,12 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
     float totalArea = 0.0f;
 
     // Spheres
-    for (const auto& e : registry.storage(Sphere).entities()) {
-        if (!transforms.has(e)) continue;
+    for (const auto& entity : registry.storage(Sphere).entities()) {
+        if (!transforms.has(entity)) continue;
         objectId++;
-        if (!isEmissive(e)) continue;
+        if (!isEmissive(entity)) continue;
 
-        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(e).get<float>("radius"), 2.0f);
+        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(entity).get<float>("radius"), 2.0f);
         totalArea += area;
         lights.push_back(GpuLight{
             .objectId = objectId-1,
@@ -411,20 +424,20 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Planes can't be used for importance sampling (infinite area)
-    for (const auto& e : registry.storage(Plane).entities()) {
-        if (!transforms.has(e)) continue;
+    for (const auto& entity : registry.storage(Plane).entities()) {
+        if (!transforms.has(entity)) continue;
         objectId++;
     }
     // Boxes
-    for (const auto& e : registry.storage(Box).entities()) {
-        if (!transforms.has(e)) continue;
+    for (const auto& entity : registry.storage(Box).entities()) {
+        if (!transforms.has(entity)) continue;
         objectId++;
-        if (!isEmissive(e)) continue;
+        if (!isEmissive(entity)) continue;
 
-        const Component& bt = transforms.get(e);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), bt.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(bt.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), bt.get<glm::vec3>("scale"));
+        const Component& boxTransform = transforms.get(entity);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), boxTransform.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(boxTransform.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), boxTransform.get<glm::vec3>("scale"));
         const glm::vec3 axisX = glm::vec3(local[0]);
         const glm::vec3 axisY = glm::vec3(local[1]);
         const glm::vec3 axisZ = glm::vec3(local[2]);
@@ -440,15 +453,15 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Quads
-    for (const auto& e : registry.storage(Quad).entities()) {
-        if (!transforms.has(e)) continue;
+    for (const auto& entity : registry.storage(Quad).entities()) {
+        if (!transforms.has(entity)) continue;
         objectId++;
-        if (!isEmissive(e)) continue;
+        if (!isEmissive(entity)) continue;
 
-        const Component& qt = transforms.get(e);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), qt.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(qt.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), qt.get<glm::vec3>("scale"));
+        const Component& quadTransform = transforms.get(entity);
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), quadTransform.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(quadTransform.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), quadTransform.get<glm::vec3>("scale"));
         const glm::vec3 u = glm::vec3(local[0]);
         const glm::vec3 v = glm::vec3(local[1]);
         const float area = glm::length(glm::cross(u, v));
@@ -460,16 +473,19 @@ void lightPackingSystem(Registry& registry, const FrameContext& frame) {
         });
     }
     // Meshes
-    for (const auto& e : registry.storage(MeshRef).entities()) {
-        if (!transforms.has(e)) continue;
+    for (const auto& entity : registry.storage(MeshRef).entities()) {
+        if (!transforms.has(entity)) continue;
         objectId++;
-        if (!isEmissive(e)) continue;
+        if (!isEmissive(entity)) continue;
 
-        const Component& mt = transforms.get(e);
-        const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), mt.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(mt.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), mt.get<glm::vec3>("scale"));
-        const float area = meshAssets[meshes.get(e).get<int>("handle")].computeArea(mLocal);
+        const Component& meshTransform = transforms.get(entity);
+        const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), meshTransform.get<glm::vec3>("position"))
+            * glm::mat4_cast(glm::quat(glm::radians(meshTransform.get<glm::vec3>("rotation"))))
+            * glm::scale(glm::mat4(1.0f), meshTransform.get<glm::vec3>("scale"));
+        const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
+        const MeshAsset* meshAsset = Core::getScene().getMeshAsset(meshAssetEntity);
+        if (!meshAsset) continue;
+        const float area = meshAsset->computeArea(mLocal);
         totalArea += area;
         lights.push_back(GpuLight{
             .objectId = objectId-1,

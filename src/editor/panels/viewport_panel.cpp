@@ -11,18 +11,15 @@
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
-#include "core/ecs/components.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/object.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"
-#include "editor/scene/scene_ui.hpp"
 #include "editor/ui_utils.hpp"
 
 void ViewportPanel::content() {
     Scene& scene = Core::getScene();
-    const SceneSelection& selection = Editor::getUi().getSelection();
 
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::AllowAxisFlip(false);
@@ -68,13 +65,14 @@ void ViewportPanel::content() {
     ImGuizmo::SetRect(pos.x, pos.y, size.x, size.y);
 
     ecs::cameraDrawingSystem(scene.getRegistry());
-    drawGizmo(scene, selection);
+    drawGizmo(scene);
 }
 
-void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
-    if (!selection.entity.has_value()) return;
+void ViewportPanel::drawGizmo(Scene& scene) {
+    const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
+    if (!selectedEntity.has_value()) return;
 
-    const ecs::Entity e = *selection.entity;
+    const ecs::Entity e = *selectedEntity;
     if (!scene.getRegistry().has(e, ecs::Transform)) return;
 
     ecs::Component& t = scene.getRegistry().get(e, ecs::Transform);
@@ -87,11 +85,8 @@ void ViewportPanel::drawGizmo(Scene& scene, const SceneSelection& selection) {
     const glm::mat4 view = camera.getView();
     const glm::mat4 proj = camera.getProjection(aspect);
 
-    int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE | ImGuizmo::OPERATION::SCALE;
     // Keep gizmo orientation in world space: avoid mixing scale with other ops.
-    if ((opFlags & ImGuizmo::OPERATION::SCALE) && (opFlags & (ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE))) {
-        opFlags &= ~ImGuizmo::OPERATION::SCALE;
-    }
+    const int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE;
 
     ImGuizmo::PushID(static_cast<int>(e.getId()) * 2);
     if (ImGuizmo::Manipulate(
@@ -161,7 +156,7 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
     auto& transformStorage = scene.getRegistry().storage(ecs::Transform);
 
     const ::Camera& sceneCamera = scene.getCamera();
-    for (const ecs::Entity& e : scene.getEntities()) {
+    for (const ecs::Entity& e : scene.getChildren(scene.getObjectsRoot())) {
         if (!transformStorage.has(e)) continue;
 
         const ecs::Component& transform = transformStorage.get(e);
@@ -185,14 +180,12 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
             const glm::vec3 normal = tRot * glm::vec3(0.0f, 0.0f, 1.0f);
             t = rayQuadIntersection(ray, tPos - 0.5f * (u + v), u, v, normal);
         } else if (meshRefs.has(e)) {
-            const ecs::Component& mesh = meshRefs.get(e);
-            const int handle = mesh.get<int>("handle");
-            if (handle >= 0 && static_cast<size_t>(handle) < scene.getMeshAssets().size()) {
-                const MeshAsset& asset = scene.getMeshAssets()[handle];
+            const ecs::Entity meshEntity = meshRefs.get(e).get<ecs::Entity>("handle");
+            if (const MeshAsset* asset = scene.getMeshAsset(meshEntity)) {
                 const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos)
                     * glm::mat4_cast(tRot)
                     * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
-                t = rayMeshIntersection(ray, local, asset.getVertices(), asset.getIndices());
+                t = rayMeshIntersection(ray, local, asset->getVertices(), asset->getIndices());
             }
         } else if (includeCameras && cameraStorage.has(e)) {
             if (sceneCamera.isPreviewEntity(e)) continue;

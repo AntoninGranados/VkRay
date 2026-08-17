@@ -1,13 +1,13 @@
 {
     "version": 1,
     "light": "day",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "programmable": { "albedo": [0.75, 0.75, 0.78] }
         },
         {
-            "name": { "value": "Cube" },
+            "name": "Cube",
             "principled": {
                 "albedo": [1.0, 0.05, 0.1],
                 "roughness": 0.02,
@@ -15,23 +15,23 @@
             }
         }
     ],
-    "entities": [
+    "Objects": [
         {
-            "camera": {},
-            "name": { "value": "Camera" },
+            "camera": {  },
+            "name": "Camera",
             "transform": { "position": [0, 0, -10], "rotation": [0, 180, 0] }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "transform": { "position": [0, -1, 0] }
         },
         {
-            "box": {},
+            "box": {  },
             "material_ref": { "handle": "Cube" },
-            "name": { "value": "Cube" },
-            "transform": {}
+            "name": "Cube",
+            "transform": {  }
         }
     ]
 }

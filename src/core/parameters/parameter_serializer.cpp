@@ -23,7 +23,7 @@ Parameter& ParameterSerializer::parseVecNode(
     T val = readJsonVec<T>(obj.at("default"));
     T mn = obj.contains("min") ? readJsonVec<T>(obj.at("min")) : defMin;
     T mx = obj.contains("max") ? readJsonVec<T>(obj.at("max")) : defMax;
-    FieldMetadata meta;
+    NumericMeta meta;
     meta.min = static_cast<float>(mn[0]);
     meta.max = static_cast<float>(mx[0]);
     meta.step = step;
@@ -163,7 +163,7 @@ void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& paramete
             parameter = &parameters.add<bool>(path, label, def.get<bool>(), {}, restart);
         } else if (def.is_number_integer()) {
             int mn = obj.value("min", INT_MIN), mx = obj.value("max", INT_MAX);
-            FieldMetadata meta;
+            NumericMeta meta;
             meta.min = mn != INT_MIN ? static_cast<float>(mn) : -std::numeric_limits<float>::infinity();
             meta.max = mx != INT_MAX ? static_cast<float>(mx) : std::numeric_limits<float>::infinity();
             meta.step = static_cast<float>(obj.value("step", 1));
@@ -171,28 +171,28 @@ void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& paramete
         } else if (def.is_number_float()) {
             float mn = obj.value("min", std::numeric_limits<float>::lowest());
             float mx = obj.value("max", std::numeric_limits<float>::max());
-            FieldMetadata meta;
+            NumericMeta meta;
             meta.min = mn != std::numeric_limits<float>::lowest() ? mn : -std::numeric_limits<float>::infinity();
             meta.max = mx != std::numeric_limits<float>::max() ? mx : std::numeric_limits<float>::infinity();
             meta.step = obj.value("step", 1e-3f);
             parameter = &parameters.add<float>(path, label, def.get<float>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("extensions")) {
-            FieldMetadata meta;
+            PathMeta meta;
             for (const auto& e : obj.at("extensions")) {
                 PathExtension ext;
                 ext.ext  = e.at("ext").get<std::string>();
                 ext.name = e.value("name", "");
-                meta.pathExtensions.push_back(std::move(ext));
+                meta.extensions.push_back(std::move(ext));
             }
-            meta.pathSave = obj.value("save", false);
+            meta.save = obj.value("save", false);
             parameter = &parameters.add<std::filesystem::path>(path, label, def.get<std::string>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("items")) {
             std::string defName = def.get<std::string>();
-            FieldMetadata meta;
-            meta.enumItems = obj.at("items").get<std::vector<std::string>>();
+            EnumMeta meta;
+            meta.items = obj.at("items").get<std::vector<std::string>>();
             int defIdx = 0;
-            for (size_t i = 0; i < meta.enumItems.size(); i++)
-                if (meta.enumItems[i] == defName) { defIdx = static_cast<int>(i); break; }
+            for (size_t i = 0; i < meta.items.size(); i++)
+                if (meta.items[i] == defName) { defIdx = static_cast<int>(i); break; }
             parameter = &parameters.add<int>(path, label, defIdx, std::move(meta), restart);
         } else if (def.is_array() && (def.size() == 2 || def.size() == 3 || def.size() == 4)) {
             bool isFloat = def[0].is_number_float();

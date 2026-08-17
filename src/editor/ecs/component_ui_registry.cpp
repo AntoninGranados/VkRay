@@ -1,12 +1,9 @@
 #include "component_ui_registry.hpp"
 
-#include <algorithm>
-
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/core.hpp"
+#include "core/ecs/systems/mesh_system.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/field_ui.hpp"
@@ -34,10 +31,9 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
         bool remove = ComponentUiRegistry::beginDraw(&component);
         if (remove) registry.remove(e, type);
         bool update = false;
-        const bool hasPublicFields = std::any_of(fields.begin(), fields.end(), [](const ecs::ComponentField& f){ return !f.isPrivate(); });
-        if (!remove && ImGui::CollapsingHeader(header.c_str(), hasPublicFields ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
+        const bool hasFields = !fields.empty();
+        if (!remove && ImGui::CollapsingHeader(header.c_str(), hasFields ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
             for (const ecs::ComponentField& schema : fields) {
-                if (schema.isPrivate()) continue;
                 if (schema.isAnimatable()) ui::drawKeyframeButton(e, component, schema.getId());
                 update |= ComponentUiRegistry::drawField(component, schema);
             }
@@ -55,6 +51,7 @@ void ComponentUiRegistry::init() {
     auto& ui_reg = ComponentUiRegistry::get();
 
     ui_reg.add(ecs::Name);
+    ui_reg.add(ecs::Material);
 
     ui_reg.add(ecs::Sphere);
     ui_reg.add(ecs::Plane);
@@ -62,39 +59,55 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Collider);
     ui_reg.add(ecs::RigidBody);
 
-    ui_reg.add(MeshRef, [](Component& c, Registry& r, Entity e) {
-        auto* meshes = ComponentUiRegistry::get().meshAssets;
-        if (!meshes || meshes->empty()) return false;
-
+    ui_reg.add(ecs::Mesh, [](Component& c, Registry& r, Entity e) {
+        Scene& scene = Core::getScene();
         bool update = false;
-        if (ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh Ref")) {
-            ImGui::PushItemWidth(-FLT_MIN);
-
-            int current = c.get<int>("handle");
-            const std::string& currentName = (*meshes)[current].getName();
-            const char* preview = currentName.empty() ? "Mesh" : currentName.c_str();
-            if (ImGui::BeginCombo("##Mesh", preview)) {
-                for (int i = 0; i < static_cast<int>(meshes->size()); i++) {
-                    const std::string& meshName = (*meshes)[i].getName();
-                    const char* display = meshName.empty() ? "Mesh" : meshName.c_str();
-                    std::string label = std::string(display) + "##MeshItem" + std::to_string(i);
-                    const bool selected = (i == current);
-                    if (ImGui::Selectable(label.c_str(), selected)) {
-                        c.set<int>("handle", i);
-                        update = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
+        if (ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh")) {
+            for (const ecs::ComponentField& schema : c.getType().getFields()) {
+                update |= ComponentUiRegistry::drawField(c, schema);
             }
-            ImGui::PopItemWidth();
-
-            ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-            update |= drawMeshAssetUI((*meshes)[current]);
-            ImGui::EndChild();
+            if (const MeshAsset* mesh = scene.getMeshAsset(e)) {
+                ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+                ImGui::Text("Vertices: %zu", mesh->getVertices().size());
+                ImGui::Text("Faces:    %zu", mesh->getIndices().size() / 3);
+                ImGui::EndChild();
+            }
         }
         return update;
     });
+
+    ui_reg.add(ecs::MeshSimplify, [](Component& c, Registry& r, Entity e) {
+        bool update = false;
+        if (ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh Simplify")) {
+            float ratio = c.get<float>("ratio");
+            ImGui::PushItemWidth(-FLT_MIN);
+            if (ImGui::SliderFloat("##Ratio", &ratio, 0.05f, 1.0f, "%.2f")) {
+                c.set<float>("ratio", ratio);
+                ecs::requestMeshSimplify(e, ratio);
+                update = true;
+            }
+            ImGui::PopItemWidth();
+            if (ImGui::BeginTable("##SimplifyButtons", 2, ImGuiTableFlags_SizingStretchSame)) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                if (ImGui::Button("Apply", ImVec2(-FLT_MIN, 0.0f))) {
+                    ecs::applyMeshSimplification(e);
+                    update = true;
+                }
+                ImGui::TableSetColumnIndex(1);
+                ui::PushCancelStyleColor();
+                if (ImGui::Button("Revert", ImVec2(-FLT_MIN, 0.0f))) {
+                    ecs::revertMeshSimplification(e);
+                    update = true;
+                }
+                ui::PopCancelStyleColor();
+                ImGui::EndTable();
+            }
+        }
+        return update;
+    });
+
+    ui_reg.add(ecs::MeshRef);
 
     ui_reg.add(ecs::Camera);
 
@@ -104,57 +117,8 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::ImageAperture);
     ui_reg.add(ecs::Transform);
 
-    ui_reg.add(MaterialRef, [](Component& c, Registry& r, Entity e) {
-        Scene& scene = Core::getScene();
-        ecs::Registry& reg = scene.getRegistry();
-        const auto& matEnts = reg.storage(ecs::Material).entities();
-        if (matEnts.empty()) return false;
-        bool update = false;
-        if (ImGui::CollapsingHeader(ICON_FA_PALETTE " Material Ref")) {
-            ImGui::PushItemWidth(-FLT_MIN);
+    ui_reg.add(ecs::MaterialRef);
 
-            int current = c.get<int>("handle");
-            if (current < 0 || current >= static_cast<int>(matEnts.size())) current = 0;
-
-            auto matName = [&](int i) -> std::string {
-                if (reg.has(matEnts[i], ecs::Name)) {
-                    const std::string& n = reg.get(matEnts[i], ecs::Name).get<std::string>("value");
-                    if (!n.empty()) return n;
-                }
-                return "Material";
-            };
-
-            std::string previewStr = matName(current);
-            if (ImGui::BeginCombo("##Material", previewStr.c_str())) {
-                for (int i = 0; i < static_cast<int>(matEnts.size()); i++) {
-                    const bool selected = (i == current);
-                    std::string label = matName(i) + "##MaterialItem" + std::to_string(i);
-                    if (ImGui::Selectable(label.c_str(), selected)) {
-                        c.set<int>("handle", i);
-                        update = true;
-                        current = i;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::PopItemWidth();
-
-            const ecs::Entity matEnt = matEnts[current];
-            ImGui::BeginChild("##MatEntity", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
-            if (ComponentUiRegistry::get().draw(reg, matEnt)) {
-                reg.flush();
-                Core::requestAccumulationRestart();
-                Core::getScene().update();
-                update = true;
-            }
-            ImGui::EndChild();
-        }
-
-        return update;
-    });
-
-    ui_reg.add(ecs::Material);
     ui_reg.add(ecs::Diffuse);
     ui_reg.add(ecs::Emissive);
     ui_reg.add(ecs::Metal);

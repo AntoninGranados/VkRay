@@ -196,7 +196,7 @@ void RigidSolver::resolveSdfCollision(
         .position = t.get<glm::vec3>("position"),
         .rotation = t.get<glm::vec3>("rotation"),
     };
-    const auto prevState = getPrevColliderTransform(e);
+    const ColliderState& prevState = collider.payload<ColliderState>("prev_transform");
     std::vector<ContactCandidate> contacts;
     contacts.reserve(body->vdata0.size());
 
@@ -212,8 +212,8 @@ void RigidSolver::resolveSdfCollision(
         const glm::vec3 normal = sample.normal / normalLen;
 
         glm::vec3 colliderVelocity(0.0f);
-        if (prevState) {
-            colliderVelocity = computeColliderPointVelocity(currState, *prevState, r, sample.center, colliderDt);
+        if (prevState.valid) {
+            colliderVelocity = computeColliderPointVelocity(currState, prevState, r, sample.center, colliderDt);
         }
 
         const glm::vec3 v = body->V + glm::cross(body->omega, rRel) - colliderVelocity;

@@ -137,7 +137,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
 
     Scene& scene = Core::getScene();
     const ::Camera& cam = scene.getCamera();
-    const SceneSelection& sel = Editor::getUi().getSelection();
+    const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
     const ecs::Registry& reg = scene.getRegistry();
     {
         const glm::vec3 dir   = cam.getDirection();
@@ -155,8 +155,8 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane   = 0;
 
-    if (sel.entity.has_value()) {
-        const ecs::Entity e = *sel.entity;
+    if (selectedEntity.has_value()) {
+        const ecs::Entity e = *selectedEntity;
 
         const auto& allTransforms = reg.storage(ecs::Transform);
         int flatIdx = -1;

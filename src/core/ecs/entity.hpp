@@ -8,6 +8,7 @@ namespace ecs {
 
 class Entity {
 public:
+    Entity() : id(-1), gen(-1) {}
     Entity(const uint32_t& id, const uint32_t& gen): id(id), gen(gen) {};
 
     uint32_t getId() const { return id; }

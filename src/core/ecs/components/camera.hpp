@@ -13,11 +13,11 @@ namespace ecs {
 inline const ComponentType Camera = ComponentType::builder("camera")
     .description("Perspective camera.")
     .icon(ICON_FA_VIDEO)
-    .group("object")
+    .group("camera")
     .needs("transform")
-    .conflicts("sphere", "plane", "box", "quad", "mesh")
-    .field<float>("fov", 80.0f, { .min = 1.0f, .max = 160.0f, .step = 0.1f }, true)
-    .field<float>("shutter_speed", 0.0f, { .min = 0.0f, .step = 0.001f, .presets = {
+    .conflicts("sphere", "plane", "box", "quad", "mesh_ref")
+    .field<float>("fov", 80.0f, NumericMeta{ .min = 1.0f, .max = 160.0f, .step = 0.1f }, true)
+    .field<float>("shutter_speed", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.001f, .presets = {
         {"Off",    0.0f},
         {"1/8000", 1.0f/8000.0f},
         {"1/4000", 1.0f/4000.0f},
@@ -39,11 +39,11 @@ inline const ComponentType Camera = ComponentType::builder("camera")
 inline const ComponentType ThinLens = ComponentType::builder("thin_lens")
     .description("Depth-of-field via thin lens approximation.")
     .icon(ICON_FA_CIRCLE_DOT)
-    .group("object")
+    .group("camera")
     .needs("camera")
-    .field<float>("focal_length", 1.0f, { .min = 0.05f, .max = 10.0f, .step = 0.01f }, true)
-    .field<float>("focal_distance", 10.0f, { .min = 0.1f, .step = 0.01f }, true)
-    .field<float>("f_stop", 0.0f, { .min = 0.0f, .max = 64.0f, .step = 0.1f, .presets = {
+    .field<float>("focal_length", 1.0f, NumericMeta{ .min = 0.05f, .max = 10.0f, .step = 0.01f }, true)
+    .field<float>("focal_distance", 10.0f, NumericMeta{ .min = 0.1f, .step = 0.01f }, true)
+    .field<float>("f_stop", 0.0f, NumericMeta{ .min = 0.0f, .max = 64.0f, .step = 0.1f, .presets = {
         {"Off",   0.0f},
         {"f/1",   1.0f},
         {"f/1.4", 1.4f},
@@ -63,29 +63,29 @@ inline const ComponentType ThinLens = ComponentType::builder("thin_lens")
 inline const ComponentType TiltShiftLens = ComponentType::builder("tilt_shift_lens")
     .description("Tilted focal plane and lens shift (Scheimpflug principle).")
     .icon(ICON_FA_EXPAND)
-    .group("object")
+    .group("camera")
     .needs("thin_lens")
-    .field<glm::vec3>("plane_position", glm::vec3(0.0f, 0.0f, 0.0f), { .step = 0.1f }, true)
-    .field<glm::vec3>("plane_rotation", glm::vec3(0.0f, 0.0f, 0.0f), { .step = 1.0f }, true)
+    .field<glm::vec3>("plane_position", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 0.1f }, true)
+    .field<glm::vec3>("plane_rotation", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 1.0f }, true)
     .build();
 
 inline const ComponentType GeometricAperture = ComponentType::builder("geometric_aperture")
     .description("Polygon aperture blade shape.")
     .icon(ICON_FA_STAR)
-    .group("object")
+    .group("camera")
     .needs("thin_lens")
     .conflicts("image_aperture")
-    .field<int>("blades", 6, { .min = 3, .max = 12, .step = 1 })
-    .field<float>("rotation", 0.0f, { .min = 0.0f, .max = 360.0f, .step = 1.0f })
+    .field<int>("blades", 6, NumericMeta{ .min = 3, .max = 12, .step = 1 })
+    .field<float>("rotation", 0.0f, NumericMeta{ .min = 0.0f, .max = 360.0f, .step = 1.0f })
     .build();
 
 inline const ComponentType ImageAperture = ComponentType::builder("image_aperture")
     .description("Custom image mask as aperture shape.")
     .icon(ICON_FA_IMAGE)
-    .group("object")
+    .group("camera")
     .needs("thin_lens")
     .conflicts("geometric_aperture")
-    .field<std::filesystem::path>("path", {}, { .pathExtensions = {{ .ext = "pgm,png,jpg,jpeg,hdr", .name = "Image" }}, .presets = {
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "pgm,png,jpg,jpeg,hdr", .name = "Image" }}, .presets = {
         {"ring",    "assets/apertures/ring.pgm"},
         {"star",    "assets/apertures/star.pgm"},
         {"heart",   "assets/apertures/heart.pgm"},

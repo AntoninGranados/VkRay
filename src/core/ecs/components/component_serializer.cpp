@@ -22,6 +22,7 @@ static std::string fieldTypeName(FieldType type) {
         case FieldType::Vec3:   return "vec3";
         case FieldType::Vec4:   return "vec4";
         case FieldType::Quat:   return "quat";
+        case FieldType::Entity: return "entity";
         case FieldType::String: return "string";
         case FieldType::Path:   return "path";
     }
@@ -45,11 +46,13 @@ static std::string fieldDefaultStr(const Field& f) {
 }
 
 static std::string fieldConstraintStr(const FieldMetadata& m) {
-    const bool hasMin = std::isfinite(m.min);
-    const bool hasMax = std::isfinite(m.max);
-    if (hasMin && hasMax) return std::format("{:g} ... {:g}", m.min, m.max);
-    if (hasMin) return std::format("≥ {:g}", m.min);
-    if (hasMax) return std::format("≤ {:g}", m.max);
+    const auto* num = std::get_if<NumericMeta>(&m);
+    if (!num) return "";
+    const bool hasMin = std::isfinite(num->min);
+    const bool hasMax = std::isfinite(num->max);
+    if (hasMin && hasMax) return std::format("{:g} ... {:g}", num->min, num->max);
+    if (hasMin) return std::format("≥ {:g}", num->min);
+    if (hasMax) return std::format("≤ {:g}", num->max);
     return "";
 }
 
@@ -87,19 +90,15 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
 
             std::vector<const ecs::ComponentField*> publicFields;
             for (const auto& f : type->getFields())
-                if (!f.isPrivate()) publicFields.push_back(&f);
+                publicFields.push_back(&f);
 
             if (!publicFields.empty()) {
                 file << "\n| Field | Type | Default | Constraints | Animatable |\n";
                 file <<   "|-------|------|---------|-------------|------------|\n";
                 for (const auto* f : publicFields) {
                     file << std::format("| `{}` | {} | {} | {} | {} |\n",
-                        f->getId(),
-                        fieldTypeName(f->getType()),
-                        fieldDefaultStr(*f),
-                        fieldConstraintStr(f->getMetadata()),
-                        f->isAnimatable() ? "yes" : "no"
-                    );
+                        f->getId(), fieldTypeName(f->getType()), fieldDefaultStr(*f),
+                        fieldConstraintStr(f->getMetadata()), f->isAnimatable() ? "yes" : "no");
                 }
             }
         }

@@ -18,7 +18,9 @@ void ParameterRegistry::syncAll() {
 
 void ParameterRegistry::setEnumByName(const ParameterPath& path, const std::string& name) {
     auto& p = getParam(path);
-    const auto& items = p.getMetadata().enumItems;
+    const auto* enumMeta = std::get_if<EnumMeta>(&p.getMetadata());
+    if (!enumMeta) return;
+    const auto& items = enumMeta->items;
     for (size_t i = 0; i < items.size(); i++) {
         if (items[i] == name) {
             p.set(static_cast<int>(i));
@@ -48,6 +50,9 @@ std::string Parameter::print() const {
     const char* l = getLabel().c_str();
     std::string desc = description.value_or("-");
     const FieldMetadata& metadata = getMetadata();
+    const auto* numMeta = std::get_if<NumericMeta>(&metadata);
+    const auto* enumMeta = std::get_if<EnumMeta>(&metadata);
+    const auto* pathMeta = std::get_if<PathMeta>(&metadata);
     const char* r = restartAccumulation ? "✓" : "-";
 
     switch (type) {
@@ -55,28 +60,38 @@ std::string Parameter::print() const {
             return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |",
                 p, l, desc, getDefault<bool>() ? "true" : "false", r);
         case FieldType::Int: {
-            int mn = std::isinf(metadata.min) ? std::numeric_limits<int>::lowest() : (int)metadata.min;
-            int mx = std::isinf(metadata.max) ? std::numeric_limits<int>::max() : (int)metadata.max;
+            const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
+            const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
+            int mn = std::isinf(fmin) ? std::numeric_limits<int>::lowest() : (int)fmin;
+            int mx = std::isinf(fmax) ? std::numeric_limits<int>::max() : (int)fmax;
             return std::format("| `{}` | {} | {} | Integer | {} | {} | {} |",
                 p, l, desc, getDefault<int>(), constraints(mn, mx, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max()), r);
         }
-        case FieldType::Float:
+        case FieldType::Float: {
+            const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
+            const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
             return std::format("| `{}` | {} | {} | Float | {:g} | {} | {} |",
-                p, l, desc, getDefault<float>(), constraints(metadata.min, metadata.max, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()), r);
+                p, l, desc, getDefault<float>(), constraints(fmin, fmax, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()), r);
+        }
         case FieldType::Enum: {
             int def = getDefault<int>();
             std::string list;
-            for (const auto& item : metadata.enumItems)
-                list = list.empty() ? std::format("`{}`", item) : std::format("{} • `{}`", list, item);
+            if (enumMeta) {
+                for (const auto& item : enumMeta->items)
+                    list = list.empty() ? std::format("`{}`", item) : std::format("{} • `{}`", list, item);
+            }
+            std::string defLabel = (enumMeta && def < (int)enumMeta->items.size()) ? enumMeta->items[def] : "";
             return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |",
-                p, l, desc, metadata.enumItems.empty() ? "" : metadata.enumItems[def], list, r);
+                p, l, desc, defLabel, list, r);
         }
         case FieldType::Path: {
             std::string defPath = getDefault<std::string>();
             std::string exts;
-            for (const auto& e : metadata.pathExtensions) {
-                if (!exts.empty()) exts += ", ";
-                exts += e.displayName() + " (." + e.ext + ")";
+            if (pathMeta) {
+                for (const auto& e : pathMeta->extensions) {
+                    if (!exts.empty()) exts += ", ";
+                    exts += e.displayName() + " (." + e.ext + ")";
+                }
             }
             return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
                 p, l, desc, defPath, exts.empty() ? "-" : exts, r);

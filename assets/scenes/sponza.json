@@ -1,22 +1,25 @@
 {
     "version": 1,
     "light": "day",
-    "materials": [
+    "Materials": [
+        { "name": "Sponza", "diffuse": { "albedo": [1, 1, 1] } }
+    ],
+    "Assets": [
         {
-            "name": { "value": "Sponza" },
-            "diffuse": { "albedo": [1, 1, 1] }
+            "name": "sponza",
+            "mesh": { "path": "./assets/models/sponza.obj" }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": 70 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 3, -5], "rotation": [0, 180, 0] }
         },
         {
-            "mesh": { "path": "./assets/models/sponza.obj" },
+            "mesh_ref": { "handle": "sponza" },
             "material_ref": { "handle": "Sponza" },
-            "name": { "value": "Sponza" },
+            "name": "Sponza",
             "transform": { "scale": [0.04, 0.04, 0.04] }
         }
     ]

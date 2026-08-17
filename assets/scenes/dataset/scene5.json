@@ -1,21 +1,21 @@
 {
     "version": 1,
     "light": "night",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Ground" },
+            "name": "Ground",
             "diffuse": { "albedo": [0.35, 0.35, 0.35] }
         },
         {
-            "name": { "value": "KeyLight" },
+            "name": "KeyLight",
             "emissive": { "albedo": [1.0, 0.97, 0.9], "emission_strength": 40 }
         },
         {
-            "name": { "value": "FillLight" },
+            "name": "FillLight",
             "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 }
         },
         {
-            "name": { "value": "SphereMat_{row}_{col}" },
+            "name": "SphereMat_{row}_{col}",
             "principled": {
                 "albedo": { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
                 "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
@@ -25,10 +25,10 @@
             "grid": { "rows": 4, "cols": 4 }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": { "rand": { "min": 55, "max": 75 } } },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "spherical": {
                 "radius": { "rand": { "min": 9, "max": 14 } },
                 "azimuth": { "rand": { "min": -20, "max": 20 } },
@@ -37,14 +37,14 @@
             }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Ground" },
-            "name": { "value": "Ground" }
+            "name": "Ground"
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "KeyLight" },
-            "name": { "value": "KeyLight" },
+            "name": "KeyLight",
             "transform": {
                 "position": [4, 20, -4],
                 "rotation": [67.1, -45, 0],
@@ -52,9 +52,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "FillLight" },
-            "name": { "value": "FillLight" },
+            "name": "FillLight",
             "transform": {
                 "position": [-5, 6, 0],
                 "rotation": [26.57, 90, 0],
@@ -64,7 +64,7 @@
         {
             "sphere": { "radius": 0.65 },
             "material_ref": { "handle": "SphereMat_{row}_{col}" },
-            "name": { "value": "Sphere_{row}_{col}" },
+            "name": "Sphere_{row}_{col}",
             "transform": {
                 "position": [
                     { "lerp": { "from": -3, "to": 3, "axis": "col" } },

@@ -1,6 +1,5 @@
 #include "mesh_simplify.hpp"
 
-#include <iostream>
 #include <unordered_set>
 #include <vector>
 #include <queue>
@@ -222,11 +221,5 @@ MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
 
     remapIndices(vertices, indices);
 
-    MeshAsset mesh = MeshAsset(
-        input.getName(),
-        std::move(vertices),
-        std::move(indices)
-    );
-    mesh.setPath(input.getPath());
-    return mesh;
+    return MeshAsset(std::move(vertices), std::move(indices));
 }

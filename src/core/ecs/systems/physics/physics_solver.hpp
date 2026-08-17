@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -55,8 +54,6 @@ struct FrameSnapshot {
     BodySnapshot body;
     glm::vec3 position;
     glm::quat rotation;
-    glm::vec3 linearVelocity;
-    glm::vec3 angularVelocity;
 };
 
 struct SdfContactSample {
@@ -122,9 +119,8 @@ struct BodyState {
 struct ColliderState {
     glm::vec3 position { 0.0f, 0.0f, 0.0f };
     glm::vec3 rotation { 0.0f, 0.0f, 0.0f };
+    bool valid = false;
 };
-
-std::optional<ColliderState> getPrevColliderTransform(const Entity& entity);
 
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax);
 

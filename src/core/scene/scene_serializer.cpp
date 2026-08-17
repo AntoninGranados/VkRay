@@ -13,6 +13,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "core/core.hpp"
+#include "core/ecs/systems/mesh_system.hpp"
 #include "scene.hpp"
 #include "utils/log.hpp"
 
@@ -41,11 +42,6 @@ T fromStr(const std::pair<const char*, T> (&table)[N], const std::string& s, T f
     return fallback;
 }
 template<typename T, size_t N>
-T fromStr(const std::pair<const char*, T> (&table)[N], const std::string& s) {
-    for (const auto& [name, val] : table) if (s == name) return val;
-    std::unreachable();
-}
-template<typename T, size_t N>
 const char* toStr(const std::pair<const char*, T> (&table)[N], T e) {
     for (const auto& [name, val] : table) if (e == val) return name;
     std::unreachable();
@@ -53,7 +49,7 @@ const char* toStr(const std::pair<const char*, T> (&table)[N], T e) {
 
 } // namespace
 
-json SceneSerializer::fieldToJson(const Field& f) {
+json SceneSerializer::valueToJson(const FieldValue& f) {
     switch (f.getType()) {
         case FieldType::Bool:   return f.get<bool>();
         case FieldType::Int:
@@ -66,6 +62,7 @@ json SceneSerializer::fieldToJson(const Field& f) {
         case FieldType::Vec3:  { auto v = f.get<glm::vec3>(); return json{v.x, v.y, v.z}; }
         case FieldType::Vec4:  { auto v = f.get<glm::vec4>(); return json{v.x, v.y, v.z, v.w}; }
         case FieldType::Quat:  { auto v = f.get<glm::quat>(); return json{v.x, v.y, v.z, v.w}; }
+        case FieldType::Entity: return nullptr;
         case FieldType::String: return trimmed(f.get<std::string>());
         case FieldType::Path:   return f.get<std::filesystem::path>().string();
     }
@@ -85,23 +82,9 @@ void SceneSerializer::applyField(const json& j, Field& f, const ResolveCtx& ctx)
         case FieldType::Vec3:   f.set<glm::vec3>(resolveVec3(j, ctx)); break;
         case FieldType::Vec4:   if (expectArray(j, 4, f.getId())) f.set<glm::vec4>({resolveFloat(j[0], ctx), resolveFloat(j[1], ctx), resolveFloat(j[2], ctx), resolveFloat(j[3], ctx)}); break;
         case FieldType::Quat:   if (expectArray(j, 4, f.getId())) f.set<glm::quat>(glm::quat(j[3].get<float>(), j[0].get<float>(), j[1].get<float>(), j[2].get<float>())); break;
+        case FieldType::Entity: break;
         case FieldType::String: f.set<std::string>(resolveTemplate(j.get<std::string>(), ctx)); break;
         case FieldType::Path:   f.set<std::filesystem::path>(j.get<std::string>()); break;
-    }
-}
-
-json SceneSerializer::fieldValueToJson(const FieldValue& fv) {
-    switch (fv.getType()) {
-        case FieldType::Bool:  return fv.get<bool>();
-        case FieldType::Int:
-        case FieldType::Enum:  return fv.get<int>();
-        case FieldType::Float: return fv.get<float>();
-        case FieldType::Vec2:  { auto v = fv.get<glm::vec2>(); return json{v.x, v.y}; }
-        case FieldType::Vec3:  { auto v = fv.get<glm::vec3>(); return json{v.x, v.y, v.z}; }
-        case FieldType::Vec4:  { auto v = fv.get<glm::vec4>(); return json{v.x, v.y, v.z, v.w}; }
-        default:
-            Log::error("SceneSerializer", std::format("Unsupported keyframe field type: {}", static_cast<int>(fv.getType())));
-            return nullptr;
     }
 }
 
@@ -125,7 +108,7 @@ json SceneSerializer::serializeKeyframes(const std::map<int, Keyframe>& kfs) {
     for (const auto& [frame, kf] : kfs) {
         json kfj;
         kfj["frame"] = frame;
-        kfj["value"] = fieldValueToJson(kf.getValue());
+        kfj["value"] = valueToJson(kf.getValue());
         if (kf.getInterpolation() != Interpolation::Linear)
             kfj["ease"] = toStr(kInterpolations, kf.getInterpolation());
         arr.push_back(kfj);
@@ -135,7 +118,7 @@ json SceneSerializer::serializeKeyframes(const std::map<int, Keyframe>& kfs) {
 
 json SceneSerializer::serializeField(const Field& f, const std::map<int, Keyframe>& kfs) {
     if (!kfs.empty()) return json{{"anim", serializeKeyframes(kfs)}};
-    return fieldToJson(f);
+    return valueToJson(f);
 }
 
 void SceneSerializer::applyKeyframes(const json& anim, FieldType type, const std::string& fieldId, const std::function<void(int, FieldValue, Interpolation)>& insert) {
@@ -151,10 +134,17 @@ void SceneSerializer::applyKeyframes(const json& anim, FieldType type, const std
     }
 }
 
-json SceneSerializer::serializeComponentWithAnim(const ecs::Component& comp, ecs::Entity e, const AnimationStore& animStore) {
+json SceneSerializer::serializeComponent(const ecs::Component& comp, ecs::Entity e, const AnimationStore& animStore, const ecs::Registry& registry) {
     json j = json::object();
     for (const auto& f : comp.getFields()) {
-        if (f.isPrivate()) continue;
+        if (f.getType() == FieldType::Entity) {
+            const ecs::Entity referenced = f.get<ecs::Entity>();
+            if (referenced != ecs::Entity{} && registry.has(referenced, ecs::Name)) {
+                const std::string name = registry.get(referenced, ecs::Name).get<std::string>("value");
+                if (!name.empty()) j[f.getId()] = name;
+            }
+            continue;
+        }
         j[f.getId()] = serializeField(f, animStore.keyframes(e, comp.getType(), f.getId()));
     }
     return j;
@@ -162,7 +152,8 @@ json SceneSerializer::serializeComponentWithAnim(const ecs::Component& comp, ecs
 
 void SceneSerializer::applyComponent(const json& obj, ecs::Component& comp, ecs::Entity e, AnimationStore& animStore, const ResolveCtx& ctx) {
     for (auto& f : comp.getFields()) {
-        if (f.isPrivate() || !obj.contains(f.getId())) continue;
+        if (!obj.contains(f.getId())) continue;
+        if (f.getType() == FieldType::Entity) continue;
         const json& val = obj[f.getId()];
         if (val.is_object() && val.contains("anim") && val["anim"].is_array())
             applyKeyframes(val["anim"], f.getType(), f.getId(), [&](int frame, FieldValue value, Interpolation interp) {
@@ -173,29 +164,9 @@ void SceneSerializer::applyComponent(const json& obj, ecs::Component& comp, ecs:
     }
 }
 
-
-void SceneSerializer::spawnMesh(const json& ej, ecs::Entity e, Scene& scene, ecs::Registry& registry) {
-    if (!ej.contains("mesh") || !ej["mesh"].is_object()) return;
-    const auto& mj = ej["mesh"];
-    const std::string meshPath = mj.value("path", "");
-    if (meshPath.empty()) return;
-    const MeshHandle handle = static_cast<MeshHandle>(scene.getMeshAssets().size());
-    scene.getMeshAssets().emplace_back(MeshAsset::nameFromPath(meshPath));
-    MeshAsset& asset = scene.getMeshAssets().back();
-    asset.setSmoothShading(mj.value("smooth", false));
-    if (asset.loadFromObj(meshPath)) {
-        if (registry.add(e, ecs::MeshRef))
-            registry.get(e, ecs::MeshRef).set<int>("handle", handle);
-    } else {
-        scene.getMeshAssets().pop_back();
-        Log::error("SceneSerializer", std::format("Failed to load mesh: {}", meshPath));
-    }
-}
-
-
-void SceneSerializer::spawnSpherical(const json& ej, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx) {
-    if (!ej.contains("spherical")) return;
-    const auto& sj = ej["spherical"];
+void SceneSerializer::spawnSpherical(const json& node, ecs::Entity e, ecs::Registry& registry, const ResolveCtx& ctx) {
+    if (!node.contains("spherical")) return;
+    const auto& sj = node["spherical"];
     const float radius = resolveFloat(sj["radius"], ctx);
     const float azDeg = resolveFloat(sj["azimuth"], ctx);
     const float elDeg = resolveFloat(sj["elevation"], ctx);
@@ -305,95 +276,115 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     ResolveCtx ctx{ rng, {} };
 
     if (j.contains("light"))
-        lightMode = fromStr(kLightModes, j["light"].get<std::string>());
+        lightMode = fromStr(kLightModes, j["light"].get<std::string>(), LightMode::Day);
 
     ecs::Registry& registry = scene.getRegistry();
     AnimationStore& animStore = scene.getAnimationStore();
 
-    std::unordered_map<std::string, int> matNameToSlot;
+    struct DeferredEntityField {
+        ecs::Entity entity;
+        const ecs::ComponentType* componentType;
+        std::string fieldId;
+        std::string entityName;
+    };
+    std::vector<DeferredEntityField> deferredEntityFields;
 
-    auto spawnComponents = [&](const json& ej, ecs::Entity e, const ResolveCtx& spawnCtx) {
-        for (const auto& [key, value] : ej.items()) {
-            if (key == "mesh" || key == "repeat" || key == "grid" || key == "spherical" || key == "material") continue;
-            if (key == "material_ref" && value.is_object() && value.contains("handle") && value["handle"].is_string()) {
-                const std::string name = resolveTemplate(value["handle"].get<std::string>(), spawnCtx);
-                const auto it = matNameToSlot.find(name);
-                if (it != matNameToSlot.end()) {
-                    if (registry.add(e, ecs::MaterialRef))
-                        registry.get(e, ecs::MaterialRef).set<int>("handle", it->second);
-                } else {
-                    Log::warn("SceneSerializer", std::format("Material '{}' not found", name));
-                }
-                continue;
-            }
+    auto spawnComponents = [&](const json& node, ecs::Entity e, const ResolveCtx& spawnCtx) {
+        for (const auto& [key, value] : node.items()) {
+            if (key == "name" || key == "children" || key == "repeat" || key == "grid" || key == "spherical") continue;
             auto type = ecs::ComponentType::find(key);
             if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
-            if (registry.add(e, type->get()) && value.is_object())
+            if (registry.add(e, type->get()) && value.is_object()) {
+                for (const auto& field : registry.get(e, type->get()).getFields()) {
+                    if (field.getType() != FieldType::Entity) continue;
+                    if (!value.contains(field.getId()) || !value[field.getId()].is_string()) continue;
+                    deferredEntityFields.push_back({e, &type->get(), field.getId(), resolveTemplate(value[field.getId()].get<std::string>(), spawnCtx)});
+                }
                 applyComponent(value, registry.get(e, type->get()), e, animStore, spawnCtx);
-        }
-    };
-
-    if (j.contains("materials")) {
-        for (const auto& m : j["materials"]) {
-            auto push = [&](const ResolveCtx& matCtx) {
-                ecs::Entity e = registry.createEntity();
-                registry.add(e, ecs::Material);
-                scene.getEntities().push_back(e);
-                spawnComponents(m, e, matCtx);
-            };
-            if (m.contains("repeat")) {
-                const int count = m["repeat"].value("count", 1);
-                for (int n = 0; n < count; n++)
-                    push(ResolveCtx{ rng, {{"n", {n, count}}} });
-            } else if (m.contains("grid")) {
-                const auto& g = m["grid"];
-                const int rows = g.value("rows", 1);
-                const int cols = g.value("cols", 1);
-                for (int r = 0; r < rows; r++)
-                    for (int c = 0; c < cols; c++)
-                        push(ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}, {"n", {r * cols + c, rows * cols}}} });
-            } else {
-                push(ctx);
             }
         }
-    }
-
-    {
-        const auto& matEnts = registry.storage(ecs::Material).entities();
-        for (int i = 0; i < static_cast<int>(matEnts.size()); i++) {
-            if (registry.has(matEnts[i], ecs::Name))
-                matNameToSlot[trimmed(registry.get(matEnts[i], ecs::Name).get<std::string>("value"))] = i;
-        }
-    }
-
-    if (!j.contains("entities")) {
-        animStore.evaluate(registry, 0.0f);
-        return true;
-    }
-
-    auto spawnEntity = [&](const json& ej, const ResolveCtx& spawnCtx) {
-        ecs::Entity e = registry.createEntity();
-        scene.getEntities().push_back(e);
-        spawnMesh(ej, e, scene, registry);
-        spawnComponents(ej, e, spawnCtx);
-        spawnSpherical(ej, e, registry, spawnCtx);
     };
 
-    for (const auto& ej : j["entities"]) {
-        if (!ej.is_object()) continue;
-        if (ej.contains("repeat")) {
-            const int count = ej["repeat"].value("count", 1);
+    std::function<void(const json&, ecs::Entity, const ResolveCtx&)> loadNode;
+    loadNode = [&](const json& node, ecs::Entity parent, const ResolveCtx& nodeCtx) {
+        auto spawnOne = [&](const ResolveCtx& spawnCtx) {
+            ecs::Entity e = registry.createEntity(parent);
+
+            if (node.contains("name") && node["name"].is_string()) {
+                const std::string name = resolveTemplate(node["name"].get<std::string>(), spawnCtx);
+                registry.add(e, ecs::Name);
+                registry.get(e, ecs::Name).set<std::string>("value", name);
+            }
+
+            spawnComponents(node, e, spawnCtx);
+            spawnSpherical(node, e, registry, spawnCtx);
+
+            if (node.contains("children") && node["children"].is_array()) {
+                for (const auto& child : node["children"]) {
+                    if (child.is_object()) loadNode(child, e, spawnCtx);
+                }
+            }
+        };
+
+        if (node.contains("repeat")) {
+            const int count = node["repeat"].value("count", 1);
             for (int n = 0; n < count; n++)
-                spawnEntity(ej, ResolveCtx{ rng, {{"n", {n, count}}} });
-        } else if (ej.contains("grid")) {
-            const auto& g = ej["grid"];
+                spawnOne(ResolveCtx{ nodeCtx.rng, {{"n", {n, count}}} });
+        } else if (node.contains("grid")) {
+            const auto& g = node["grid"];
             const int rows = g.value("rows", 1);
             const int cols = g.value("cols", 1);
             for (int r = 0; r < rows; r++)
                 for (int c = 0; c < cols; c++)
-                    spawnEntity(ej, ResolveCtx{ rng, {{"row", {r, rows}}, {"col", {c, cols}}, {"n", {r * cols + c, rows * cols}}} });
+                    spawnOne(ResolveCtx{ nodeCtx.rng, {{"row", {r, rows}}, {"col", {c, cols}}, {"n", {r * cols + c, rows * cols}}} });
         } else {
-            spawnEntity(ej, ctx);
+            spawnOne(nodeCtx);
+        }
+    };
+
+    auto loadSection = [&](const std::string& key, ecs::Entity root) {
+        if (!j.contains(key) || !j[key].is_array()) return;
+        for (const auto& child : j[key])
+            if (child.is_object()) loadNode(child, root, ctx);
+    };
+
+    loadSection("Materials", scene.getMaterialsRoot());
+    loadSection("Assets", scene.getAssetsRoot());
+    loadSection("Objects", scene.getObjectsRoot());
+
+    std::unordered_map<std::string, ecs::Entity> entityByName;
+    for (const ecs::Entity& entity : scene.getChildren(scene.getMaterialsRoot())) {
+        const std::string name = registry.get(entity, ecs::Name).get<std::string>("value");
+        if (!name.empty()) entityByName[name] = entity;
+    }
+    for (const ecs::Entity& entity : scene.getChildren(scene.getAssetsRoot())) {
+        const std::string name = registry.get(entity, ecs::Name).get<std::string>("value");
+        if (!name.empty()) entityByName[name] = entity;
+    }
+
+    for (const DeferredEntityField& deferred : deferredEntityFields) {
+        const auto found = entityByName.find(deferred.entityName);
+        if (found != entityByName.end())
+            registry.get(deferred.entity, *deferred.componentType).set<ecs::Entity>(deferred.fieldId, found->second);
+        else
+            Log::warn("SceneSerializer", std::format("Entity '{}' not found for field '{}'", deferred.entityName, deferred.fieldId));
+    }
+
+    for (const ecs::Entity entity : scene.getChildren(scene.getAssetsRoot())) {
+        if (!registry.has(entity, ecs::Mesh)) continue;
+        ecs::Component& meshComp = registry.get(entity, ecs::Mesh);
+        const std::filesystem::path meshPath = meshComp.get<std::filesystem::path>("path");
+        if (meshPath.empty()) continue;
+        std::optional<MeshAsset> asset = MeshAsset::load(meshPath.string());
+        if (asset) {
+            meshComp.payload<MeshAsset>("geometry") = std::move(*asset);
+        } else {
+            Log::error("SceneSerializer", std::format("Failed to load mesh: {}", meshPath.string()));
+        }
+
+        if (registry.has(entity, ecs::MeshSimplify)) {
+            const float ratio = registry.get(entity, ecs::MeshSimplify).get<float>("ratio");
+            ecs::requestMeshSimplify(entity, ratio);
         }
     }
 
@@ -408,52 +399,45 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
 
     ecs::Registry& reg = scene.getRegistry();
     const AnimationStore& animStore = scene.getAnimationStore();
-    const auto& assets = scene.getMeshAssets();
 
-    auto serializeEntity = [&](const ecs::Entity& e) -> json {
-        json ej = json::object();
+    std::function<json(ecs::Entity)> saveNode;
+    saveNode = [&](ecs::Entity e) -> json {
+        json node = json::object();
+
+        if (reg.has(e, ecs::Name))
+            node["name"] = reg.get(e, ecs::Name).get<std::string>("value");
+
         for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
             if (!reg.has(e, type)) continue;
+            if (type.getId() == "name") continue;
             if (type.getId() == "material") continue;
-            if (type.getId() == "mesh") {
-                const int handle = reg.get(e, type).get<int>("handle");
-                if (handle >= 0 && handle < (int)assets.size() && !assets[handle].getPath().empty())
-                    ej["mesh"] = json{{"path", assets[handle].getPath()}, {"smooth", assets[handle].getSmoothShading()}};
-                continue;
-            }
-            if (type.getId() == "material_ref") {
-                const int handle = reg.get(e, type).get<int>("handle");
-                const auto& matEnts = reg.storage(ecs::Material).entities();
-                if (handle >= 0 && handle < (int)matEnts.size()) {
-                    const ecs::Entity matE = matEnts[handle];
-                    if (reg.has(matE, ecs::Name)) {
-                        const std::string name = trimmed(reg.get(matE, ecs::Name).get<std::string>("value"));
-                        if (!name.empty()) {
-                            ej["material_ref"] = json{{"handle", name}};
-                            continue;
-                        }
-                    }
-                }
-                ej["material_ref"] = serializeComponentWithAnim(reg.get(e, type), e, animStore);
-                continue;
-            }
-            ej[type.getId()] = serializeComponentWithAnim(reg.get(e, type), e, animStore);
+            node[type.getId()] = serializeComponent(reg.get(e, type), e, animStore, reg);
         }
-        return ej;
+
+        json childrenJson = json::array();
+        for (const ecs::Entity& child : reg.getChildren(e)) {
+            if (child == scene.getDefaultMaterial()) continue;
+            if (child == scene.getDefaultMeshAsset()) continue;
+            childrenJson.push_back(saveNode(child));
+        }
+        if (!childrenJson.empty())
+            node["children"] = childrenJson;
+
+        return node;
     };
 
-    const auto& matEnts = reg.storage(ecs::Material).entities();
-    json matsJson = json::array();
-    for (size_t i = 1; i < matEnts.size(); i++)
-        matsJson.push_back(serializeEntity(matEnts[i]));
-    j["materials"] = matsJson;
+    auto saveSection = [&](ecs::Entity root, ecs::Entity skip = {}) -> json {
+        json arr = json::array();
+        for (const ecs::Entity& child : reg.getChildren(root)) {
+            if (child == skip) continue;
+            arr.push_back(saveNode(child));
+        }
+        return arr;
+    };
 
-    json entitiesJson = json::array();
-    for (const ecs::Entity& e : scene.getEntities()) {
-        if (reg.has(e, ecs::Material)) continue;
-        entitiesJson.push_back(serializeEntity(e));
-    }
-    j["entities"] = entitiesJson;
+    j["Materials"] = saveSection(scene.getMaterialsRoot(), scene.getDefaultMaterial());
+    j["Assets"] = saveSection(scene.getAssetsRoot(), scene.getDefaultMeshAsset());
+    j["Objects"] = saveSection(scene.getObjectsRoot());
 
     std::ofstream out(path);
     if (!out.is_open()) {

@@ -1,9 +1,9 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "glossy": {
                 "albedo": { "rand": { "min": [0.72, 0.68, 0.62], "max": [0.92, 0.88, 0.82] } },
                 "roughness": { "rand": { "min": 0.0, "max": 0.4 } },
@@ -11,15 +11,15 @@
             }
         },
         {
-            "name": { "value": "KeyLight" },
+            "name": "KeyLight",
             "emissive": { "albedo": [1.0, 0.9, 0.8], "emission_strength": 6 }
         },
         {
-            "name": { "value": "FillLight" },
+            "name": "FillLight",
             "emissive": { "albedo": [0.7, 0.8, 1.0], "emission_strength": 2 }
         },
         {
-            "name": { "value": "Lucy" },
+            "name": "Lucy",
             "dielectric": {
                 "albedo": { "rand": { "min": [0.85, 0.85, 0.85], "max": [1.0, 1.0, 1.0] } },
                 "roughness": 0.1,
@@ -27,7 +27,7 @@
             }
         },
         {
-            "name": { "value": "Bunny" },
+            "name": "Bunny",
             "glossy": {
                 "albedo": { "rand": { "min": [0.55, 0.55, 0.55], "max": [1.0, 0.97, 0.9] } },
                 "roughness": { "rand": { "min": 0.1, "max": 0.7 } },
@@ -35,10 +35,20 @@
             }
         }
     ],
-    "entities": [
+    "Assets": [
+        {
+            "name": "lucy-centered",
+            "mesh": { "path": "./assets/models/lucy-centered.obj" }
+        },
+        {
+            "name": "bunny",
+            "mesh": { "path": "./assets/models/bunny.obj" }
+        }
+    ],
+    "Objects": [
         {
             "camera": { "fov": { "rand": { "min": 30, "max": 60 } } },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "spherical": {
                 "radius": { "rand": { "min": 8, "max": 12 } },
                 "azimuth": { "rand": { "min": -30, "max": 30 } },
@@ -47,14 +57,14 @@
             }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" }
+            "name": "Floor"
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "KeyLight" },
-            "name": { "value": "KeyLight" },
+            "name": "KeyLight",
             "transform": {
                 "position": [0, 7, 0],
                 "rotation": [90, 0, 0],
@@ -62,9 +72,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "FillLight" },
-            "name": { "value": "FillLight" },
+            "name": "FillLight",
             "transform": {
                 "position": [-5, 3, 0],
                 "rotation": [0, 90, 0],
@@ -72,9 +82,9 @@
             }
         },
         {
-            "mesh": { "path": "./assets/models/lucy-centered.obj" },
+            "mesh_ref": { "handle": "lucy-centered" },
             "material_ref": { "handle": "Lucy" },
-            "name": { "value": "Lucy" },
+            "name": "Lucy",
             "transform": {
                 "position": [-1.5, 0, -0.5],
                 "rotation": [
@@ -85,9 +95,9 @@
             }
         },
         {
-            "mesh": { "path": "./assets/models/bunny.obj" },
+            "mesh_ref": { "handle": "bunny" },
             "material_ref": { "handle": "Bunny" },
-            "name": { "value": "Bunny" },
+            "name": "Bunny",
             "transform": {
                 "position": [1.5, 0.86, 0.5],
                 "rotation": [

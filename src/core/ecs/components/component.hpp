@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cassert>
+#include <functional>
+#include <memory>
 #include <string>
+#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -16,6 +19,8 @@ public:
             fieldIndex[f.getId()] = fields.size();
             fields.push_back(f);
         }
+        for (const auto& p : proto.getPayloads())
+            payloads.emplace_back(p.construct(), p.destroy);
     }
     Component(Component&&) = default;
     Component& operator=(Component&&) = default;
@@ -38,12 +43,24 @@ public:
     std::vector<ComponentField>& getFields() { return fields; }
     const std::vector<ComponentField>& getFields() const { return fields; }
 
+    template<typename T>
+    T& payload(const std::string& id) {
+        assert(type->getPayloads()[type->getPayloadIndex(id)].typeId == std::type_index(typeid(T)));
+        return *static_cast<T*>(payloads[type->getPayloadIndex(id)].get());
+    }
+    template<typename T>
+    const T& payload(const std::string& id) const {
+        assert(type->getPayloads()[type->getPayloadIndex(id)].typeId == std::type_index(typeid(T)));
+        return *static_cast<const T*>(payloads[type->getPayloadIndex(id)].get());
+    }
+
     const ComponentType& getType() const { return *type; }
 
 private:
     const ComponentType* type;
     std::vector<ComponentField> fields;
     std::unordered_map<std::string, size_t> fieldIndex;
+    std::vector<std::unique_ptr<void, std::function<void(void*)>>> payloads;
 };
 
 } // namespace ecs

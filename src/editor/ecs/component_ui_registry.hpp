@@ -7,9 +7,6 @@
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
-#include "core/scene/object.hpp"
-
-class MeshAsset;
 
 namespace ecs {
 
@@ -41,11 +38,9 @@ public:
 
     static ComponentUiRegistry& get();
     static void init();
-    void setMeshAssets(std::vector<MeshAsset>* meshAssets_) { meshAssets = meshAssets_; }
 
 private:
     std::vector<Drawer> drawers;
-    std::vector<MeshAsset>* meshAssets = nullptr;
 
     static bool drawField(Component& component, const ComponentField& schema);
 
@@ -54,7 +49,6 @@ private:
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_Separator));
         ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 
         bool remove = ImGui::Button("-##Remove", { 32, 0 });
@@ -64,7 +58,7 @@ private:
 
     static void endDraw() {
         ImGui::EndChild();
-        ImGui::PopStyleColor(4);
+        ImGui::PopStyleColor(3);
         ImGui::PopID();
     }
 };

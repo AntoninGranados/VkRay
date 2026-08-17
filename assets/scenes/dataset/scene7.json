@@ -1,43 +1,43 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "MirrorLeft" },
+            "name": "MirrorLeft",
             "metal": {
                 "albedo": [0.98, 0.98, 0.98],
                 "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
             }
         },
         {
-            "name": { "value": "MirrorRight" },
+            "name": "MirrorRight",
             "metal": {
                 "albedo": [0.98, 0.98, 0.98],
                 "roughness": { "rand": { "min": 0.05, "max": 0.2 } }
             }
         },
         {
-            "name": { "value": "WallBack" },
+            "name": "WallBack",
             "diffuse": { "albedo": [0.88, 0.86, 0.82] }
         },
         {
-            "name": { "value": "WallFront" },
+            "name": "WallFront",
             "diffuse": { "albedo": [0.88, 0.86, 0.82] }
         },
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "diffuse": { "albedo": [0.9, 0.88, 0.84] }
         },
         {
-            "name": { "value": "Ceiling" },
+            "name": "Ceiling",
             "diffuse": { "albedo": [0.92, 0.9, 0.88] }
         },
         {
-            "name": { "value": "CeilLight" },
+            "name": "CeilLight",
             "emissive": { "albedo": [1.0, 0.97, 0.92], "emission_strength": 35 }
         },
         {
-            "name": { "value": "GlassLarge" },
+            "name": "GlassLarge",
             "dielectric": {
                 "albedo": { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
                 "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
@@ -45,7 +45,7 @@
             }
         },
         {
-            "name": { "value": "GlassSmall" },
+            "name": "GlassSmall",
             "dielectric": {
                 "albedo": { "rand": { "min": [0.45, 0.45, 0.45], "max": [0.98, 0.98, 0.98] } },
                 "roughness": { "rand": { "min": 0.0, "max": 0.25 } },
@@ -53,10 +53,10 @@
             }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": { "rand": { "min": 60, "max": 95 } } },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "spherical": {
                 "radius": { "rand": { "min": 4, "max": 8 } },
                 "azimuth": { "rand": { "min": 0, "max": 360 } },
@@ -65,15 +65,15 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "transform": { "rotation": [-90, 0, 0], "scale": [6, 6, 1] }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "Ceiling" },
-            "name": { "value": "Ceiling" },
+            "name": "Ceiling",
             "transform": {
                 "position": [0, 4, 0],
                 "rotation": [90, 0, 0],
@@ -81,15 +81,15 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "WallBack" },
-            "name": { "value": "WallBack" },
+            "name": "WallBack",
             "transform": { "position": [0, 2, -3], "scale": [6, 4, 1] }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "WallFront" },
-            "name": { "value": "WallFront" },
+            "name": "WallFront",
             "transform": {
                 "position": [0, 2, 3],
                 "rotation": [180, 0, 0],
@@ -97,9 +97,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "MirrorLeft" },
-            "name": { "value": "MirrorLeft" },
+            "name": "MirrorLeft",
             "transform": {
                 "position": [-3, 2, 0],
                 "rotation": [0, 90, 0],
@@ -107,9 +107,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "MirrorRight" },
-            "name": { "value": "MirrorRight" },
+            "name": "MirrorRight",
             "transform": {
                 "position": [3, 2, 0],
                 "rotation": [0, -90, 0],
@@ -117,9 +117,9 @@
             }
         },
         {
-            "quad": {},
+            "quad": {  },
             "material_ref": { "handle": "CeilLight" },
-            "name": { "value": "CeilLight" },
+            "name": "CeilLight",
             "transform": {
                 "position": [1, 3.9, -0.5],
                 "rotation": [90, 0, 0],
@@ -129,13 +129,13 @@
         {
             "sphere": { "radius": 1.0 },
             "material_ref": { "handle": "GlassLarge" },
-            "name": { "value": "GlassBall" },
+            "name": "GlassBall",
             "transform": { "position": [-0.5, 1.1, 0] }
         },
         {
             "sphere": { "radius": 0.5 },
             "material_ref": { "handle": "GlassSmall" },
-            "name": { "value": "GlassSmall" },
+            "name": "GlassSmall",
             "transform": { "position": [1.4, 0.6, 0.8] }
         }
     ]

@@ -12,11 +12,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "core/ecs/entity.hpp"
+
 enum class FieldType {
     Bool,
     Int, IVec2, IVec3, IVec4,
     Float, Vec2, Vec3, Vec4,
     Quat,
+    Entity,
     String,
     Enum,
     Path
@@ -33,16 +36,30 @@ struct FieldPreset {
     std::variant<float, int, std::string> value;
 };
 
-struct FieldMetadata {
+struct NumericMeta {
     float min = -std::numeric_limits<float>::infinity();
     float max =  std::numeric_limits<float>::infinity();
     float step = 0.0f;
     bool color = false;
-    std::vector<std::string> enumItems;
-    std::vector<PathExtension> pathExtensions;
-    bool pathSave = false;
     std::vector<FieldPreset> presets;
 };
+
+struct PathMeta {
+    std::vector<PathExtension> extensions;
+    bool save = false;
+    std::vector<FieldPreset> presets;
+};
+
+struct EnumMeta {
+    std::vector<std::string> items;
+};
+
+struct EntityMeta {
+    std::vector<std::string> needs;
+    std::vector<std::string> conflicts;
+};
+
+using FieldMetadata = std::variant<std::monostate, NumericMeta, PathMeta, EnumMeta, EntityMeta>;
 
 class FieldValue {
 public:
@@ -136,7 +153,7 @@ public:
         else {
             f.type = typeOf<T>(); f.size = sizeof(T);
             if constexpr (std::is_same_v<T, int>)
-                if (!f.metadata.enumItems.empty()) f.type = FieldType::Enum;
+                if (std::holds_alternative<EnumMeta>(f.metadata)) f.type = FieldType::Enum;
         }
         f.value.resize(f.size, std::byte{0});
         writeBlob(f.value, def);
@@ -150,7 +167,9 @@ public:
     void reset() { value = defaultValue; }
 
     int findPreset() const {
-        for (int i = 0; i < (int)metadata.presets.size(); i++) {
+        const auto* presets = getPresets();
+        if (!presets) return -1;
+        for (int i = 0; i < (int)presets->size(); i++) {
             bool m = std::visit([this](const auto& val) -> bool {
                 using V = std::decay_t<decltype(val)>;
                 if constexpr (std::is_same_v<V, std::string>) {
@@ -162,13 +181,15 @@ public:
                     if (type == FieldType::Float) return get<float>() == val;
                 }
                 return false;
-            }, metadata.presets[i].value);
+            }, (*presets)[i].value);
             if (m) return i;
         }
         return -1;
     }
 
     void applyPreset(int idx) {
+        const auto* presets = getPresets();
+        if (!presets) return;
         std::visit([this](const auto& val) {
             using V = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<V, std::string>) {
@@ -179,7 +200,13 @@ public:
             } else {
                 if (type == FieldType::Float) set<float>(val);
             }
-        }, metadata.presets[idx].value);
+        }, (*presets)[idx].value);
+    }
+
+    const std::vector<FieldPreset>* getPresets() const {
+        if (const auto* num = std::get_if<NumericMeta>(&metadata)) return &num->presets;
+        if (const auto* path = std::get_if<PathMeta>(&metadata)) return &path->presets;
+        return nullptr;
     }
 
 private:

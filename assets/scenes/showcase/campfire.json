@@ -1,44 +1,55 @@
 {
     "version": 1,
     "light": "empty",
-    "materials": [
+    "Materials": [
+        { "name": "Base", "diffuse": { "albedo": [1, 1, 1] } },
         {
-            "name": { "value": "Base" },
-            "diffuse": { "albedo": [1, 1, 1] }
-        },
-        {
-            "name": { "value": "Fire" },
+            "name": "Fire",
             "emissive": { "albedo": [1, 1, 1], "emission_strength": 50 }
         },
         {
-            "name": { "value": "Fireflies" },
+            "name": "Fireflies",
             "emissive": { "albedo": [1, 1, 1], "emission_strength": 5 }
         }
     ],
-    "entities": [
+    "Assets": [
+        {
+            "name": "campsite",
+            "mesh": { "path": "./assets/models/campfire/campsite.obj" }
+        },
+        {
+            "name": "fire",
+            "mesh": { "path": "./assets/models/campfire/fire.obj" }
+        },
+        {
+            "name": "fireflies",
+            "mesh": { "path": "./assets/models/campfire/fireflies.obj" }
+        }
+    ],
+    "Objects": [
         {
             "camera": { "fov": 35 },
             "thin_lens": { "f_stop": 0.5, "focal_distance": 11 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
         },
         {
-            "mesh": { "path": "./assets/models/campfire/campsite.obj" },
+            "mesh_ref": { "handle": "campsite" },
             "material_ref": { "handle": "Base" },
-            "transform": {},
-            "name": { "value": "Campsite" }
+            "transform": {  },
+            "name": "Campsite"
         },
         {
-            "mesh": { "path": "./assets/models/campfire/fire.obj" },
+            "mesh_ref": { "handle": "fire" },
             "material_ref": { "handle": "Fire" },
-            "transform": {},
-            "name": { "value": "Fire" }
+            "transform": {  },
+            "name": "Fire"
         },
         {
-            "mesh": { "path": "./assets/models/campfire/fireflies.obj" },
+            "mesh_ref": { "handle": "fireflies" },
             "material_ref": { "handle": "Fireflies" },
-            "transform": {},
-            "name": { "value": "Fireflies" }
+            "transform": {  },
+            "name": "Fireflies"
         }
     ]
 }

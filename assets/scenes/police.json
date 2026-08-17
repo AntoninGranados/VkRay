@@ -1,24 +1,38 @@
 {
     "version": 1,
     "light": "sunset",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "VertexColor" },
+            "name": "VertexColor",
             "diffuse": { "albedo": [1.0, 1.0, 1.0] }
         },
         {
-            "name": { "value": "Sun" },
+            "name": "Sun",
             "emissive": {
                 "albedo": [0.95, 0.3, 0.035],
                 "emission_strength": 2000.0
             }
         }
     ],
-    "entities": [
+    "Assets": [
+        {
+            "name": "car1",
+            "mesh": { "path": "./assets/models/police/car1.obj" }
+        },
+        {
+            "name": "car2",
+            "mesh": { "path": "./assets/models/police/car2.obj" }
+        },
+        {
+            "name": "road",
+            "mesh": { "path": "./assets/models/police/road.obj" }
+        }
+    ],
+    "Objects": [
         {
             "camera": { "fov": 50.0, "shutter_speed": 0.016667 },
             "thin_lens": { "f_stop": 10.0, "focal_distance": 6.13 },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "transform": {
                 "position": {
                     "anim": [
@@ -31,11 +45,8 @@
             }
         },
         {
-            "mesh": {
-                "path": "./assets/models/police/car1.obj",
-                "smooth": false
-            },
-            "name": { "value": "Car 1" },
+            "mesh_ref": { "handle": "car1" },
+            "name": "Car 1",
             "transform": {
                 "position": {
                     "anim": [
@@ -49,11 +60,8 @@
             "material_ref": { "handle": "VertexColor" }
         },
         {
-            "mesh": {
-                "path": "./assets/models/police/car2.obj",
-                "smooth": false
-            },
-            "name": { "value": "Car 2" },
+            "mesh_ref": { "handle": "car2" },
+            "name": "Car 2",
             "transform": {
                 "position": {
                     "anim": [
@@ -67,11 +75,8 @@
             "material_ref": { "handle": "VertexColor" }
         },
         {
-            "mesh": {
-                "path": "./assets/models/police/road.obj",
-                "smooth": false
-            },
-            "name": { "value": "Road" },
+            "mesh_ref": { "handle": "road" },
+            "name": "Road",
             "transform": {
                 "position": [-15.0, 0.0, 0.0],
                 "rotation": [0.0, 0.0, 0.0],
@@ -81,7 +86,7 @@
         },
         {
             "sphere": { "radius": 20.0 },
-            "name": { "value": "Sun" },
+            "name": "Sun",
             "transform": {
                 "position": [200.0, 20.0, -100.0],
                 "rotation": [0.0, -0.0, 0.0],

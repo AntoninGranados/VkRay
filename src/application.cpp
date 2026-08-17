@@ -7,6 +7,9 @@
 #include "VkSmol/platform/headless_platform.hpp"
 #include "VkSmol/render/shader.hpp"
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
@@ -49,13 +52,18 @@ void Application::initEditorMode() {
     Editor::init();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
-    io.Fonts->AddFontFromFileTTF("assets/fonts/FiraCode-Regular.ttf", 14.0f);
+
+    float xscale, yscale;
+    glfwGetWindowContentScale(static_cast<GLFWwindow*>(platform->getNativeWindowHandle()), &xscale, &yscale);
+
+    io.Fonts->AddFontFromFileTTF("assets/fonts/FiraCode-Regular.ttf", 14.0f * xscale);
     ImFontConfig iconConfig;
     iconConfig.MergeMode  = true;
     iconConfig.PixelSnapH = true;
     iconConfig.GlyphOffset = ImVec2(0.0f, 1.0f);
     static const ImWchar iconRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-    io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 14.0f, &iconConfig, iconRanges);
+    io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 14.0f * xscale, &iconConfig, iconRanges);
+    io.FontGlobalScale = 1.0f / xscale;
 
     initScene();
     buildRenderGraph(false);
@@ -90,8 +98,6 @@ void Application::buildRenderGraph(bool offline) {
 void Application::initScene(const std::string& sceneFile) {
     Core::getScene().init();
 
-    auto& uiReg = ecs::ComponentUiRegistry::get();
-    uiReg.setMeshAssets(&Core::getScene().getMeshAssets());
     ecs::ComponentUiRegistry::init();
 
     LightMode mode = LightMode::Day;

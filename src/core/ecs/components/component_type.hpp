@@ -1,8 +1,10 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -12,15 +14,19 @@ namespace ecs {
 
 struct ComponentField : Field {
     ComponentField() = default;
-    ComponentField(bool isPrivate, bool isAnimatable)
-        : fieldPrivate(isPrivate), animatable(isAnimatable) {}
+    explicit ComponentField(bool isAnimatable) : animatable(isAnimatable) {}
 
-    bool isPrivate() const { return fieldPrivate; }
     bool isAnimatable() const { return animatable; }
 
 private:
-    bool fieldPrivate = false;
     bool animatable = false;
+};
+
+struct ComponentPayload {
+    std::string id;
+    std::type_index typeId;
+    std::function<void*()> construct;
+    std::function<void(void*)> destroy;
 };
 
 class ComponentType {
@@ -38,6 +44,9 @@ public:
 
     const std::vector<ComponentField>& getFields() const { return fields; }
     const ComponentField& getField(const std::string& id) const { return fields[fieldIndex.at(id)]; }
+
+    const std::vector<ComponentPayload>& getPayloads() const { return payloads; }
+    size_t getPayloadIndex(const std::string& id) const { return payloadIndex.at(id); }
 
     static std::string deriveLabel(const std::string& id);
 
@@ -59,6 +68,8 @@ private:
     std::vector<std::string> conflicts;
     std::vector<ComponentField> fields;
     std::unordered_map<std::string, size_t> fieldIndex;
+    std::vector<ComponentPayload> payloads;
+    std::unordered_map<std::string, size_t> payloadIndex;
 };
 
 class ComponentType::Builder {
@@ -71,12 +82,27 @@ public:
 
     template <typename T>
     Builder& field(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
-        return addField<T>(std::move(id), std::move(defaultValue), std::move(metadata), false, animatable);
+        if (type.fieldIndex.contains(id))
+            throw std::invalid_argument("duplicate field id: " + id);
+        ComponentField f(animatable);
+        static_cast<Field&>(f) = Field::make<T>(id, deriveLabel(id), defaultValue, std::move(metadata));
+        type.fieldIndex[f.getId()] = type.fields.size();
+        type.fields.push_back(std::move(f));
+        return *this;
     }
 
     template <typename T>
-    Builder& privateField(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
-        return addField<T>(std::move(id), std::move(defaultValue), std::move(metadata), true, animatable);
+    Builder& payload(std::string id) {
+        if (type.payloadIndex.contains(id))
+            throw std::invalid_argument("duplicate payload id: " + id);
+        type.payloadIndex[id] = type.payloads.size();
+        type.payloads.push_back(ComponentPayload{
+            std::move(id),
+            std::type_index(typeid(T)),
+            []() -> void* { return new T(); },
+            [](void* p) { delete static_cast<T*>(p); },
+        });
+        return *this;
     }
 
     template <typename ...Args>
@@ -94,17 +120,6 @@ public:
     ComponentType& build();
 
 private:
-    template <typename T>
-    Builder& addField(std::string id, T defaultValue, FieldMetadata metadata, bool isPrivate, bool animatable = false) {
-        if (type.fieldIndex.contains(id))
-            throw std::invalid_argument("duplicate field id: " + id);
-        ComponentField f(isPrivate, animatable);
-        static_cast<Field&>(f) = Field::make<T>(id, deriveLabel(id), defaultValue, std::move(metadata));
-        type.fieldIndex[f.getId()] = type.fields.size();
-        type.fields.push_back(std::move(f));
-        return *this;
-    }
-
     ComponentType type = {};
 };
 

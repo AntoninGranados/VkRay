@@ -1,9 +1,9 @@
 {
     "version": 1,
     "light": "night",
-    "materials": [
+    "Materials": [
         {
-            "name": { "value": "Floor" },
+            "name": "Floor",
             "glossy": {
                 "albedo": { "rand": { "min": [0.04, 0.04, 0.04], "max": [0.14, 0.14, 0.14] } },
                 "roughness": { "rand": { "min": 0.0, "max": 0.08 } },
@@ -11,23 +11,23 @@
             }
         },
         {
-            "name": { "value": "RedLight" },
+            "name": "RedLight",
             "emissive": { "albedo": [1.0, 0.08, 0.04], "emission_strength": 180 }
         },
         {
-            "name": { "value": "BlueLight" },
+            "name": "BlueLight",
             "emissive": { "albedo": [0.1, 0.25, 1.0], "emission_strength": 150 }
         },
         {
-            "name": { "value": "GreenLight" },
+            "name": "GreenLight",
             "emissive": { "albedo": [0.1, 0.9, 0.15], "emission_strength": 120 }
         },
         {
-            "name": { "value": "YellowLight" },
+            "name": "YellowLight",
             "emissive": { "albedo": [1.0, 0.85, 0.05], "emission_strength": 100 }
         },
         {
-            "name": { "value": "Glass" },
+            "name": "Glass",
             "dielectric": {
                 "albedo": { "rand": { "min": [0.88, 0.88, 0.88], "max": [1.0, 1.0, 1.0] } },
                 "roughness": 0.0,
@@ -35,17 +35,17 @@
             }
         },
         {
-            "name": { "value": "Metal" },
+            "name": "Metal",
             "metal": {
                 "albedo": { "rand": { "min": [0.55, 0.55, 0.55], "max": [1.0, 0.95, 0.85] } },
                 "roughness": { "rand": { "min": 0.0, "max": 0.2 } }
             }
         }
     ],
-    "entities": [
+    "Objects": [
         {
             "camera": { "fov": { "rand": { "min": 45, "max": 70 } } },
-            "name": { "value": "Camera" },
+            "name": "Camera",
             "spherical": {
                 "radius": { "rand": { "min": 4, "max": 8 } },
                 "azimuth": { "rand": { "min": -120, "max": 120 } },
@@ -54,50 +54,50 @@
             }
         },
         {
-            "plane": {},
+            "plane": {  },
             "material_ref": { "handle": "Floor" },
-            "name": { "value": "Floor" }
+            "name": "Floor"
         },
         {
             "sphere": { "radius": 0.25 },
             "material_ref": { "handle": "RedLight" },
-            "name": { "value": "RedLight" },
+            "name": "RedLight",
             "transform": { "position": [-3.5, 2.5, -2] }
         },
         {
             "sphere": { "radius": 0.25 },
             "material_ref": { "handle": "BlueLight" },
-            "name": { "value": "BlueLight" },
+            "name": "BlueLight",
             "transform": { "position": [3.5, 2, -2] }
         },
         {
             "sphere": { "radius": 0.3 },
             "material_ref": { "handle": "GreenLight" },
-            "name": { "value": "GreenLight" },
+            "name": "GreenLight",
             "transform": { "position": [0, 4.5, 2.5] }
         },
         {
             "sphere": { "radius": 0.2 },
             "material_ref": { "handle": "YellowLight" },
-            "name": { "value": "YellowLight" },
+            "name": "YellowLight",
             "transform": { "position": [-2, 1.8, 3] }
         },
         {
             "sphere": { "radius": 1 },
             "material_ref": { "handle": "Glass" },
-            "name": { "value": "GlassSphere" },
+            "name": "GlassSphere",
             "transform": { "position": [0, 1, 0] }
         },
         {
-            "box": {},
+            "box": {  },
             "material_ref": { "handle": "Metal" },
-            "name": { "value": "MetalBlock1" },
+            "name": "MetalBlock1",
             "transform": { "position": [-2.5, 1, 0], "scale": [0.7, 1, 0.5] }
         },
         {
-            "box": {},
+            "box": {  },
             "material_ref": { "handle": "Metal" },
-            "name": { "value": "MetalBlock2" },
+            "name": "MetalBlock2",
             "transform": { "position": [2.5, 0.75, 0], "scale": [0.7, 0.75, 0.5] }
         }
     ]
