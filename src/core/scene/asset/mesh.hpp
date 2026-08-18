@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "core/scene/object.hpp"
+#include "core/scene/gpu_structs.hpp"
 
 struct Vertex {
     alignas(16) glm::vec3 position;

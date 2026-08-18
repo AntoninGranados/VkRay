@@ -9,16 +9,6 @@
 #include "editor/editor.hpp"
 
 void StatsPanel::content() {
-    static constexpr ImU32 kPassColors[kNumPasses] = {
-        IM_COL32(255,  70,  70, 255), // Pathtracing — red
-        IM_COL32( 70, 170, 255, 255), // Compositing — blue
-        IM_COL32( 50, 220,  80, 255), // Display     — green
-        IM_COL32(255, 200,  40, 255), // Debug       — amber
-        IM_COL32(220,  80, 255, 255), // UI          — magenta
-    };
-    static constexpr const char* kPassNames[kNumPasses] = {
-        "Pathtracing", "Compositing", "Display", "Debug", "UI",
-    };
     static constexpr float kTargetMs  = 1000.0f / 60.0f;
     static constexpr int   kAvg       = 5;
     static constexpr float kCanvasW   = 300.0f;
@@ -29,13 +19,19 @@ void StatsPanel::content() {
     CoreRenderer& core = Core::getCoreRenderer();
     EditorRenderer& editor = Editor::getEditorRenderer();
 
+    const std::array<PassInfo, kNumPasses> passes = {{
+        { "Pathtracing", IM_COL32(255,  70,  70, 255), core.getPathtracingTimestamp() },
+        { "Compositing", IM_COL32( 70, 170, 255, 255), core.getCompositingTimestamp() },
+        { "Display",     IM_COL32( 50, 220,  80, 255), editor.getDisplayTimestamp()   },
+        { "Debug",       IM_COL32(255, 200,  40, 255), editor.getDebugTimestamp()     },
+        { "UI",          IM_COL32(220,  80, 255, 255), editor.getUiTimestamp()        },
+    }};
+
     FrameSample sample;
     const bool paused = core.isRenderFinished();
-    sample.ms[0] = paused ? 0.0f : static_cast<float>(engine.getTimestampMs(core.getPathtracingTimestamp()));
-    sample.ms[1] = static_cast<float>(engine.getTimestampMs(core.getCompositingTimestamp()));
-    sample.ms[2] = static_cast<float>(engine.getTimestampMs(editor.getDisplayTimestamp()));
-    sample.ms[3] = static_cast<float>(engine.getTimestampMs(editor.getDebugTimestamp()));
-    sample.ms[4] = static_cast<float>(engine.getTimestampMs(editor.getUiTimestamp()));
+    sample.ms[0] = paused ? 0.0f : static_cast<float>(engine.getTimestampMs(passes[0].timestamp));
+    for (int p = 1; p < kNumPasses; ++p)
+        sample.ms[p] = static_cast<float>(engine.getTimestampMs(passes[p].timestamp));
 
     bool valid = paused || sample.ms[0] >= 0.0f;
     for (int p = 1; p < kNumPasses; ++p)
@@ -86,7 +82,7 @@ void StatsPanel::content() {
 
         for (int p = 0; p < kNumPasses; ++p) {
             float h = (s.ms[p] / maxTotal) * (kCanvasH - kPaddingTop);
-            dl->AddRectFilled(ImVec2(x0, yBase - h), ImVec2(x1, yBase), kPassColors[p]);
+            dl->AddRectFilled(ImVec2(x0, yBase - h), ImVec2(x1, yBase), passes[p].color);
             yBase -= h;
         }
     }
@@ -112,10 +108,10 @@ void StatsPanel::content() {
     });
 
     for (const auto& l : labels) {
-        ImGui::ColorButton("##col", ImGui::ColorConvertU32ToFloat4(kPassColors[l.passIdx]),
+        ImGui::ColorButton("##col", ImGui::ColorConvertU32ToFloat4(passes[l.passIdx].color),
             ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(10, 10));
         ImGui::SameLine();
-        ImGui::Text("%-14s %.3f ms", kPassNames[l.passIdx], l.avgMs);
+        ImGui::Text("%-14s %.3f ms", passes[l.passIdx].name, l.avgMs);
     }
 
     ImGui::End();

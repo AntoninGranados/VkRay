@@ -1,5 +1,7 @@
 #pragma once
 
+// ECS-side definitions of the scene primitives; see core/scene/gpu_structs.hpp for their GPU-side mirror.
+
 #include <filesystem>
 
 #include "FontAwesome/IconsFontAwesome7.h"

@@ -12,7 +12,7 @@
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
-#include "core/scene/object.hpp"
+#include "core/scene/gpu_structs.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"

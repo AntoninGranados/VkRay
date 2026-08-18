@@ -1,5 +1,7 @@
 #pragma once
 
+// GPU-side mirror of the scene primitives; see core/ecs/components/geometry.hpp for their ECS-side definitions.
+
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 

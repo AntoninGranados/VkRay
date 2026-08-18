@@ -237,12 +237,6 @@ void CoreRenderer::bindParameters() {
 
     parameters.bind("scene/light_mode", &pathtracerUBO.render.lightMode);
 
-    parameters.bind("renderer/aov/position_w", &aovFlags.positionW);
-    parameters.bind("renderer/aov/position",   &aovFlags.position);
-    parameters.bind("renderer/aov/normal_w",   &aovFlags.normalW);
-    parameters.bind("renderer/aov/normal",     &aovFlags.normal);
-    parameters.bind("renderer/aov/albedo",     &aovFlags.albedo);
-    parameters.bind("renderer/aov/roughness",  &aovFlags.roughness);
-    parameters.bind("renderer/aov/mat_type",   &aovFlags.matType);
-    parameters.bind("renderer/aov/sky_mask",   &aovFlags.skyMask);
+    for (const AOVChannel& channel : kAOVChannels)
+        parameters.bind(std::string("renderer/aov/") + channel.name, &(aovFlags.*channel.flag));
 }

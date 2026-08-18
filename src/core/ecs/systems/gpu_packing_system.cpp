@@ -10,7 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "core/scene/object.hpp"
+#include "core/scene/gpu_structs.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 

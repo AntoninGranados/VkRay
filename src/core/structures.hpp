@@ -88,6 +88,22 @@ struct AOVFlags {
     bool skyMask   = false;
 };
 
+struct AOVChannel {
+    const char* name;
+    bool AOVFlags::* flag;
+};
+
+inline constexpr AOVChannel kAOVChannels[] = {
+    { "position_w", &AOVFlags::positionW },
+    { "position",   &AOVFlags::position  },
+    { "normal_w",   &AOVFlags::normalW   },
+    { "normal",     &AOVFlags::normal    },
+    { "albedo",     &AOVFlags::albedo    },
+    { "roughness",  &AOVFlags::roughness },
+    { "mat_type",   &AOVFlags::matType   },
+    { "sky_mask",   &AOVFlags::skyMask   },
+};
+
 struct alignas(16) AOVBuffer {
     alignas(16) uint32_t  hitValid;
     alignas(16) glm::vec3 positionW;

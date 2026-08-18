@@ -3,33 +3,25 @@
 #include <fstream>
 #include <random>
 #include <stdexcept>
-#include <unordered_map>
 
 #include "nlohmann/json.hpp"
 
+#include "core/structures.hpp"
 #include "utils/json_resolve.hpp"
 
 using json = nlohmann::json;
 
 static constexpr int JOB_VERSION = 1;
 
-static std::unordered_map<std::string, std::filesystem::path> kAovPaths = {
-    { "position_w", "renderer/aov/position_w" },
-    { "position",   "renderer/aov/position"   },
-    { "normal_w",   "renderer/aov/normal_w"   },
-    { "normal",     "renderer/aov/normal"     },
-    { "albedo",     "renderer/aov/albedo"     },
-    { "roughness",  "renderer/aov/roughness"  },
-    { "mat_type",   "renderer/aov/mat_type"   },
-    { "sky_mask",   "renderer/aov/sky_mask"   },
-};
-
 static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides) {
     for (const auto& name : arr) {
         const std::string s = name.get<std::string>();
-        auto it = kAovPaths.find(s);
-        if (it != kAovPaths.end())
-            overrides.push_back({ it->second, true });
+        for (const AOVChannel& channel : kAOVChannels) {
+            if (s == channel.name) {
+                overrides.push_back({ std::string("renderer/aov/") + channel.name, true });
+                break;
+            }
+        }
     }
 }
 
