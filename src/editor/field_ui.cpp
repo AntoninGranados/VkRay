@@ -16,6 +16,34 @@
 
 namespace ui {
 
+namespace {
+std::vector<ecs::Entity> findEntityCandidates(Scene& scene, ecs::Registry& registry, const EntityMeta* entityMeta) {
+    std::vector<ecs::Entity> candidates;
+    for (const ecs::Entity root : {scene.getMaterialsRoot(), scene.getAssetsRoot(), scene.getObjectsRoot()}) {
+        for (const ecs::Entity child : scene.getChildren(root)) {
+            if (entityMeta && !entityMeta->needs.empty()) {
+                bool passes = true;
+                for (const std::string& needed : entityMeta->needs) {
+                    const auto found = ecs::ComponentType::find(needed);
+                    if (!found || !registry.has(child, found->get())) { passes = false; break; }
+                }
+                if (!passes) continue;
+            }
+            if (entityMeta && !entityMeta->conflicts.empty()) {
+                bool blocked = false;
+                for (const std::string& conflicted : entityMeta->conflicts) {
+                    const auto found = ecs::ComponentType::find(conflicted);
+                    if (found && registry.has(child, found->get())) { blocked = true; break; }
+                }
+                if (blocked) continue;
+            }
+            candidates.push_back(child);
+        }
+    }
+    return candidates;
+}
+} // namespace
+
 bool drawField(Field& field, const std::string& widgetId) {
     const FieldMetadata& metadata = field.getMetadata();
     const NumericMeta* numMeta = std::get_if<NumericMeta>(&metadata);
@@ -196,29 +224,7 @@ bool drawField(Field& field, const std::string& widgetId) {
         case FieldType::Entity: {
             Scene& scene = Core::getScene();
             ecs::Registry& registry = scene.getRegistry();
-
-            std::vector<ecs::Entity> candidates;
-            for (const ecs::Entity root : {scene.getMaterialsRoot(), scene.getAssetsRoot(), scene.getObjectsRoot()}) {
-                for (const ecs::Entity child : scene.getChildren(root)) {
-                    if (entityMeta && !entityMeta->needs.empty()) {
-                        bool passes = true;
-                        for (const std::string& needed : entityMeta->needs) {
-                            const auto found = ecs::ComponentType::find(needed);
-                            if (!found || !registry.has(child, found->get())) { passes = false; break; }
-                        }
-                        if (!passes) continue;
-                    }
-                    if (entityMeta && !entityMeta->conflicts.empty()) {
-                        bool blocked = false;
-                        for (const std::string& conflicted : entityMeta->conflicts) {
-                            const auto found = ecs::ComponentType::find(conflicted);
-                            if (found && registry.has(child, found->get())) { blocked = true; break; }
-                        }
-                        if (blocked) continue;
-                    }
-                    candidates.push_back(child);
-                }
-            }
+            const std::vector<ecs::Entity> candidates = findEntityCandidates(scene, registry, entityMeta);
 
             const ecs::Entity current = field.get<ecs::Entity>();
             const auto found = std::find(candidates.begin(), candidates.end(), current);

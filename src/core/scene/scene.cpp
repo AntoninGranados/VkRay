@@ -62,29 +62,18 @@ void Scene::pushSphere(std::string name, glm::vec3 center, float radius, std::op
     registry.add(e, ecs::Sphere);
     registry.get(e, ecs::Sphere).set<float>("radius", radius);
 
-    registry.add(e, ecs::MaterialRef);
-    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
-
-    registry.add(e, ecs::Transform);
-    auto& t = registry.get(e, ecs::Transform);
-    t.set<glm::vec3>("position", center);
-    t.set<glm::vec3>("scale", glm::vec3(1.0f));
+    pushMaterialRef(e, materialEntity);
+    setTransform(e, center, glm::vec3(0.0f), glm::vec3(1.0f));
 }
 
 void Scene::pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, std::optional<ecs::Entity> materialEntity) {
     ecs::Entity e = createNamedEntity(std::move(name), objectsRoot);
 
     registry.add(e, ecs::Plane);
-
-    registry.add(e, ecs::MaterialRef);
-    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
+    pushMaterialRef(e, materialEntity);
 
     const glm::quat q = glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), normal);
-    registry.add(e, ecs::Transform);
-    auto& t = registry.get(e, ecs::Transform);
-    t.set<glm::vec3>("position", point);
-    t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
-    t.set<glm::vec3>("scale", glm::vec3(1.0f));
+    setTransform(e, point, glm::degrees(glm::eulerAngles(q)), glm::vec3(1.0f));
 }
 
 void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, std::optional<ecs::Entity> materialEntity) {
@@ -93,14 +82,8 @@ void Scene::pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, 
     ecs::Entity e = createNamedEntity(std::move(name), objectsRoot);
 
     registry.add(e, ecs::Box);
-
-    registry.add(e, ecs::MaterialRef);
-    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
-
-    registry.add(e, ecs::Transform);
-    auto& t = registry.get(e, ecs::Transform);
-    t.set<glm::vec3>("position", center);
-    t.set<glm::vec3>("scale", halfExtents);
+    pushMaterialRef(e, materialEntity);
+    setTransform(e, center, glm::vec3(0.0f), halfExtents);
 }
 
 void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation, std::optional<ecs::Entity> materialEntity) {
@@ -117,17 +100,10 @@ void Scene::pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::
     const glm::vec3 v_hat = -std::sin(rotation) * tangent + std::cos(rotation) * bitangent;
 
     registry.add(e, ecs::Quad);
-
-    registry.add(e, ecs::MaterialRef);
-    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
+    pushMaterialRef(e, materialEntity);
 
     const glm::quat q = glm::quat_cast(glm::mat3(u_hat, v_hat, normal));
-    registry.add(e, ecs::Transform);
-    auto& t = registry.get(e, ecs::Transform);
-    t.set<glm::vec3>("position", center);
-    t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(q)));
-    t.set<glm::vec3>("scale", glm::vec3(scale.x, scale.y, 1.0f));
-
+    setTransform(e, center, glm::degrees(glm::eulerAngles(q)), glm::vec3(scale.x, scale.y, 1.0f));
 }
 
 ecs::Entity Scene::pushMeshAsset(std::string name, const std::string& path, bool smooth) {
@@ -157,8 +133,7 @@ void Scene::pushMesh(std::string name, ecs::Entity meshAssetEntity, const glm::m
     registry.add(e, ecs::MeshRef);
     registry.get(e, ecs::MeshRef).set<ecs::Entity>("handle", meshAssetEntity);
 
-    registry.add(e, ecs::MaterialRef);
-    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
+    pushMaterialRef(e, materialEntity);
     addTransformFromMatrix(e, transform);
 }
 
@@ -212,16 +187,25 @@ ecs::Entity Scene::createNamedEntity(std::string name, ecs::Entity parent) {
     return e;
 }
 
+void Scene::pushMaterialRef(ecs::Entity e, std::optional<ecs::Entity> materialEntity) {
+    registry.add(e, ecs::MaterialRef);
+    registry.get(e, ecs::MaterialRef).set<ecs::Entity>("handle", materialEntity.value_or(defaultMaterial));
+}
+
+void Scene::setTransform(ecs::Entity e, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) {
+    registry.add(e, ecs::Transform);
+    auto& t = registry.get(e, ecs::Transform);
+    t.set<glm::vec3>("position", position);
+    t.set<glm::vec3>("rotation", rotation);
+    t.set<glm::vec3>("scale", scale);
+}
+
 void Scene::addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform) {
     glm::vec3 translation, scale, skew;
     glm::vec4 perspective;
     glm::quat rotation;
     glm::decompose(transform, scale, rotation, translation, skew, perspective);
-    registry.add(e, ecs::Transform);
-    auto& t = registry.get(e, ecs::Transform);
-    t.set<glm::vec3>("position", translation);
-    t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(rotation))));
-    t.set<glm::vec3>("scale", scale);
+    setTransform(e, translation, glm::degrees(glm::eulerAngles(glm::normalize(rotation))), scale);
 }
 
 void Scene::resetSceneState() {

@@ -100,6 +100,8 @@ private:
     void initSystems();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
+    void pushMaterialRef(ecs::Entity e, std::optional<ecs::Entity> materialEntity);
+    void setTransform(ecs::Entity e, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
     void addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform);
     void resetSceneState();
     void addDefaultAssets();

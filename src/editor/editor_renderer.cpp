@@ -17,6 +17,54 @@
 #include "editor.hpp"
 #include "editor/ui_utils.hpp"
 
+namespace {
+
+int resolveSelectedObjectIndex(const ecs::Registry& reg, ecs::Entity selected) {
+    const auto& allTransforms = reg.storage(ecs::Transform);
+    int flatIdx = -1;
+    int i = 0;
+    auto check = [&](const ecs::ComponentType& type) {
+        if (flatIdx >= 0) return;
+        for (const auto& ent : reg.storage(type).entities()) {
+            if (!allTransforms.has(ent)) continue;
+            if (ent == selected) { flatIdx = i; return; }
+            i++;
+        }
+    };
+    check(ecs::Sphere);
+    check(ecs::Plane);
+    check(ecs::Box);
+    check(ecs::Quad);
+    check(ecs::MeshRef);
+    return flatIdx;
+}
+
+struct FocusPlane {
+    bool visible = false;
+    glm::vec4 plane{};
+};
+
+FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, const ::Camera& cam) {
+    if (!reg.has(selected, ecs::ThinLens) || !reg.get(selected, ecs::ThinLens).get<bool>("show_focus_plane"))
+        return {};
+
+    glm::vec3 normal, point;
+    if (reg.has(selected, ecs::TiltShiftLens)) {
+        const ecs::Component& ts = reg.get(selected, ecs::TiltShiftLens);
+        normal = glm::normalize(
+            glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f));
+        point = ts.get<glm::vec3>("plane_position");
+    } else {
+        normal = cam.getDirection();
+        point  = cam.getPosition() + normal * reg.get(selected, ecs::ThinLens).get<float>("focal_distance");
+    }
+    float d = -glm::dot(normal, point);
+    if (glm::dot(cam.getPosition(), normal) + d > 0.0f) { normal = -normal; d = -d; }
+    return { true, glm::vec4(normal, d) };
+}
+
+} // namespace
+
 void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreResources) {
     VkSmol& engine = Core::getEngine();
     editorGroupHandle = builder.addSubmissionGroup("Editor");
@@ -157,40 +205,12 @@ void EditorRenderer::render(const FrameContext& frameContext) {
 
     if (selectedEntity.has_value()) {
         const ecs::Entity e = *selectedEntity;
+        displayUBO.selectedObjectId = resolveSelectedObjectIndex(reg, e);
 
-        const auto& allTransforms = reg.storage(ecs::Transform);
-        int flatIdx = -1;
-        int i = 0;
-        auto check = [&](const ecs::ComponentType& type) {
-            if (flatIdx >= 0) return;
-            for (const auto& ent : reg.storage(type).entities()) {
-                if (!allTransforms.has(ent)) continue;
-                if (ent == e) { flatIdx = i; return; }
-                i++;
-            }
-        };
-        check(ecs::Sphere);
-        check(ecs::Plane);
-        check(ecs::Box);
-        check(ecs::Quad);
-        check(ecs::MeshRef);
-        displayUBO.selectedObjectId = flatIdx;
-
-        if (reg.has(e, ecs::ThinLens) && reg.get(e, ecs::ThinLens).get<bool>("show_focus_plane")) {
-            glm::vec3 normal, point;
-            if (reg.has(e, ecs::TiltShiftLens)) {
-                const ecs::Component& ts = reg.get(e, ecs::TiltShiftLens);
-                normal = glm::normalize(
-                    glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f));
-                point = ts.get<glm::vec3>("plane_position");
-            } else {
-                normal = cam.getDirection();
-                point  = cam.getPosition() + normal * reg.get(e, ecs::ThinLens).get<float>("focal_distance");
-            }
-            float d = -glm::dot(normal, point);
-            if (glm::dot(cam.getPosition(), normal) + d > 0.0f) { normal = -normal; d = -d; }
+        const FocusPlane focus = resolveFocusPlane(reg, e, cam);
+        if (focus.visible) {
             displayUBO.showFocusPlane = 1;
-            displayUBO.focusPlane     = glm::vec4(normal, d);
+            displayUBO.focusPlane     = focus.plane;
         }
     }
 
