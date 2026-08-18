@@ -19,12 +19,14 @@ struct CoreResources {
 
 class CoreRenderer {
 public:
+    static constexpr int kUnboundedSamples = -1;
+
     CoreResources initGraph(RenderGraphBuilder& builder);
     void destroy();
     // TODO: make it non blocking (compile/build in the background and replace when finished)
     void buildPipelines();
 
-    bool     isRenderFinished()          { return targetSampleCount >= 0 && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
+    bool     isRenderFinished()          { return targetSampleCount != kUnboundedSamples && sampleCount >= static_cast<uint32_t>(targetSampleCount); }
     uint32_t getSampleCount()            { return sampleCount; }
     TimestampHandle getPathtracingTimestamp() const { return pathtracingTimestamp; }
     TimestampHandle getCompositingTimestamp() const { return compositingTimestamp; }
@@ -66,5 +68,5 @@ private:
     VkExtent2D renderExtent = {};
 
     uint32_t sampleCount = 0;
-    int      targetSampleCount = -1;
+    int      targetSampleCount = kUnboundedSamples;
 };

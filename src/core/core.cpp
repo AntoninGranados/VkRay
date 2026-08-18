@@ -33,14 +33,14 @@ void Core::restartAccumulation() {
     c.coreRenderer.restartAccumulation();
     if (c.renderMode == RenderMode::Preview) {
         const int n = c.parameters.get<int>("renderer/viewport/max_samples");
-        c.coreRenderer.setTargetSampleCount(n > 0 ? n : -1);
+        c.coreRenderer.setTargetSampleCount(n > 0 ? n : CoreRenderer::kUnboundedSamples);
     }
 }
 
-bool Core::consumeAccumulationRestart() {
+bool Core::consumeDirty() {
     Core& c = get();
-    if (!c.restartPending) return false;
-    c.restartPending = false;
+    if (!c.dirty) return false;
+    c.dirty = false;
     c.restartAccumulation();
     return true;
 }
@@ -61,10 +61,9 @@ bool Core::consumeResize() {
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Core& c = get();
     const float jitterRange = c.renderMode != RenderMode::Preview ? c.scene.getCamera().getShutterSpeed() : 0.0f;
-    if (c.animation.sample(jitterRange)) requestAccumulationRestart();
-    if (c.scene.checkUpdate()) requestAccumulationRestart();
-    if (!c.animation.isPaused()) requestAccumulationRestart();
-    consumeAccumulationRestart();
+    if (c.animation.sample(jitterRange)) markDirty();
+    if (!c.animation.isPaused()) markDirty();
+    consumeDirty();
     c.scene.runPreRender();
     auto frameContext = c.engine.beginFrame();
     if (!frameContext) {
@@ -79,7 +78,7 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
 
 void Core::reloadShaders() {
     get().coreRenderer.buildPipelines();
-    requestAccumulationRestart();
+    markDirty();
 }
 
 void Core::startRender() {
@@ -89,7 +88,7 @@ void Core::startRender() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    requestAccumulationRestart();
+    markDirty();
 }
 
 void Core::startRenderAnim() {
@@ -99,6 +98,6 @@ void Core::startRenderAnim() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    requestAccumulationRestart();
+    markDirty();
     c.animation.reset(0);
 }

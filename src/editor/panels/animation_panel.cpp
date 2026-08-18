@@ -108,7 +108,7 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
         AnimationHandler& anim = Core::getAnimation();
         anim.reset(std::min(static_cast<int>(std::round(t * float(ctx.endFrame - 1))), ctx.endFrame - 1));
         anim.pause();
-        Core::requestAccumulationRestart();
+        Core::markDirty();
     }
     const bool rightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     ImGui::PopID();
@@ -191,7 +191,7 @@ void AnimationPanel::content() {
         if (ImGui::DragInt("##CurrentFrame", &currentFrame, 1, 0, animation.getEndFrame() - 1)) {
             animation.reset(currentFrame);
             animation.pause();
-            Core::requestAccumulationRestart();
+            Core::markDirty();
         }
         ImGui::SameLine();
         ImGui::TextDisabled("/");

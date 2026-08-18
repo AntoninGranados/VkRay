@@ -37,10 +37,7 @@ void InspectorPanel::content() {
     auto& uiReg = ecs::ComponentUiRegistry::get();
     bool changed = uiReg.draw(reg, entity);
     reg.flush();
-    if (changed) {
-        Core::requestAccumulationRestart();
-        scene.update();
-    }
+    if (changed) Core::markDirty();
 
     ImGui::End();
 
@@ -93,8 +90,7 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
         const std::string label = type->getIcon() + " " + type->getLabel();
         if (ImGui::Button(label.c_str(), ui::kButtonSize)) {
             registry.add(entity, *type);
-            Core::requestAccumulationRestart();
-            scene.update();
+            Core::markDirty();
             ImGui::CloseCurrentPopup();
         }
 

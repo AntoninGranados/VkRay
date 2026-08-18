@@ -31,7 +31,6 @@ void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
 }
 
 void Scene::clear() {
-    ++generation;
     gpuBuffers.sphere.capacity   = 0;
     gpuBuffers.plane.capacity    = 0;
     gpuBuffers.box.capacity      = 0;
@@ -188,14 +187,6 @@ int Scene::getPhysicsBakeTotalFrames() const {
     return ecs::getPhysicsBakeTotalFrames();
 }
 
-bool Scene::checkUpdate() {
-    if (updated) {
-        updated = false;
-        return true;
-    }
-    return false;
-}
-
 void Scene::initSystems() {
     preUpdateScheduler.clear();
     preUpdateScheduler.add(ecs::animationSystem);
@@ -212,8 +203,6 @@ void Scene::initSystems() {
     onRenderScheduler.add(ecs::meshPackingSystem);
     onRenderScheduler.add(ecs::objectPackingSystem);
     onRenderScheduler.add(ecs::lightPackingSystem);
-
-    postUpdateScheduler.clear();
 }
 
 ecs::Entity Scene::createNamedEntity(std::string name, ecs::Entity parent) {

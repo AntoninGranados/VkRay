@@ -28,7 +28,7 @@ void InputHandler::initCallbacks() {
     Core::getPlatform().setCursorPosCallback([](double x, double y){
         if (isMouseInputBlocked()) return;
         if (Core::getScene().getCamera().cursorPosCallback(x, y)) {
-            Core::requestAccumulationRestart();
+            Core::markDirty();
             ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
         }
     });
@@ -36,7 +36,7 @@ void InputHandler::initCallbacks() {
     Core::getPlatform().setScrollCallback([](double xoffset, double yoffset){
         if (ImGui::GetIO().WantCaptureMouse || Editor::getUi().isMouseCaptured()) return;
         if (Core::getRenderMode() != RenderMode::Preview) return;
-        if (Core::getScene().getCamera().scrollCallback(xoffset, yoffset)) Core::requestAccumulationRestart();
+        if (Core::getScene().getCamera().scrollCallback(xoffset, yoffset)) Core::markDirty();
     });
 }
 
@@ -78,13 +78,13 @@ void InputHandler::handlePreview(float dt) {
 
     if (!blockKeyboardInput) {
         if (Core::getScene().getCamera().processInput(dt)) {
-            Core::requestAccumulationRestart();
+            Core::markDirty();
             ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
         }
     }
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R))
-        Core::requestAccumulationRestart();
+        Core::markDirty();
 }
 
 bool InputHandler::justPressed(int key) {
@@ -106,7 +106,7 @@ void InputHandler::handleFrameStepKey(int key, int direction, float dt, bool blo
     const auto step = [&]() {
         anim.reset(std::clamp(anim.getFrame() + direction, 0, anim.getEndFrame() - 1));
         anim.pause();
-        Core::requestAccumulationRestart();
+        Core::markDirty();
     };
 
     if (!prevKeys[key]) {

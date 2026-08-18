@@ -67,7 +67,6 @@ public:
 
     void runPreRender()                         { preUpdateScheduler.run(registry); }
     void runOnRender(const FrameContext& frame) { onRenderScheduler.run(registry, frame); }
-    void runPostRender()                        { postUpdateScheduler.run(registry); }
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
@@ -82,16 +81,11 @@ public:
     MeshAsset* getMeshAsset(ecs::Entity e);
     const MeshAsset* getMeshAsset(ecs::Entity e) const;
 
-    bool checkUpdate();
-    void update() { updated = true; ++generation; }
-    void touch() { ++generation; }
-    size_t getGeneration() const { return generation; }
-
 private:
     SceneGpuBuffers gpuBuffers;
 
     ecs::Registry registry;
-    ecs::SystemScheduler<> preUpdateScheduler, postUpdateScheduler;
+    ecs::SystemScheduler<> preUpdateScheduler;
     ecs::SystemScheduler<const FrameContext&> onRenderScheduler;
 
     ecs::Entity materialsRoot;
@@ -102,9 +96,6 @@ private:
 
     Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
     AnimationStore animationStore;
-
-    bool updated = false;
-    size_t generation = 1;
 
     void initSystems();
 

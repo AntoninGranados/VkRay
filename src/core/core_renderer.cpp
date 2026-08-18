@@ -138,9 +138,9 @@ void CoreRenderer::buildPipelines() {
 void CoreRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
 
-    const bool paused = isRenderFinished();
+    const bool converged = isRenderFinished();
 
-    if (!paused) {
+    if (!converged) {
         pathtracerUBO.sampleCount = ++sampleCount;
         engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
     }
@@ -174,7 +174,7 @@ void CoreRenderer::render(const FrameContext& frameContext) {
 
     CommandBuffer& commandBuffer = engine.beginRecording(coreGroupHandle);
 
-    if (!paused)
+    if (!converged)
         engine.dispatch(commandBuffer, pathtracePassHandle, (extent.width + 7) / 8, (extent.height + 7) / 8);
 
     engine.dispatch(commandBuffer, compositePassHandle, (extent.width + 7) / 8, (extent.height + 7) / 8);
@@ -228,7 +228,7 @@ void CoreRenderer::bindParameters() {
 
     parameters.bind<int>("renderer/viewport/max_samples", [this](int n) {
         if (Core::getRenderMode() == RenderMode::Preview)
-            setTargetSampleCount(n > 0 ? n : -1);
+            setTargetSampleCount(n > 0 ? n : kUnboundedSamples);
     });
 
     parameters.bind<glm::ivec2>("renderer/output/render_size", [](glm::ivec2 size) {

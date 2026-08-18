@@ -51,7 +51,7 @@ void ViewportPanel::content() {
             auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
             if (hit.has_value()) {
                 scene.getCamera().setFocusDistance(dist);
-                Core::requestAccumulationRestart();
+                Core::markDirty();
             }
         }
     }
@@ -111,7 +111,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         t.set<glm::vec3>("position", translation);
         t.set<glm::vec3>("rotation", rotationEuler);
         t.set<glm::vec3>("scale", scale);
-        scene.update();
+        Core::markDirty();
     }
     ImGuizmo::PopID();
 
@@ -137,7 +137,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
                 glm::value_ptr(scale));
             ts.set<glm::vec3>("plane_position", translation);
             ts.set<glm::vec3>("plane_rotation", rotationEuler);
-            scene.update();
+            Core::markDirty();
         }
     }
     ImGuizmo::PopID();

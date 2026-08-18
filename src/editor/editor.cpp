@@ -58,14 +58,14 @@ void Editor::run() {
             } else {
                 get().editorRenderer.registerImGuiTextures();
             }
-            Core::requestAccumulationRestart();
+            Core::markDirty();
         }
 
         bool shouldSave = false;
         std::filesystem::path savePath;
         bool toVideo = false;
 
-        if (Core::getRenderMode() != RenderMode::Preview && !Core::isAccumulationRestartPending()) {
+        if (Core::getRenderMode() != RenderMode::Preview && !Core::isDirty()) {
             if (Core::getCoreRenderer().isRenderFinished()) {
                 shouldSave = true;
 
@@ -84,7 +84,7 @@ void Editor::run() {
                     Core::setRenderMode(RenderMode::Preview);
                 }
 
-                Core::requestAccumulationRestart();
+                Core::markDirty();
             }
         }
 

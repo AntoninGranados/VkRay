@@ -11,7 +11,7 @@ void evaluateAnimation(Registry& registry) {
     if (store.isEmpty()) return;
 
     store.evaluate(registry, Core::getAnimation().getSampleFrame());
-    Core::getScene().touch();
+    Core::markDirty();
 }
 
 void animationSystem(Registry& registry) {

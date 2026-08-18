@@ -49,7 +49,7 @@ void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fie
     if (clicked) {
         if (has) store.remove(e, c.getType(), fieldId, frame);
         else store.capture(e, c, fieldId, frame);
-        Core::requestAccumulationRestart();
+        Core::markDirty();
     }
 
     drawKeyframeIcon(has, hovered, active);

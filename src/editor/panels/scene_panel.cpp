@@ -38,7 +38,7 @@ void ScenePanel::content() {
                         Editor::setSelectedEntity(cameras[0]);
                         scene.getCamera().setPreviewCamera(cameras[0]);
                     }
-                    Core::requestAccumulationRestart();
+                    Core::markDirty();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
                 }
             }
@@ -86,7 +86,7 @@ void ScenePanel::content() {
                     Editor::setSelectedEntity(entity);
                     if (reg.has(entity, ecs::Camera))
                         scene.getCamera().setPreviewCamera(entity);
-                    Core::requestAccumulationRestart();
+                    Core::markDirty();
                 }
 
                 if (open) {
@@ -106,7 +106,7 @@ void ScenePanel::content() {
         ImGui::SameLine();
         if (ImGui::Button("+ Material")) {
             scene.pushMaterial(ecs::Diffuse, std::format("Material-uid[{:02d}]", rand()));
-            scene.update();
+            Core::markDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("+ Mesh")) {
@@ -118,7 +118,7 @@ void ScenePanel::content() {
                 const ecs::Entity meshAssetEntity = scene.pushMeshAsset(
                     std::filesystem::path(meshPath).stem().string(), meshPath);
                 if (meshAssetEntity != ecs::Entity{}) {
-                    scene.update();
+                    Core::markDirty();
                     Editor::setSelectedEntity(meshAssetEntity);
                     Log::success("ScenePanel", std::format("Loaded mesh: {}", meshPath));
                 }
@@ -154,7 +154,7 @@ void ScenePanel::content() {
                 }
             }
             reg.destroyEntity(entityToDelete);
-            scene.update();
+            Core::markDirty();
             Editor::clearSelectedEntity();
         }
         if (!canDelete) ImGui::EndDisabled();
@@ -176,37 +176,37 @@ void ScenePanel::drawNewObjectPopUp(Scene& scene) {
         ecs::Entity e = scene.getRegistry().createEntity(scene.getObjectsRoot());
         scene.getRegistry().add(e, ecs::Name);
         scene.getRegistry().get(e, ecs::Name).set<std::string>("value", name);
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::kButtonSize)) {
         scene.pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::kButtonSize)) {
         scene.pushPlane(name, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_BOX " Box", ui::kButtonSize)) {
         scene.pushBox(name, glm::vec3(-1.0, -1.0, -1.0), glm::vec3(1.0, 1.0, 1.0));
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_SQUARE " Quad", ui::kButtonSize)) {
         scene.pushQuad(name, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0), glm::vec2(1, 1));
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::kButtonSize)) {
         scene.pushMesh(name, scene.getDefaultMeshAsset(), glm::mat4(1.0));
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::kButtonSize)) {
         scene.pushCamera(name, glm::mat4(1.0));
-        scene.update();
+        Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
     ui::PushCancelStyleColor();

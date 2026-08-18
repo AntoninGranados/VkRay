@@ -23,7 +23,7 @@ EditorUi::EditorUi() {
             if (Editor::getSelectedEntity() != id) {
                 if (id.has_value()) Editor::setSelectedEntity(*id);
                 else Editor::clearSelectedEntity();
-                Core::requestAccumulationRestart();
+                Core::markDirty();
             }
         }
     );
@@ -166,12 +166,12 @@ void EditorUi::setPreview() {
     const ecs::Entity e = *selectedEntity;
     if (!scene.getRegistry().has(e, ecs::Camera)) return;
     scene.getCamera().setPreviewCamera(e);
-    Core::requestAccumulationRestart();
+    Core::markDirty();
 }
 
 void EditorUi::clearPreview() {
     if (Core::getScene().getCamera().clearPreviewCamera())
-        Core::requestAccumulationRestart();
+        Core::markDirty();
 }
 
 void EditorUi::drawPreview() {

@@ -29,10 +29,10 @@ public:
     static RenderMode getRenderMode()             { return get().renderMode; }
     static void       setRenderMode(RenderMode m) { get().renderMode = m; }
 
-    static void requestAccumulationRestart() { get().restartPending = true; }
+    static void markDirty() { get().dirty = true; }
     static void restartAccumulation();
-    static bool isAccumulationRestartPending()  { return get().restartPending; }
-    static bool consumeAccumulationRestart();
+    static bool isDirty()     { return get().dirty; }
+    static bool consumeDirty();
 
     static void resize(int width, int height);
     static void requestResize(int width, int height) { get().targetExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
@@ -58,7 +58,7 @@ private:
     AnimationHandler  animation{24 * 5, 24.0f};
     CoreRenderer      coreRenderer;
     RenderMode        renderMode     = RenderMode::Preview;
-    bool              restartPending = false;
+    bool              dirty          = false;
     VkExtent2D        targetExtent   = {};
     std::filesystem::path outputPath;
 };

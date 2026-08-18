@@ -264,7 +264,7 @@ void bakePhysicsSimulation(Registry& registry) {
     physics_detail::gBakeState.wasPaused = animation.isPaused();
 
     animation.pause();
-    Core::requestAccumulationRestart();
+    Core::markDirty();
 }
 
 bool isPhysicsBakeInProgress() {
@@ -287,7 +287,7 @@ void physicsSystem(Registry& registry) {
         Core::getAnimation().sample();
         evaluateAnimation(registry);
         physicsSolverSystem(registry);
-        Core::requestAccumulationRestart();
+        Core::markDirty();
 
         gBakeState.nextFrame++;
         if (gBakeState.nextFrame >= gBakeState.totalFrames) {
@@ -344,7 +344,7 @@ void physicsSystem(Registry& registry) {
         }
     }
 
-    Core::getScene().touch();
+    Core::markDirty();
 }
 
 } // namespace ecs
