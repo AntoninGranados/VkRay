@@ -2,6 +2,78 @@
 
 Components are defined in `src/core/ecs/components.hpp`.
 
+## Asset
+
+### Mesh
+Mesh geometry asset loaded from file.
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+| `smooth` | bool | false |  | no |
+
+### Mesh Simplify
+Simplifies the mesh asset to a target ratio.
+
+**Needs:** `mesh`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `ratio` | float | 1 | 0.05 ... 1 | no |
+
+## Camera
+
+### Camera
+Perspective camera.
+
+**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `mesh_ref`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `fov` | float | 80 | 1 ... 160 | yes |
+| `shutter_speed` | float | 0 | ≥ 0 | no |
+
+### Thin Lens
+Depth-of-field via thin lens approximation.
+
+**Needs:** `camera`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `focal_length` | float | 1 | 0.05 ... 10 | yes |
+| `focal_distance` | float | 10 | ≥ 0.1 | yes |
+| `f_stop` | float | 0 | 0 ... 64 | yes |
+| `show_focus_plane` | bool | false |  | no |
+
+### Tilt Shift Lens
+Tilted focal plane and lens shift (Scheimpflug principle).
+
+**Needs:** `thin_lens`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `plane_position` | vec3 | [0, 0, 0] |  | yes |
+| `plane_rotation` | vec3 | [0, 0, 0] |  | yes |
+
+### Geometric Aperture
+Polygon aperture blade shape.
+
+**Needs:** `thin_lens` — **Conflicts:** `image_aperture`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `blades` | int | 6 | 3 ... 12 | no |
+| `rotation` | float | 0 | 0 ... 360 | no |
+
+### Image Aperture
+Custom image mask as aperture shape.
+
+**Needs:** `thin_lens` — **Conflicts:** `geometric_aperture`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+
 ## Material
 
 ### Material
@@ -115,7 +187,7 @@ World-space transform.
 ### Sphere
 Sphere primitive.
 
-**Needs:** `transform` — **Conflicts:** `plane` `box` `mesh` `camera`
+**Needs:** `transform` — **Conflicts:** `plane` `box` `mesh_ref` `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -124,77 +196,26 @@ Sphere primitive.
 ### Plane
 Infinite plane primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `box` `mesh` `quad` `camera`
+**Needs:** `transform` — **Conflicts:** `sphere` `box` `mesh_ref` `quad` `camera`
 
 ### Box
 Box primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `mesh` `quad` `camera`
+**Needs:** `transform` — **Conflicts:** `sphere` `plane` `mesh_ref` `quad` `camera`
 
 ### Quad
 Single face quad primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `mesh` `camera`
+**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `mesh_ref` `camera`
 
-### Mesh
-Loaded mesh asset.
+### Mesh Ref
+Reference to a mesh asset.
 
 **Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
-| `handle` | int | 0 |  | no |
-
-### Camera
-Perspective camera.
-
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `mesh`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `fov` | float | 80 | 1 ... 160 | yes |
-| `shutter_speed` | float | 0 | ≥ 0 | no |
-
-### Thin Lens
-Depth-of-field via thin lens approximation.
-
-**Needs:** `camera`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `focal_length` | float | 1 | 0.05 ... 10 | yes |
-| `focal_distance` | float | 10 | ≥ 0.1 | yes |
-| `f_stop` | float | 0 | 0 ... 64 | yes |
-| `show_focus_plane` | bool | false |  | no |
-
-### Tilt Shift Lens
-Tilted focal plane and lens shift (Scheimpflug principle).
-
-**Needs:** `thin_lens`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `plane_position` | vec3 | [0, 0, 0] |  | yes |
-| `plane_rotation` | vec3 | [0, 0, 0] |  | yes |
-
-### Geometric Aperture
-Polygon aperture blade shape.
-
-**Needs:** `thin_lens` — **Conflicts:** `image_aperture`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `blades` | int | 6 | 3 ... 12 | no |
-| `rotation` | float | 0 | 0 ... 360 | no |
-
-### Image Aperture
-Custom image mask as aperture shape.
-
-**Needs:** `thin_lens` — **Conflicts:** `geometric_aperture`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `path` | path |  |  | no |
+| `handle` | entity |  |  | no |
 
 ## Other
 
@@ -210,7 +231,7 @@ Material reference.
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
-| `handle` | int | 0 |  | no |
+| `handle` | entity |  |  | no |
 
 ## Physics
 

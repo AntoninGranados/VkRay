@@ -206,6 +206,7 @@ void ScenePanel::drawNewObjectPopUp(Scene& scene) {
     }
     if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::kButtonSize)) {
         scene.pushCamera(name, glm::mat4(1.0));
+        scene.update();
         ImGui::CloseCurrentPopup();
     }
     ui::PushCancelStyleColor();

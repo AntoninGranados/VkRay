@@ -48,8 +48,8 @@ void StatsPanel::content() {
         if (historyCount < kHistorySize) ++historyCount;
     }
 
-    ImGui::SetNextWindowPos({ 0, 0 });
-    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
+    ImGui::SetNextWindowPos(Editor::getUi().getViewportPos(), ImGuiCond_Always);
+    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
     ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
     ImGui::Text("%u samples", core.getSampleCount());
     if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))

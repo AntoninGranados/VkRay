@@ -60,18 +60,21 @@ bool Core::consumeResize() {
 
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Core& c = get();
+    const float jitterRange = c.renderMode != RenderMode::Preview ? c.scene.getCamera().getShutterSpeed() : 0.0f;
+    if (c.animation.sample(jitterRange)) requestAccumulationRestart();
+    if (c.scene.checkUpdate()) requestAccumulationRestart();
+    if (!c.animation.isPaused()) requestAccumulationRestart();
+    consumeAccumulationRestart();
     c.scene.runPreRender();
     auto frameContext = c.engine.beginFrame();
     if (!frameContext) {
         c.engine.advanceFrame();
-        c.scene.runPostRender();
         return;
     }
     c.scene.runOnRender(*frameContext);
     c.coreRenderer.render(*frameContext);
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
-    c.scene.runPostRender();
 }
 
 void Core::reloadShaders() {

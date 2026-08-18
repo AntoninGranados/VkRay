@@ -2,24 +2,14 @@
 
 This plan will most likely be subjected to heavy modifications.
 
-## v0.5 Camera & Lens
+## v0.6 Light Tracing
 
-- [x] **[0.5.1] Motion blur**
-- [x] **[0.5.2] Arbitrary aperture shape**: replace the disk sample with a user-defined shape
-  - Support polygon apertures (square, hex, ...) and custom mask textures
-  - Controls bokeh blade count and rotation
-- [x] **[0.5.3] Tilted lens (Scheimpflug)**: tilt the focus plane relative to the optical axis
-  - Adds `tiltX`/`tiltY` angles to the camera; focus plane intersection replaces the fixed-depth target
-  - Enables oblique focus planes and tilt-shift miniature effects
-- [ ] **[0.5.4] Spectral rendering**: replace RGB with wavelength-sampled radiance
+- [ ] **[0.6.0] Spectral rendering**: replace RGB with wavelength-sampled radiance
   - Sample a hero wavelength per ray; carry a small spectral packet (e.g. 4 wavelengths) through the path
   - Spectral sensitivity curves (CIE XYZ or camera RGB primaries) used at accumulation time to convert to display RGB
   - Enables wavelength-dependent effects: dispersion (glass prisms, caustic rainbows), iridescence (thin-film interference), fluorescence
   - Materials need spectral reflectance curves; start with fitted Cauchy/Sellmeier coefficients for dielectrics
-
-## v0.6 Light Tracing
-
-- [ ] **[0.6.0] BDPT**: trace paths from emitters and connect to the camera
+- [ ] **[0.6.1] BDPT**: trace paths from emitters and connect to the camera
 
 ## v0.X Denoising
 

@@ -18,11 +18,15 @@
 #include "editor/editor.hpp"
 #include "editor/editor_ui.hpp"
 
+bool InputHandler::isMouseInputBlocked() {
+    if (ImGuizmo::IsUsing()) return true;
+    if (!Core::getScene().getCamera().isLocked()) return false;
+    return Editor::getUi().isMouseCaptured() || ImGui::GetIO().WantCaptureMouse;
+}
+
 void InputHandler::initCallbacks() {
     Core::getPlatform().setCursorPosCallback([](double x, double y){
-        const bool cameraLocked = Core::getScene().getCamera().isLocked();
-        if (cameraLocked && (ImGui::GetIO().WantCaptureMouse || Editor::getUi().isMouseCaptured() || ImGuizmo::IsUsing()))
-            return;
+        if (isMouseInputBlocked()) return;
         if (Core::getScene().getCamera().cursorPosCallback(x, y)) {
             Core::requestAccumulationRestart();
             ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
@@ -49,7 +53,7 @@ void InputHandler::handle(float dt) {
 }
 
 void InputHandler::handlePreview(float dt) {
-    const bool blockMouseInput    = ImGuizmo::IsUsing() || (Core::getScene().getCamera().isLocked() && (Editor::getUi().isMouseCaptured() || ImGui::GetIO().WantCaptureMouse));
+    const bool blockMouseInput    = isMouseInputBlocked();
     const bool blockKeyboardInput = Editor::getUi().isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
     Core::getPlatform().setCursorMode(
@@ -69,52 +73,8 @@ void InputHandler::handlePreview(float dt) {
     if (!blockKeyboardInput && Core::getScene().getCamera().isLocked() && justPressed(GLFW_KEY_SPACE))
         Core::getAnimation().toggle();
 
-    constexpr float kRepeatDelay    = 0.4f;
-    constexpr float kRepeatInterval = 0.05f;
-
-    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_LEFT)) {
-        AnimationHandler& anim = Core::getAnimation();
-        if (!prevKeys[GLFW_KEY_LEFT]) {
-            anim.reset(std::max(0, anim.getFrame() - 1));
-            anim.pause();
-            Core::requestAccumulationRestart();
-            leftRepeat = kRepeatDelay;
-        } else {
-            leftRepeat -= dt;
-            if (leftRepeat <= 0.0f) {
-                anim.reset(std::max(0, anim.getFrame() - 1));
-                anim.pause();
-                Core::requestAccumulationRestart();
-                leftRepeat += kRepeatInterval;
-            }
-        }
-        prevKeys[GLFW_KEY_LEFT] = true;
-    } else {
-        prevKeys[GLFW_KEY_LEFT] = false;
-        leftRepeat = 0.0f;
-    }
-
-    if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_RIGHT)) {
-        AnimationHandler& anim = Core::getAnimation();
-        if (!prevKeys[GLFW_KEY_RIGHT]) {
-            anim.reset(std::min(anim.getEndFrame() - 1, anim.getFrame() + 1));
-            anim.pause();
-            Core::requestAccumulationRestart();
-            rightRepeat = kRepeatDelay;
-        } else {
-            rightRepeat -= dt;
-            if (rightRepeat <= 0.0f) {
-                anim.reset(std::min(anim.getEndFrame() - 1, anim.getFrame() + 1));
-                anim.pause();
-                Core::requestAccumulationRestart();
-                rightRepeat += kRepeatInterval;
-            }
-        }
-        prevKeys[GLFW_KEY_RIGHT] = true;
-    } else {
-        prevKeys[GLFW_KEY_RIGHT] = false;
-        rightRepeat = 0.0f;
-    }
+    handleFrameStepKey(GLFW_KEY_LEFT, -1, dt, blockKeyboardInput);
+    handleFrameStepKey(GLFW_KEY_RIGHT, 1, dt, blockKeyboardInput);
 
     if (!blockKeyboardInput) {
         if (Core::getScene().getCamera().processInput(dt)) {
@@ -125,9 +85,6 @@ void InputHandler::handlePreview(float dt) {
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R))
         Core::requestAccumulationRestart();
-
-    if (Core::getScene().checkUpdate())
-        Core::requestAccumulationRestart();
 }
 
 bool InputHandler::justPressed(int key) {
@@ -135,6 +92,34 @@ bool InputHandler::justPressed(int key) {
     const bool first = down && !prevKeys[key];
     prevKeys[key] = down;
     return first;
+}
+
+void InputHandler::handleFrameStepKey(int key, int direction, float dt, bool blocked) {
+    const bool pressed = !blocked && Core::getPlatform().getKey(key);
+    if (!pressed) {
+        prevKeys[key] = false;
+        repeatTimers[key] = 0.0f;
+        return;
+    }
+
+    AnimationHandler& anim = Core::getAnimation();
+    const auto step = [&]() {
+        anim.reset(std::clamp(anim.getFrame() + direction, 0, anim.getEndFrame() - 1));
+        anim.pause();
+        Core::requestAccumulationRestart();
+    };
+
+    if (!prevKeys[key]) {
+        step();
+        repeatTimers[key] = kFrameStepRepeatDelay;
+    } else {
+        repeatTimers[key] -= dt;
+        if (repeatTimers[key] <= 0.0f) {
+            step();
+            repeatTimers[key] += kFrameStepRepeatInterval;
+        }
+    }
+    prevKeys[key] = true;
 }
 
 void InputHandler::handleRender(float dt) {

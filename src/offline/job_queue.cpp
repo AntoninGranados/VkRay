@@ -109,9 +109,9 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
 
                 Job job;
                 job.scene  = scenePath;
-                job.parameterOverrides.push_back({"renderer/output/output_image", std::filesystem::path(resolveTemplate(j.at("output").get<std::string>(), ctx))});
                 job.seed   = nSeed;
                 job.parameterOverrides = parameterOverrides;
+                job.parameterOverrides.push_back({"renderer/output/output_image", std::filesystem::path(resolveTemplate(j.at("output").get<std::string>(), ctx))});
                 job.parameterOverrides.push_back({"renderer/sampling/render_samples", static_cast<int>(checkpoints[ci].spp)});
                 job.parameterOverrides.insert(job.parameterOverrides.end(), aovOverrides.begin(), aovOverrides.end());
 

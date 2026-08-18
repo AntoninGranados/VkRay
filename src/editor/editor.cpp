@@ -60,7 +60,6 @@ void Editor::run() {
             }
             Core::requestAccumulationRestart();
         }
-        Core::consumeAccumulationRestart();
 
         bool shouldSave = false;
         std::filesystem::path savePath;

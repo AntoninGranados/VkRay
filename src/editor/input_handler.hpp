@@ -9,14 +9,18 @@ public:
     void handle(float dt);
 
 private:
+    static constexpr float kFrameStepRepeatDelay    = 0.4f;
+    static constexpr float kFrameStepRepeatInterval = 0.05f;
+
     std::unordered_map<int, bool> prevKeys;
-    float leftRepeat  = 0.0f;
-    float rightRepeat = 0.0f;
+    std::unordered_map<int, float> repeatTimers;
 
     bool justPressed(int key);
+    static bool isMouseInputBlocked();
 
     void handlePreview(float dt);
     void handleRender(float dt);
+    void handleFrameStepKey(int key, int direction, float dt, bool blocked);
 
     void returnToPreview();
 };

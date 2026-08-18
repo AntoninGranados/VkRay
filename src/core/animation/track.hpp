@@ -10,6 +10,7 @@ public:
 
     template<typename T>
     T sample(float frame) const {
+        if (keyframes.empty()) return T{};
         if (frame <= float(keyframes.begin()->first)) return keyframes.begin()->second.getValue().get<T>();
         if (frame >= float(keyframes.rbegin()->first)) return keyframes.rbegin()->second.getValue().get<T>();
         const auto next = keyframes.upper_bound(static_cast<int>(frame));
