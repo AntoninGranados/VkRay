@@ -1,5 +1,7 @@
 #include "ui_utils.hpp"
 
+#include <nfd.hpp>
+
 #include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
@@ -56,5 +58,58 @@ void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fie
     ImGui::SameLine();
 }
 
+bool beginCenteredModal(const char* name) {
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    return ImGui::BeginPopupModal(name, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+}
+
+void endCenteredModal() {
+    PushCancelStyleColor();
+    if (ImGui::Button(ICON_FA_BAN " Cancel", kButtonSize))
+        ImGui::CloseCurrentPopup();
+    PopCancelStyleColor();
+    ImGui::EndPopup();
+}
+
+namespace {
+std::vector<nfdfilteritem_t> toNfdFilters(const std::vector<FileFilter>& filters) {
+    std::vector<nfdfilteritem_t> items;
+    for (const auto& f : filters) items.push_back({ f.name.c_str(), f.extensions.c_str() });
+    return items;
+}
+}
+
+std::optional<std::filesystem::path> openFileDialog(const std::vector<FileFilter>& filters, const std::filesystem::path& defaultDir) {
+    NFD::Guard guard;
+    NFD::UniquePath outPath;
+    const std::vector<nfdfilteritem_t> items = toNfdFilters(filters);
+    const std::string dir = defaultDir.string();
+    if (NFD::OpenDialog(outPath, items.data(), static_cast<nfdfiltersize_t>(items.size()), dir.empty() ? nullptr : dir.c_str()) != NFD_OKAY)
+        return std::nullopt;
+    return std::filesystem::path(outPath.get());
+}
+
+std::optional<std::filesystem::path> saveFileDialog(const std::vector<FileFilter>& filters, const std::filesystem::path& defaultDir, const std::string& defaultName, const std::string& forceExtension) {
+    NFD::Guard guard;
+    NFD::UniquePath outPath;
+    const std::vector<nfdfilteritem_t> items = toNfdFilters(filters);
+    const std::string dir = defaultDir.string();
+    if (NFD::SaveDialog(outPath, items.data(), static_cast<nfdfiltersize_t>(items.size()), dir.empty() ? nullptr : dir.c_str(), defaultName.empty() ? nullptr : defaultName.c_str()) != NFD_OKAY)
+        return std::nullopt;
+    std::filesystem::path path(outPath.get());
+    if (!forceExtension.empty() && path.extension() != "." + forceExtension)
+        path += "." + forceExtension;
+    return path;
+}
+
+std::optional<std::filesystem::path> pickFolderDialog(const std::filesystem::path& defaultDir) {
+    NFD::Guard guard;
+    NFD::UniquePath outPath;
+    const std::string dir = defaultDir.string();
+    if (NFD::PickFolder(outPath, dir.empty() ? nullptr : dir.c_str()) != NFD_OKAY)
+        return std::nullopt;
+    return std::filesystem::path(outPath.get());
+}
 
 }   // namespace ui

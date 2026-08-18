@@ -4,7 +4,6 @@
 #include <format>
 #include <functional>
 
-#include <nfd.hpp>
 #include "imgui/imgui.h"
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -25,12 +24,9 @@ void ScenePanel::content() {
     ImGui::Begin(ICON_FA_CUBES " Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", { -FLT_MIN, 0 })) {
-            NFD::Guard guard;
-            NFD::UniquePath outPath;
-            nfdfilteritem_t filter[1] = { { "Scene", "json" } };
-            if (NFD::OpenDialog(outPath, filter, 1, "assets/scenes/") == NFD_OKAY) {
+            if (auto path = ui::openFileDialog({{"Scene", "json"}}, "assets/scenes/")) {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
-                if (SceneSerializer::load(scene, mode, outPath.get())) {
+                if (SceneSerializer::load(scene, mode, path->string())) {
                     Core::getParameters().set("scene/light_mode", mode);
                     Editor::clearSelectedEntity();
                     const auto& cameras = reg.storage(ecs::Camera).entities();
@@ -39,22 +35,16 @@ void ScenePanel::content() {
                         scene.getCamera().setPreviewCamera(cameras[0]);
                     }
                     Core::markDirty();
-                    Log::success("ScenePanel", std::format("Scene loaded: {}", outPath.get()));
+                    Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
             }
         }
 
         if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save Scene", { -FLT_MIN, 0 })) {
-            NFD::Guard guard;
-            NFD::UniquePath outPath;
-            nfdfilteritem_t filter[1] = { { "Scene", "json" } };
-            if (NFD::SaveDialog(outPath, filter, 1, "assets/scenes/", "untitled.json") == NFD_OKAY) {
-                std::string path = outPath.get();
-                if (path.size() < 5 || path.substr(path.size() - 5) != ".json")
-                    path += ".json";
+            if (auto path = ui::saveFileDialog({{"Scene", "json"}}, "assets/scenes/", "untitled.json", "json")) {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
-                if (SceneSerializer::save(scene, mode, path)) {
-                    Log::success("ScenePanel", std::format("Scene saved: {}", path));
+                if (SceneSerializer::save(scene, mode, path->string())) {
+                    Log::success("ScenePanel", std::format("Scene saved: {}", path->string()));
                 }
             }
         }
@@ -110,17 +100,12 @@ void ScenePanel::content() {
         }
         ImGui::SameLine();
         if (ImGui::Button("+ Mesh")) {
-            NFD::Guard guard;
-            NFD::UniquePath outPath;
-            nfdfilteritem_t filter[1] = { { "OBJ Mesh", "obj" } };
-            if (NFD::OpenDialog(outPath, filter, 1, "assets/models/") == NFD_OKAY) {
-                const std::string meshPath = outPath.get();
-                const ecs::Entity meshAssetEntity = scene.pushMeshAsset(
-                    std::filesystem::path(meshPath).stem().string(), meshPath);
+            if (auto path = ui::openFileDialog({{"OBJ Mesh", "obj"}}, "assets/models/")) {
+                const ecs::Entity meshAssetEntity = scene.pushMeshAsset(path->stem().string(), path->string());
                 if (meshAssetEntity != ecs::Entity{}) {
                     Core::markDirty();
                     Editor::setSelectedEntity(meshAssetEntity);
-                    Log::success("ScenePanel", std::format("Loaded mesh: {}", meshPath));
+                    Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
                 }
             }
         }
@@ -166,9 +151,7 @@ void ScenePanel::content() {
 }
 
 void ScenePanel::drawNewObjectPopUp(Scene& scene) {
-    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (!ImGui::BeginPopupModal("New Object", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
+    if (!ui::beginCenteredModal("New Object")) return;
 
     std::string name = std::format("Entity-uid[{:02d}]", rand());
 
@@ -209,11 +192,5 @@ void ScenePanel::drawNewObjectPopUp(Scene& scene) {
         Core::markDirty();
         ImGui::CloseCurrentPopup();
     }
-    ui::PushCancelStyleColor();
-    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize)) {
-        ImGui::CloseCurrentPopup();
-    }
-    ui::PopCancelStyleColor();
-
-    ImGui::EndPopup();
+    ui::endCenteredModal();
 }

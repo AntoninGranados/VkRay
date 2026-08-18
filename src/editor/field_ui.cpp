@@ -9,10 +9,10 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "imgui/imgui.h"
-#include <nfd.hpp>
 
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/ui_utils.hpp"
 
 namespace ui {
 
@@ -174,30 +174,23 @@ bool drawField(Field& field, const std::string& widgetId) {
             ImGui::SameLine();
             if (!ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browseWidth, 0))) return changed;
 
-            NFD::Guard guard;
-            NFD::UniquePath outPath;
-            nfdresult_t result;
+            std::optional<std::filesystem::path> result;
             if (!pathMeta || pathMeta->extensions.empty()) {
-                result = NFD::PickFolder(outPath, current.empty() ? nullptr : current.c_str());
+                result = pickFolderDialog(current);
             } else {
-                std::vector<std::pair<std::string, std::string>> extStrs;
+                std::vector<FileFilter> filters;
                 for (const auto& e : pathMeta->extensions)
-                    extStrs.push_back({ e.displayName(), e.ext });
-                std::vector<nfdfilteritem_t> filters;
-                for (const auto& [name, ext] : extStrs)
-                    filters.push_back({ name.c_str(), ext.c_str() });
+                    filters.push_back({ e.displayName(), e.ext });
                 if (pathMeta->save) {
                     std::string defaultName = std::filesystem::path(current).filename().string();
-                    result = NFD::SaveDialog(outPath, filters.data(), (nfdfiltersize_t)filters.size(),
-                        nullptr, defaultName.empty() ? nullptr : defaultName.c_str());
+                    result = saveFileDialog(filters, {}, defaultName);
                 } else {
-                    std::string defaultDir = current.empty() ? "" : std::filesystem::path(current).parent_path().string();
-                    result = NFD::OpenDialog(outPath, filters.data(), (nfdfiltersize_t)filters.size(),
-                        defaultDir.empty() ? nullptr : defaultDir.c_str());
+                    std::filesystem::path defaultDir = current.empty() ? std::filesystem::path{} : std::filesystem::path(current).parent_path();
+                    result = openFileDialog(filters, defaultDir);
                 }
             }
-            if (result != NFD_OKAY) return changed;
-            field.set<std::filesystem::path>(std::filesystem::path(outPath.get()));
+            if (!result) return changed;
+            field.set<std::filesystem::path>(*result);
             return true;
         }
         case FieldType::Entity: {

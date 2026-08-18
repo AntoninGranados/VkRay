@@ -19,29 +19,9 @@ void RenderViewportPanel::content() {
         ImGuiWindowFlags_NoBringToFrontOnFocus
     );
 
-    ImVec2 available = ImGui::GetContentRegionAvail();
-    ImVec2 imageSize = available;
-
     VkExtent2D renderExtent = Core::getCoreRenderer().getRenderExtent();
-    if (renderExtent.width > 0 && renderExtent.height > 0) {
-        const float renderAspect    = static_cast<float>(renderExtent.width) / renderExtent.height;
-        const float availableAspect = available.x / available.y;
-
-        if (availableAspect > renderAspect) {
-            imageSize.y = available.y;
-            imageSize.x = imageSize.y * renderAspect;
-        } else {
-            imageSize.x = available.x;
-            imageSize.y = imageSize.x / renderAspect;
-        }
-    }
-
-    ImVec2 cursor = ImGui::GetCursorPos();
-    ImGui::SetCursorPos({
-        cursor.x + (available.x - imageSize.x) * 0.5f,
-        cursor.y + (available.y - imageSize.y) * 0.5f
-    });
-    ImGui::Image(Editor::getEditorRenderer().getOutputTexId(), imageSize);
+    ui::drawFittedImage(Editor::getEditorRenderer().getOutputTexId(),
+        ImVec2(static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)));
 
     ImGui::End();
     ImGui::PopStyleColor();

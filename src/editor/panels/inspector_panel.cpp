@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
@@ -46,9 +45,7 @@ void InspectorPanel::content() {
 }
 
 void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
-    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (!ImGui::BeginPopupModal("Add Component", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) return;
+    if (!ui::beginCenteredModal("Add Component")) return;
 
     std::vector<const ecs::ComponentType*> sortedTypes;
     for (const ecs::ComponentType& ct : ecs::ComponentType::all()) sortedTypes.push_back(&ct);
@@ -125,9 +122,5 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
         }
     }
 
-    ui::PushCancelStyleColor();
-    if (ImGui::Button(ICON_FA_BAN " Cancel", ui::kButtonSize))
-        ImGui::CloseCurrentPopup();
-    ui::PopCancelStyleColor();
-    ImGui::EndPopup();
+    ui::endCenteredModal();
 }

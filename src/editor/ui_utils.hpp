@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
@@ -99,6 +102,28 @@ inline void setNextWindowFixed(bool noTabBar = false) {
         | (noTabBar ? ImGuiDockNodeFlags_NoTabBar : 0)
     );
     ImGui::SetNextWindowClass(&fixedClass);
+}
+
+bool beginCenteredModal(const char* name);
+void endCenteredModal();
+
+struct FileFilter { std::string name; std::string extensions; };
+std::optional<std::filesystem::path> openFileDialog(const std::vector<FileFilter>& filters, const std::filesystem::path& defaultDir = {});
+std::optional<std::filesystem::path> saveFileDialog(const std::vector<FileFilter>& filters, const std::filesystem::path& defaultDir = {}, const std::string& defaultName = {}, const std::string& forceExtension = {});
+std::optional<std::filesystem::path> pickFolderDialog(const std::filesystem::path& defaultDir = {});
+
+inline void drawFittedImage(ImTextureID texId, ImVec2 imageSize) {
+    const ImVec2 available = ImGui::GetContentRegionAvail();
+    ImVec2 size = available;
+    if (imageSize.x > 0.0f && imageSize.y > 0.0f) {
+        const float aspect = imageSize.x / imageSize.y;
+        size = (available.x / available.y > aspect)
+            ? ImVec2(available.y * aspect, available.y)
+            : ImVec2(available.x, available.x / aspect);
+    }
+    const ImVec2 cursor = ImGui::GetCursorPos();
+    ImGui::SetCursorPos(ImVec2(cursor.x + (available.x - size.x) * 0.5f, cursor.y + (available.y - size.y) * 0.5f));
+    ImGui::Image(texId, size);
 }
 
 }   // namespace ui
