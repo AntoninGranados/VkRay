@@ -85,7 +85,7 @@ void Application::initOfflineMode(const std::string& jobFile) {
 
 void Application::buildRenderGraph(bool offline) {
     RenderGraphBuilder builder;
-    RenderResources resources = Core::getSceneRenderer().initGraph(builder);
+    RenderResources resources = Core::getCoreRenderer().initGraph(builder);
     if (!offline) Editor::getEditorRenderer().initGraph(builder, resources);
 
     Core::getEngine().setGraph(builder);

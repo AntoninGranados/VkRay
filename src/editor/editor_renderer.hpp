@@ -3,7 +3,7 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
-#include "core/scene_renderer.hpp"
+#include "core/core_renderer.hpp"
 #include "editor/structures.hpp"
 #include "imgui/imgui.h"
 

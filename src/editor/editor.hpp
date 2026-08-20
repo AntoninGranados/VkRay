@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filesystem>
 #include <optional>
 
 #include "core/ecs/entity.hpp"
@@ -22,18 +21,12 @@ public:
     static void clearSelectedEntity();
 
 private:
-    struct RenderCompletion {
-        bool shouldSave = false;
-        std::filesystem::path savePath;
-        bool toVideo = false;
-    };
-
     Editor() = default;
     static Editor& get();
 
     static void stepAnimation(float deltaTime);
     static void handleViewportResize();
-    static RenderCompletion handleRenderModeCompletion();
+    static void handleRenderModeCompletion();
 
     EditorUi       ui;
     InputHandler   inputHandler;

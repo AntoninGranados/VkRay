@@ -30,23 +30,23 @@ void Offline::run(JobQueue& queue) {
         Core::getEngine().waitIdle();
 
         const uint32_t totalSamples = Core::getParameters().get<int>("renderer/sampling/render_samples");
-        Core::getSceneRenderer().setTargetSampleCount(static_cast<int>(totalSamples));
-        Core::getSceneRenderer().restartAccumulation();
+        Core::getCoreRenderer().setTargetSampleCount(static_cast<int>(totalSamples));
+        Core::getCoreRenderer().restartAccumulation();
 
         ProgressBar bar(
             std::format("[{}/{}]", jobIndex, totalJobs),
             totalSamples,
             "spp"
         );
-        while (!Core::getSceneRenderer().isRenderFinished()) {
+        while (!Core::getCoreRenderer().isRenderFinished()) {
             Core::renderFrame();
-            const uint32_t sampleCount = Core::getSceneRenderer().getSampleCount();
+            const uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
             queue.setProgress(static_cast<float>(sampleCount) / static_cast<float>(totalSamples));
             bar.update(sampleCount);
         }
         bar.close();
 
-        Core::getSceneRenderer().saveCapture(Core::getParameters().get<std::filesystem::path>("renderer/output/output_image"));
+        Core::getCoreRenderer().saveCapture(Core::getParameters().get<std::filesystem::path>("renderer/output/output_image"));
 
         queue.complete();
     }

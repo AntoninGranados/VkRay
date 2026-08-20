@@ -11,7 +11,7 @@
 #include "core/parameters/parameters.hpp"
 #include "core/parameters/parameter_serializer.hpp"
 #include "core/scene/scene.hpp"
-#include "core/scene_renderer.hpp"
+#include "core/core_renderer.hpp"
 #include "core/structures.hpp"
 
 class Core {
@@ -24,7 +24,7 @@ public:
     static AnimationClock&   getAnimation()   { return get().animation; }
     static ParameterRegistry& getParameters() { return get().parameters; }
     static Scene&            getScene()       { return get().scene; }
-    static SceneRenderer&    getSceneRenderer() { return get().sceneRenderer; }
+    static CoreRenderer&     getCoreRenderer() { return get().coreRenderer; }
 
     static RenderMode getRenderMode()             { return get().renderMode; }
     static void       setRenderMode(RenderMode m) { get().renderMode = m; }
@@ -56,7 +56,7 @@ private:
     ParameterRegistry parameters;
     Scene             scene;
     AnimationClock    animation{24 * 5, 24.0f};
-    SceneRenderer     sceneRenderer;
+    CoreRenderer      coreRenderer;
     RenderMode        renderMode     = RenderMode::Preview;
     bool              dirty          = false;
     VkExtent2D        targetExtent   = {};

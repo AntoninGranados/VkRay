@@ -16,7 +16,7 @@ void RenderProgressPanel::content() {
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
 
-    uint32_t sampleCount = Core::getSceneRenderer().getSampleCount();
+    uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
     int renderSamplesPerPixel = Core::getParameters().get<int>("renderer/sampling/render_samples");
 
     if (sampleCount == 1) timer.start();

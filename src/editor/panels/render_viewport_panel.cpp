@@ -19,7 +19,7 @@ void RenderViewportPanel::content() {
         ImGuiWindowFlags_NoBringToFrontOnFocus
     );
 
-    VkExtent2D renderExtent = Core::getSceneRenderer().getRenderExtent();
+    VkExtent2D renderExtent = Core::getCoreRenderer().getRenderExtent();
     ui::drawFittedImage(Editor::getEditorRenderer().getOutputTexId(),
         ImVec2(static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)));
 

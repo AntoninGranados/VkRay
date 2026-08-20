@@ -13,9 +13,9 @@
 #define FEATHER 0.02
 #define SMALL_FEATHER 0.01
 
-// #define PROGRAMMABLE_SMOOTH_RANDOM
+#define PROGRAMMABLE_SMOOTH_RANDOM
 // #define PROGRAMMABLE_CHECKERBOARD
-#define PROGRAMMABLE_TEST_GRID
+// #define PROGRAMMABLE_TEST_GRID
 // #define PROGRAMMABLE_POINT_GRID
 
 #define MATERIAL_NORMAL mat_makeGlossy(mat_albedo(mat), 0.1, 2.0)
@@ -36,10 +36,7 @@ float cubicCatmullRom(float p0, float p1, float p2, float p3, float t) {
     return ((a * t + b) * t + c) * t + p1;
 }
 
-Material createProgrammableMaterial(in Material mat, in Hit hit) {
-    vec2 p = planeCoords(hit);
-
-#if defined(PROGRAMMABLE_SMOOTH_RANDOM)
+float smoothNoise(vec2 p) {
     vec2 cell = p / SCALE;
     ivec2 pos = ivec2(floor(cell));
     vec2 f = fract(cell);
@@ -73,13 +70,92 @@ Material createProgrammableMaterial(in Material mat, in Hit hit) {
     float cx1 = cubicCatmullRom(r01, r11, r21, r31, f.x);
     float cx2 = cubicCatmullRom(r02, r12, r22, r32, f.x);
     float cx3 = cubicCatmullRom(r03, r13, r23, r33, f.x);
-    float r = clamp(cubicCatmullRom(cx0, cx1, cx2, cx3, f.y), 0.0, 1.0);
+    return cubicCatmullRom(cx0, cx1, cx2, cx3, f.y);
+}
 
-    if (r < 0.5) {
-        return MATERIAL_BLACK;
-        return MATERIAL_NORMAL;
-    } else {
+float fade(float t) {
+    return 6 * pow(t, 5) - 15 * pow(t, 4) + 10 * pow(t, 3);
+}
+
+float perlinNoise(vec2 p) {
+    vec2 cell = p / SCALE;
+    vec2 f = fract(cell);
+
+    ivec2 p00 = ivec2(floor(cell));
+    ivec2 p01 = p00 + ivec2(0, 1);
+    ivec2 p10 = p00 + ivec2(1, 0);
+    ivec2 p11 = p00 + ivec2(1, 1);
+
+    uint s;
+    
+    s = initSeed(p00, 0);
+    float a00 = rand(s) * 2 * PI;
+    vec2 grad00 = vec2(cos(a00), sin(a00));
+    s = initSeed(p01, 0);
+    float a01 = rand(s) * 2 * PI;
+    vec2 grad01 = vec2(cos(a01), sin(a01));
+    s = initSeed(p10, 0);
+    float a10 = rand(s) * 2 * PI;
+    vec2 grad10 = vec2(cos(a10), sin(a10));
+    s = initSeed(p11, 0);
+    float a11 = rand(s) * 2 * PI;
+    vec2 grad11 = vec2(cos(a11), sin(a11));
+
+    float n00 = dot(grad00, f - vec2(0, 0));
+    float n01 = dot(grad01, f - vec2(0, 1));
+    float n10 = dot(grad10, f - vec2(1, 0));
+    float n11 = dot(grad11, f - vec2(1, 1));
+
+    float u = fade(f.x); float v = fade(f.y);
+    float nx0 = mix(n00, n10, u);
+    float nx1 = mix(n01, n11, u);
+    return mix(nx0, nx1, v);
+}
+
+float fractalNoise(vec2 p, int octaves, float lacunarity, float gain) {
+    uint s = initSeed(ivec2(0), 0);
+
+    const mat2 ROTATION = mat2(0.8, 0.6, -0.6, 0.8);
+
+    float amplitude = 1.0;
+    float frequency = 1.0;
+    float sum = 0.0;
+    float maxAmplitude = 0.0;
+    vec2 q = ROTATION * p;
+    for (int i = 0; i < octaves; i++) {
+        sum += amplitude * perlinNoise(q * frequency + vec2(rand(s), rand(s)) * 152.196);
+        maxAmplitude += amplitude;
+        frequency *= lacunarity;
+        amplitude *= gain;
+        q = ROTATION * q;
     }
+    return sum / maxAmplitude;
+}
+
+Material createProgrammableMaterial(in Material mat, in Hit hit) {
+    vec2 p = planeCoords(hit);
+
+#if defined(PROGRAMMABLE_SMOOTH_RANDOM)
+    float h = 0.0001;
+    int octave = 10;
+    float lacunarity = 2.0;
+    float gain = 0.5;
+    float r = (fractalNoise(p, octave, lacunarity, gain) + 1) / 2;
+    // return mat_makeDiffuse(vec3(r));
+    float rx = (fractalNoise(p + vec2(h, 0), octave, lacunarity, gain) + 1) / 2;
+    float ry = (fractalNoise(p + vec2(0, h), octave, lacunarity, gain) + 1) / 2;
+    float dx = (rx - r) / h;
+    float dy = (ry - r) / h;
+    dx = (dx + 1) / 2;
+    dy = (dy + 1) / 2;
+    float factor = sqrt(dx*dx + dy*dy);
+    return mat_makeDiffuse(mat_albedo(mat) * factor);
+
+    // if (perlinNoise(p) < 0.5) {
+    //     return MATERIAL_BLACK;
+    // } else {
+    //     return MATERIAL_NORMAL;
+    // }
 
 #elif defined(PROGRAMMABLE_CHECKERBOARD)
     if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {
@@ -106,17 +182,6 @@ Material createProgrammableMaterial(in Material mat, in Hit hit) {
         return MATERIAL_NORMAL;
     }
     return MATERIAL_BLACK;
-
-    // if (abs(p.x - round(p.x / SCALE) * SCALE) < FEATHER || abs(p.y - round(p.y / SCALE) * SCALE) < FEATHER) {
-    //     return MATERIAL_BLACK;
-    // }
-    // } else if (int(round(p.x / SCALE + 0.5) + round(p.y / SCALE + 0.5) + 1) % 2 == 0) {
-    //     if (abs(p.x - round(p.x / SCALE * 2) * SCALE / 2) < SMALL_FEATHER || abs(p.y - round(p.y / SCALE * 2) * SCALE / 2) < SMALL_FEATHER) {
-    //         return MATERIAL_BLACK;
-    //     return MATERIAL_NORMAL;
-    //     }
-    // return MATERIAL_DARK;
-    // }
 
 #endif
 }

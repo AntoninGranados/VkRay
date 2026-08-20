@@ -16,7 +16,7 @@ void apertureSystem(Registry& registry) {
 
     VkSmol& engine = Core::getEngine();
     auto upload = [&](std::vector<uint8_t> data) {
-        engine.fillImage(engine.getImage(Core::getSceneRenderer().getLensImageHandle()), data.data(), data.size());
+        engine.fillImage(engine.getImage(Core::getCoreRenderer().getLensImageHandle()), data.data(), data.size());
     };
 
     auto& geometrics = registry.storage(GeometricAperture);

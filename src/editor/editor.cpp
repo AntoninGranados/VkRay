@@ -45,7 +45,7 @@ void Editor::handleViewportResize() {
 
     if (Core::consumeResize()) {
         if (Core::getRenderMode() == RenderMode::Preview) {
-            get().editorRenderer.resize(Core::getSceneRenderer().getRenderExtent(), vpExtent);
+            get().editorRenderer.resize(Core::getCoreRenderer().getRenderExtent(), vpExtent);
         } else {
             get().editorRenderer.registerImGuiTextures();
         }
@@ -53,30 +53,26 @@ void Editor::handleViewportResize() {
     }
 }
 
-Editor::RenderCompletion Editor::handleRenderModeCompletion() {
-    RenderCompletion completion;
-    if (Core::getRenderMode() == RenderMode::Preview || Core::isDirty()) return completion;
-    if (!Core::getSceneRenderer().isRenderFinished()) return completion;
-
-    completion.shouldSave = true;
+void Editor::handleRenderModeCompletion() {
+    if (Core::getRenderMode() == RenderMode::Preview || Core::isDirty()) return;
+    if (!Core::getCoreRenderer().isRenderFinished()) return;
 
     if (Core::getRenderMode() == RenderMode::RenderAnimation) {
         const auto cacheDir = Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache");
-        completion.savePath = ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir);
+        Core::getCoreRenderer().saveCapture(ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
         Core::getAnimation().stepFixed();
         if (Core::getAnimation().getFrame() == 0) {
-            completion.toVideo = true;
+            ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir);
             get().ui.restoreToggledState();
             Core::setRenderMode(RenderMode::Preview);
         }
     } else {
-        completion.savePath = Core::getOutputPath();
+        Core::getCoreRenderer().saveCapture(Core::getOutputPath());
         get().ui.restoreToggledState();
         Core::setRenderMode(RenderMode::Preview);
     }
 
     Core::markDirty();
-    return completion;
 }
 
 void Editor::run() {
@@ -93,17 +89,10 @@ void Editor::run() {
         get().inputHandler.handle(deltaTime);
 
         handleViewportResize();
-
-        const RenderCompletion completion = handleRenderModeCompletion();
+        handleRenderModeCompletion();
 
         Core::renderFrame([&](FrameContext& frameContext) {
             get().editorRenderer.render(frameContext);
-
-            if (completion.shouldSave) {
-                Core::getSceneRenderer().saveCapture(completion.savePath);
-                if (completion.toVideo) ExportService::convertFramesToVideo(Core::getOutputPath(), Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache"));
-            }
-
             Core::getEngine().present();
         });
     }

@@ -16,19 +16,19 @@ void StatsPanel::content() {
     static constexpr float kPaddingTop = 6.0f;
 
     VkSmol& engine = Core::getEngine();
-    SceneRenderer& sceneRenderer = Core::getSceneRenderer();
-    EditorRenderer& editor = Editor::getEditorRenderer();
+    CoreRenderer& coreRenderer = Core::getCoreRenderer();
+    EditorRenderer& editorRenderer = Editor::getEditorRenderer();
 
     const std::array<PassInfo, kNumPasses> passes = {{
-        { "Pathtracing", IM_COL32(255,  70,  70, 255), sceneRenderer.getPathtracingTimestamp() },
-        { "Compositing", IM_COL32( 70, 170, 255, 255), sceneRenderer.getCompositingTimestamp() },
-        { "Display",     IM_COL32( 50, 220,  80, 255), editor.getDisplayTimestamp()   },
-        { "Debug",       IM_COL32(255, 200,  40, 255), editor.getDebugTimestamp()     },
-        { "UI",          IM_COL32(220,  80, 255, 255), editor.getUiTimestamp()        },
+        { "Pathtracing", IM_COL32(255,  70,  70, 255), coreRenderer.getPathtracingTimestamp() },
+        { "Compositing", IM_COL32( 70, 170, 255, 255), coreRenderer.getCompositingTimestamp() },
+        { "Display",     IM_COL32( 50, 220,  80, 255), editorRenderer.getDisplayTimestamp()   },
+        { "Debug",       IM_COL32(255, 200,  40, 255), editorRenderer.getDebugTimestamp()     },
+        { "UI",          IM_COL32(220,  80, 255, 255), editorRenderer.getUiTimestamp()        },
     }};
 
     FrameSample sample;
-    const bool paused = sceneRenderer.isRenderFinished();
+    const bool paused = coreRenderer.isRenderFinished();
     sample.ms[0] = paused ? 0.0f : static_cast<float>(engine.getTimestampMs(passes[0].timestamp));
     for (int p = 1; p < kNumPasses; ++p)
         sample.ms[p] = static_cast<float>(engine.getTimestampMs(passes[p].timestamp));
@@ -47,7 +47,7 @@ void StatsPanel::content() {
     ImGui::SetNextWindowPos(Editor::getUi().getViewportPos(), ImGuiCond_Always);
     ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
     ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-    ImGui::Text("%u samples", sceneRenderer.getSampleCount());
+    ImGui::Text("%u samples", coreRenderer.getSampleCount());
     if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
         showGraph = !showGraph;
     ImGui::End();

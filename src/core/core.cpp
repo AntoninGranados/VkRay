@@ -13,7 +13,7 @@ void Core::init(Platform& p, uint32_t version) {
     c.platform = &p;
     c.engine.init("VkRay", version, p);
     c.parameters = ParameterSerializer::load("./src/config/parameters.json");
-    c.sceneRenderer.bindParameters();
+    c.coreRenderer.bindParameters();
     // TODO: move that to a meta programm
     ParameterSerializer::saveDocumentation("./docs/parameters.md");
     ComponentSerializer::saveDocumentation("./docs/components.md");
@@ -22,7 +22,7 @@ void Core::init(Platform& p, uint32_t version) {
 void Core::terminate() {
     Core& c = get();
     c.engine.waitIdle();
-    c.sceneRenderer.destroy();
+    c.coreRenderer.destroy();
     c.engine.destroyGraph();
     c.scene.destroy();
     c.engine.terminate();
@@ -30,10 +30,10 @@ void Core::terminate() {
 
 void Core::restartAccumulation() {
     Core& c = get();
-    c.sceneRenderer.restartAccumulation();
+    c.coreRenderer.restartAccumulation();
     if (c.renderMode == RenderMode::Preview) {
         const int n = c.parameters.get<int>("renderer/viewport/max_samples");
-        c.sceneRenderer.setTargetSampleCount(n > 0 ? n : SampleAccumulator::kUnboundedSamples);
+        c.coreRenderer.setTargetSampleCount(n > 0 ? n : SampleAccumulator::kUnboundedSamples);
     }
 }
 
@@ -46,13 +46,13 @@ bool Core::consumeDirty() {
 }
 
 void Core::resize(int width, int height) {
-    get().sceneRenderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    get().coreRenderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 }
 
 bool Core::consumeResize() {
     Core& c = get();
     if (c.targetExtent.width == 0) return false;
-    VkExtent2D current = c.sceneRenderer.getRenderExtent();
+    VkExtent2D current = c.coreRenderer.getRenderExtent();
     if (c.targetExtent.width == current.width && c.targetExtent.height == current.height) return false;
     resize(c.targetExtent.width, c.targetExtent.height);
     return true;
@@ -71,13 +71,13 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
         return;
     }
     c.scene.runOnRender(*frameContext);
-    c.sceneRenderer.render(*frameContext, c.scene.getCamera());
+    c.coreRenderer.render(*frameContext, c.scene.getCamera());
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
 }
 
 void Core::reloadShaders() {
-    get().sceneRenderer.buildPipelines();
+    get().coreRenderer.buildPipelines();
     markDirty();
 }
 
@@ -85,7 +85,7 @@ void Core::startRender() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
-    c.sceneRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
     markDirty();
@@ -95,7 +95,7 @@ void Core::startRenderAnim() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
-    c.sceneRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
+    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
     markDirty();
