@@ -9,11 +9,15 @@
 
 #include "core/ecs/components/component_storage.hpp"
 #include "entity.hpp"
+#include "registry_context.hpp"
 
 namespace ecs {
 
 class Registry {
 public:
+    RegistryContext& ctx() { return context; }
+    const RegistryContext& ctx() const { return context; }
+
     Entity createEntity(Entity parent = {}) {
         uint32_t id;
         if (!freeIds.empty()) {
@@ -130,6 +134,7 @@ private:
     std::vector<uint32_t> generations;
     std::vector<uint32_t> freeIds;
     std::vector<std::pair<Entity, std::string>> removalQueue;
+    RegistryContext context;
 
     bool hasById(const Entity& e, const std::string& id) const {
         auto it = storages.find(id);

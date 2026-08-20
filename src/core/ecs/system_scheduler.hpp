@@ -8,16 +8,15 @@
 
 namespace ecs {
 
-template <typename... Args>
 class SystemScheduler {
 public:
-    using SystemFn = std::function<void(Registry&, Args...)>;
+    using SystemFn = std::function<void(Registry&)>;
 
     void add(SystemFn fn) { systems.push_back(std::move(fn)); }
     void clear() { systems.clear(); }
 
-    void run(Registry& registry, Args... args) {
-        for (SystemFn& sys : systems) sys(registry, args...);
+    void run(Registry& registry) {
+        for (SystemFn& sys : systems) sys(registry);
     }
 
 private:

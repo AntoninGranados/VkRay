@@ -83,7 +83,7 @@ void ComponentUiRegistry::init() {
             ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::SliderFloat("##Ratio", &ratio, 0.05f, 1.0f, "%.2f")) {
                 c.set<float>("ratio", ratio);
-                ecs::requestMeshSimplify(e, ratio);
+                ecs::requestMeshSimplify(r, e, ratio);
                 update = true;
             }
             ImGui::PopItemWidth();
@@ -91,13 +91,13 @@ void ComponentUiRegistry::init() {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 if (ImGui::Button("Apply", ImVec2(-FLT_MIN, 0.0f))) {
-                    ecs::applyMeshSimplification(e);
+                    ecs::applyMeshSimplification(r, e);
                     update = true;
                 }
                 ImGui::TableSetColumnIndex(1);
                 ui::PushCancelStyleColor();
                 if (ImGui::Button("Revert", ImVec2(-FLT_MIN, 0.0f))) {
-                    ecs::revertMeshSimplification(e);
+                    ecs::revertMeshSimplification(r, e);
                     update = true;
                 }
                 ui::PopCancelStyleColor();

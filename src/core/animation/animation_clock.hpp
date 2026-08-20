@@ -2,9 +2,9 @@
 
 #include <random>
 
-class AnimationHandler {
+class AnimationClock {
 public:
-    AnimationHandler(int endFrame, double fps);
+    AnimationClock(int endFrame, double fps);
     void setEndFrame(int newEndFrame) { endFrame = newEndFrame; }
     void setFps(double newFps) {
         fps = newFps;

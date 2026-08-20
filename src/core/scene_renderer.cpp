@@ -1,4 +1,4 @@
-#include "core_renderer.hpp"
+#include "scene_renderer.hpp"
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
@@ -15,7 +15,7 @@
 #include "core/parameters/parameters.hpp"
 #include "core/structures.hpp"
 
-CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
+RenderResources SceneRenderer::initGraph(RenderGraphBuilder& builder) {
     VkSmol& engine = Core::getEngine();
     coreGroupHandle = builder.addSubmissionGroup("Core");
 
@@ -116,12 +116,12 @@ CoreResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     return resources;
 }
 
-void CoreRenderer::destroy() {
+void SceneRenderer::destroy() {
     VkSmol& engine = Core::getEngine();
     exportService.destroy(engine);
 }
 
-void CoreRenderer::buildPipelines() {
+void SceneRenderer::buildPipelines() {
     VkSmol& engine = Core::getEngine();
     engine.waitIdle();
 
@@ -132,16 +132,16 @@ void CoreRenderer::buildPipelines() {
         return;
     }
 
-    Log::success("CoreRenderer", "(Re)Built the pipelines");
+    Log::success("SceneRenderer", "(Re)Built the pipelines");
 }
 
-void CoreRenderer::render(const FrameContext& frameContext) {
+void SceneRenderer::render(const FrameContext& frameContext, const Camera& camera) {
     VkSmol& engine = Core::getEngine();
 
     const bool converged = isRenderFinished();
 
     if (!converged) {
-        pathtracerUBO.sampleCount = ++sampleCount;
+        pathtracerUBO.sampleCount = accumulator.increment();
         engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
     }
 
@@ -149,7 +149,6 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.screen.size   = { static_cast<float>(extent.width), static_cast<float>(extent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
 
-    const Camera& camera = Core::getScene().getCamera();
     const glm::vec3 dir   = camera.getDirection();
     const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
     const glm::vec3 camUp = glm::cross(right, dir);
@@ -184,12 +183,12 @@ void CoreRenderer::render(const FrameContext& frameContext) {
     engine.endRecording(coreGroupHandle);
 }
 
-void CoreRenderer::saveCapture(const std::filesystem::path& path) {
+void SceneRenderer::saveCapture(const std::filesystem::path& path) {
     VkSmol& engine = Core::getEngine();
     exportService.save(engine, engine.getImage(resources.outputImageHandle), path, aovFlags);
 }
 
-void CoreRenderer::resize(uint32_t width, uint32_t height) {
+void SceneRenderer::resize(uint32_t width, uint32_t height) {
     VkSmol& engine = Core::getEngine();
     engine.waitIdle();
     if (engine.isHeadless())
@@ -204,7 +203,7 @@ void CoreRenderer::resize(uint32_t width, uint32_t height) {
 }
 
 
-void CoreRenderer::bindParameters() {
+void SceneRenderer::bindParameters() {
     ParameterRegistry& parameters = Core::getParameters();
     parameters.bind<bool>("renderer/denoising", [this](bool v) {
         compositingUBO.denoisingEnabled = static_cast<int>(v);
@@ -228,7 +227,7 @@ void CoreRenderer::bindParameters() {
 
     parameters.bind<int>("renderer/viewport/max_samples", [this](int n) {
         if (Core::getRenderMode() == RenderMode::Preview)
-            setTargetSampleCount(n > 0 ? n : kUnboundedSamples);
+            setTargetSampleCount(n > 0 ? n : SampleAccumulator::kUnboundedSamples);
     });
 
     parameters.bind<glm::ivec2>("renderer/output/render_size", [](glm::ivec2 size) {

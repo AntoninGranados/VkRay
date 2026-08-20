@@ -7,7 +7,7 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
-#include "core/animation/animation_handler.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/animation/animation_store.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
@@ -105,7 +105,7 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
     if (ImGui::IsItemActive() && ImGui::IsMouseDown(0)) {
         const float t = std::clamp(
             (ImGui::GetIO().MousePos.x - ImGui::GetItemRectMin().x) / ctx.timelineWidth, 0.0f, 1.0f);
-        AnimationHandler& anim = Core::getAnimation();
+        AnimationClock& anim = Core::getAnimation();
         anim.reset(std::min(static_cast<int>(std::round(t * float(ctx.endFrame - 1))), ctx.endFrame - 1));
         anim.pause();
         Core::markDirty();
@@ -155,7 +155,7 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
 
 void AnimationPanel::content() {
     Scene& scene = Core::getScene();
-    AnimationHandler& animation = Core::getAnimation();
+    AnimationClock& animation = Core::getAnimation();
 
     ui::setNextWindowFixed();
     ImGui::Begin("Animation");

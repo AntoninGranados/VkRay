@@ -25,7 +25,7 @@ void ToastNotifications::push(const LogEntry& entry) {
     toasts.push_back({ entry, kToastTTL });
 }
 
-void ToastNotifications::draw() {
+void ToastNotifications::content() {
     auto  now = std::chrono::steady_clock::now();
     float dt  = std::chrono::duration<float>(now - lastTick).count();
     lastTick  = now;

@@ -1,21 +1,21 @@
-#include "animation_handler.hpp"
+#include "animation_clock.hpp"
 
 #include <cmath>
 
-AnimationHandler::AnimationHandler(int endFrame, double fps)
+AnimationClock::AnimationClock(int endFrame, double fps)
     : endFrame(endFrame), fps(fps), fixedDt(1.0 / fps) {}
 
-void AnimationHandler::reset(double t) {
+void AnimationClock::reset(double t) {
     time = t;
     frame = static_cast<int>(std::floor(time * fps));
 }
 
-void AnimationHandler::reset(int _frame) {
+void AnimationClock::reset(int _frame) {
     frame = _frame;
     time = static_cast<double>(_frame) / fps;
 }
 
-void AnimationHandler::step(double _dt) {
+void AnimationClock::step(double _dt) {
     dt = _dt;
     const int newFrame = static_cast<int>(std::floor((time + _dt) * fps));
     if (newFrame >= endFrame) {
@@ -27,7 +27,7 @@ void AnimationHandler::step(double _dt) {
     }
 }
 
-void AnimationHandler::stepFixed() {
+void AnimationClock::stepFixed() {
     dt = fixedDt;
     const int newFrame = frame + 1;
     if (newFrame >= endFrame) {
@@ -39,7 +39,7 @@ void AnimationHandler::stepFixed() {
     }
 }
 
-bool AnimationHandler::sample(float jitterRange) {
+bool AnimationClock::sample(float jitterRange) {
     frameChanged = frame != sampledFrame;
     sampledFrame = frame;
 

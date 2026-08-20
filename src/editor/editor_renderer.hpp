@@ -3,7 +3,7 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
-#include "core/core_renderer.hpp"
+#include "core/scene_renderer.hpp"
 #include "editor/structures.hpp"
 #include "imgui/imgui.h"
 
@@ -11,7 +11,7 @@ struct FrameContext;
 
 class EditorRenderer {
 public:
-    void initGraph(RenderGraphBuilder& builder, CoreResources& coreResources);
+    void initGraph(RenderGraphBuilder& builder, RenderResources& renderResources);
     void registerImGuiTextures();
     void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
     void render(const FrameContext& frameContext);

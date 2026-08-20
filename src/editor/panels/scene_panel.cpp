@@ -51,8 +51,6 @@ void ScenePanel::content() {
 
         ParameterUI::drawGroup("scene");
 
-        bool openNewObjectPopup = false;
-
         if (ImGui::BeginChild("##SceneTree", ImVec2(-FLT_MIN, 400.0f), ImGuiChildFlags_Borders)) {
             std::function<void(ecs::Entity, int)> drawNode;
             drawNode = [&](ecs::Entity entity, int depth) {
@@ -92,16 +90,21 @@ void ScenePanel::content() {
         }
         ImGui::EndChild();
 
-        if (ImGui::Button("+ Object")) openNewObjectPopup = true;
+        if (ImGui::Button("+ Object")) {
+            const ecs::Entity e = scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
+            reg.add(e, ecs::Transform);
+            Core::markDirty();
+        }
         ImGui::SameLine();
         if (ImGui::Button("+ Material")) {
-            scene.pushMaterial(ecs::Diffuse, std::format("Material-uid[{:02d}]", rand()));
+            const ecs::Entity e = scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
+            scene.getRegistry().add(e, ecs::Diffuse);
             Core::markDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("+ Mesh")) {
             if (auto path = ui::openFileDialog({{"OBJ Mesh", "obj"}}, "assets/models/")) {
-                const ecs::Entity meshAssetEntity = scene.pushMeshAsset(path->stem().string(), path->string());
+                const ecs::Entity meshAssetEntity = scene.loadMeshAsset(path->stem().string(), path->string());
                 if (meshAssetEntity != ecs::Entity{}) {
                     Core::markDirty();
                     Editor::setSelectedEntity(meshAssetEntity);
@@ -143,54 +146,6 @@ void ScenePanel::content() {
             Editor::clearSelectedEntity();
         }
         if (!canDelete) ImGui::EndDisabled();
-
-        if (openNewObjectPopup) ImGui::OpenPopup("New Object");
-        drawNewObjectPopUp(scene);
     }
     ImGui::End();
-}
-
-void ScenePanel::drawNewObjectPopUp(Scene& scene) {
-    if (!ui::beginCenteredModal("New Object")) return;
-
-    std::string name = std::format("Entity-uid[{:02d}]", rand());
-
-    if (ImGui::Button(ICON_FA_BORDER_NONE " Empty", ui::kButtonSize)) {
-        ecs::Entity e = scene.getRegistry().createEntity(scene.getObjectsRoot());
-        scene.getRegistry().add(e, ecs::Name);
-        scene.getRegistry().get(e, ecs::Name).set<std::string>("value", name);
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_CIRCLE " Sphere", ui::kButtonSize)) {
-        scene.pushSphere(name, glm::vec3(0.0, 0.0, 0.0), 1.0);
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_SQUARE " Plane", ui::kButtonSize)) {
-        scene.pushPlane(name, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_BOX " Box", ui::kButtonSize)) {
-        scene.pushBox(name, glm::vec3(-1.0, -1.0, -1.0), glm::vec3(1.0, 1.0, 1.0));
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_SQUARE " Quad", ui::kButtonSize)) {
-        scene.pushQuad(name, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0), glm::vec2(1, 1));
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_CUBE " Mesh", ui::kButtonSize)) {
-        scene.pushMesh(name, scene.getDefaultMeshAsset(), glm::mat4(1.0));
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    if (ImGui::Button(ICON_FA_VIDEO " Camera", ui::kButtonSize)) {
-        scene.pushCamera(name, glm::mat4(1.0));
-        Core::markDirty();
-        ImGui::CloseCurrentPopup();
-    }
-    ui::endCenteredModal();
 }

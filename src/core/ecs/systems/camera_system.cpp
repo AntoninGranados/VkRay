@@ -6,15 +6,14 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "core/animation/animation_handler.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
-#include "core/scene/scene.hpp"
 
 namespace ecs {
 
 void cameraPreUpdateSystem(Registry& registry) {
-    ::Camera& sceneCamera = Core::getScene().getCamera();
+    ::Camera& sceneCamera = *registry.ctx().get<::Camera*>();
     auto& cameras = registry.storage(Camera);
     auto& transforms = registry.storage(Transform);
     auto& thinLensCameras = registry.storage(ThinLens);

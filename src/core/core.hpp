@@ -7,11 +7,11 @@
 #include "VkSmol/frame_context.hpp"
 #include "VkSmol/platform/platform.hpp"
 
-#include "core/animation/animation_handler.hpp"
-#include "core/core_renderer.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/parameters/parameters.hpp"
 #include "core/parameters/parameter_serializer.hpp"
 #include "core/scene/scene.hpp"
+#include "core/scene_renderer.hpp"
 #include "core/structures.hpp"
 
 class Core {
@@ -21,10 +21,10 @@ public:
 
     static VkSmol&           getEngine()      { return get().engine; }
     static Platform&         getPlatform()    { return *get().platform; }
-    static AnimationHandler& getAnimation()   { return get().animation; }
-    static ParameterRegistry& getParameters()  { return get().parameters; }
+    static AnimationClock&   getAnimation()   { return get().animation; }
+    static ParameterRegistry& getParameters() { return get().parameters; }
     static Scene&            getScene()       { return get().scene; }
-    static CoreRenderer&     getCoreRenderer(){ return get().coreRenderer; }
+    static SceneRenderer&    getSceneRenderer() { return get().sceneRenderer; }
 
     static RenderMode getRenderMode()             { return get().renderMode; }
     static void       setRenderMode(RenderMode m) { get().renderMode = m; }
@@ -55,8 +55,8 @@ private:
     VkSmol            engine;
     ParameterRegistry parameters;
     Scene             scene;
-    AnimationHandler  animation{24 * 5, 24.0f};
-    CoreRenderer      coreRenderer;
+    AnimationClock    animation{24 * 5, 24.0f};
+    SceneRenderer     sceneRenderer;
     RenderMode        renderMode     = RenderMode::Preview;
     bool              dirty          = false;
     VkExtent2D        targetExtent   = {};

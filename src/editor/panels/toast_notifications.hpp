@@ -3,12 +3,12 @@
 #include <chrono>
 #include <vector>
 
+#include "panel.hpp"
 #include "utils/log.hpp"
 
-class ToastNotifications {
+class ToastNotifications : public IPanel {
 public:
     ToastNotifications();
-    void draw();
 
 private:
     struct Toast {
@@ -17,6 +17,7 @@ private:
     };
 
     void push(const LogEntry& entry);
+    void content() override;
 
     std::vector<Toast>                    toasts;
     std::chrono::steady_clock::time_point lastTick = std::chrono::steady_clock::now();

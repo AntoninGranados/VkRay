@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -36,27 +35,26 @@ struct SceneGpuBuffers {
     SceneGpuBufferEntry light;
 };
 
+struct SceneRoots {
+    ecs::Entity materialsRoot;
+    ecs::Entity assetsRoot;
+    ecs::Entity objectsRoot;
+};
+
 class Scene {
 public:
     void init();
     void destroy();
     void clear();
 
-    ecs::Entity pushMaterial(const ecs::ComponentType& bsdfType, std::string name = {});
-    ecs::Entity pushMeshAsset(std::string name, const std::string& path, bool smooth = false);
-    void pushSphere(std::string name, glm::vec3 center, float radius, std::optional<ecs::Entity> materialEntity = {});
-    void pushPlane(std::string name, glm::vec3 point, glm::vec3 normal, std::optional<ecs::Entity> materialEntity = {});
-    void pushBox(std::string name, glm::vec3 cornerMin, glm::vec3 cornerMax, std::optional<ecs::Entity> materialEntity = {});
-    void pushQuad(std::string name, glm::vec3 center, glm::vec3 normal, glm::vec2 scale, float rotation = 0.0f, std::optional<ecs::Entity> materialEntity = {});
-    void pushMesh(std::string name, const std::string& path, const glm::mat4& transform, std::optional<ecs::Entity> materialEntity = {}, bool smooth = false);
-    void pushMesh(std::string name, ecs::Entity meshAssetEntity, const glm::mat4& transform, std::optional<ecs::Entity> materialEntity = {});
-    void pushCamera(std::string name, const glm::mat4& transform);
+    ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
+    ecs::Entity loadMeshAsset(std::string name, const std::string& path, bool smooth = false);
 
     const std::vector<ecs::Entity>& getChildren(ecs::Entity parent) const;
 
-    ecs::Entity getMaterialsRoot() const { return materialsRoot; }
-    ecs::Entity getAssetsRoot() const { return assetsRoot; }
-    ecs::Entity getObjectsRoot() const { return objectsRoot; }
+    ecs::Entity getMaterialsRoot() const { return registry.ctx().get<SceneRoots>().materialsRoot; }
+    ecs::Entity getAssetsRoot() const { return registry.ctx().get<SceneRoots>().assetsRoot; }
+    ecs::Entity getObjectsRoot() const { return registry.ctx().get<SceneRoots>().objectsRoot; }
     ecs::Entity getDefaultMaterial() const { return defaultMaterial; }
     ecs::Entity getDefaultMeshAsset() const { return defaultMeshAsset; }
 
@@ -65,8 +63,11 @@ public:
     int getPhysicsBakeCurrentFrame() const;
     int getPhysicsBakeTotalFrames() const;
 
-    void runPreRender()                         { preUpdateScheduler.run(registry); }
-    void runOnRender(const FrameContext& frame) { onRenderScheduler.run(registry, frame); }
+    void runPreRender() { preUpdateScheduler.run(registry); }
+    void runOnRender(const FrameContext& frame) {
+        registry.ctx().get<FrameContext>() = frame;
+        onRenderScheduler.run(registry);
+    }
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
@@ -74,23 +75,18 @@ public:
     Camera& getCamera() { return camera; }
     AnimationStore& getAnimationStore() { return animationStore; }
 
-    SceneGpuBuffers& getBuffers() { return gpuBuffers; }
-    const SceneGpuBuffers& getBuffers() const { return gpuBuffers; }
+    SceneGpuBuffers& getBuffers() { return registry.ctx().get<SceneGpuBuffers>(); }
+    const SceneGpuBuffers& getBuffers() const { return registry.ctx().get<SceneGpuBuffers>(); }
     void setGpuBufferHandles(SceneGpuBuffers handles);
 
     MeshAsset* getMeshAsset(ecs::Entity e);
     const MeshAsset* getMeshAsset(ecs::Entity e) const;
 
 private:
-    SceneGpuBuffers gpuBuffers;
-
     ecs::Registry registry;
-    ecs::SystemScheduler<> preUpdateScheduler;
-    ecs::SystemScheduler<const FrameContext&> onRenderScheduler;
+    ecs::SystemScheduler preUpdateScheduler;
+    ecs::SystemScheduler onRenderScheduler;
 
-    ecs::Entity materialsRoot;
-    ecs::Entity assetsRoot;
-    ecs::Entity objectsRoot;
     ecs::Entity defaultMaterial;
     ecs::Entity defaultMeshAsset;
 
@@ -99,10 +95,8 @@ private:
 
     void initSystems();
 
-    ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
-    void pushMaterialRef(ecs::Entity e, std::optional<ecs::Entity> materialEntity);
-    void setTransform(ecs::Entity e, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
-    void addTransformFromMatrix(ecs::Entity e, const glm::mat4& transform);
+    SceneRoots& roots() { return registry.ctx().get<SceneRoots>(); }
+
     void resetSceneState();
     void addDefaultAssets();
 

@@ -1,6 +1,9 @@
 #include "export_service.hpp"
 
+#include <array>
 #include <format>
+
+#include <glm/glm.hpp>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
@@ -11,11 +14,64 @@
 #include "utils/log.hpp"
 #include "core/structures.hpp"
 
+namespace {
+
+class ExrChannelBuffer {
+public:
+    explicit ExrChannelBuffer(int channelCount) {
+        InitEXRHeader(&header);
+        InitEXRImage(&image);
+        header.num_channels = channelCount;
+        header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * channelCount);
+        header.pixel_types = (int*)malloc(sizeof(int) * channelCount);
+        header.requested_pixel_types = (int*)malloc(sizeof(int) * channelCount);
+        for (int i = 0; i < channelCount; i++) {
+            header.pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT;
+            header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;
+        }
+    }
+    ~ExrChannelBuffer() {
+        free(header.channels);
+        free(header.pixel_types);
+        free(header.requested_pixel_types);
+    }
+    ExrChannelBuffer(const ExrChannelBuffer&) = delete;
+    ExrChannelBuffer& operator=(const ExrChannelBuffer&) = delete;
+
+    void setChannelName(int index, const std::string& name) {
+        strncpy(header.channels[index].name, name.c_str(), 255);
+        header.channels[index].name[std::min<size_t>(name.size(), 255)] = '\0';
+    }
+
+    EXRHeader header;
+    EXRImage image;
+};
+
+template <int N, typename Accessor>
+void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channels,
+                  size_t pixelCount, const std::string& baseName,
+                  std::initializer_list<const char*> suffixes, Accessor accessor) {
+    std::array<std::vector<float>, N> comps;
+    for (auto& c : comps) c.resize(pixelCount);
+    for (size_t i = 0; i < pixelCount; i++) {
+        if constexpr (N == 1) {
+            comps[0][i] = accessor(i);
+        } else {
+            auto v = accessor(i);
+            for (int k = 0; k < N; k++) comps[k][i] = v[k];
+        }
+    }
+    for (int k = 0; k < N; k++)
+        channels.emplace_back(baseName + "." + suffixes.begin()[k], std::move(comps[k]));
+}
+
+} // namespace
+
 void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
     width  = _width;
     height = _height;
-    buffer                  = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
-    pixelInfoBufferHandle   = pixelInfoHandle;
+    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    pixelInfoBufferHandle  = pixelInfoHandle;
     pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
@@ -29,7 +85,7 @@ void ExportService::resize(VkSmol& engine, uint32_t _width, uint32_t _height) {
     engine.destroyBuffer(pixelInfoReadbackBuffer);
     width  = _width;
     height = _height;
-    buffer                  = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
+    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
     pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
@@ -80,14 +136,6 @@ void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path&
     std::vector<float> floatPixels(floatCount);
     engine.readBuffer(buffer, floatPixels.data(), byteCount);
 
-    EXRHeader header;
-    InitEXRHeader(&header);
-
-    EXRImage image;
-    InitEXRImage(&image);
-
-    image.num_channels = 4;
-
     std::vector<float> images[4];
     images[0].resize(width * height);
     images[1].resize(width * height);
@@ -107,36 +155,24 @@ void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path&
     image_ptr[2] = &(images[1].at(0)); // G
     image_ptr[3] = &(images[0].at(0)); // R
 
-    image.images = (unsigned char**)image_ptr;
-    image.width  = width;
-    image.height = height;
-
-    header.num_channels = 4;
-    header.channels     = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * header.num_channels);
-    strncpy(header.channels[0].name, "A", 255); header.channels[0].name[strlen("A")] = '\0';
-    strncpy(header.channels[1].name, "B", 255); header.channels[1].name[strlen("B")] = '\0';
-    strncpy(header.channels[2].name, "G", 255); header.channels[2].name[strlen("G")] = '\0';
-    strncpy(header.channels[3].name, "R", 255); header.channels[3].name[strlen("R")] = '\0';
-
-    header.pixel_types           = (int*)malloc(sizeof(int) * header.num_channels);
-    header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels);
-    for (int i = 0; i < header.num_channels; i++) {
-        header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT;
-        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;
-    }
+    ExrChannelBuffer exr(4);
+    exr.image.images       = (unsigned char**)image_ptr;
+    exr.image.width        = width;
+    exr.image.height       = height;
+    exr.image.num_channels = 4;
+    exr.setChannelName(0, "A");
+    exr.setChannelName(1, "B");
+    exr.setChannelName(2, "G");
+    exr.setChannelName(3, "R");
 
     const char* err = nullptr;
-    int ret = SaveEXRImageToFile(&image, &header, path.c_str(), &err);
+    int ret = SaveEXRImageToFile(&exr.image, &exr.header, path.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         FreeEXRErrorMessage(err);
         Log::error("ExportService", "Failed to write EXR");
     } else {
         Log::success("ExportService", std::format("Saved screenshot to {}", path.string()));
     }
-
-    free(header.channels);
-    free(header.pixel_types);
-    free(header.requested_pixel_types);
 }
 
 void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
@@ -152,90 +188,37 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
 
     std::vector<std::pair<std::string, std::vector<float>>> channels;
 
-    auto push = [&](const std::string& name, std::vector<float> data) {
-        channels.emplace_back(name, std::move(data));
-    };
+    if (f.positionW)
+        pushChannel<3>(channels, pixelCount, "position_w", {"X", "Y", "Z"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.positionW : glm::vec3(0.0f); });
 
-    if (f.positionW) {
-        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.x : 0.0f;
-            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.y : 0.0f;
-            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.positionW.z : 0.0f;
-        }
-        push("position_w.X", std::move(x));
-        push("position_w.Y", std::move(y));
-        push("position_w.Z", std::move(z));
-    }
+    if (f.position)
+        pushChannel<3>(channels, pixelCount, "position", {"X", "Y", "Z"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.position : glm::vec3(0.0f); });
 
-    if (f.position) {
-        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.x : 0.0f;
-            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.y : 0.0f;
-            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.position.z : 0.0f;
-        }
-        push("position.X", std::move(x));
-        push("position.Y", std::move(y));
-        push("position.Z", std::move(z));
-    }
+    if (f.normalW)
+        pushChannel<3>(channels, pixelCount, "normal_w", {"X", "Y", "Z"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normalW : glm::vec3(0.0f); });
 
-    if (f.normalW) {
-        std::vector<float> x(pixelCount), y(pixelCount), z(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.x : 0.0f;
-            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.y : 0.0f;
-            z[i] = pixels[i].aov.hitValid ? pixels[i].aov.normalW.z : 0.0f;
-        }
-        push("normal_w.X", std::move(x));
-        push("normal_w.Y", std::move(y));
-        push("normal_w.Z", std::move(z));
-    }
+    if (f.normal)
+        pushChannel<2>(channels, pixelCount, "normal", {"X", "Y"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normal : glm::vec2(0.0f); });
 
-    if (f.normal) {
-        std::vector<float> x(pixelCount), y(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            x[i] = pixels[i].aov.hitValid ? pixels[i].aov.normal.x : 0.0f;
-            y[i] = pixels[i].aov.hitValid ? pixels[i].aov.normal.y : 0.0f;
-        }
-        push("normal.X", std::move(x));
-        push("normal.Y", std::move(y));
-    }
+    if (f.albedo)
+        pushChannel<3>(channels, pixelCount, "albedo", {"R", "G", "B"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.albedo : glm::vec3(0.0f); });
 
-    if (f.albedo) {
-        std::vector<float> r(pixelCount), g(pixelCount), b(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            r[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.x : 0.0f;
-            g[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.y : 0.0f;
-            b[i] = pixels[i].aov.hitValid ? pixels[i].aov.albedo.z : 0.0f;
-        }
-        push("albedo.R", std::move(r));
-        push("albedo.G", std::move(g));
-        push("albedo.B", std::move(b));
-    }
+    if (f.roughness)
+        pushChannel<1>(channels, pixelCount, "roughness", {"V"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f; });
 
-    if (f.roughness) {
-        std::vector<float> v(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++)
-            v[i] = pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f;
-        push("roughness.V", std::move(v));
-    }
+    if (f.matType)
+        pushChannel<1>(channels, pixelCount, "mat_type", {"V"},
+            [&](size_t i) { return pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f; });
 
-    if (f.matType) {
-        std::vector<float> v(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++)
-            v[i] = pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
-        push("mat_type.V", std::move(v));
-    }
-
-    if (f.skyMask) {
-        std::vector<float> m(pixelCount);
-        for (size_t i = 0; i < pixelCount; i++) {
-            int c = pixels[i].count;
-            m[i] = c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;
-        }
-        push("sky_mask.V", std::move(m));
-    }
+    if (f.skyMask)
+        pushChannel<1>(channels, pixelCount, "sky_mask", {"V"},
+            [&](size_t i) { int c = pixels[i].count; return c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f; });
 
     if (channels.empty()) return;
 
@@ -244,41 +227,27 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
 
     int nch = static_cast<int>(channels.size());
 
-    EXRHeader header; InitEXRHeader(&header);
-    EXRImage  exrImage;  InitEXRImage(&exrImage);
-
     std::vector<float*> ptrs(nch);
     for (int i = 0; i < nch; i++) ptrs[i] = channels[i].second.data();
-    exrImage.images = (unsigned char**)ptrs.data();
-    exrImage.width  = width;
-    exrImage.height = height;
-    exrImage.num_channels = nch;
 
-    header.num_channels = nch;
-    header.channels     = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * nch);
-    header.pixel_types           = (int*)malloc(sizeof(int) * nch);
-    header.requested_pixel_types = (int*)malloc(sizeof(int) * nch);
-    for (int i = 0; i < nch; i++) {
-        strncpy(header.channels[i].name, channels[i].first.c_str(), 255);
-        header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT;
-        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;
-    }
+    ExrChannelBuffer exr(nch);
+    exr.image.images       = (unsigned char**)ptrs.data();
+    exr.image.width        = width;
+    exr.image.height       = height;
+    exr.image.num_channels = nch;
+    for (int i = 0; i < nch; i++) exr.setChannelName(i, channels[i].first);
 
     auto stem = basePath.stem().string();
     auto aovPath = (basePath.parent_path() / (stem + "_aovs.exr")).string();
 
     const char* err = nullptr;
-    int ret = SaveEXRImageToFile(&exrImage, &header, aovPath.c_str(), &err);
+    int ret = SaveEXRImageToFile(&exr.image, &exr.header, aovPath.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         FreeEXRErrorMessage(err);
         Log::error("ExportService", "Failed to write AOV EXR");
     } else {
         Log::success("ExportService", std::format("Saved AOVs to {}", aovPath));
     }
-
-    free(header.channels);
-    free(header.pixel_types);
-    free(header.requested_pixel_types);
 }
 
 void ExportService::convertFramesToVideo(const std::filesystem::path& path, const std::filesystem::path& framePath) {

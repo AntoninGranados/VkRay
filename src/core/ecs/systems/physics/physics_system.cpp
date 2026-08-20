@@ -4,11 +4,11 @@
 #include <cmath>
 #include <utility>
 
-#include "core/animation/animation_handler.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/core.hpp"
+#include "core/scene/asset/mesh.hpp"
 #include "physics_solver.hpp"
 #include "core/ecs/systems/animation_system.hpp"
-#include "core/scene/scene.hpp"
 
 namespace ecs {
 
@@ -112,7 +112,7 @@ void physicsSolverSystem(Registry& registry) {
         const MeshAsset* meshAsset = nullptr;
         if (hasMesh) {
             const ecs::Entity meshEntity = meshes.get(e).get<ecs::Entity>("handle");
-            meshAsset = Core::getScene().getMeshAsset(meshEntity);
+            meshAsset = registry.has(meshEntity, Mesh) ? &registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry") : nullptr;
             if (!meshAsset) continue;
         }
 
@@ -246,7 +246,7 @@ void physicsSolverSystem(Registry& registry) {
 void bakePhysicsSimulation(Registry& registry) {
     if (physics_detail::gBakeState.inProgress) return;
 
-    AnimationHandler& animation = Core::getAnimation();
+    AnimationClock& animation = Core::getAnimation();
     const int endFrame = std::max(1, animation.getEndFrame());
 
     for (const Entity& e : registry.storage(RigidBody).entities()) {

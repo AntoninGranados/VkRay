@@ -65,7 +65,7 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
 
 } // namespace
 
-void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreResources) {
+void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& renderResources) {
     VkSmol& engine = Core::getEngine();
     editorGroupHandle = builder.addSubmissionGroup("Editor");
     uiGroupHandle     = builder.addSubmissionGroup("Ui");
@@ -88,7 +88,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
         VK_FORMAT_R32G32B32A32_SFLOAT,
         engine.getExtent().width, engine.getExtent().height
     );
-    outputImageHandle = coreResources.outputImageHandle;
+    outputImageHandle = renderResources.outputImageHandle;
 
     debugUBOHandle   = builder.createPerFrameBuffer("DebugUBO",   sizeof(DebugUBO),   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     displayUBOHandle = builder.createPerFrameBuffer("DisplayUBO", sizeof(DisplayUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -97,20 +97,20 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
     displayPassHandle = display.getHandle();
     display.setGroup(editorGroupHandle);
-    display.readImage ( 0, coreResources.outputImageHandle,              ImageUsageType::Sampled);
-    display.readBuffer( 1, coreResources.pixelInfoBufferHandle,          BufferUsageType::Storage);
+    display.readImage ( 0, renderResources.outputImageHandle,              ImageUsageType::Sampled);
+    display.readBuffer( 1, renderResources.pixelInfoBufferHandle,          BufferUsageType::Storage);
     display.writeImage( 2, displayImageHandle,                           ImageUsageType::Storage);
     display.readBuffer( 3, displayUBOHandle,                             BufferUsageType::Uniform);
-    display.readBuffer( 4, coreResources.sceneHandles.sphere.handle,     BufferUsageType::Storage);
-    display.readBuffer( 5, coreResources.sceneHandles.plane.handle,      BufferUsageType::Storage);
-    display.readBuffer( 6, coreResources.sceneHandles.box.handle,        BufferUsageType::Storage);
-    display.readBuffer( 7, coreResources.sceneHandles.vertex.handle,     BufferUsageType::Storage);
-    display.readBuffer( 8, coreResources.sceneHandles.index.handle,      BufferUsageType::Storage);
-    display.readBuffer( 9, coreResources.sceneHandles.bvh.handle,        BufferUsageType::Storage);
-    display.readBuffer(10, coreResources.sceneHandles.mesh.handle,       BufferUsageType::Storage);
-    display.readBuffer(11, coreResources.sceneHandles.object.handle,     BufferUsageType::Storage);
-    display.readBuffer(12, coreResources.sceneHandles.quad.handle,       BufferUsageType::Storage);
-    display.readBuffer(13, coreResources.sceneHandles.material.handle,   BufferUsageType::Storage);
+    display.readBuffer( 4, renderResources.sceneHandles.sphere.handle,     BufferUsageType::Storage);
+    display.readBuffer( 5, renderResources.sceneHandles.plane.handle,      BufferUsageType::Storage);
+    display.readBuffer( 6, renderResources.sceneHandles.box.handle,        BufferUsageType::Storage);
+    display.readBuffer( 7, renderResources.sceneHandles.vertex.handle,     BufferUsageType::Storage);
+    display.readBuffer( 8, renderResources.sceneHandles.index.handle,      BufferUsageType::Storage);
+    display.readBuffer( 9, renderResources.sceneHandles.bvh.handle,        BufferUsageType::Storage);
+    display.readBuffer(10, renderResources.sceneHandles.mesh.handle,       BufferUsageType::Storage);
+    display.readBuffer(11, renderResources.sceneHandles.object.handle,     BufferUsageType::Storage);
+    display.readBuffer(12, renderResources.sceneHandles.quad.handle,       BufferUsageType::Storage);
+    display.readBuffer(13, renderResources.sceneHandles.material.handle,   BufferUsageType::Storage);
     display.setPipeline("./src/shaders/editor/display.glsl");
     displayTimestamp = display.setTimestamp();
 
@@ -119,7 +119,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     debugPassHandle = debug.getHandle();
     debug.setGroup(editorGroupHandle);
     debug.readBuffer( 0, debugUBOHandle, BufferUsageType::Uniform);
-    debug.readBuffer( 1, coreResources.pixelInfoBufferHandle, BufferUsageType::Storage);
+    debug.readBuffer( 1, renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
     debug.writeImage( 2, debugImageHandle, ImageUsageType::Storage);
     debug.setPipeline("./src/shaders/editor/debug.glsl");
     debugTimestamp = debug.setTimestamp();
@@ -130,7 +130,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, CoreResources& coreR
     ui.setGroup(uiGroupHandle);
     ui.readImage(0, displayImageHandle, ImageUsageType::Sampled);
     ui.readImage(1, debugImageHandle,   ImageUsageType::Sampled);
-    ui.readImage(2, coreResources.outputImageHandle, ImageUsageType::Sampled);
+    ui.readImage(2, renderResources.outputImageHandle, ImageUsageType::Sampled);
     ui.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
     uiTimestamp = ui.setTimestamp();
 

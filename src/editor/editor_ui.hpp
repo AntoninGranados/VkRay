@@ -10,8 +10,8 @@
 #include "editor/panels/renderer_panel.hpp"
 #include "editor/panels/scene_panel.hpp"
 #include "editor/panels/stats_panel.hpp"
+#include "editor/panels/toast_notifications.hpp"
 #include "editor/panels/viewport_panel.hpp"
-#include "toast_notifications.hpp"
 
 class Scene;
 class CommandBuffer;

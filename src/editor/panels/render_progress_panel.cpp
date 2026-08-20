@@ -6,7 +6,7 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/core.hpp"
-#include "core/animation/animation_handler.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/parameters/parameters.hpp"
 
 void RenderProgressPanel::content() {
@@ -16,7 +16,7 @@ void RenderProgressPanel::content() {
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration
     );
 
-    uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
+    uint32_t sampleCount = Core::getSceneRenderer().getSampleCount();
     int renderSamplesPerPixel = Core::getParameters().get<int>("renderer/sampling/render_samples");
 
     if (sampleCount == 1) timer.start();

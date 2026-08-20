@@ -10,7 +10,7 @@
 
 #include "VkSmol/platform/platform.hpp"
 
-#include "core/animation/animation_handler.hpp"
+#include "core/animation/animation_clock.hpp"
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/ecs/systems/camera_system.hpp"
@@ -102,7 +102,7 @@ void InputHandler::handleFrameStepKey(int key, int direction, float dt, bool blo
         return;
     }
 
-    AnimationHandler& anim = Core::getAnimation();
+    AnimationClock& anim = Core::getAnimation();
     const auto step = [&]() {
         anim.reset(std::clamp(anim.getFrame() + direction, 0, anim.getEndFrame() - 1));
         anim.pause();

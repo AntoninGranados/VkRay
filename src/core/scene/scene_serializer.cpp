@@ -384,7 +384,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
         if (registry.has(entity, ecs::MeshSimplify)) {
             const float ratio = registry.get(entity, ecs::MeshSimplify).get<float>("ratio");
-            ecs::requestMeshSimplify(entity, ratio);
+            ecs::requestMeshSimplify(registry, entity, ratio);
         }
     }
 

@@ -6,12 +6,10 @@
 #include "core/ecs/components.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/asset/mesh_simplify.hpp"
-#include "core/scene/scene.hpp"
 
 namespace ecs {
 
-void requestMeshSimplify(Entity meshEntity, float ratio) {
-    Registry& registry = Core::getScene().getRegistry();
+void requestMeshSimplify(Registry& registry, Entity meshEntity, float ratio) {
     if (!registry.has(meshEntity, Mesh) || !registry.has(meshEntity, MeshSimplify)) return;
 
     ratio = std::clamp(ratio, 0.05f, 1.0f);
@@ -25,8 +23,7 @@ void requestMeshSimplify(Entity meshEntity, float ratio) {
     Core::markDirty();
 }
 
-void applyMeshSimplification(Entity meshEntity) {
-    Registry& registry = Core::getScene().getRegistry();
+void applyMeshSimplification(Registry& registry, Entity meshEntity) {
     if (!registry.has(meshEntity, Mesh) || !registry.has(meshEntity, MeshSimplify)) return;
 
     const MeshAsset& live = registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry");
@@ -35,8 +32,7 @@ void applyMeshSimplification(Entity meshEntity) {
     Core::markDirty();
 }
 
-void revertMeshSimplification(Entity meshEntity) {
-    Registry& registry = Core::getScene().getRegistry();
+void revertMeshSimplification(Registry& registry, Entity meshEntity) {
     if (!registry.has(meshEntity, Mesh) || !registry.has(meshEntity, MeshSimplify)) return;
 
     const MeshAsset& original = registry.get(meshEntity, MeshSimplify).payload<MeshAsset>("original");
