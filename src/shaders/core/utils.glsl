@@ -124,6 +124,7 @@ struct Hit {
 #define lightMode_Sunset Enum(1)
 #define lightMode_Night  Enum(2)
 #define lightMode_Empty  Enum(3)
+#define lightMode_Studio Enum(4)
 
 struct Light {
     int objectId;

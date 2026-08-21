@@ -4,6 +4,7 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 
 #include "core/core.hpp"
+#include "core/parameters/parameters.hpp"
 #include "core/scene/gpu_structs.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {
@@ -84,7 +85,23 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     composite.setPipeline("./src/shaders/core/compositing.glsl");
     compositingTimestamp = composite.setTimestamp();
 
+    setDefaultUBOs();
+
     return resources;
+}
+
+void PathtraceRenderer::setDefaultUBOs() {
+    ParameterRegistry& parameters = Core::getParameters();
+
+    pathtracerUBO.render.lightMode = parameters.get<LightMode>("scene/light_mode");
+    pathtracerUBO.render.maxBounces = parameters.get<int>("renderer/sampling/max_bounces");
+    pathtracerUBO.render.importanceSampling = parameters.get<bool>("renderer/sampling/importance_sampling");
+    pathtracerUBO.render.clipAccumulation = parameters.get<bool>("renderer/sampling/clamp");
+    pathtracerUBO.render.clipThreshold = parameters.get<float>("renderer/sampling/clamp_threshold");
+    pathtracerUBO.render.varianceSampling = parameters.get<bool>("renderer/sampling/adaptive_sampling");
+    pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
+
+    compositingUBO.denoisingEnabled = parameters.get<bool>("renderer/denoising");
 }
 
 void PathtraceRenderer::render(const FrameContext& frameContext, const Camera& camera) {

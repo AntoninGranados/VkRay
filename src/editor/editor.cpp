@@ -16,9 +16,10 @@ Editor& Editor::get() {
 
 void Editor::init() { get().inputHandler.initCallbacks(); }
 
-EditorUi&       Editor::getUi()             { return get().ui; }
-InputHandler&   Editor::getInputHandler()   { return get().inputHandler; }
+EditorUi& Editor::getUi() { return get().ui; }
+InputHandler& Editor::getInputHandler() { return get().inputHandler; }
 EditorRenderer& Editor::getEditorRenderer() { return get().editorRenderer; }
+MaterialPreview& Editor::getMaterialPreview() { return get().materialPreview; }
 
 std::optional<ecs::Entity> Editor::getSelectedEntity(){ return get().selectedEntity; }
 void Editor::setSelectedEntity(ecs::Entity entity) { get().selectedEntity = entity; }
@@ -93,6 +94,7 @@ void Editor::run() {
 
         Core::renderFrame([&](FrameContext& frameContext) {
             get().editorRenderer.render(frameContext);
+            get().materialPreview.tick(frameContext);
             Core::getEngine().present();
         });
     }

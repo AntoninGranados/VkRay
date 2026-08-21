@@ -86,6 +86,9 @@ public:
     template<typename T> T get() const { return readBlob<T>(value); }
     template<typename T> void set(const T& v) { writeBlob(value, v); }
 
+    friend bool operator==(const FieldValue& a, const FieldValue& b) { return a.type == b.type && a.value == b.value; }
+    friend bool operator!=(const FieldValue& a, const FieldValue& b) { return !(a == b); }
+
     template<typename F>
     void dispatch(F&& f) const {
         switch (type) {

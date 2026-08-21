@@ -27,6 +27,7 @@ public:
     void     setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }
     void     restartAccumulation()       { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
+    void setLightMode(LightMode mode) { pathtracerUBO.render.lightMode = mode; }
     void render(const FrameContext& frameContext, const Camera& camera);
     void resize(uint32_t width, uint32_t height);
 
@@ -45,6 +46,8 @@ protected:
     virtual void onResize(uint32_t width, uint32_t height) {}
 
 private:
+    void setDefaultUBOs();
+
     RenderResources resources = {};
 
     ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;

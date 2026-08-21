@@ -13,12 +13,12 @@
 #include "volume.glsl"
 #include "programmable.glsl"
 
-Material resolveMaterial(in Material mat, in Hit hit) {
+Material resolveMaterial(in Material mat, inout Hit hit) {
     if (mat.type != mat_Programmable) return mat;
     return createProgrammableMaterial(mat, hit);
 }
 
-BSDFEval evalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalBSDF(in Material mat, inout Hit hit, in vec3 wo, in vec3 wi) {
     mat = resolveMaterial(mat, hit);
     switch (mat.type) {
         case mat_Principled: return evalPrincipledBSDF(mat, hit, wo, wi);
@@ -31,7 +31,7 @@ BSDFEval evalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     }
 }
 
-BSDFSample sampleBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+BSDFSample sampleBSDF(in Material mat, inout Hit hit, in vec3 wo, inout uint seed) {
     mat = resolveMaterial(mat, hit);
     switch (mat.type) {
         case mat_Principled: return samplePrincipledBSDF(mat, hit, wo, seed);  break;

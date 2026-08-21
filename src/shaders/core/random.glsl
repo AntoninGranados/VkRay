@@ -12,6 +12,11 @@ uint initSeed(uvec2 pos, uint frame) {
     return pcg_hash(v);
 }
 
+uint initSeed(uvec3 pos, uint frame) {
+    uint v = pos.x + pos.y * 4096u + pos.z * 4096u * 4096u + frame * 1315423911u;
+    return pcg_hash(v);
+}
+
 float rand(inout uint seed) {
     seed = pcg_hash(seed);
     return float(seed) * (1.0 / 4294967296.0);

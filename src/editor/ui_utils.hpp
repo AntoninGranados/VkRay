@@ -126,4 +126,11 @@ inline void drawFittedImage(ImTextureID texId, ImVec2 imageSize) {
     ImGui::Image(texId, size);
 }
 
+inline void drawResizableImage(const char* label, ImTextureID texId) {
+    const float width = ImGui::GetContentRegionAvail().x;
+    if (ImGui::BeginChild(label, ImVec2(width, width), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
+        drawFittedImage(texId, ImVec2(1.0f, 1.0f));
+    ImGui::EndChild();
+}
+
 }   // namespace ui

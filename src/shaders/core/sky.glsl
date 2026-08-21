@@ -24,10 +24,10 @@ vec3 skyColor(vec3 dir) {
         case lightMode_Empty:
             return vec3(0.0);
             // return vec3(0.005, 0.005, 0.01);
-            break;
+        case lightMode_Studio:
+            return vec3(0.1);
         default:
             return vec3(1.0, 0.0, 1.0);
-            break;
     }
 
     return mix(horizon, zenith, t);

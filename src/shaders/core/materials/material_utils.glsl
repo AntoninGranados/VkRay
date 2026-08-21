@@ -59,6 +59,14 @@ Material mat_makeGlossy(vec3 albedo, float roughness, float ior) {
     return m;
 }
 
+Material mat_makeMetal(vec3 albedo, float roughness) {
+    Material m;
+    m.type = mat_Metal;
+    m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
+    m.payload[3] = roughness;
+    return m;
+}
+
 // ============== BSDF ==============
 struct BSDFMediumInfo {
     bool isDielectric;

@@ -6,6 +6,7 @@
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/editor.hpp"
 #include "editor/field_ui.hpp"
 #include "editor/ui_utils.hpp"
 
@@ -21,7 +22,15 @@ bool ComponentUiRegistry::drawField(Component& component, const ecs::ComponentFi
 }
 
 void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
-    drawers.emplace_back([type = componentType](Registry& registry, Entity e) {
+    addWithFields(componentType, [](Component&, Registry&, Entity) { return false; }, true);
+}
+
+void ComponentUiRegistry::add(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra) {
+    addWithFields(type, std::move(extra), false);
+}
+
+void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty) {
+    drawers.emplace_back([extra, type, bulletIfEmpty](Registry& registry, Entity e) {
         if (!registry.has(e, type)) return false;
 
         Component& component = registry.get(e, type);
@@ -31,13 +40,27 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
         bool remove = ComponentUiRegistry::beginDraw(&component);
         if (remove) registry.remove(e, type);
         bool update = false;
-        const bool hasFields = !fields.empty();
-        if (!remove && ImGui::CollapsingHeader(header.c_str(), hasFields ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Bullet)) {
+        const bool useBullet = bulletIfEmpty && fields.empty();
+        if (!remove && ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
             for (const ecs::ComponentField& schema : fields) {
                 if (schema.isAnimatable()) ui::drawKeyframeButton(e, component, schema.getId());
                 update |= ComponentUiRegistry::drawField(component, schema);
             }
+            update |= extra(component, registry, e);
         }
+        ComponentUiRegistry::endDraw();
+        return remove || update;
+    });
+}
+
+void ComponentUiRegistry::addCustom(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> custom) {
+    drawers.emplace_back([custom, type](Registry& registry, Entity e) {
+        if (!registry.has(e, type)) return false;
+
+        Component& component = registry.get(e, type);
+        bool remove = ComponentUiRegistry::beginDraw(&component);
+        if (remove) registry.remove(e, type);
+        bool update = !remove && custom(component, registry, e);
         ComponentUiRegistry::endDraw();
         return remove || update;
     });
@@ -51,7 +74,11 @@ void ComponentUiRegistry::init() {
     auto& ui_reg = ComponentUiRegistry::get();
 
     ui_reg.add(ecs::Name);
-    ui_reg.add(ecs::Material);
+
+    ui_reg.add(ecs::Material, [](Component&, Registry&, Entity e) {
+        Editor::getMaterialPreview().drawPreview(e);
+        return false;
+    });
 
     ui_reg.add(ecs::Sphere);
     ui_reg.add(ecs::Plane);
@@ -59,24 +86,17 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Collider);
     ui_reg.add(ecs::RigidBody);
 
-    ui_reg.add(ecs::Mesh, [](Component& c, Registry& r, Entity e) {
-        Scene& scene = Core::getScene();
-        bool update = false;
-        if (ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh")) {
-            for (const ecs::ComponentField& schema : c.getType().getFields()) {
-                update |= ComponentUiRegistry::drawField(c, schema);
-            }
-            if (const MeshAsset* mesh = scene.getMeshAsset(e)) {
-                ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-                ImGui::Text("Vertices: %zu", mesh->getVertices().size());
-                ImGui::Text("Faces:    %zu", mesh->getIndices().size() / 3);
-                ImGui::EndChild();
-            }
+    ui_reg.add(ecs::Mesh, [](Component&, Registry&, Entity e) {
+        if (const MeshAsset* mesh = Core::getScene().getMeshAsset(e)) {
+            ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+            ImGui::Text("Vertices: %zu", mesh->getVertices().size());
+            ImGui::Text("Faces:    %zu", mesh->getIndices().size() / 3);
+            ImGui::EndChild();
         }
-        return update;
+        return false;
     });
 
-    ui_reg.add(ecs::MeshSimplify, [](Component& c, Registry& r, Entity e) {
+    ui_reg.addCustom(ecs::MeshSimplify, [](Component& c, Registry& r, Entity e) {
         bool update = false;
         if (ImGui::CollapsingHeader(ICON_FA_CUBE " Mesh Simplify")) {
             float ratio = c.get<float>("ratio");
@@ -117,7 +137,12 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::ImageAperture);
     ui_reg.add(ecs::Transform);
 
-    ui_reg.add(ecs::MaterialRef);
+    ui_reg.add(ecs::MaterialRef, [](Component& c, Registry&, Entity) {
+        const ecs::Entity handle = c.get<ecs::Entity>("handle");
+        if (handle != ecs::Entity{})
+            Editor::getMaterialPreview().drawPreview(handle);
+        return false;
+    });
 
     ui_reg.add(ecs::Diffuse);
     ui_reg.add(ecs::Emissive);

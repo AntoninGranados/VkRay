@@ -26,6 +26,7 @@ constexpr std::pair<const char*, LightMode> kLightModes[] = {
     {"sunset", LightMode::Sunset},
     {"night", LightMode::Night},
     {"empty", LightMode::Empty},
+    {"studio", LightMode::Studio},
 };
 constexpr std::pair<const char*, Interpolation> kInterpolations[] = {
     {"linear", Interpolation::Linear},

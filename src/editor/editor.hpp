@@ -6,15 +6,17 @@
 #include "editor_ui.hpp"
 #include "editor_renderer.hpp"
 #include "input_handler.hpp"
+#include "material_preview.hpp"
 
 class Editor {
 public:
     static void init();
     static void run();
 
-    static EditorUi&       getUi();
-    static InputHandler&   getInputHandler();
+    static EditorUi& getUi();
+    static InputHandler& getInputHandler();
     static EditorRenderer& getEditorRenderer();
+    static MaterialPreview& getMaterialPreview();
 
     static std::optional<ecs::Entity> getSelectedEntity();
     static void setSelectedEntity(ecs::Entity entity);
@@ -28,8 +30,9 @@ private:
     static void handleViewportResize();
     static void handleRenderModeCompletion();
 
-    EditorUi       ui;
-    InputHandler   inputHandler;
+    EditorUi ui;
+    InputHandler inputHandler;
     EditorRenderer editorRenderer;
+    MaterialPreview materialPreview;
     std::optional<ecs::Entity> selectedEntity;
 };

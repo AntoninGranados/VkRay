@@ -28,6 +28,7 @@ enum LightMode : int {
     Sunset,
     Night,
     Empty,
+    Studio,
 };
 
 struct alignas(16) ThinLensUBO {

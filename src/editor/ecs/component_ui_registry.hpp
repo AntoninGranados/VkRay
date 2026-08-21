@@ -15,19 +15,8 @@ public:
     using Drawer = std::function<bool(Registry&, Entity)>;
 
     void add(const ComponentType& componentType);
-
-    void add(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> func) {
-        drawers.emplace_back([func, type](Registry& registry, Entity e) {
-            if (!registry.has(e, type)) return false;
-
-            Component& component = registry.get(e, type);
-            bool remove = ComponentUiRegistry::beginDraw(&component);
-            if (remove) registry.remove(e, type);
-            bool update = !remove && func(component, registry, e);
-            ComponentUiRegistry::endDraw();
-            return remove || update;
-        });
-    }
+    void add(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra);
+    void addCustom(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> custom);
 
     bool draw(Registry& registry, Entity e) const {
         bool changed = false;
@@ -41,6 +30,8 @@ public:
 
 private:
     std::vector<Drawer> drawers;
+
+    void addWithFields(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty);
 
     static bool drawField(Component& component, const ComponentField& schema);
 

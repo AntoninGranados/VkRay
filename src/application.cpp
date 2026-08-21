@@ -86,12 +86,19 @@ void Application::initOfflineMode(const std::string& jobFile) {
 void Application::buildRenderGraph(bool offline) {
     RenderGraphBuilder builder;
     RenderResources resources = Core::getCoreRenderer().initGraph(builder);
-    if (!offline) Editor::getEditorRenderer().initGraph(builder, resources);
+    RenderResources previewResources;
+    if (!offline) {
+        Editor::getEditorRenderer().initGraph(builder, resources);
+        previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
+    }
 
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();
 
-    if (!offline) Editor::getEditorRenderer().registerImGuiTextures();
+    if (!offline) {
+        Editor::getEditorRenderer().registerImGuiTextures();
+        Editor::getMaterialPreview().onGraphCompiled(previewResources);
+    }
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
 
