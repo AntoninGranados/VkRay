@@ -201,7 +201,8 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     }
 
     displayUBO.selectedObjectId = -1;
-    displayUBO.showFocusPlane   = 0;
+    displayUBO.showFocusPlane = 0;
+    displayUBO.previewBorderEnabled = (Core::getRenderMode() == RenderMode::Preview && cam.hasPreviewCamera()) ? 1 : 0;
 
     if (selectedEntity.has_value()) {
         const ecs::Entity e = *selectedEntity;

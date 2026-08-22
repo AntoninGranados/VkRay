@@ -8,7 +8,6 @@
 
 #include "core/core.hpp"
 #include "editor/ui_utils.hpp"
-#include "utils/log.hpp"
 
 RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {
     scene.init();
@@ -58,7 +57,14 @@ const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& regist
     return nullptr;
 }
 
-MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Registry& registry, ecs::Entity entity) const {
+ecs::Entity MaterialPreview::resolveMaterialSource(ecs::Entity entity) const {
+    return resolveBsdfType(Core::getScene().getRegistry(), entity) ? entity : Core::getScene().getDefaultMaterial();
+}
+
+MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) const {
+    ecs::Registry& registry = Core::getScene().getRegistry();
+    entity = resolveMaterialSource(entity);
+
     MaterialFingerprint fingerprint;
     fingerprint.type = resolveBsdfType(registry, entity);
     if (fingerprint.type)
@@ -68,7 +74,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Registry& registry,
 }
 
 bool MaterialPreview::isStale(ecs::Entity entity, const MaterialFingerprint& fingerprint) const {
-    return captureFingerprint(Core::getScene().getRegistry(), entity) != fingerprint;
+    return captureFingerprint(entity) != fingerprint;
 }
 
 ImTextureID MaterialPreview::registerTexture(VkImageView view) const {
@@ -80,27 +86,28 @@ ImTextureID MaterialPreview::registerTexture(VkImageView view) const {
     );
 }
 
+void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource) {
+    ecs::Registry& previewRegistry = scene.getRegistry();
+    if (!previewRegistry.has(previewMaterialEntity, type)) {
+        if (const ecs::ComponentType* previousType = resolveBsdfType(previewRegistry, previewMaterialEntity)) {
+            previewRegistry.remove(previewMaterialEntity, *previousType);
+            previewRegistry.flush();
+        }
+        previewRegistry.add(previewMaterialEntity, type);
+    }
+
+    ecs::Component& source = Core::getScene().getRegistry().get(fieldSource, type);
+    ecs::Component& preview = previewRegistry.get(previewMaterialEntity, type);
+    for (const ecs::ComponentField& field : source.getFields())
+        preview.getField(field.getId()) = field;
+}
+
 void MaterialPreview::startGeneration(ecs::Entity materialEntity) {
-    ecs::Registry& sourceRegistry = Core::getScene().getRegistry();
-    MaterialFingerprint fingerprint = captureFingerprint(sourceRegistry, materialEntity);
+    const MaterialFingerprint fingerprint = captureFingerprint(materialEntity);
     inFlight = InFlight{ materialEntity, fingerprint };
 
-    if (fingerprint.type) {
-        ecs::Registry& previewRegistry = scene.getRegistry();
-        if (!previewRegistry.has(previewMaterialEntity, *fingerprint.type)) {
-            const ecs::ComponentType* previewType = resolveBsdfType(previewRegistry, previewMaterialEntity);
-            if (previewType) {
-                previewRegistry.remove(previewMaterialEntity, *previewType);
-                previewRegistry.flush();
-            }
-            previewRegistry.add(previewMaterialEntity, *fingerprint.type);
-        }
-
-        ecs::Component& source = sourceRegistry.get(materialEntity, *fingerprint.type);
-        ecs::Component& preview = previewRegistry.get(previewMaterialEntity, *fingerprint.type);
-        for (const ecs::ComponentField& field : source.getFields())
-            preview.getField(field.getId()) = field;
-    }
+    if (fingerprint.type)
+        syncPreviewMaterial(*fingerprint.type, resolveMaterialSource(materialEntity));
 
     renderer.setTargetSampleCount(kPreviewSampleCount);
     renderer.restartAccumulation();
@@ -122,8 +129,6 @@ void MaterialPreview::finishGeneration() {
     engine.waitIdle();
     engine.copyImage(engine.getImage(renderer.getOutputImageHandle()), it->second.image);
     it->second.fingerprint = inFlight->fingerprint;
-
-    Log::debug("MaterialPreview", "Cached preview thumbnail");
 
     inFlight.reset();
     renderer.setTargetSampleCount(0);

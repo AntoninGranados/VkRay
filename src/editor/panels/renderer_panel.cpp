@@ -16,9 +16,7 @@ static void startRender(const char* paramPath, auto startFn) {
         return;
     }
     Core::setOutputPath(path);
-    Editor::getUi().clearEntitySelection();
-    Editor::getUi().saveToggledState();
-    Editor::getUi().setToggle(false);
+    Editor::selectEntity(std::nullopt);
     startFn();
 }
 

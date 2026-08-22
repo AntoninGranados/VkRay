@@ -74,10 +74,20 @@ public:
 
     void resetMouse() { firstMouse = true; }
 
-    void setPreviewCamera(ecs::Entity e) { previewEntity = e; }
+    void setPreviewCamera(ecs::Entity e) {
+        if (!previewEntity.has_value())
+            savedState = SavedState{ position, target, fov };
+        previewEntity = e;
+    }
     bool clearPreviewCamera() {
         if (!previewEntity.has_value()) return false;
         previewEntity.reset();
+        if (savedState.has_value()) {
+            position = savedState->position;
+            target = savedState->target;
+            fov = savedState->fov;
+            savedState.reset();
+        }
         return true;
     }
     bool hasPreviewCamera() const { return previewEntity.has_value(); }
@@ -91,6 +101,12 @@ private:
         Orbit,
         Pan,
         Dolly
+    };
+
+    struct SavedState {
+        glm::vec3 position;
+        glm::vec3 target;
+        float fov;
     };
 
     float orbitDistance = 10.0f;
@@ -118,6 +134,7 @@ private:
     DragMode dragMode = DragMode::None;
     bool locked = true;
     std::optional<ecs::Entity> previewEntity;
+    std::optional<SavedState> savedState;
 
     static constexpr glm::vec3 up = { 0.0f, 1.0f, 0.0f };
 

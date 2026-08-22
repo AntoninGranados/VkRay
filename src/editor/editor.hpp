@@ -14,17 +14,21 @@ public:
     static void run();
 
     static EditorUi& getUi();
-    static InputHandler& getInputHandler();
     static EditorRenderer& getEditorRenderer();
     static MaterialPreview& getMaterialPreview();
 
     static std::optional<ecs::Entity> getSelectedEntity();
-    static void setSelectedEntity(ecs::Entity entity);
-    static void clearSelectedEntity();
+    static void selectEntity(std::optional<ecs::Entity> entity);
+
+    static void setPreviewCamera(ecs::Entity entity);
+    static void clearPreviewCamera();
 
 private:
     Editor() = default;
     static Editor& get();
+
+    static void setSelectedEntity(ecs::Entity entity);
+    static void clearSelectedEntity();
 
     static void stepAnimation(float deltaTime);
     static void handleViewportResize();

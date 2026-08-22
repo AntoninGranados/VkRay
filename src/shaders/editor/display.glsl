@@ -14,6 +14,7 @@ layout(set = 0, binding = 2, rgba32f) uniform writeonly image2D displayOut;
 layout(set = 0, binding = 3) uniform DisplayUBO {
     int  showFocusPlane;
     int  selectedObjectId;
+    int  previewBorderEnabled;
     vec4 focusPlane;
     vec3 cameraEye;
     vec3 cameraU;
@@ -107,6 +108,15 @@ void main() {
             t = t_hit > 0.0 ? 1.0 : 0.0;
         }
         color *= mix(vec3(1.0), focusColor, t);
+    }
+
+    if (displayUBO.previewBorderEnabled != 0) {
+        vec2 ndc = (vec2(coord) + 0.5) / vec2(viewportSize) * 2.0 - 1.0;
+        float dist = max(abs(ndc.x), abs(ndc.y));
+        color *= dist > 0.8 ? 0.2 : 1.0;
+        float borderHalfWidth = outlineWidth / float(min(viewportSize.x, viewportSize.y));
+        float edgeMask = 1.0 - smoothstep(0.0, borderHalfWidth, abs(dist - 0.8));
+        color = mix(color, edgeColor, edgeMask);
     }
 
     imageStore(displayOut, coord, vec4(color, 1.0));

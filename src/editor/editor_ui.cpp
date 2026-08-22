@@ -18,14 +18,7 @@
 EditorUi::EditorUi() {
     initStyle();
     viewportPanel.setOnEntitySelectionCallback(
-        [this](std::optional<ecs::Entity> id) {
-            clearPreview();
-            if (Editor::getSelectedEntity() != id) {
-                if (id.has_value()) Editor::setSelectedEntity(*id);
-                else Editor::clearSelectedEntity();
-                Core::markDirty();
-            }
-        }
+        [](std::optional<ecs::Entity> id) { Editor::selectEntity(id); }
     );
 }
 
@@ -120,7 +113,7 @@ void EditorUi::draw(const CommandBuffer& commandBuffer) {
     updateState();
 
     if (Core::getRenderMode() != RenderMode::Preview) drawRender();
-    else if (toggled) drawPreview();
+    else drawPreview();
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
@@ -159,21 +152,6 @@ void EditorUi::setupDockspace() {
     }
 }
 
-void EditorUi::setPreview() {
-    const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
-    if (!selectedEntity.has_value()) return;
-    Scene& scene = Core::getScene();
-    const ecs::Entity e = *selectedEntity;
-    if (!scene.getRegistry().has(e, ecs::Camera)) return;
-    scene.getCamera().setPreviewCamera(e);
-    Core::markDirty();
-}
-
-void EditorUi::clearPreview() {
-    if (Core::getScene().getCamera().clearPreviewCamera())
-        Core::markDirty();
-}
-
 void EditorUi::drawPreview() {
     setupDockspace();
     viewportPanel.draw();
@@ -190,9 +168,4 @@ void EditorUi::drawPreview() {
 void EditorUi::drawRender() {
     renderViewportPanel.draw();
     renderPanel.draw();
-}
-
-void EditorUi::clearEntitySelection() {
-    clearPreview();
-    Editor::clearSelectedEntity();
 }

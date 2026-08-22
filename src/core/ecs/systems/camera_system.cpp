@@ -33,11 +33,16 @@ void cameraPreUpdateSystem(Registry& registry) {
         const float fps = static_cast<float>(Core::getAnimation().getFps());
         sceneCamera.setShutterSpeed(::Camera::blurFractionFromShutter(c.get<float>("shutter_speed"), fps));
 
+        const auto setPreviewFov = [&](float fovDegrees) {
+            const float previewFovRad = 2.0f * glm::atan(glm::tan(glm::radians(fovDegrees) * 0.5f) / 0.8f);
+            sceneCamera.setFov(glm::degrees(previewFovRad));
+        };
+
         if (thinLensCameras.has(previewEnt)) {
             const Component& tl = thinLensCameras.get(previewEnt);
             const float focalLength = tl.get<float>("focal_length");
             const float fStop = tl.get<float>("f_stop");
-            sceneCamera.setFov(::Camera::fovFromFocalLength(focalLength));
+            setPreviewFov(::Camera::fovFromFocalLength(focalLength));
             sceneCamera.setDrawFocusPlane(tl.get<bool>("show_focus_plane"));
 
             sceneCamera.setThinLens({ focalLength, fStop, tl.get<float>("focal_distance") });
@@ -48,7 +53,7 @@ void cameraPreUpdateSystem(Registry& registry) {
                 sceneCamera.clearTiltShift();
             }
         } else {
-            sceneCamera.setFov(c.get<float>("fov"));
+            setPreviewFov(c.get<float>("fov"));
             sceneCamera.clearLens();
         }
         return;

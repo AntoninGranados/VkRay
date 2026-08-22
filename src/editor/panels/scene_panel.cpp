@@ -28,12 +28,8 @@ void ScenePanel::content() {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(scene, mode, path->string())) {
                     Core::getParameters().set("scene/light_mode", mode);
-                    Editor::clearSelectedEntity();
                     const auto& cameras = reg.storage(ecs::Camera).entities();
-                    if (!cameras.empty()) {
-                        Editor::setSelectedEntity(cameras[0]);
-                        scene.getCamera().setPreviewCamera(cameras[0]);
-                    }
+                    Editor::selectEntity(cameras.empty() ? std::nullopt : std::optional{cameras[0]});
                     Core::markDirty();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
@@ -69,13 +65,8 @@ void ScenePanel::content() {
 
                 const bool open = ImGui::TreeNodeEx((void*)(uintptr_t)entity.getId(), flags, "%s", name.c_str());
 
-                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-                    scene.getCamera().clearPreviewCamera();
-                    Editor::setSelectedEntity(entity);
-                    if (reg.has(entity, ecs::Camera))
-                        scene.getCamera().setPreviewCamera(entity);
-                    Core::markDirty();
-                }
+                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+                    Editor::selectEntity(entity);
 
                 if (open) {
                     for (const ecs::Entity& child : children)
@@ -107,7 +98,7 @@ void ScenePanel::content() {
                 const ecs::Entity meshAssetEntity = scene.loadMeshAsset(path->stem().string(), path->string());
                 if (meshAssetEntity != ecs::Entity{}) {
                     Core::markDirty();
-                    Editor::setSelectedEntity(meshAssetEntity);
+                    Editor::selectEntity(meshAssetEntity);
                     Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
                 }
             }
@@ -143,7 +134,7 @@ void ScenePanel::content() {
             }
             reg.destroyEntity(entityToDelete);
             Core::markDirty();
-            Editor::clearSelectedEntity();
+            Editor::selectEntity(std::nullopt);
         }
         if (!canDelete) ImGui::EndDisabled();
     }

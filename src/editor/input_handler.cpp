@@ -60,14 +60,15 @@ void InputHandler::handlePreview(float dt) {
         (Core::getScene().getCamera().isLocked() || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
     );
 
-    if (Core::getPlatform().getKey(GLFW_KEY_ESCAPE)) {
-        if (!Editor::getUi().isToggled()) Editor::getUi().toggle();
-        else Editor::getUi().clearEntitySelection();
-    }
+    if (Core::getPlatform().getKey(GLFW_KEY_ESCAPE))
+        Editor::selectEntity(std::nullopt);
 
     if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
-        if (Core::getScene().getCamera().hasPreviewCamera()) Editor::getUi().clearPreview();
-        else Editor::getUi().setPreview();
+        if (Core::getScene().getCamera().hasPreviewCamera()) {
+            Editor::clearPreviewCamera();
+        } else if (const auto selected = Editor::getSelectedEntity()) {
+            Editor::setPreviewCamera(*selected);
+        }
     }
 
     if (!blockKeyboardInput && Core::getScene().getCamera().isLocked() && justPressed(GLFW_KEY_SPACE))
@@ -130,6 +131,5 @@ void InputHandler::handleRender(float dt) {
 }
 
 void InputHandler::returnToPreview() {
-    Editor::getUi().restoreToggledState();
     Core::setRenderMode(RenderMode::Preview);
 }

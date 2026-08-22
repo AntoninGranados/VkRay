@@ -48,10 +48,12 @@ private:
 
     std::optional<ImTextureID> getPreview(ecs::Entity materialEntity);
     const ecs::ComponentType* resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const;
-    MaterialFingerprint captureFingerprint(ecs::Registry& registry, ecs::Entity entity) const;
+    ecs::Entity resolveMaterialSource(ecs::Entity entity) const;
+    MaterialFingerprint captureFingerprint(ecs::Entity entity) const;
     bool isStale(ecs::Entity entity, const MaterialFingerprint& fingerprint) const;
     ImTextureID registerTexture(VkImageView view) const;
 
+    void syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource);
     void startGeneration(ecs::Entity materialEntity);
     void finishGeneration();
     void evictDeadEntries();

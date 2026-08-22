@@ -21,18 +21,8 @@ public:
     EditorUi();
     void draw(const CommandBuffer& commandBuffer);
 
-    bool isToggled() { return toggled; }
-    void toggle() { toggled = !toggled; }
-    void setToggle(bool newToggle) { toggled = newToggle; }
-    void saveToggledState() { toggleState = toggled; }
-    void restoreToggledState() { toggled = toggleState; }
-
     bool isMouseCaptured()    { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }
-
-    void clearEntitySelection();
-    void setPreview();
-    void clearPreview();
 
     ImVec2      getViewportSize()            const { return viewportPanel.getSize(); }
     ImVec2      getViewportPos()             const { return viewportPanel.getPos(); }
@@ -50,8 +40,6 @@ private:
     RenderViewportPanel renderViewportPanel;
     ToastNotifications  toastNotifications;
 
-    bool toggled      = true;
-    bool toggleState  = true;
     bool capturesMouse    = false;
     bool capturesKeyboard = false;
 
