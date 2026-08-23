@@ -110,3 +110,8 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
 | `scene/light_mode` | Light Mode | - | Enumeration | `Day` | `Day` • `Sunset` • `Night` • `Empty` • `Studio` | ✓ |
+
+## internal
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+| `internal/sensor_width` | Sensor Width | Reference sensor width (mm). | Float | 36 | 1 ... | - |

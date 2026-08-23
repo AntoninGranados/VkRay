@@ -40,7 +40,7 @@ Depth-of-field via thin lens approximation.
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
-| `focal_length` | float | 1 | 0.05 ... 10 | yes |
+| `focal_length` | float | 21.45 | 1 ... 300 | yes |
 | `focal_distance` | float | 10 | ≥ 0.1 | yes |
 | `f_stop` | float | 0 | 0 ... 64 | yes |
 | `show_focus_plane` | bool | false |  | no |

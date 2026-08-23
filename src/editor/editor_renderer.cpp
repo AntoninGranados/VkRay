@@ -70,12 +70,14 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     editorGroupHandle = builder.addSubmissionGroup("Editor");
     uiGroupHandle     = builder.addSubmissionGroup("Ui");
 
-    swapchainImageHandle = builder.importImage(
+    swapchainImageHandle = builder.createImage(
         "SwapchainImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
         engine.getExtent().width, engine.getExtent().height, 1,
-        { .usage = ImageUsageType::Undefined, .access = AccessType::None },
-        { .usage = ImageUsageType::Present,   .access = AccessType::Read }
+        VKSMOL_IMAGE_OWNERSHIP_IMPORTED,
+        0,
+        ImageAccessInfo{ .usage = ImageUsageType::Undefined, .access = AccessType::None },
+        ImageAccessInfo{ .usage = ImageUsageType::Present,   .access = AccessType::Read }
     );
 
     displayImageHandle = builder.createImage(
@@ -90,8 +92,8 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     );
     outputImageHandle = renderResources.outputImageHandle;
 
-    debugUBOHandle   = builder.createPerFrameBuffer("DebugUBO",   sizeof(DebugUBO),   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    displayUBOHandle = builder.createPerFrameBuffer("DisplayUBO", sizeof(DisplayUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    debugUBOHandle   = builder.createBuffer("DebugUBO",   sizeof(DebugUBO),   VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    displayUBOHandle = builder.createBuffer("DisplayUBO", sizeof(DisplayUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     // Display pass — beauty + selection edges + focus plane overlay (compute, at viewport resolution)
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
@@ -208,10 +210,12 @@ void EditorRenderer::render(const FrameContext& frameContext) {
         const ecs::Entity e = *selectedEntity;
         displayUBO.selectedObjectId = resolveSelectedObjectIndex(reg, e);
 
-        const FocusPlane focus = resolveFocusPlane(reg, e, cam);
-        if (focus.visible) {
-            displayUBO.showFocusPlane = 1;
-            displayUBO.focusPlane     = focus.plane;
+        if (cam.isPreviewEntity(e)) {
+            const FocusPlane focus = resolveFocusPlane(reg, e, cam);
+            if (focus.visible) {
+                displayUBO.showFocusPlane = 1;
+                displayUBO.focusPlane     = focus.plane;
+            }
         }
     }
 

@@ -19,12 +19,39 @@ void cameraPreUpdateSystem(Registry& registry) {
     auto& thinLensCameras = registry.storage(ThinLens);
     auto& tiltShiftCameras = registry.storage(TiltShiftLens);
 
+    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+
+    const auto syncFovAndFocalLength = [&](Component& camera, Component& thinLens) {
+        auto& sync = thinLens.payload<ThinLensSync>("sync");
+        const float fovDeg = camera.get<float>("fov");
+        const float focalLengthMm = thinLens.get<float>("focal_length");
+
+        if (!sync.initialized) {
+            sync.lastFov = fovDeg;
+            sync.lastFocalLength = focalLengthMm;
+            sync.initialized = true;
+            return;
+        }
+
+        if (glm::abs(focalLengthMm - sync.lastFocalLength) > 1e-4f) {
+            const float newFov = ::Camera::fovFromFocalLength(focalLengthMm / sensorWidth);
+            camera.set<float>("fov", newFov);
+            sync.lastFov = newFov;
+            sync.lastFocalLength = focalLengthMm;
+        } else if (glm::abs(fovDeg - sync.lastFov) > 1e-4f) {
+            const float newFocalLength = ::Camera::focalLengthFromFov(fovDeg) * sensorWidth;
+            thinLens.set<float>("focal_length", newFocalLength);
+            sync.lastFov = fovDeg;
+            sync.lastFocalLength = newFocalLength;
+        }
+    };
+
     if (sceneCamera.hasPreviewCamera()) {
         const ecs::Entity previewEnt = sceneCamera.getPreviewCamera();
         if (!cameras.has(previewEnt) || !transforms.has(previewEnt)) return;
 
         const Component& t = transforms.get(previewEnt);
-        const Component& c = cameras.get(previewEnt);
+        Component& c = cameras.get(previewEnt);
         const glm::quat q = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
         const glm::vec3 pos = t.get<glm::vec3>("position");
         const float dist = glm::max(0.1f, glm::length(sceneCamera.getTarget() - sceneCamera.getPosition()));
@@ -39,13 +66,15 @@ void cameraPreUpdateSystem(Registry& registry) {
         };
 
         if (thinLensCameras.has(previewEnt)) {
-            const Component& tl = thinLensCameras.get(previewEnt);
+            Component& tl = thinLensCameras.get(previewEnt);
+            syncFovAndFocalLength(c, tl);
             const float focalLength = tl.get<float>("focal_length");
             const float fStop = tl.get<float>("f_stop");
-            setPreviewFov(::Camera::fovFromFocalLength(focalLength));
+            const float normalizedFocalLength = focalLength / sensorWidth;
+            setPreviewFov(::Camera::fovFromFocalLength(normalizedFocalLength));
             sceneCamera.setDrawFocusPlane(tl.get<bool>("show_focus_plane"));
 
-            sceneCamera.setThinLens({ focalLength, fStop, tl.get<float>("focal_distance") });
+            sceneCamera.setThinLens({ normalizedFocalLength, fStop, tl.get<float>("focal_distance") });
             if (tiltShiftCameras.has(previewEnt)) {
                 const Component& ts = tiltShiftCameras.get(previewEnt);
                 sceneCamera.setTiltShift(ts.get<glm::vec3>("plane_position"), ts.get<glm::vec3>("plane_rotation"));
@@ -68,7 +97,7 @@ void cameraPreUpdateSystem(Registry& registry) {
 
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
-        const Component& c = cameras.get(e);
+        Component& c = cameras.get(e);
 
         const Component& t = transforms.get(e);
         const glm::vec3 pos = t.get<glm::vec3>("position");
@@ -78,15 +107,17 @@ void cameraPreUpdateSystem(Registry& registry) {
         sceneCamera.setShutterSpeed(::Camera::blurFractionFromShutter(c.get<float>("shutter_speed"), fps));
 
         if (thinLensCameras.has(e)) {
-            const Component& tl = thinLensCameras.get(e);
+            Component& tl = thinLensCameras.get(e);
+            syncFovAndFocalLength(c, tl);
             const float focalLength = tl.get<float>("focal_length");
             const float fStop = tl.get<float>("f_stop");
-            sceneCamera.setFov(::Camera::fovFromFocalLength(focalLength));
-            sceneCamera.setDrawFocusPlane(tl.get<bool>("show_focus_plane"));
+            const float normalizedFocalLength = focalLength / sensorWidth;
+            sceneCamera.setFov(::Camera::fovFromFocalLength(normalizedFocalLength));
+            sceneCamera.setDrawFocusPlane(false);
 
             const float focalDistance = glm::max(0.1f, tl.get<float>("focal_distance"));
             sceneCamera.setTarget(pos + dir * focalDistance);
-            sceneCamera.setThinLens({ focalLength, fStop, focalDistance });
+            sceneCamera.setThinLens({ normalizedFocalLength, fStop, focalDistance });
             if (tiltShiftCameras.has(e)) {
                 const Component& ts = tiltShiftCameras.get(e);
                 sceneCamera.setTiltShift(ts.get<glm::vec3>("plane_position"), ts.get<glm::vec3>("plane_rotation"));

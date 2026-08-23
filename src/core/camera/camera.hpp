@@ -8,9 +8,9 @@
 #include "core/ecs/entity.hpp"
 
 struct ThinLensState {
-    float focalLength   = 0.0f;
-    float fStop         = 0.0f;
-    float focusDistance = 10.0f;
+    float normalizedFocalLength = 0.0f;
+    float fStop                 = 0.0f;
+    float focusDistance         = 10.0f;
 };
 
 struct TiltShiftState {
@@ -30,11 +30,14 @@ public:
 
     float getTanHFov() const { return glm::tan(glm::radians(getFov()) * 0.5f); }
 
-    static float fovFromFocalLength(float focalLength) {
-        return 2.0f * glm::degrees(glm::atan(0.5f / focalLength));
+    static float fovFromFocalLength(float normalizedFocalLength) {
+        return 2.0f * glm::degrees(glm::atan(0.5f / normalizedFocalLength));
     }
-    static float lensRadiusFromFStop(float focalLength, float fStop) {
-        return fStop > 0.0f ? focalLength / (2.0f * fStop) : 0.0f;
+    static float focalLengthFromFov(float fovDegrees) {
+        return 0.5f / glm::tan(glm::radians(fovDegrees) * 0.5f);
+    }
+    static float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
+        return fStop > 0.0f ? normalizedFocalLength / (2.0f * fStop) : 0.0f;
     }
     static float blurFractionFromShutter(float seconds, float fps) {
         return seconds * fps;
@@ -53,7 +56,7 @@ public:
     float getFov() const { return fov; }
     void setFov(const float newFov) { fov = glm::clamp(newFov, 1.0f, 160.0f); }
 
-    float getLensRadius() const { return lensRadiusFromFStop(thinLens.focalLength, thinLens.fStop); }
+    float getLensRadius() const { return lensRadiusFromFStop(thinLens.normalizedFocalLength, thinLens.fStop); }
     float getFocusDistance() const { return thinLens.focusDistance; }
 
     void setDrawFocusPlane(bool v) { drawFocusPlane = v; }

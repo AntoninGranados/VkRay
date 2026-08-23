@@ -15,9 +15,10 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         tag + "PreviousPathtracingImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
         extent.width, extent.height, 1,
-        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-        VK_IMAGE_USAGE_STORAGE_BIT
+        VKSMOL_IMAGE_OWNERSHIP_MANAGED,
+        VK_IMAGE_USAGE_STORAGE_BIT,
+        ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read }
     );
     currentPathtracingImageHandle = builder.createImage(
         tag + "CurrentPathtracingImage",
@@ -30,26 +31,27 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         extent.width, extent.height
     );
 
-    pathtracingUBOHandle = builder.createPerFrameBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    compositingUBOHandle = builder.createPerFrameBuffer(tag + "CompositingUBO", sizeof(CompositingUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    pathtracingUBOHandle = builder.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    compositingUBOHandle = builder.createBuffer(tag + "CompositingUBO", sizeof(CompositingUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     resources.pixelInfoBufferHandle = builder.createBuffer(
         tag + "PixelInfoBuffer",
         static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo),
+        0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
     );
 
     // Scene buffers must be created before passes so binding slots can be declared
-    resources.sceneHandles.sphere = { builder.createPerFrameBuffer(tag + "SceneSphereBuffer", 16 * sizeof(GpuSphere), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.plane = { builder.createPerFrameBuffer(tag + "ScenePlaneBuffer", 16 * sizeof(GpuPlane), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.box = { builder.createPerFrameBuffer(tag + "SceneBoxBuffer", 16 * sizeof(GpuBox), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.quad = { builder.createPerFrameBuffer(tag + "SceneQuadBuffer", 16 * sizeof(GpuQuad), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.vertex = { builder.createPerFrameBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.index = { builder.createPerFrameBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.bvh = { builder.createPerFrameBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.mesh = { builder.createPerFrameBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.material = { builder.createPerFrameBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.object = { builder.createPerFrameBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(ObjectHandle), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.light = { builder.createPerFrameBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.sphere = { builder.createBuffer(tag + "SceneSphereBuffer", 16 * sizeof(GpuSphere), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.plane = { builder.createBuffer(tag + "ScenePlaneBuffer", 16 * sizeof(GpuPlane), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.box = { builder.createBuffer(tag + "SceneBoxBuffer", 16 * sizeof(GpuBox), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.quad = { builder.createBuffer(tag + "SceneQuadBuffer", 16 * sizeof(GpuQuad), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.vertex = { builder.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.index = { builder.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.bvh = { builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.mesh = { builder.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.material = { builder.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.object = { builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(ObjectHandle), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.light = { builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
 
     // Pathtracing pass
     ComputePassBuilder pathtrace = builder.addComputePass(tag + "PathtracingPass");

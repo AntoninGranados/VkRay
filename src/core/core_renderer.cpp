@@ -16,9 +16,10 @@ RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
         "LensTexture",
         VK_FORMAT_R8_UNORM,
         aperture::kSize, aperture::kSize, 1,
-        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-        { .usage = ImageUsageType::Sampled, .access = AccessType::Read },
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT
+        VKSMOL_IMAGE_OWNERSHIP_MANAGED,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+        ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read }
     );
 
     RenderResources resources = PathtraceRenderer::initGraph(builder, engine.getExtent(), "", lensImageHandle);

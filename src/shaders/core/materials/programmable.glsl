@@ -14,7 +14,8 @@
 #define SMALL_FEATHER 0.01
 
 // #define PROGRAMMABLE_SMOOTH_RANDOM
-#define PROGRAMMABLE_GOLD_ROCK
+// #define PROGRAMMABLE_GOLD_VEIN
+#define PROGRAMMABLE_MARBLE
 // #define PROGRAMMABLE_CHECKERBOARD
 // #define PROGRAMMABLE_TEST_GRID
 // #define PROGRAMMABLE_POINT_GRID
@@ -78,28 +79,45 @@ float perlinNoise(vec3 p) {
     return mix(nxy0, nxy1, w);
 }
 
+const mat3 NOISE_ROTATION = mat3(
+    0.00,  0.80,  0.60,
+    -0.80,  0.36, -0.48,
+    -0.60, -0.48,  0.64
+);
+
+const float FBM_SIGMA = 0.115;
+
 float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
-    uint s = initSeed(ivec3(0), 0);
-
-    const mat3 ROTATION = mat3(
-         0.00,  0.80,  0.60,
-        -0.80,  0.36, -0.48,
-        -0.60, -0.48,  0.64
-    );
-
     float amplitude = 1.0;
-    float frequency = 1.0;
-    float sum = 0.0;
     float maxAmplitude = 0.0;
-    vec3 q = ROTATION * p;
+    float sum = 0.0;
+    vec3 q = NOISE_ROTATION * p;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude * perlinNoise(q * frequency + vec3(rand(s), rand(s), rand(s)) * 152.196);
+        sum += amplitude * perlinNoise(q);
         maxAmplitude += amplitude;
-        frequency *= lacunarity;
         amplitude *= gain;
-        q = ROTATION * q;
+        q = NOISE_ROTATION * (q * lacunarity);
     }
-    return sum / maxAmplitude;
+    return sum / (maxAmplitude * FBM_SIGMA);
+}
+
+float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
+    float amplitude = 1.0;
+    float maxAmplitude = 0.0;
+    float sum = 0.0;
+    vec3 q = NOISE_ROTATION * p;
+    for (int i = 0; i < octaves; i++) {
+        sum += amplitude * abs(perlinNoise(q));
+        maxAmplitude += amplitude;
+        amplitude *= gain;
+        q = NOISE_ROTATION * (q * lacunarity);
+    }
+    return sum / (maxAmplitude * 0.16);
+}
+
+float veinMaskAt(vec3 p) {
+    float veinField = fractalNoise(p * 1.5, 3, 2.0, 0.5);
+    return 1.0 - smoothstep(0.0, 0.45, abs(veinField));
 }
 
 Material createProgrammableMaterial(in Material mat, inout Hit hit) {
@@ -112,38 +130,84 @@ Material createProgrammableMaterial(in Material mat, inout Hit hit) {
     float r = (fractalNoise(hit.p, octave, lacunarity, gain) + 1) / 2;
     return mat_makeDiffuse(vec3(r));
 
-#elif defined(PROGRAMMABLE_GOLD_ROCK)
-    vec3 pos = hit.p;
-
+#elif defined(PROGRAMMABLE_GOLD_VEIN)
+    vec3 pos = hit.p * SCALE;
     float h = 0.0001;
-    int octave = 10;
-    float lacunarity = 2.0;
-    float gain = 0.5;
-    float r  = (fractalNoise(pos, octave, lacunarity, gain) + 1) / 2;
-    float rx = (fractalNoise(pos + vec3(h, 0, 0), octave, lacunarity, gain) + 1) / 2;
-    float ry = (fractalNoise(pos + vec3(0, h, 0), octave, lacunarity, gain) + 1) / 2;
-    float rz = (fractalNoise(pos + vec3(0, 0, h), octave, lacunarity, gain) + 1) / 2;
-    vec3 grad = vec3(rx - r, ry - r, rz - r) / h;
 
-    float veinField = fractalNoise(pos * 1.5, 3, 2.0, 0.5);
-    float veinMask = 1.0 - smoothstep(0.0, 0.05, abs(veinField));
+    int rockOctaves = 15;
+    float rockLacunarity = 2.0;
+    float rockGain = 0.5;
+    float height  = (fractalNoise(pos, rockOctaves, rockLacunarity, rockGain) + 1) / 2;
+    float heightX = (fractalNoise(pos + vec3(h, 0, 0), rockOctaves, rockLacunarity, rockGain) + 1) / 2;
+    float heightY = (fractalNoise(pos + vec3(0, h, 0), rockOctaves, rockLacunarity, rockGain) + 1) / 2;
+    float heightZ = (fractalNoise(pos + vec3(0, 0, h), rockOctaves, rockLacunarity, rockGain) + 1) / 2;
+    vec3 rockGradient = vec3(heightX - height, heightY - height, heightZ - height) / h;
 
-    float presenceField = (fractalNoise(pos * 0.5, 3, 2.0, 0.5) + 1) / 2;
-    float presence = step(0.3, presenceField);
-    veinMask *= presence;
+    float veinMask  = veinMaskAt(pos);
+    float veinMaskX = veinMaskAt(pos + vec3(h, 0, 0));
+    float veinMaskY = veinMaskAt(pos + vec3(0, h, 0));
+    float veinMaskZ = veinMaskAt(pos + vec3(0, 0, h));
+    vec3 veinGradient = -vec3(veinMaskX - veinMask, veinMaskY - veinMask, veinMaskZ - veinMask) / h;
 
-    float bumpStrength = mix(1.0, 0.3, veinMask);
+    vec3 rockColor = vec3(0.8);
+    float rockRoughness = 1.0;
+    vec3 goldColor = vec3(0.8, 0.7, 0.35);
+    float goldRoughness = 0.1;
+    float veinRecessDepth = 0.03;
+
+    float bumpStrength = rockRoughness + step(0.5, veinMask) * (goldRoughness - rockRoughness);
+    vec3 grad = rockGradient * bumpStrength + veinGradient * veinRecessDepth;
     vec3 tangentGrad = grad - dot(grad, hit.normal) * hit.normal;
-    hit.normal = normalize(hit.normal - tangentGrad * bumpStrength);
-
-    vec3 rockColor = vec3(0.6);
-    vec3 goldColor = vec3(0.85, 0.8, 0.35);
-    float goldRoughness = 0.3;
+    hit.normal = normalize(hit.normal - tangentGrad);
 
     if (veinMask > 0.5) {
         return mat_makeMetal(goldColor, goldRoughness);
     }
     return mat_makeDiffuse(rockColor);
+
+#elif defined(PROGRAMMABLE_MARBLE)
+    const vec3  stretch   = vec3(1.0, 0.25, 0.6);
+    const vec3  veinDir   = vec3(1.0, 0.0, 1.0);
+    const float bendAmp   = 0.2;
+    const float bendFreq  = 0.1;
+    const float distort   = 0.3;
+    const float sharpness = 4.0;
+    const float NOISE_NORM = 8.0;
+
+    vec3 pos = hit.p * SCALE * stretch;
+
+    float bend   = fractalNoise(pos * bendFreq,  6, 2.0, 0.5) * NOISE_NORM;
+    float detail = fractalNoise(pos * 1.5,      10, 2.0, 0.5) * NOISE_NORM;
+
+    float phase = dot(pos, veinDir) + bendAmp * bend;
+    float band  = 0.5 + 0.5 * sin(phase * 3.14159 + detail * distort);
+    float vein  = pow(1.0 - band, sharpness);
+
+    vec3 rockColor = vec3(0.86, 0.85, 0.82);
+    float rockRoughness = 0.05;
+    vec3 veinColor = vec3(0.16, 0.15, 0.17);
+    float veinRoughness = 0.95;
+
+    float t = vein;
+    return mat_makeGlossy(
+        mix(rockColor, veinColor, vein), 
+        mix(rockRoughness, veinRoughness, vein),
+        2
+    );
+
+    // int veinOctaves = 5;
+    // float veinLacunarity = 2.0;
+    // float veinGain = 0.5;
+    // float t = (turbulence(pos, veinOctaves, veinLacunarity, veinGain) + 1) / 2;
+    
+    // float band = 0.5 + 0.5 * sin(pos.y * PI + t * 6.0);
+    // float vein = pow(1.0 - band, 6.0);
+
+    // vec3 rockColor = vec3(1.0);
+    // float rockRoughness = 0.1;
+    // vec3 veinColor = vec3(0.0);
+    // float veinRoughness = 0.9;
+
 
 #elif defined(PROGRAMMABLE_CHECKERBOARD)
     if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {

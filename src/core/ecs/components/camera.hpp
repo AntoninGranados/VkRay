@@ -36,13 +36,20 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     } })
     .build();
 
+struct ThinLensSync {
+    float lastFov = 0.0f;
+    float lastFocalLength = 0.0f;
+    bool initialized = false;
+};
+
 inline const ComponentType ThinLens = ComponentType::builder("thin_lens")
     .description("Depth-of-field via thin lens approximation.")
     .icon(ICON_FA_CIRCLE_DOT)
     .group("camera")
     .needs("camera")
-    .field<float>("focal_length", 1.0f, NumericMeta{ .min = 0.05f, .max = 10.0f, .step = 0.01f }, true)
+    .field<float>("focal_length", 21.45f, NumericMeta{ .min = 1.0f, .max = 300.0f, .step = 0.5f }, true)
     .field<float>("focal_distance", 10.0f, NumericMeta{ .min = 0.1f, .step = 0.01f }, true)
+    .payload<ThinLensSync>("sync")
     .field<float>("f_stop", 0.0f, NumericMeta{ .min = 0.0f, .max = 64.0f, .step = 0.1f, .presets = {
         {"Off",   0.0f},
         {"f/1",   1.0f},
