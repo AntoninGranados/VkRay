@@ -389,6 +389,12 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         }
     }
 
+    for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
+        if (entity == scene.getDefaultCamera()) continue;
+        scene.setActiveCamera(entity);
+        break;
+    }
+
     animStore.evaluate(registry, 0.0f);
     return true;
 }
@@ -418,7 +424,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         json childrenJson = json::array();
         for (const ecs::Entity& child : reg.getChildren(e)) {
             if (child == scene.getDefaultMaterial()) continue;
-            if (child == scene.getDefaultMeshAsset()) continue;
+            if (child == scene.getDefaultMesh()) continue;
             childrenJson.push_back(saveNode(child));
         }
         if (!childrenJson.empty())
@@ -437,7 +443,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
     };
 
     j["Materials"] = saveSection(scene.getMaterialsRoot(), scene.getDefaultMaterial());
-    j["Assets"] = saveSection(scene.getAssetsRoot(), scene.getDefaultMeshAsset());
+    j["Assets"] = saveSection(scene.getAssetsRoot(), scene.getDefaultMesh());
     j["Objects"] = saveSection(scene.getObjectsRoot());
 
     std::ofstream out(path);

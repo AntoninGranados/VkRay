@@ -5,6 +5,9 @@
 #include <optional>
 #include <utility>
 
+#include "core/core.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/entity.hpp"
 #include "utils/log.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
@@ -17,7 +20,7 @@ void Scene::init() {
     registry.ctx().emplace<SceneGpuBuffers>();
     registry.ctx().emplace<FrameContext>();
     registry.ctx().emplace<AnimationStore*>(&animationStore);
-    registry.ctx().emplace<::Camera*>(&camera);
+    registry.ctx().emplace<ecs::Entity*>(&activeCamera);
     initSystems();
     addDefaultAssets();
 }
@@ -64,6 +67,18 @@ ecs::Entity Scene::loadMeshAsset(std::string name, const std::string& path, bool
     return e;
 }
 
+void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
+    if (newActiveCamera == activeCamera) return;
+    activeCamera = newActiveCamera;
+    Core::markDirty();
+}
+
+bool Scene::resetActiveCamera() {
+    if (activeCamera == defaultCamera) return true;
+    setActiveCamera(defaultCamera);
+    return false;
+}
+
 void Scene::bakePhysics() {
     ecs::bakePhysicsSimulation(registry);
 }
@@ -108,7 +123,6 @@ ecs::Entity Scene::createNamedEntity(std::string name, ecs::Entity parent) {
 void Scene::resetSceneState() {
     registry.clear();
     animationStore.clear();
-    camera.clearPreviewCamera();
 }
 
 void Scene::addDefaultAssets() {
@@ -116,14 +130,23 @@ void Scene::addDefaultAssets() {
     sceneRoots.materialsRoot = createNamedEntity("Materials");
     sceneRoots.assetsRoot    = createNamedEntity("Assets");
     sceneRoots.objectsRoot   = createNamedEntity("Objects");
+    sceneRoots.internalsRoot = createNamedEntity("Internals");
 
-    defaultMaterial = createNamedEntity("Default", sceneRoots.materialsRoot);
+    defaultMaterial = createNamedEntity("Default Material", sceneRoots.materialsRoot);
     registry.add(defaultMaterial, ecs::Diffuse);
     registry.get(defaultMaterial, ecs::Diffuse).set<glm::vec3>("albedo", glm::vec3(1.0f, 0.0f, 1.0f));
 
-    defaultMeshAsset = createNamedEntity("Default", sceneRoots.assetsRoot);
-    registry.add(defaultMeshAsset, ecs::Mesh);
-    registry.get(defaultMeshAsset, ecs::Mesh).payload<MeshAsset>("geometry") = makeDefaultMeshAsset();
+    defaultMesh = createNamedEntity("Default Cube", sceneRoots.assetsRoot);
+    registry.add(defaultMesh, ecs::Mesh);
+    registry.get(defaultMesh, ecs::Mesh).payload<MeshAsset>("geometry") = makeDefaultMeshAsset();
+
+    defaultCamera = createNamedEntity("Default Camera", sceneRoots.internalsRoot);
+    registry.add(defaultCamera, ecs::Camera);
+    registry.get(defaultCamera, ecs::Camera).set<float>("fov", 80.0f);
+    registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
+    registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
+
+    activeCamera = defaultCamera;
 }
 
 MeshAsset* Scene::getMeshAsset(ecs::Entity e) {
@@ -133,3 +156,4 @@ MeshAsset* Scene::getMeshAsset(ecs::Entity e) {
 const MeshAsset* Scene::getMeshAsset(ecs::Entity e) const {
     return registry.has(e, ecs::Mesh) ? &registry.get(e, ecs::Mesh).payload<MeshAsset>("geometry") : nullptr;
 }
+

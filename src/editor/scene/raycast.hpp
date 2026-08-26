@@ -4,16 +4,16 @@
 
 #include <glm/glm.hpp>
 
-struct Vertex;
+#include "core/ecs/entity.hpp"
 
-class Camera;
+struct Vertex;
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 dir;
 };
 
-Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const Camera& camera);
+Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::Entity& camera);
 
 float raySphereIntersection(const Ray& ray, const glm::vec3& center, const float& radius);
 float rayPlaneIntersection(const Ray& ray, const glm::vec3& point, const glm::vec3& normal);

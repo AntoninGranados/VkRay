@@ -24,12 +24,12 @@ layout(set = 0, binding = 3) uniform DisplayUBO {
 layout(set = 0, binding = 4)  buffer readonly SphereBuffer { Sphere   spheres[];  } sphereBuffer;
 layout(set = 0, binding = 5)  buffer readonly PlaneBuffer  { Plane    planes[];   } planeBuffer;
 layout(set = 0, binding = 6)  buffer readonly BoxBuffer    { Box      boxes[];    } boxBuffer;
-layout(set = 0, binding = 7)  buffer readonly VertexBuffer { Vertex   vertices[]; } vertexBuffer;
-layout(set = 0, binding = 8)  buffer readonly IndexBuffer  { uint     indices[];  } indexBuffer;
-layout(set = 0, binding = 9)  buffer readonly BvhBuffer    { BvhNode  bvhNodes[]; } bvhBuffer;
-layout(set = 0, binding = 10) buffer readonly MeshBuffer   { Mesh     meshes[];   } meshBuffer;
-layout(set = 0, binding = 11) buffer readonly ObjectBuffer { uint objectCount; Object objects[]; } objectBuffer;
-layout(set = 0, binding = 12) buffer readonly QuadBuffer    { Quad     quads[];    } quadBuffer;
+layout(set = 0, binding = 7)  buffer readonly QuadBuffer   { Quad     quads[];    } quadBuffer;
+layout(set = 0, binding = 8)  buffer readonly VertexBuffer { Vertex   vertices[]; } vertexBuffer;
+layout(set = 0, binding = 9)  buffer readonly IndexBuffer  { uint     indices[];  } indexBuffer;
+layout(set = 0, binding = 10) buffer readonly BvhBuffer    { BvhNode  bvhNodes[]; } bvhBuffer;
+layout(set = 0, binding = 11) buffer readonly MeshBuffer   { Mesh     meshes[];   } meshBuffer;
+layout(set = 0, binding = 12) buffer readonly ObjectBuffer { uint objectCount; Object objects[]; } objectBuffer;
 layout(set = 0, binding = 13) buffer readonly MaterialBuffer { Material materials[]; } materialBuffer;
 
 #include "../core/global.glsl"
@@ -37,6 +37,7 @@ layout(set = 0, binding = 13) buffer readonly MaterialBuffer { Material material
 layout(local_size_x = 8, local_size_y = 8) in;
 
 const float outlineWidth = 2.0;
+const float previewBorderWidth = 8.0;
 const float feather      = 0.4;
 const vec3  edgeColor    = vec3(1.0, 0.5, 0.062);
 const vec3  focusColor   = vec3(1.0, 0.3, 1.0);
@@ -114,7 +115,7 @@ void main() {
         vec2 ndc = (vec2(coord) + 0.5) / vec2(viewportSize) * 2.0 - 1.0;
         float dist = max(abs(ndc.x), abs(ndc.y));
         color *= dist > 0.8 ? 0.2 : 1.0;
-        float borderHalfWidth = outlineWidth / float(min(viewportSize.x, viewportSize.y));
+        float borderHalfWidth = previewBorderWidth / float(min(viewportSize.x, viewportSize.y));
         float edgeMask = 1.0 - smoothstep(0.0, borderHalfWidth, abs(dist - 0.8));
         color = mix(color, edgeColor, edgeMask);
     }

@@ -5,6 +5,7 @@
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
+#include "core/ecs/entity.hpp"
 #include "core/render/sample_accumulator.hpp"
 #include "core/scene/scene.hpp"
 #include "core/structures.hpp"
@@ -28,7 +29,7 @@ public:
     void     restartAccumulation()       { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
     void setLightMode(LightMode mode) { pathtracerUBO.render.lightMode = mode; }
-    void render(const FrameContext& frameContext, const Camera& camera);
+    void render(const FrameContext& frameContext, const ecs::Entity& camera);
     void resize(uint32_t width, uint32_t height);
 
     VkExtent2D getRenderExtent() const { return renderExtent; }

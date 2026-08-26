@@ -11,44 +11,48 @@
 #include "VkSmol/platform/platform.hpp"
 
 #include "core/animation/animation_clock.hpp"
-#include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/ecs/systems/camera_system.hpp"
+#include "core/ecs/components/component.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
 #include "editor/editor_ui.hpp"
+#include "editor/ecs/components/camera.hpp"
+#include "editor/ecs/systems/camera_system.hpp"
 
 bool InputHandler::isMouseInputBlocked() {
     if (ImGuizmo::IsUsing()) return true;
-    if (!Core::getScene().getCamera().isLocked()) return false;
+
+    const ecs::Registry& registry = Core::getScene().getRegistry();
+    const ecs::Entity camera = Core::getScene().getCamera();
+    if (!registry.get(camera, ecs::CameraNavigation).payload<ecs::CameraNavigationState>("state").locked)
+        return false;
+
     return Editor::getUi().isMouseCaptured() || ImGui::GetIO().WantCaptureMouse;
 }
 
 void InputHandler::initCallbacks() {
     Core::getPlatform().setCursorPosCallback([](double x, double y){
         if (isMouseInputBlocked()) return;
-        if (Core::getScene().getCamera().cursorPosCallback(x, y)) {
-            Core::markDirty();
-            ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
-        }
+        ecs::cameraCursorCallback(Core::getScene().getRegistry(), Core::getScene().getCamera(), x, y);
     });
 
     Core::getPlatform().setScrollCallback([](double xoffset, double yoffset){
         if (ImGui::GetIO().WantCaptureMouse || Editor::getUi().isMouseCaptured()) return;
-        if (Core::getRenderMode() != RenderMode::Preview) return;
-        if (Core::getScene().getCamera().scrollCallback(xoffset, yoffset)) Core::markDirty();
+        ecs::cameraScrollCallback(Core::getScene().getRegistry(), Core::getScene().getCamera(), xoffset, yoffset);
     });
 }
 
 void InputHandler::pollEvents() {
+    ecs::cameraActivationSystem(Core::getScene().getRegistry());
     Core::getPlatform().pollEvents();
 }
 
 void InputHandler::handle(float dt) {
     switch (Core::getRenderMode()) {
-        case RenderMode::Preview:           handlePreview(dt); break;
+        case RenderMode::Preview:         handlePreview(dt); break;
         case RenderMode::RenderSingle:
-        case RenderMode::RenderAnimation:   handleRender(dt);  break;
+        case RenderMode::RenderAnimation: handleRender(dt);  break;
     }
 }
 
@@ -56,32 +60,33 @@ void InputHandler::handlePreview(float dt) {
     const bool blockMouseInput    = isMouseInputBlocked();
     const bool blockKeyboardInput = Editor::getUi().isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
+    const ecs::Component& ac = Core::getScene().getRegistry().get(Core::getScene().getCamera(), ecs::CameraNavigation);
+    const ecs::CameraNavigationState& cameraState = ac.payload<ecs::CameraNavigationState>("state");
+
     Core::getPlatform().setCursorMode(
-        (Core::getScene().getCamera().isLocked() || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
+        (cameraState.locked || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
     );
 
     if (Core::getPlatform().getKey(GLFW_KEY_ESCAPE))
         Editor::selectEntity(std::nullopt);
 
     if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
-        if (Core::getScene().getCamera().hasPreviewCamera()) {
-            Editor::clearPreviewCamera();
+        if (Core::getScene().isPreviewing()) {
+            Core::getScene().resetActiveCamera();
         } else if (const auto selected = Editor::getSelectedEntity()) {
-            Editor::setPreviewCamera(*selected);
+            Core::getScene().setActiveCamera(*selected);
         }
     }
 
-    if (!blockKeyboardInput && Core::getScene().getCamera().isLocked() && justPressed(GLFW_KEY_SPACE))
+    if (!blockKeyboardInput && cameraState.locked && justPressed(GLFW_KEY_SPACE))
         Core::getAnimation().toggle();
 
     handleFrameStepKey(GLFW_KEY_LEFT, -1, dt, blockKeyboardInput);
     handleFrameStepKey(GLFW_KEY_RIGHT, 1, dt, blockKeyboardInput);
 
     if (!blockKeyboardInput) {
-        if (Core::getScene().getCamera().processInput(dt)) {
-            Core::markDirty();
-            ecs::syncPreviewCameraToEntity(Core::getScene().getCamera(), Core::getScene().getRegistry());
-        }
+        ecs::cameraActivationSystem(Core::getScene().getRegistry());
+        ecs::cameraControlSystem(Core::getScene().getRegistry());
     }
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R))

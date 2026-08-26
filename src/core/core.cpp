@@ -1,5 +1,7 @@
 #include "core.hpp"
 
+#include "core/camera/camera.hpp"
+#include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/parameters/parameter_serializer.hpp"
 
@@ -14,7 +16,7 @@ void Core::init(Platform& p, uint32_t version) {
     c.engine.init("VkRay", version, p);
     c.parameters = ParameterSerializer::load("./src/config/parameters.json");
     c.coreRenderer.bindParameters();
-    // TODO: move that to a meta programm
+    // TODO: move that to a meta programm (compile time)
     ParameterSerializer::saveDocumentation("./docs/parameters.md");
     ComponentSerializer::saveDocumentation("./docs/components.md");
 }
@@ -60,7 +62,11 @@ bool Core::consumeResize() {
 
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Core& c = get();
-    const float jitterRange = c.renderMode != RenderMode::Preview ? c.scene.getCamera().getShutterSpeed() : 0.0f;
+    float jitterRange = 0.0f;
+    if (c.renderMode != RenderMode::Preview) {
+        const float shutterSpeed = c.scene.getRegistry().get(c.scene.getCamera(), ecs::Camera).get<float>("shutter_speed");
+        jitterRange = blurFractionFromShutter(shutterSpeed, static_cast<float>(c.animation.getFps()));
+    }
     if (c.animation.sample(jitterRange)) markDirty();
     if (!c.animation.isPaused()) markDirty();
     consumeDirty();

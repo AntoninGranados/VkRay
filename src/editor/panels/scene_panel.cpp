@@ -28,8 +28,8 @@ void ScenePanel::content() {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
                 if (SceneSerializer::load(scene, mode, path->string())) {
                     Core::getParameters().set("scene/light_mode", mode);
-                    const auto& cameras = reg.storage(ecs::Camera).entities();
-                    Editor::selectEntity(cameras.empty() ? std::nullopt : std::optional{cameras[0]});
+                    const ecs::Entity camera = scene.getCamera();
+                    Editor::selectEntity(camera == scene.getDefaultCamera() ? std::nullopt : std::optional{camera});
                     Core::markDirty();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
@@ -108,7 +108,7 @@ void ScenePanel::content() {
         const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
         const bool canDelete = selectedEntity.has_value()
             && *selectedEntity != scene.getDefaultMaterial()
-            && *selectedEntity != scene.getDefaultMeshAsset()
+            && *selectedEntity != scene.getDefaultMesh()
             && *selectedEntity != scene.getMaterialsRoot()
             && *selectedEntity != scene.getAssetsRoot()
             && *selectedEntity != scene.getObjectsRoot();
@@ -129,7 +129,7 @@ void ScenePanel::content() {
                 for (size_t i = 0; i < meshRefStorage.size(); i++) {
                     ecs::Component& ref = meshRefStorage.get(meshRefStorage.entities()[i]);
                     if (ref.get<ecs::Entity>("handle") == entityToDelete)
-                        ref.set<ecs::Entity>("handle", scene.getDefaultMeshAsset());
+                        ref.set<ecs::Entity>("handle", scene.getDefaultMesh());
                 }
             }
             reg.destroyEntity(entityToDelete);

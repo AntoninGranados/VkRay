@@ -9,6 +9,7 @@
 
 #include "core/animation/animation_store.hpp"
 #include "core/camera/camera.hpp"
+#include "core/ecs/entity.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/ecs/components.hpp"
@@ -39,6 +40,7 @@ struct SceneRoots {
     ecs::Entity materialsRoot;
     ecs::Entity assetsRoot;
     ecs::Entity objectsRoot;
+    ecs::Entity internalsRoot;
 };
 
 class Scene {
@@ -56,7 +58,13 @@ public:
     ecs::Entity getAssetsRoot() const { return registry.ctx().get<SceneRoots>().assetsRoot; }
     ecs::Entity getObjectsRoot() const { return registry.ctx().get<SceneRoots>().objectsRoot; }
     ecs::Entity getDefaultMaterial() const { return defaultMaterial; }
-    ecs::Entity getDefaultMeshAsset() const { return defaultMeshAsset; }
+    ecs::Entity getDefaultMesh() const { return defaultMesh; }
+    ecs::Entity getDefaultCamera() const { return defaultCamera; }
+
+    ecs::Entity& getCamera() { return activeCamera; }
+    bool isPreviewing() { return activeCamera != defaultCamera; }   // TODO: find a better name
+    void setActiveCamera(ecs::Entity newActiveCamera);
+    bool resetActiveCamera();
 
     void bakePhysics();
     bool isPhysicsBakeInProgress() const;
@@ -71,8 +79,7 @@ public:
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
-
-    Camera& getCamera() { return camera; }
+    
     AnimationStore& getAnimationStore() { return animationStore; }
 
     SceneGpuBuffers& getBuffers() { return registry.ctx().get<SceneGpuBuffers>(); }
@@ -88,9 +95,13 @@ private:
     ecs::SystemScheduler onRenderScheduler;
 
     ecs::Entity defaultMaterial;
-    ecs::Entity defaultMeshAsset;
+    ecs::Entity defaultMesh;
 
-    Camera camera = Camera(glm::vec3(0.0f, 0.0f, -10.0f));
+    // TODO: find a better architecture place as this is an Editor object (not Core)
+    // Used as the main viewport camera in the editor (until we preview)
+    ecs::Entity defaultCamera;
+    ecs::Entity activeCamera;
+
     AnimationStore animationStore;
 
     void initSystems();

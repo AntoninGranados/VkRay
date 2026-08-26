@@ -13,6 +13,7 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
+#include "editor/ecs/components/camera.hpp"
 #include "ui_utils.hpp"
 
 EditorUi::EditorUi() {
@@ -106,7 +107,9 @@ void EditorUi::draw(const CommandBuffer& commandBuffer) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
-    if (!Core::getScene().getCamera().isLocked())
+    const ecs::Registry& registry = Core::getScene().getRegistry();
+    const ecs::Entity camera = Core::getScene().getCamera();
+    if (!registry.get(camera, ecs::CameraNavigation).payload<ecs::CameraNavigationState>("state").locked)
         ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 
     ImGui::NewFrame();

@@ -88,6 +88,17 @@
         }
     },
 
+    "editor": {
+        "label": "Editor",
+        "camera": {
+            "label": "Camera",
+            "speed": { "label": "Speed", "default": 20.0, "min": 0.1 },
+            "sensitivity": { "label": "Sensitivity", "default": 0.2, "min": 0.01 },
+            "pan_sensitivity": { "label": "Pan Sensitivity", "default": 0.003, "min": 0.0001 },
+            "dolly_sensitivity": { "label": "Dolly Sensitivity", "default": 0.01, "min": 0.0001 }
+        }
+    },
+
     "internal": {
         "sensor_width": { "label": "Sensor Width", "description": "Reference sensor width (mm).", "default": 36.0, "min": 1.0 }
     }

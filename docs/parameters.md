@@ -111,6 +111,18 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 |------|-------|-------------|------|---------|-------------|---------|
 | `scene/light_mode` | Light Mode | - | Enumeration | `Day` | `Day` • `Sunset` • `Night` • `Empty` • `Studio` | ✓ |
 
+## Editor
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+
+### Camera
+| Path | Label | Description | Type | Default | Constraints | Restart |
+|------|-------|-------------|------|---------|-------------|---------|
+| `editor/camera/speed` | Speed | - | Float | 20 | 0.1 ... | - |
+| `editor/camera/sensitivity` | Sensitivity | - | Float | 0.2 | 0.01 ... | - |
+| `editor/camera/pan_sensitivity` | Pan Sensitivity | - | Float | 0.003 | 1e-04 ... | - |
+| `editor/camera/dolly_sensitivity` | Dolly Sensitivity | - | Float | 0.01 | 1e-04 ... | - |
+
 ## internal
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|

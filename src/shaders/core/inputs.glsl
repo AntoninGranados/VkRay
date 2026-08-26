@@ -61,32 +61,32 @@ layout(set = 0, binding = 4) buffer readonly PlaneBuffer {
 layout(set = 0, binding = 5) buffer readonly BoxBuffer {
     Box boxes[];
 } boxBuffer;
-layout(set = 0, binding = 6) buffer readonly VertexBuffer {
+layout(set = 0, binding = 6) buffer readonly QuadBuffer {
+    Quad quads[];
+} quadBuffer;
+layout(set = 0, binding = 7) buffer readonly VertexBuffer {
     Vertex vertices[];
 } vertexBuffer;
-layout(set = 0, binding = 7) buffer readonly IndexBuffer {
+layout(set = 0, binding = 8) buffer readonly IndexBuffer {
     uint indices[];
 } indexBuffer;
-layout(set = 0, binding = 8) buffer readonly BvhBuffer {
+layout(set = 0, binding = 9) buffer readonly BvhBuffer {
     BvhNode bvhNodes[];
 } bvhBuffer;
-layout(set = 0, binding = 9) buffer readonly MeshBuffer {
+layout(set = 0, binding = 10) buffer readonly MeshBuffer {
     Mesh meshes[];
 } meshBuffer;
-layout(set = 0, binding = 10) buffer readonly MaterialBuffer {
+layout(set = 0, binding = 11) buffer readonly MaterialBuffer {
     Material materials[];
 } materialBuffer;
-layout(set = 0, binding = 11) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 12) buffer readonly ObjectBuffer {
     uint objectCount;
     Object objects[];
 } objectBuffer;
-layout(set = 0, binding = 12) buffer readonly LightBuffer {
+layout(set = 0, binding = 13) buffer readonly LightBuffer {
     float totalArea;
     Light lights[];
 } lightBuffer;
-layout(set = 0, binding = 13) buffer readonly QuadBuffer {
-    Quad quads[];
-} quadBuffer;
 
 layout(set = 0, binding = 15) uniform sampler2D lensSampler;
 

@@ -4,8 +4,13 @@
 #include "VkSmol/graph/render_graph_builder.hpp"
 
 #include "core/core.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/component.hpp"
+#include "core/ecs/components/core.hpp"
+#include "core/ecs/entity.hpp"
 #include "core/parameters/parameters.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include <cmath>
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {
     renderExtent = extent;
@@ -63,14 +68,14 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.readBuffer(3, resources.sceneHandles.sphere.handle, BufferUsageType::Storage);
     pathtrace.readBuffer(4, resources.sceneHandles.plane.handle, BufferUsageType::Storage);
     pathtrace.readBuffer(5, resources.sceneHandles.box.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(6, resources.sceneHandles.vertex.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(7, resources.sceneHandles.index.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(8, resources.sceneHandles.bvh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(9, resources.sceneHandles.mesh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(10, resources.sceneHandles.material.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(11, resources.sceneHandles.object.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(12, resources.sceneHandles.light.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(13, resources.sceneHandles.quad.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(6, resources.sceneHandles.quad.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(7, resources.sceneHandles.vertex.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(8, resources.sceneHandles.index.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(9, resources.sceneHandles.bvh.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(10, resources.sceneHandles.mesh.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(11, resources.sceneHandles.material.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(12, resources.sceneHandles.object.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(13, resources.sceneHandles.light.handle, BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle, ImageUsageType::Storage);
     pathtrace.readImage(15, lensImageHandle, ImageUsageType::Sampled);
     pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
@@ -106,7 +111,7 @@ void PathtraceRenderer::setDefaultUBOs() {
     compositingUBO.denoisingEnabled = parameters.get<bool>("renderer/denoising");
 }
 
-void PathtraceRenderer::render(const FrameContext& frameContext, const Camera& camera) {
+void PathtraceRenderer::render(const FrameContext& frameContext, const ecs::Entity& camera) {
     VkSmol& engine = Core::getEngine();
 
     const bool converged = isRenderFinished();
@@ -119,24 +124,38 @@ void PathtraceRenderer::render(const FrameContext& frameContext, const Camera& c
     pathtracerUBO.screen.size = { static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
 
-    const glm::vec3 dir = camera.getDirection();
+    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+
+    const glm::vec3 dir = directionFromRotation(t.get<glm::vec3>("rotation"));
     const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
     const glm::vec3 camUp = glm::cross(right, dir);
-    const float tanHFov = camera.getTanHFov();
+    const float tanHFov = glm::tan(glm::radians(effectiveFov(camera)) * 0.5f);
     const float aspect = pathtracerUBO.screen.aspect;
 
-    pathtracerUBO.camera.eye = camera.getPosition();
+    pathtracerUBO.camera.eye = t.get<glm::vec3>("position");
     pathtracerUBO.camera.U = right * aspect * tanHFov;
     pathtracerUBO.camera.V = camUp * tanHFov;
     pathtracerUBO.camera.W = dir;
-    pathtracerUBO.camera.thinLens.lensRadius = camera.getLensRadius();
-    pathtracerUBO.camera.thinLens.focusDistance = camera.getFocusDistance();
 
-    const TiltShiftState ts = camera.getTiltShift();
-    pathtracerUBO.camera.tiltShift.focusA = ts.focusA;
-    pathtracerUBO.camera.tiltShift.focusB = ts.focusB;
-    pathtracerUBO.camera.tiltShift.focusC = ts.focusC;
-    pathtracerUBO.camera.tiltShift.enabled = ts.enabled ? 1 : 0;
+    const bool hasTL = Core::getScene().getRegistry().has(camera, ecs::ThinLens);
+    float lensRadius = 0.0f;
+    float focusDistance = 10.0f;
+    if (hasTL) {
+        const ecs::Component& tl = Core::getScene().getRegistry().get(camera, ecs::ThinLens);
+        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+        lensRadius = lensRadiusFromFStop(tl.get<float>("focal_length") / sensorWidth, tl.get<float>("f_stop"));
+        focusDistance = tl.get<float>("focal_distance");
+    }
+    pathtracerUBO.camera.thinLens.lensRadius = lensRadius;
+    pathtracerUBO.camera.thinLens.focusDistance = focusDistance;
+
+    const auto ts = getTiltShiftState(camera);
+    pathtracerUBO.camera.tiltShift.enabled = ts.has_value();
+    if (ts.has_value()) {
+        pathtracerUBO.camera.tiltShift.focusA = ts->focusA;
+        pathtracerUBO.camera.tiltShift.focusB = ts->focusB;
+        pathtracerUBO.camera.tiltShift.focusC = ts->focusC;
+    }
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);

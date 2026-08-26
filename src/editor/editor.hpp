@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "core/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "editor_ui.hpp"
 #include "editor_renderer.hpp"
@@ -20,9 +21,6 @@ public:
     static std::optional<ecs::Entity> getSelectedEntity();
     static void selectEntity(std::optional<ecs::Entity> entity);
 
-    static void setPreviewCamera(ecs::Entity entity);
-    static void clearPreviewCamera();
-
 private:
     Editor() = default;
     static Editor& get();
@@ -38,5 +36,6 @@ private:
     InputHandler inputHandler;
     EditorRenderer editorRenderer;
     MaterialPreview materialPreview;
+
     std::optional<ecs::Entity> selectedEntity;
 };

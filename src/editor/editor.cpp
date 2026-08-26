@@ -25,24 +25,13 @@ void Editor::setSelectedEntity(ecs::Entity entity) { get().selectedEntity = enti
 void Editor::clearSelectedEntity() { get().selectedEntity.reset(); }
 
 void Editor::selectEntity(std::optional<ecs::Entity> entity) {
-    clearPreviewCamera();
+    Core::getScene().resetActiveCamera();
 
     const bool changed = get().selectedEntity != entity;
     if (entity.has_value()) setSelectedEntity(*entity);
     else clearSelectedEntity();
 
     if (changed) Core::markDirty();
-}
-
-void Editor::setPreviewCamera(ecs::Entity entity) {
-    if (!Core::getScene().getRegistry().has(entity, ecs::Camera)) return;
-    Core::getScene().getCamera().setPreviewCamera(entity);
-    Core::markDirty();
-}
-
-void Editor::clearPreviewCamera() {
-    if (Core::getScene().getCamera().clearPreviewCamera())
-        Core::markDirty();
 }
 
 void Editor::stepAnimation(float deltaTime) {

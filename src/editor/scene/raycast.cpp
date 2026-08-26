@@ -1,27 +1,35 @@
 #include "raycast.hpp"
 
+#include "core/core.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/component.hpp"
+#include "core/ecs/components/core.hpp"
+#include "core/ecs/entity.hpp"
+#include "core/ecs/components.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/camera/camera.hpp"
 
-Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const Camera& camera) {
+Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::Entity& camera) {
+    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+
     const float invWidth = 1.0f / screenSize.x;
     const float invHeight = 1.0f / screenSize.y;
 
-    const glm::vec3 forward = glm::normalize(camera.getDirection());
-    const glm::vec3 right = glm::normalize(glm::cross(forward, camera.getUp()));
+    const glm::vec3 forward = directionFromRotation(t.get<glm::vec3>("rotation"));
+    const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
     const glm::vec3 up = glm::cross(right, forward);
 
     const float ndcX = mousePos.x * 2.0f * invWidth - 1.0f;
     const float ndcY = 1.0f - mousePos.y * 2.0f * invHeight;
 
-    const float tanHFov = camera.getTanHFov();
+    const float tanHFov = glm::tan(glm::radians(effectiveFov(camera)) * 0.5f);
     const float aspect = screenSize.x * invHeight;
 
     const float camX = ndcX * aspect * tanHFov;
     const float camY = ndcY * tanHFov;
 
     glm::vec3 dir = glm::normalize(camX * right + camY * up + forward);
-    return Ray{ camera.getPosition(), dir };
+    return Ray{ t.get<glm::vec3>("position"), dir };
 }
 
 float raySphereIntersection(const Ray& ray, const glm::vec3& center, const float& radius) {

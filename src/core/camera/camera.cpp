@@ -1,6 +1,10 @@
 #include "camera.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/component_type.hpp"
+#include "core/ecs/components/core.hpp"
 
 #include <cmath>
+#include <cstddef>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
@@ -8,195 +12,86 @@
 
 #include "core/core.hpp"
 
-void Camera::setTiltShift(glm::vec3 planePosition, glm::vec3 planeRotationEuler) {
-    const glm::vec3 worldNormal = glm::normalize(
-        glm::quat(glm::radians(planeRotationEuler)) * glm::vec3(0.0f, 0.0f, 1.0f));
+glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
+    return glm::normalize(glm::quat(glm::radians(rotationEuler)) * glm::vec3(0.0f, 0.0f, -1.0f));
+}
 
-    const glm::vec3 camDir = getDirection();
+float effectiveFov(ecs::Entity camera) {
+    const ecs::Component& c = Core::getScene().getRegistry().get(camera, ecs::Camera);
+    const float fov = c.get<float>("fov");
+    if (Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isPreviewing() || camera != Core::getScene().getCamera())
+        return fov;
+    return glm::degrees(2.0f * glm::atan(glm::tan(glm::radians(fov) * 0.5f) / 0.8f));
+}
+
+std::optional<TiltShiftState> getTiltShiftState(ecs::Entity camera) {
+    if (!Core::getScene().getRegistry().has(camera, ecs::TiltShiftLens)) return std::nullopt;
+
+    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+    const ecs::Component& tl = Core::getScene().getRegistry().get(camera, ecs::TiltShiftLens);
+
+    const glm::vec3 worldNormal = glm::normalize(
+        glm::quat(glm::radians(tl.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f)
+    );
+
+    const glm::vec3 camDir = directionFromRotation(t.get<glm::vec3>("rotation"));
     const glm::vec3 camRight = glm::normalize(glm::cross(camDir, glm::vec3(0.0f, 1.0f, 0.0f)));
     const glm::vec3 camUp = glm::cross(camRight, camDir);
-    const glm::vec3 diff = planePosition - position;
+    const glm::vec3 diff = tl.get<glm::vec3>("plane_position") - t.get<glm::vec3>("position");
 
     const glm::vec3 center = glm::vec3(
         glm::dot(diff, camRight),
         glm::dot(diff, camUp),
-        glm::dot(diff, camDir));
+        glm::dot(diff, camDir)
+    );
     const glm::vec3 normal = glm::normalize(glm::vec3(
         glm::dot(worldNormal, camRight),
         glm::dot(worldNormal, camUp),
-        glm::dot(worldNormal, camDir)));
+        glm::dot(worldNormal, camDir))
+    );
 
     const glm::vec3 arbUp = std::abs(glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f))) < 0.99f
         ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
     const glm::vec3 right = glm::normalize(glm::cross(normal, arbUp));
     const glm::vec3 upOnPlane = glm::cross(normal, right);
 
-    tiltShift.enabled = true;
-    tiltShift.focusA = center + right;
-    tiltShift.focusB = center - right;
-    tiltShift.focusC = center + upOnPlane;
+    TiltShiftState state;
+    state.focusA = center + right;
+    state.focusB = center - right;
+    state.focusC = center + upOnPlane;
+
+    return state;
 }
 
-void Camera::updateYawPitchFromDirection(const glm::vec3& dir, float& yaw, float& pitch) {
-    const glm::vec3 n = glm::normalize(dir);
-    yaw = glm::degrees(atan2(n.z, n.x));
-    pitch = glm::degrees(asin(n.y));
+glm::mat4 getView(ecs::Entity camera) {
+    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+    const glm::vec3 position = t.get<glm::vec3>("position");
+    return glm::lookAt(
+        position,
+        position + directionFromRotation(t.get<glm::vec3>("rotation")),
+        glm::vec3(0, 1, 0)
+    );
 }
 
-Camera::Camera(glm::vec3 position)
-    : position(position),
-      target(glm::vec3(0.0f)) {
-    orbitDistance = glm::length(target - position);
-    if (orbitDistance < 0.1f) orbitDistance = 0.1f;
-    updateYawPitchFromDirection(getDirection(), yaw, pitch);
+glm::mat4 getProjection(ecs::Entity camera, float aspect) {
+    return glm::perspective(
+        glm::radians(effectiveFov(camera)),
+        aspect, 1e-4f, 1e4f
+    );
 }
 
-bool Camera::cursorPosCallback(double x, double y) {
-    if (locked || dragMode == DragMode::None) return false;
-
-    bool change = false;
-
-    if (firstMouse) {
-        lastX = x;
-        lastY = y;
-        firstMouse = false;
-        updateYawPitchFromDirection(getDirection(), yaw, pitch);
-    }
-
-    float xoffset = x - lastX;
-    float yoffset = lastY - y;
-    if (xoffset != 0 || yoffset != 0) change = true;
-    lastX = x;
-    lastY = y;
-
-    const glm::vec3 dir = getDirection();
-    const glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
-    const glm::vec3 camUp = glm::normalize(glm::cross(right, dir));
-
-    if (dragMode == DragMode::Pan) {
-        float panScale = panSensitivity * orbitDistance;
-        glm::vec3 offset = (right * xoffset + camUp * yoffset) * panScale;
-        position -= offset;
-        target -= offset;
-        setTarget(target);
-        return change;
-    }
-
-    if (dragMode == DragMode::Dolly) {
-        float dollyDelta = yoffset * dollySensitivity * orbitDistance;
-        orbitDistance = glm::max(0.1f, orbitDistance + dollyDelta);
-        position = target - dir * orbitDistance;
-        setTarget(target);
-        return change;
-    }
-
-    float zoomSensitivityFactor = glm::min(getFov() / 80.0f, 1.0f);
-    xoffset *= sensitivity * zoomSensitivityFactor;
-    yoffset *= sensitivity * zoomSensitivityFactor;
-
-    yaw   += xoffset;
-    pitch = glm::clamp(pitch + yoffset, -89.0f, 89.0f);
-
-    glm::vec3 newDir;
-    newDir.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    newDir.y = sin(glm::radians(pitch));
-    newDir.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    newDir = glm::normalize(newDir);
-
-    if (dragMode == DragMode::Look) {
-        target = position + newDir * orbitDistance;
-        setTarget(target);
-        return change;
-    }
-
-    if (dragMode == DragMode::Orbit) {
-        position = target - newDir * orbitDistance;
-        setTarget(target);
-        return change;
-    }
-
-    return change;
+float fovFromFocalLength(float normalizedFocalLength) {
+    return 2.0f * glm::degrees(glm::atan(0.5f / normalizedFocalLength));
 }
 
-bool Camera::scrollCallback(double xoffset, double yoffset) {
-    setFov(getFov() - static_cast<float>(yoffset));
-    return yoffset != 0;
+float focalLengthFromFov(float fovDegrees) {
+    return 0.5f / glm::tan(glm::radians(fovDegrees) * 0.5f);
 }
 
-bool Camera::processInput(float deltaTime) {
-    Platform& platform = Core::getPlatform();
-    float velocity = speed * deltaTime;
-    if (platform.getKey(GLFW_KEY_LEFT_CONTROL)) {
-        velocity /= 8.0f;
-    }
-
-    bool change = false;
-
-    const bool rmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
-    const bool mmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
-    const bool shift = platform.getKey(GLFW_KEY_LEFT_SHIFT) || platform.getKey(GLFW_KEY_RIGHT_SHIFT);
-    const bool ctrl  = platform.getKey(GLFW_KEY_LEFT_CONTROL) || platform.getKey(GLFW_KEY_RIGHT_CONTROL);
-
-    DragMode newDragMode = DragMode::None;
-    if (rmb) {
-        newDragMode = DragMode::Look;
-    } else if (mmb) {
-        if (shift) newDragMode = DragMode::Pan;
-        else if (ctrl) newDragMode = DragMode::Dolly;
-        else newDragMode = DragMode::Orbit;
-    }
-
-    if (newDragMode != dragMode) {
-        dragMode = newDragMode;
-        if (dragMode != DragMode::None) {
-            resetMouse();
-            orbitDistance = glm::length(target - position);
-            if (orbitDistance < 0.1f) orbitDistance = 0.1f;
-        }
-    }
-
-    locked = (dragMode == DragMode::None);
-
-    if (dragMode == DragMode::Look) {
-        glm::vec3 dir = getDirection();
-        glm::vec3 right = glm::normalize(glm::cross(dir, getUp()));
-
-        if (platform.getKey(GLFW_KEY_W)) {
-            position += dir * velocity;
-            target += dir * velocity;
-            change = true;
-        }
-        if (platform.getKey(GLFW_KEY_S)) {
-            position -= dir * velocity;
-            target -= dir * velocity;
-            change = true;
-        }
-        if (platform.getKey(GLFW_KEY_A)) {
-            position -= right * velocity;
-            target -= right * velocity;
-            change = true;
-        }
-        if (platform.getKey(GLFW_KEY_D)) {
-            position += right * velocity;
-            target += right * velocity;
-            change = true;
-        }
-        if (platform.getKey(GLFW_KEY_SPACE)) {
-            position += getUp() * velocity;
-            target += getUp() * velocity;
-            change = true;
-        }
-        if (platform.getKey(GLFW_KEY_LEFT_SHIFT)) {
-            position -= getUp() * velocity;
-            target -= getUp() * velocity;
-            change = true;
-        }
-    }
-
-    if (change) setTarget(target);
-    return change;
+float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
+    return fStop > 0.0f ? normalizedFocalLength / (2.0f * fStop) : 0.0f;
 }
 
-glm::mat4 Camera::getProjection(float aspect) const {
-    return glm::perspective(glm::radians(fov), aspect, 1e-4f, 1e4f);
+float blurFractionFromShutter(float seconds, float fps) {
+    return seconds * fps;
 }

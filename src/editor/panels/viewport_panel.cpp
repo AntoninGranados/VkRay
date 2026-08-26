@@ -2,10 +2,15 @@
 
 #include <limits>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/entity.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
@@ -13,7 +18,7 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/gpu_structs.hpp"
-#include "editor/ecs/systems/camera_drawing_system.hpp"
+#include "editor/ecs/systems/camera_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"
 #include "editor/ui_utils.hpp"
@@ -50,7 +55,7 @@ void ViewportPanel::content() {
             float dist;
             auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
             if (hit.has_value()) {
-                scene.getCamera().setFocusDistance(dist);
+                scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focus_distance", dist);
                 Core::markDirty();
             }
         }
@@ -80,10 +85,10 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
         * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
-    const Camera& camera = scene.getCamera();
+    const ecs::Entity& camera = scene.getCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
-    const glm::mat4 view = camera.getView();
-    const glm::mat4 proj = camera.getProjection(aspect);
+    const glm::mat4 view = getView(camera);
+    const glm::mat4 proj = getProjection(camera, aspect);
 
     // Keep gizmo orientation in world space: avoid mixing scale with other ops.
     const int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE;
@@ -101,13 +106,15 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         }
 
         // TODO: move transform update to a better place
-        glm::vec3 translation, rotationEuler, scale;
-        ImGuizmo::DecomposeMatrixToComponents(
-            glm::value_ptr(model),
-            glm::value_ptr(translation),
-            glm::value_ptr(rotationEuler),
-            glm::value_ptr(scale));
-
+        glm::vec3 translation, scale, skew;
+        glm::quat rotation;
+        glm::vec4 perspective;
+        glm::decompose(model,
+            scale, rotation, translation,
+            skew, perspective
+        );
+        glm::vec3 rotationEuler = glm::eulerAngles(rotation);
+        
         t.set<glm::vec3>("position", translation);
         t.set<glm::vec3>("rotation", rotationEuler);
         t.set<glm::vec3>("scale", scale);
@@ -155,7 +162,7 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
     auto& cameraStorage = scene.getRegistry().storage(ecs::Camera);
     auto& transformStorage = scene.getRegistry().storage(ecs::Transform);
 
-    const ::Camera& sceneCamera = scene.getCamera();
+    const ecs::Entity& activeCamera = scene.getCamera();
     for (const ecs::Entity& e : scene.getChildren(scene.getObjectsRoot())) {
         if (!transformStorage.has(e)) continue;
 
@@ -188,7 +195,7 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
                 t = rayMeshIntersection(ray, local, asset->getVertices(), asset->getIndices());
             }
         } else if (includeCameras && cameraStorage.has(e)) {
-            if (sceneCamera.isPreviewEntity(e)) continue;
+            if (activeCamera == e) continue;
             constexpr float cameraSelectRadius = 0.6f;
             t = raySphereIntersection(ray, tPos, cameraSelectRadius);
         }

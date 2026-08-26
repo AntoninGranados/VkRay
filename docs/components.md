@@ -74,6 +74,13 @@ Custom image mask as aperture shape.
 |-------|------|---------|-------------|------------|
 | `path` | path |  |  | no |
 
+## Internal
+
+### Camera Navigation
+Live interactive navigation state for the active camera.
+
+**Needs:** `camera`
+
 ## Material
 
 ### Material
