@@ -77,7 +77,7 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
         return;
     }
     c.scene.runOnRender(*frameContext);
-    c.coreRenderer.render(*frameContext, c.scene.getCamera());
+    c.coreRenderer.render(*frameContext, c.scene.getRegistry(), c.scene.getCamera());
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
 }

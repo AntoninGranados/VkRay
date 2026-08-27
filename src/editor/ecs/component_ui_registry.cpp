@@ -151,7 +151,17 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Dielectric);
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
-    ui_reg.add(ecs::ProgrammableMaterial);
+    ui_reg.add(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity) {
+        ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
+        shader.parse(c.get<std::filesystem::path>("path"));
+
+        if (!shader.getError().empty())
+            ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", shader.getError().c_str());
+
+        for (Field& param : shader.getParams())
+            ui::drawField(param, "##" + param.getId());
+        return false;
+    });
 }
 
 } // namespace ecs

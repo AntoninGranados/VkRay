@@ -200,7 +200,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
         const glm::vec3 dir   = directionFromRotation(t.get<glm::vec3>("rotation"));
         const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
         const glm::vec3 camUp = glm::cross(right, dir);
-        const float tanHFov   = glm::tan(glm::radians(effectiveFov(camera)) * 0.5f);
+        const float tanHFov   = glm::tan(glm::radians(effectiveFov(reg, camera)) * 0.5f);
         const float aspect    = viewportE.height > 0
             ? static_cast<float>(viewportE.width) / static_cast<float>(viewportE.height) : 1.0f;
         displayUBO.camera.eye = t.get<glm::vec3>("position");

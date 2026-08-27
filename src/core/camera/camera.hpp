@@ -7,6 +7,8 @@
 
 #include "core/ecs/entity.hpp"
 
+namespace ecs { class Registry; }
+
 struct TiltShiftState {
     glm::vec3 focusA  = { -1.0f, 0.0f, 5.0f };
     glm::vec3 focusB  = {  1.0f, 0.0f, 5.0f };
@@ -14,11 +16,11 @@ struct TiltShiftState {
 };
 
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler);
-float effectiveFov(ecs::Entity camera);
+float effectiveFov(const ecs::Registry& registry, ecs::Entity camera);
 
-std::optional<TiltShiftState> getTiltShiftState(ecs::Entity camera);
-glm::mat4 getView(ecs::Entity camera);
-glm::mat4 getProjection(ecs::Entity camera, float aspect);
+std::optional<TiltShiftState> getTiltShiftState(const ecs::Registry& registry, ecs::Entity camera);
+glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera);
+glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect);
 
 float fovFromFocalLength(float normalizedFocalLength);
 float focalLengthFromFov(float fovDegrees);

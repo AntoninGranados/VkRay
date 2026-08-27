@@ -134,7 +134,7 @@ void Scene::addDefaultAssets() {
 
     defaultMaterial = createNamedEntity("Default Material", sceneRoots.materialsRoot);
     registry.add(defaultMaterial, ecs::Diffuse);
-    registry.get(defaultMaterial, ecs::Diffuse).set<glm::vec3>("albedo", glm::vec3(1.0f, 0.0f, 1.0f));
+    registry.get(defaultMaterial, ecs::Diffuse).set<glm::vec3>("albedo", glm::vec3(0.5f, 0.0f, 0.5f));
 
     defaultMesh = createNamedEntity("Default Cube", sceneRoots.assetsRoot);
     registry.add(defaultMesh, ecs::Mesh);

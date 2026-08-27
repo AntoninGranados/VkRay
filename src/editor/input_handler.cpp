@@ -73,7 +73,7 @@ void InputHandler::handlePreview(float dt) {
     if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
         if (Core::getScene().isPreviewing()) {
             Core::getScene().resetActiveCamera();
-        } else if (const auto selected = Editor::getSelectedEntity()) {
+        } else if (const auto selected = Editor::getSelectedEntity(); selected && Core::getScene().getRegistry().has(*selected, ecs::Camera)) {
             Core::getScene().setActiveCamera(*selected);
         }
     }

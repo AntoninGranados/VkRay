@@ -50,7 +50,7 @@ void ViewportPanel::content() {
             auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
             if (onEntitySelection) onEntitySelection(entityId);
         }
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && scene.getRegistry().has(scene.getCamera(), ecs::ThinLens)) {
             ImVec2 mp = ImGui::GetMousePos();
             float dist;
             auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
@@ -87,8 +87,8 @@ void ViewportPanel::drawGizmo(Scene& scene) {
 
     const ecs::Entity& camera = scene.getCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
-    const glm::mat4 view = getView(camera);
-    const glm::mat4 proj = getProjection(camera, aspect);
+    const glm::mat4 view = getView(scene.getRegistry(), camera);
+    const glm::mat4 proj = getProjection(scene.getRegistry(), camera, aspect);
 
     // Keep gizmo orientation in world space: avoid mixing scale with other ops.
     const int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE;
@@ -113,11 +113,13 @@ void ViewportPanel::drawGizmo(Scene& scene) {
             scale, rotation, translation,
             skew, perspective
         );
-        glm::vec3 rotationEuler = glm::eulerAngles(rotation);
-        
+
+        const glm::quat oldRotation = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
+
         t.set<glm::vec3>("position", translation);
-        t.set<glm::vec3>("rotation", rotationEuler);
         t.set<glm::vec3>("scale", scale);
+        if (glm::abs(glm::dot(oldRotation, rotation)) < 0.99999f)
+            t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(rotation)));
         Core::markDirty();
     }
     ImGuizmo::PopID();

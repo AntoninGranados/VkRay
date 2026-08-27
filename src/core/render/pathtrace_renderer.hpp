@@ -29,7 +29,7 @@ public:
     void     restartAccumulation()       { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
     void setLightMode(LightMode mode) { pathtracerUBO.render.lightMode = mode; }
-    void render(const FrameContext& frameContext, const ecs::Entity& camera);
+    void render(const FrameContext& frameContext, const ecs::Registry& registry, const ecs::Entity& camera);
     void resize(uint32_t width, uint32_t height);
 
     VkExtent2D getRenderExtent() const { return renderExtent; }

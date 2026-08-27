@@ -2,7 +2,7 @@
 #define INPUTS_GLSL
 
 #include "utils.glsl"
-#include "materials/materials.glsl"
+#include "materials/material_utils.glsl"
 
 struct ThinLensUBO {
     float lensRadius;

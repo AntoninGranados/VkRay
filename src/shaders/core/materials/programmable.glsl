@@ -9,15 +9,23 @@
 #include "metal.glsl"
 #include "glossy.glsl"
 
+Material createProgrammableMaterial(in Material mat, inout Hit hit) {
+    return DEFAULT_MATERIAL;
+}
+
+#endif // PROGRAMMABLE_GLSL
+
+/*
+
 #define SCALE 1.0
 #define FEATHER 0.02
 #define SMALL_FEATHER 0.01
 
 // #define PROGRAMMABLE_SMOOTH_RANDOM
 // #define PROGRAMMABLE_GOLD_VEIN
-#define PROGRAMMABLE_MARBLE
+// #define PROGRAMMABLE_MARBLE
 // #define PROGRAMMABLE_CHECKERBOARD
-// #define PROGRAMMABLE_TEST_GRID
+#define PROGRAMMABLE_TEST_GRID
 // #define PROGRAMMABLE_POINT_GRID
 
 #define MATERIAL_NORMAL mat_makeGlossy(mat_albedo(mat), 0.1, 2.0)
@@ -35,84 +43,6 @@ vec2 planeCoords(in Hit hit) {
     vec3 t = normalize(cross(up, hit.normal));
     vec3 b = cross(hit.normal, t);
     return vec2(dot(hit.p, t), dot(hit.p, b));
-}
-
-float fade(float t) {
-    return 6 * pow(t, 5) - 15 * pow(t, 4) + 10 * pow(t, 3);
-}
-
-// 3D gradient noise. For a 2D sample, just pass p.z = 0.
-float perlinNoise(vec3 p) {
-    vec3 cell = p / SCALE;
-    vec3 f = fract(cell);
-    ivec3 p0 = ivec3(floor(cell));
-
-    uint s;
-    s = initSeed(p0 + ivec3(0, 0, 0), 0); vec3 grad000 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(1, 0, 0), 0); vec3 grad100 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(0, 1, 0), 0); vec3 grad010 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(1, 1, 0), 0); vec3 grad110 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(0, 0, 1), 0); vec3 grad001 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(1, 0, 1), 0); vec3 grad101 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(0, 1, 1), 0); vec3 grad011 = randomInSphere(s);
-    s = initSeed(p0 + ivec3(1, 1, 1), 0); vec3 grad111 = randomInSphere(s);
-
-    float n000 = dot(grad000, f - vec3(0, 0, 0));
-    float n100 = dot(grad100, f - vec3(1, 0, 0));
-    float n010 = dot(grad010, f - vec3(0, 1, 0));
-    float n110 = dot(grad110, f - vec3(1, 1, 0));
-    float n001 = dot(grad001, f - vec3(0, 0, 1));
-    float n101 = dot(grad101, f - vec3(1, 0, 1));
-    float n011 = dot(grad011, f - vec3(0, 1, 1));
-    float n111 = dot(grad111, f - vec3(1, 1, 1));
-
-    float u = fade(f.x); float v = fade(f.y); float w = fade(f.z);
-
-    float nx00 = mix(n000, n100, u);
-    float nx10 = mix(n010, n110, u);
-    float nx01 = mix(n001, n101, u);
-    float nx11 = mix(n011, n111, u);
-
-    float nxy0 = mix(nx00, nx10, v);
-    float nxy1 = mix(nx01, nx11, v);
-
-    return mix(nxy0, nxy1, w);
-}
-
-const mat3 NOISE_ROTATION = mat3(
-    0.00,  0.80,  0.60,
-    -0.80,  0.36, -0.48,
-    -0.60, -0.48,  0.64
-);
-
-const float FBM_SIGMA = 0.115;
-
-float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
-    float amplitude = 1.0;
-    float maxAmplitude = 0.0;
-    float sum = 0.0;
-    vec3 q = NOISE_ROTATION * p;
-    for (int i = 0; i < octaves; i++) {
-        sum += amplitude * perlinNoise(q);
-        maxAmplitude += amplitude;
-        amplitude *= gain;
-        q = NOISE_ROTATION * (q * lacunarity);
-    }
-    return sum / (maxAmplitude * FBM_SIGMA);
-}
-
-float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
-    float amplitude = 1.0;
-    float maxAmplitude = 0.0;
-    float sum = 0.0;
-    vec3 q = NOISE_ROTATION * p;
-    for (int i = 0; i < octaves; i++) {
-        sum += amplitude * abs(perlinNoise(q));
-        maxAmplitude += amplitude;
-        amplitude *= gain;
-        q = NOISE_ROTATION * (q * lacunarity);
-    }
-    return sum / (maxAmplitude * 0.16);
 }
 
 float veinMaskAt(vec3 p) {
@@ -190,24 +120,10 @@ Material createProgrammableMaterial(in Material mat, inout Hit hit) {
 
     float t = vein;
     return mat_makeGlossy(
-        mix(rockColor, veinColor, vein), 
+        mix(rockColor, veinColor, vein),
         mix(rockRoughness, veinRoughness, vein),
         2
     );
-
-    // int veinOctaves = 5;
-    // float veinLacunarity = 2.0;
-    // float veinGain = 0.5;
-    // float t = (turbulence(pos, veinOctaves, veinLacunarity, veinGain) + 1) / 2;
-    
-    // float band = 0.5 + 0.5 * sin(pos.y * PI + t * 6.0);
-    // float vein = pow(1.0 - band, 6.0);
-
-    // vec3 rockColor = vec3(1.0);
-    // float rockRoughness = 0.1;
-    // vec3 veinColor = vec3(0.0);
-    // float veinRoughness = 0.9;
-
 
 #elif defined(PROGRAMMABLE_CHECKERBOARD)
     if (int(round(p.x / SCALE) + round(p.y / SCALE) + 1) % 2 == 0) {
@@ -238,4 +154,4 @@ Material createProgrammableMaterial(in Material mat, inout Hit hit) {
 #endif
 }
 
-#endif // PROGRAMMABLE_GLSL
+*/

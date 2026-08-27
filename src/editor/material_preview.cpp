@@ -173,7 +173,7 @@ void MaterialPreview::tick(const FrameContext& frameContext) {
     }
 
     scene.runOnRender(frameContext);
-    renderer.render(frameContext, scene.getCamera());
+    renderer.render(frameContext, scene.getRegistry(), scene.getCamera());
 
     if (inFlight.has_value() && renderer.isRenderFinished())
         finishGeneration();

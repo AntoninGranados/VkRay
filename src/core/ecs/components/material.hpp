@@ -1,11 +1,14 @@
 #pragma once
 
+#include <filesystem>
+
 #include <glm/glm.hpp>
 
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/entity.hpp"
+#include "core/materials/programmable_shader.hpp"
 
 namespace ecs {
 
@@ -105,12 +108,13 @@ inline const ComponentType Principled = ComponentType::builder("principled")
     .build();
 
 inline const ComponentType ProgrammableMaterial = ComponentType::builder("programmable")
-    .description("Programmable custom BSDF.")
+    .description("Programmable custom BSDF, defined by a GLSL shader-definition file.")
     .icon(ICON_FA_CODE)
     .group("material")
     .needs("material")
     .conflicts("diffuse", "emissive", "metal", "glossy", "dielectric", "volume", "principled")
-    .field<glm::vec3>("albedo", glm::vec3(0.8f), NumericMeta{ .min = 0.0f, .max = 1.0f, .step = 0.01f, .color = true }, true)
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Material Shader" }} })
+    .payload<ProgrammableShader>("shader")
     .build();
 
 }   // namespace ecs

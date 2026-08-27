@@ -2,6 +2,7 @@
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/components/core.hpp"
+#include "core/ecs/registry.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -16,19 +17,19 @@ glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
     return glm::normalize(glm::quat(glm::radians(rotationEuler)) * glm::vec3(0.0f, 0.0f, -1.0f));
 }
 
-float effectiveFov(ecs::Entity camera) {
-    const ecs::Component& c = Core::getScene().getRegistry().get(camera, ecs::Camera);
+float effectiveFov(const ecs::Registry& registry, ecs::Entity camera) {
+    const ecs::Component& c = registry.get(camera, ecs::Camera);
     const float fov = c.get<float>("fov");
-    if (Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isPreviewing() || camera != Core::getScene().getCamera())
+    if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isPreviewing() || camera != Core::getScene().getCamera())
         return fov;
     return glm::degrees(2.0f * glm::atan(glm::tan(glm::radians(fov) * 0.5f) / 0.8f));
 }
 
-std::optional<TiltShiftState> getTiltShiftState(ecs::Entity camera) {
-    if (!Core::getScene().getRegistry().has(camera, ecs::TiltShiftLens)) return std::nullopt;
+std::optional<TiltShiftState> getTiltShiftState(const ecs::Registry& registry, ecs::Entity camera) {
+    if (!registry.has(camera, ecs::TiltShiftLens)) return std::nullopt;
 
-    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
-    const ecs::Component& tl = Core::getScene().getRegistry().get(camera, ecs::TiltShiftLens);
+    const ecs::Component& t = registry.get(camera, ecs::Transform);
+    const ecs::Component& tl = registry.get(camera, ecs::TiltShiftLens);
 
     const glm::vec3 worldNormal = glm::normalize(
         glm::quat(glm::radians(tl.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f)
@@ -63,8 +64,8 @@ std::optional<TiltShiftState> getTiltShiftState(ecs::Entity camera) {
     return state;
 }
 
-glm::mat4 getView(ecs::Entity camera) {
-    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
+    const ecs::Component& t = registry.get(camera, ecs::Transform);
     const glm::vec3 position = t.get<glm::vec3>("position");
     return glm::lookAt(
         position,
@@ -73,9 +74,9 @@ glm::mat4 getView(ecs::Entity camera) {
     );
 }
 
-glm::mat4 getProjection(ecs::Entity camera, float aspect) {
+glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
     return glm::perspective(
-        glm::radians(effectiveFov(camera)),
+        glm::radians(effectiveFov(registry, camera)),
         aspect, 1e-4f, 1e4f
     );
 }

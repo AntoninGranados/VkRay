@@ -90,7 +90,7 @@ struct BSDFEval {
     float pdf;
 };
 
-#define DEFAULT_MATERIAL mat_makeDiffuse(vec3(0.7, 0.0, 0.7))
+#define DEFAULT_MATERIAL materialBuffer.materials[0]
 
 // ============== REFRACTION/REFLECTION ==============
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)

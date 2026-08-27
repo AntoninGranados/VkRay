@@ -167,6 +167,8 @@ public:
     template<typename T> T getDefault() const { return readBlob<T>(defaultValue); }
     template<typename T> void setDefault(const T& v) { writeBlob(defaultValue, v); }
 
+    static Field makeNumeric(FieldType type, std::string id, std::string label, const std::vector<float>& values, NumericMeta metadata = {});
+
     void reset() { value = defaultValue; }
 
     int findPreset() const {

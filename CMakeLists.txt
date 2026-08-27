@@ -33,30 +33,13 @@ configure_file(
 )
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
-find_package(Vulkan REQUIRED)
-
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory("${CMAKE_SOURCE_DIR}/external/glfw" glfw)
-set(VKRAY_GLFW_TARGET glfw)
-
-file(GLOB VKRAY_IMGUI_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/external/imgui/*.cpp")
-add_library(imgui STATIC ${VKRAY_IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC
-  "${CMAKE_SOURCE_DIR}/external/imgui"
-)
-target_link_libraries(imgui PUBLIC ${VKRAY_GLFW_TARGET} Vulkan::Vulkan)
-target_compile_options(imgui PRIVATE -Wno-nontrivial-memcall)
-
 add_library(tinyexr STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
 target_include_directories(tinyexr PUBLIC
   "${CMAKE_SOURCE_DIR}/external/tinyexr"
 )
 
 # ── Engine submodule ──────────────────────────────────────────────────────────
-set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/imgui;${CMAKE_SOURCE_DIR}/external")
+set(VKSMOL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external")
 add_subdirectory("${CMAKE_SOURCE_DIR}/external/VkSmol" engine)
 
 # ── NFD (Native File Dialog Extended) ────────────────────────────────────────

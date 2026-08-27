@@ -63,8 +63,8 @@ void cameraDrawingSystem(Registry& registry) {
         const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
         const float fov = glm::radians(c.get<float>("fov"));
 
-        const glm::mat4 view = getView(activeCamera);
-        const glm::mat4 proj = getProjection(activeCamera, aspect);
+        const glm::mat4 view = getView(registry, activeCamera);
+        const glm::mat4 proj = getProjection(registry, activeCamera, aspect);
         const glm::mat4 viewProj = proj * view;
 
         const glm::vec3 camPos = t.get<glm::vec3>("position");

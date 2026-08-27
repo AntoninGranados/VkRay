@@ -312,9 +312,7 @@ void materialPackingSystem(Registry& registry) {
             gpu.payload[3] = c.get<float>("density");
             gpu.payload[4] = c.get<float>("anisotropic");
         } else if (registry.has(entity, ecs::ProgrammableMaterial)) {
-            const Component& c = registry.get(entity, ecs::ProgrammableMaterial);
             gpu.type = 7;
-            albedo(c);
         } else if (slot > 0 && !gpuMaterials.empty()) {
             gpu = gpuMaterials[0];
         }

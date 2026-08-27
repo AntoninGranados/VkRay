@@ -10,7 +10,8 @@
 #include "core/camera/camera.hpp"
 
 Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::Entity& camera) {
-    const ecs::Component& t = Core::getScene().getRegistry().get(camera, ecs::Transform);
+    const ecs::Registry& registry = Core::getScene().getRegistry();
+    const ecs::Component& t = registry.get(camera, ecs::Transform);
 
     const float invWidth = 1.0f / screenSize.x;
     const float invHeight = 1.0f / screenSize.y;
@@ -22,7 +23,7 @@ Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::En
     const float ndcX = mousePos.x * 2.0f * invWidth - 1.0f;
     const float ndcY = 1.0f - mousePos.y * 2.0f * invHeight;
 
-    const float tanHFov = glm::tan(glm::radians(effectiveFov(camera)) * 0.5f);
+    const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
     const float aspect = screenSize.x * invHeight;
 
     const float camX = ndcX * aspect * tanHFov;
