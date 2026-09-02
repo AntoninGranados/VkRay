@@ -17,7 +17,7 @@
 #include "scene.hpp"
 #include "utils/log.hpp"
 
-static constexpr int SCENE_VERSION = 1;
+static constexpr int kSceneVersion = 1;
 
 namespace {
 
@@ -265,8 +265,8 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     scene.clear();
 
     const int version = j.value("version", -1);
-    if (version != SCENE_VERSION) {
-        Log::error("SceneSerializer", std::format("Scene version mismatch in '{}': expected {}, got {}", path, SCENE_VERSION, version));
+    if (version != kSceneVersion) {
+        Log::error("SceneSerializer", std::format("Scene version mismatch in '{}': expected {}, got {}", path, kSceneVersion, version));
         return false;
     }
 
@@ -407,7 +407,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
 bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string& path) {
     json j;
-    j["version"] = SCENE_VERSION;
+    j["version"] = kSceneVersion;
     j["light"] = toStr(kLightModes, lightMode);
 
     ecs::Registry& reg = scene.getRegistry();

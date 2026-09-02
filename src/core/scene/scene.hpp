@@ -14,7 +14,7 @@
 #include "core/ecs/registry.hpp"
 #include "core/ecs/components.hpp"
 #include "core/ecs/system_scheduler.hpp"
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 
 
 struct SceneGpuBufferEntry {
@@ -66,7 +66,7 @@ public:
     ecs::Entity getDefaultCamera() const { return defaultCamera; }
 
     ecs::Entity& getCamera() { return activeCamera; }
-    bool isPreviewing() { return activeCamera != defaultCamera; }   // TODO: find a better name
+    bool isUsingSceneCamera() { return activeCamera != defaultCamera; }
     void setActiveCamera(ecs::Entity newActiveCamera);
     bool resetActiveCamera();
     void activateSceneCamera();

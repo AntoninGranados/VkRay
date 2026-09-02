@@ -42,7 +42,7 @@ public:
     static void generateDispatch();
 
 private:
-    static const size_t SHADER_VERSION = 1;
+    static const size_t kShaderVersion = 1;
     static constexpr const char* KIND = "material";
 
     struct TypeInfo {

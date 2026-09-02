@@ -5,7 +5,7 @@
 
 class Scene;
 
-class InspectorPanel : public IPanel {
+class InspectorPanel : public Panel {
 private:
     void content() override;
     void drawAddComponentPopup(Scene& scene, ecs::Entity entity);

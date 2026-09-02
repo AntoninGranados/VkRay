@@ -13,8 +13,6 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "adaptive_sampling.glsl"
 #include "camera.glsl"
 
-layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
-
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     Hit bestHit = NO_HIT;
     for (int i = 0; i < objectBuffer.objectCount; i++) {

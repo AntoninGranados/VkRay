@@ -8,7 +8,7 @@
 #include "core/ecs/entity.hpp"
 #include "core/render/sample_accumulator.hpp"
 #include "core/scene/scene.hpp"
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 
 struct FrameContext;
 

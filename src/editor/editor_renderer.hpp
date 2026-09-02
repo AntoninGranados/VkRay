@@ -4,7 +4,7 @@
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/core_renderer.hpp"
-#include "editor/structures.hpp"
+#include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
 struct FrameContext;

@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-class DebugPanel : public IPanel {
+class DebugPanel : public Panel {
 private:
     void content() override;
 };

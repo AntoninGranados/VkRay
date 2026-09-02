@@ -1,5 +1,5 @@
-#ifndef OBJECT_GLSL
-#define OBJECT_GLSL
+#ifndef OBJECTS_GLSL
+#define OBJECTS_GLSL
 
 #include "utils.glsl"
 #include "random/utils.glsl"

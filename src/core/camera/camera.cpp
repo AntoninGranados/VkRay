@@ -20,7 +20,7 @@ glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
 float effectiveFov(const ecs::Registry& registry, ecs::Entity camera) {
     const ecs::Component& c = registry.get(camera, ecs::Camera);
     const float fov = c.get<float>("fov");
-    if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isPreviewing() || camera != Core::getScene().getCamera())
+    if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isUsingSceneCamera() || camera != Core::getScene().getCamera())
         return fov;
     return glm::degrees(2.0f * glm::atan(glm::tan(glm::radians(fov) * 0.5f) / 0.8f));
 }

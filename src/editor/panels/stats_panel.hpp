@@ -7,7 +7,7 @@
 
 #include "panel.hpp"
 
-class StatsPanel: public IPanel {
+class StatsPanel: public Panel {
 private:
     void content() override;
 

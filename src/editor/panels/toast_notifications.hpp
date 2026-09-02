@@ -6,7 +6,7 @@
 #include "panel.hpp"
 #include "utils/log.hpp"
 
-class ToastNotifications : public IPanel {
+class ToastNotifications : public Panel {
 public:
     ToastNotifications();
 

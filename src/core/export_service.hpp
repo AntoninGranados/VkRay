@@ -4,7 +4,7 @@
 
 #include "VkSmol/engine.hpp"
 
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 
 class ExportService {
 public:

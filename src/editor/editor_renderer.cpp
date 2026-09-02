@@ -29,9 +29,9 @@ int resolveSelectedObjectIndex(const ecs::Registry& reg, ecs::Entity selected) {
     int i = 0;
     auto check = [&](const ecs::ComponentType& type) {
         if (flatIdx >= 0) return;
-        for (const auto& ent : reg.storage(type).entities()) {
-            if (!allTransforms.has(ent)) continue;
-            if (ent == selected) { flatIdx = i; return; }
+        for (const auto& entity : reg.storage(type).entities()) {
+            if (!allTransforms.has(entity)) continue;
+            if (entity == selected) { flatIdx = i; return; }
             i++;
         }
     };
@@ -211,13 +211,13 @@ void EditorRenderer::render(const FrameContext& frameContext) {
 
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane = 0;
-    displayUBO.previewBorderEnabled = (Core::getRenderMode() == RenderMode::Preview && scene.isPreviewing()) ? 1 : 0;
+    displayUBO.previewBorderEnabled = (Core::getRenderMode() == RenderMode::Preview && scene.isUsingSceneCamera()) ? 1 : 0;
 
     if (selectedEntity.has_value()) {
         const ecs::Entity e = *selectedEntity;
         displayUBO.selectedObjectId = resolveSelectedObjectIndex(reg, e);
 
-        if (scene.isPreviewing()) {
+        if (scene.isUsingSceneCamera()) {
             const FocusPlane focus = resolveFocusPlane(reg, e, camera);
             if (focus.visible) {
                 displayUBO.showFocusPlane = 1;

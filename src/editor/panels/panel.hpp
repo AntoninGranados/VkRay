@@ -1,8 +1,8 @@
 #pragma once
 
-class IPanel {
+class Panel {
 public:
-    virtual ~IPanel() = default;
+    virtual ~Panel() = default;
     void draw() { content(); };
     
 private:

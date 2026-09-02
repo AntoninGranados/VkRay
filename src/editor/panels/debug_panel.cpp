@@ -5,7 +5,7 @@
 #include "core/core.hpp"
 #include "core/parameters/parameters.hpp"
 #include "core/core_renderer.hpp"
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
 

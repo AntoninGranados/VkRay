@@ -185,8 +185,8 @@ void cameraControlSystem(Registry& registry) {
     const ecs::Entity camera = Core::getScene().getCamera();
 
     Platform& platform = Core::getPlatform();
-    ecs::Component& ac = registry.get(camera, ecs::CameraNavigation);
-    CameraNavigationState& state = ac.payload<CameraNavigationState>("state");
+    ecs::Component& navigation = registry.get(camera, ecs::CameraNavigation);
+    CameraNavigationState& state = navigation.payload<CameraNavigationState>("state");
     ecs::Component& t = registry.get(camera, ecs::Transform);
 
     const bool rmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
@@ -241,8 +241,8 @@ void cameraControlSystem(Registry& registry) {
 
 void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, double y) {
     const ecs::Component& c = registry.get(camera, ecs::Camera);
-    ecs::Component& ac = registry.get(camera, ecs::CameraNavigation);
-    CameraNavigationState& state = ac.payload<CameraNavigationState>("state");
+    ecs::Component& navigation = registry.get(camera, ecs::CameraNavigation);
+    CameraNavigationState& state = navigation.payload<CameraNavigationState>("state");
 
     if (state.locked || state.dragMode == DragMode::None) return;
 

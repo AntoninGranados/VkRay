@@ -2,7 +2,7 @@
 
 #include "panel.hpp"
 
-class RendererPanel: public IPanel {
+class RendererPanel: public Panel {
 private:
     void content() override;
 };

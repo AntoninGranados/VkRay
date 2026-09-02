@@ -5,7 +5,7 @@
 
 #include "core/core.hpp"
 
-static constexpr int PARAMETER_VERSION = 1;
+static constexpr int kParameterVersion = 1;
 
 template <typename T>
 T ParameterSerializer::readJsonVec(const json& arr) {
@@ -139,9 +139,9 @@ ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
     json root = json::parse(f, nullptr, true, true);
 
     const int version = root.value("version", -1);
-    if (version != PARAMETER_VERSION)
+    if (version != kParameterVersion)
         throw std::runtime_error(std::format(
-            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), PARAMETER_VERSION, version
+            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), kParameterVersion, version
         ));
 
     for (const auto& [key, val] : root.items()) {

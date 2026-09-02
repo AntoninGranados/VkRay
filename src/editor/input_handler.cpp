@@ -60,8 +60,8 @@ void InputHandler::handlePreview(float dt) {
     const bool blockMouseInput    = isMouseInputBlocked();
     const bool blockKeyboardInput = Editor::getUi().isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
-    const ecs::Component& ac = Core::getScene().getRegistry().get(Core::getScene().getCamera(), ecs::CameraNavigation);
-    const ecs::CameraNavigationState& cameraState = ac.payload<ecs::CameraNavigationState>("state");
+    const ecs::Component& navigation = Core::getScene().getRegistry().get(Core::getScene().getCamera(), ecs::CameraNavigation);
+    const ecs::CameraNavigationState& cameraState = navigation.payload<ecs::CameraNavigationState>("state");
 
     Core::getPlatform().setCursorMode(
         (cameraState.locked || blockMouseInput) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED
@@ -71,7 +71,7 @@ void InputHandler::handlePreview(float dt) {
         Editor::selectEntity(std::nullopt);
 
     if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
-        if (Core::getScene().isPreviewing()) {
+        if (Core::getScene().isUsingSceneCamera()) {
             Core::getScene().resetActiveCamera();
         } else if (const auto selected = Editor::getSelectedEntity(); selected && Core::getScene().getRegistry().has(*selected, ecs::Camera)) {
             Core::getScene().setActiveCamera(*selected);

@@ -13,7 +13,7 @@
 
 struct RowContext;
 
-class AnimationPanel : public IPanel {
+class AnimationPanel : public Panel {
     struct EntityTrack {
         ecs::Entity entity;
         const ecs::ComponentType* type;

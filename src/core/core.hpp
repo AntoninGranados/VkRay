@@ -13,7 +13,7 @@
 #include "core/parameters/parameter_serializer.hpp"
 #include "core/scene/scene.hpp"
 #include "core/core_renderer.hpp"
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 #include "utils/file_watcher.hpp"
 
 class Core {

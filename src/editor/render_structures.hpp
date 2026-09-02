@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 
 struct DebugUBO {
     DebugView debugView = DebugView::None;

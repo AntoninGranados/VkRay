@@ -5,6 +5,8 @@
 #include <queue>
 #include <cmath>
 
+namespace {
+
 struct Face {
     uint32_t v[3];
     bool alive = true;
@@ -97,6 +99,8 @@ Edge computeEdge(
     float cost = quadricError(q, pos);
     return Edge{ v0, v1, pos, cost, version[v0], version[v1] };
 }
+
+} // namespace
 
 MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
     std::vector<Vertex> vertices = input.getVertices();

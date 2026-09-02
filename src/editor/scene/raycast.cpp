@@ -42,19 +42,19 @@ float raySphereIntersection(const Ray& ray, const glm::vec3& center, const float
 
     const float sqrt_delta = std::sqrt(delta);
 
-    float t = dp - sqrt_delta;
-    if (t >= 0.0f) return t;
+    float hitT = dp - sqrt_delta;
+    if (hitT >= 0.0f) return hitT;
 
-    t = dp + sqrt_delta;
-    return t >= 0.0f ? t : -1.0f;
+    hitT = dp + sqrt_delta;
+    return hitT >= 0.0f ? hitT : -1.0f;
 }
 
 float rayPlaneIntersection(const Ray& ray, const glm::vec3& point, const glm::vec3& normal) {
     const float denom = glm::dot(normal, ray.dir);
     if (std::abs(denom) <= 1e-12f) return -1.0f;
 
-    const float t = glm::dot(point - ray.origin, normal) / denom;
-    return t >= 0.0f ? t : -1.0f;
+    const float hitT = glm::dot(point - ray.origin, normal) / denom;
+    return hitT >= 0.0f ? hitT : -1.0f;
 }
 
 float rayBoxIntersection(const Ray& ray, const glm::mat4& transform) {
@@ -91,17 +91,17 @@ float rayQuadIntersection(const Ray& ray, const glm::vec3& origin, const glm::ve
     const float denom = glm::dot(normal, ray.dir);
     if (denom >= -1e-12f) return -1.0f; // back-face or parallel
 
-    const float t = glm::dot(origin - ray.origin, normal) / denom;
-    if (t < 0.0f) return -1.0f;
+    const float hitT = glm::dot(origin - ray.origin, normal) / denom;
+    if (hitT < 0.0f) return -1.0f;
 
-    const glm::vec3 p = ray.origin + ray.dir * t - origin;
+    const glm::vec3 p = ray.origin + ray.dir * hitT - origin;
     const float uu = glm::dot(u, u);
     const float vv = glm::dot(v, v);
     const float pu = glm::dot(p, u) / uu;
     const float pv = glm::dot(p, v) / vv;
 
     if (pu < 0.0f || pu > 1.0f || pv < 0.0f || pv > 1.0f) return -1.0f;
-    return t;
+    return hitT;
 }
 
 static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& dir,
@@ -120,9 +120,9 @@ static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& di
     const glm::vec3 qvec = glm::cross(tvec, edge1);
     const float v = glm::dot(dir, qvec) * invDet;
     if (v < 0.0f || u + v > 1.0f) return false;
-    const float t = glm::dot(edge2, qvec) * invDet;
-    if (t < 0.0f) return false;
-    tOut = t;
+    const float hitT = glm::dot(edge2, qvec) * invDet;
+    if (hitT < 0.0f) return false;
+    tOut = hitT;
     return true;
 }
 

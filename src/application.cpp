@@ -25,6 +25,8 @@
 #include "offline/job_queue.hpp"
 #include "offline/offline.hpp"
 
+#include "utils/log.hpp"
+
 Application::Application(int argc, char* argv[]) {
     Shader::setSpvOutputDir(BUILD_DIR);
 
@@ -72,7 +74,13 @@ void Application::initEditorMode() {
 }
 
 void Application::initOfflineMode(const std::string& jobFile) {
-    JobQueue queue = JobQueue::fromFile(jobFile);
+    JobQueue queue;
+    try {
+        queue = JobQueue::fromFile(jobFile);
+    } catch (const std::exception& e) {
+        Log::error("Application", std::format("Failed to load job queue `{}`: {}", jobFile, e.what()));
+        return;
+    }
     if (queue.isEmpty()) return;
 
     platform = std::make_unique<HeadlessPlatform>(1080, 1080);  // This size is arbitrary as the buffers will be resized with the first jobs parameters

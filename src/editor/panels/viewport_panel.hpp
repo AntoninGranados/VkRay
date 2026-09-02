@@ -11,7 +11,7 @@
 
 class Scene;
 
-class ViewportPanel : public IPanel {
+class ViewportPanel : public Panel {
 public:
     void setOnEntitySelectionCallback(std::function<void(std::optional<ecs::Entity>)> callback) { onEntitySelection = callback; }
 

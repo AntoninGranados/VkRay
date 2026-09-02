@@ -12,7 +12,7 @@
 #include "tinyexr/tinyexr.h"
 
 #include "utils/log.hpp"
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 
 namespace {
 

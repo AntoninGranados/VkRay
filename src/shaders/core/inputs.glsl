@@ -88,6 +88,8 @@ layout(set = 0, binding = 13) buffer readonly LightBuffer {
     Light lights[];
 } lightBuffer;
 
+layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
+
 layout(set = 0, binding = 15) uniform sampler2D lensSampler;
 
 layout(set = 0, binding = 16) buffer readonly ProgrammableParamsBuffer {

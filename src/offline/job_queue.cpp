@@ -6,12 +6,12 @@
 
 #include "nlohmann/json.hpp"
 
-#include "core/structures.hpp"
+#include "core/render_structures.hpp"
 #include "utils/json_resolve.hpp"
 
 using json = nlohmann::json;
 
-static constexpr int JOB_VERSION = 1;
+static constexpr int kJobVersion = 1;
 
 static void parseAovs(const json& arr, std::vector<ParameterOverride>& overrides) {
     for (const auto& name : arr) {
@@ -33,9 +33,9 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
     json root = json::parse(f, nullptr, true, true);
 
     const int version = root.value("version", -1);
-    if (version != JOB_VERSION)
+    if (version != kJobVersion)
         throw std::runtime_error(std::format(
-            "Job version mismatch in `{}`: expected {}, got {}", path.string(), std::to_string(JOB_VERSION), std::to_string(version)
+            "Job version mismatch in `{}`: expected {}, got {}", path.string(), std::to_string(kJobVersion), std::to_string(version)
         ));
 
     JobQueue queue;

@@ -4,7 +4,7 @@
 
 #include "utils/progress.hpp"
 
-class RenderProgressPanel: public IPanel {
+class RenderProgressPanel: public Panel {
 private:
     void content() override;
     ProgressTimer timer;
