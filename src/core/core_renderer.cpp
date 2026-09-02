@@ -48,7 +48,7 @@ void CoreRenderer::buildPipelines() {
     engine.waitIdle();
 
     try {
-        engine.reloadPipelines();
+        engine.reloadPipelines(true);
     } catch (const std::exception& e) {
         Log::error(e.what());
         return;

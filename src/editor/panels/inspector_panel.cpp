@@ -36,7 +36,7 @@ void InspectorPanel::content() {
     auto& uiReg = ecs::ComponentUiRegistry::get();
     bool changed = uiReg.draw(reg, entity);
     reg.flush();
-    if (changed) Core::markDirty();
+    if (changed) Core::markRenderDirty();
 
     ImGui::End();
 
@@ -81,13 +81,13 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
                 conflicting.push_back(it->second->getLabel());
         }
 
-        const bool disabled = alreadyPresent || !conflicting.empty();
+        const bool disabled = alreadyPresent || !registry.canAdd(entity, *type);
         if (disabled) ImGui::BeginDisabled();
 
         const std::string label = type->getIcon() + " " + type->getLabel();
         if (ImGui::Button(label.c_str(), ui::kButtonSize)) {
             registry.add(entity, *type);
-            Core::markDirty();
+            Core::markRenderDirty();
             ImGui::CloseCurrentPopup();
         }
 

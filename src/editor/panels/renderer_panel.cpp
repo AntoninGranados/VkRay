@@ -17,6 +17,7 @@ static void startRender(const char* paramPath, auto startFn) {
     }
     Core::setOutputPath(path);
     Editor::selectEntity(std::nullopt);
+    Core::getScene().activateSceneCamera();
     startFn();
 }
 
@@ -28,8 +29,6 @@ void RendererPanel::content() {
             startRender("renderer/output/output_image", Core::startRender);
         if (ImGui::Button(ICON_FA_FILM " Render Animation", { -FLT_MIN, 0 }))
             startRender("renderer/output/output_video", Core::startRenderAnim);
-        if (ImGui::Button(ICON_FA_ROTATE " Reload Shaders", { -FLT_MIN, 0 }))
-            Core::reloadShaders();
 
         ImGui::Separator();
         ParameterUI::drawGroup("renderer");

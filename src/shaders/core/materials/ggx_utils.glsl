@@ -2,13 +2,13 @@
 #define GGX_UTILS_GLSL
 
 #include "../utils.glsl"
-#include "../random.glsl"
+#include "../random/utils.glsl"
 
 #include "material_utils.glsl"
 
-vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, out vec3 h, inout uint seed) {
-    float s1 = rand(seed);
-    float s2 = rand(seed);
+vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, out vec3 h, inout RngState rng) {
+    float s1 = rand(rng);
+    float s2 = rand(rng);
 
     float phi = 2.0 * PI * s1;
     float theta = atan(alpha * sqrt(s2 / (1.0 - s2)));

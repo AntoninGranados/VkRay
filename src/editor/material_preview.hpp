@@ -18,6 +18,8 @@ struct FrameContext;
 struct MaterialFingerprint {
     const ecs::ComponentType* type = nullptr;
     std::vector<FieldValue> fields;
+    std::string programmableBody;
+    std::vector<float> programmableValues;
 
     bool operator==(const MaterialFingerprint&) const = default;
 };
@@ -40,6 +42,8 @@ public:
 
     void drawPreview(ecs::Entity materialEntity);
 
+    Scene& getScene() { return renderer.getScene(); }
+
 private:
     struct InFlight {
         ecs::Entity entity;
@@ -60,7 +64,6 @@ private:
     void evict(ecs::Entity materialEntity);
 
     PathtraceRenderer renderer;
-    Scene scene;
     ecs::Entity previewMaterialEntity;
     ImTextureID liveTextureId = 0;
 

@@ -13,44 +13,44 @@ struct Material {
     float payload[12];
 };
 
-#define mat_albedo(m)                    vec3((m).payload[0], (m).payload[1], (m).payload[2])
+#define albedo(m)                    vec3((m).payload[0], (m).payload[1], (m).payload[2])
 
-#define mat_emissive_emissionStrength(m) (m).payload[3]
+#define emissionStrength(m) (m).payload[3]
 
-#define mat_metal_roughness(m)           (m).payload[3]
+#define metalRoughness(m)           (m).payload[3]
 
-#define mat_glossy_roughness(m)          (m).payload[3]
-#define mat_glossy_ior(m)                (m).payload[4]
+#define glossyRoughness(m)          (m).payload[3]
+#define glossyIor(m)                (m).payload[4]
 
-#define mat_dielectric_roughness(m)      (m).payload[3]
-#define mat_dielectric_ior(m)            (m).payload[4]
-#define mat_dielectric_transmission(m)   (m).payload[5]
-#define mat_dielectric_density(m)        (m).payload[6]
-#define mat_dielectric_anisotropic(m)    (m).payload[7]
+#define dielectricRoughness(m)      (m).payload[3]
+#define dielectricIor(m)            (m).payload[4]
+#define dielectricTransmission(m)   (m).payload[5]
+#define dielectricDensity(m)        (m).payload[6]
+#define dielectricAnisotropic(m)    (m).payload[7]
 
-#define mat_volume_density(m)            (m).payload[3]
-#define mat_volume_anisotropic(m)        (m).payload[4]
+#define volumeDensity(m)            (m).payload[3]
+#define volumeAnisotropic(m)        (m).payload[4]
 
-#define mat_principled_roughness(m)      (m).payload[3]
-#define mat_principled_metalness(m)      (m).payload[4]
-#define mat_principled_ior(m)            (m).payload[5]
-#define mat_principled_transmission(m)   (m).payload[6]
-#define mat_principled_density(m)        (m).payload[7]
-#define mat_principled_anisotropic(m)    (m).payload[8]
-#define mat_principled_alpha(m)          (m).payload[9]
+#define principledRoughness(m)      (m).payload[3]
+#define principledMetalness(m)      (m).payload[4]
+#define principledIor(m)            (m).payload[5]
+#define principledTransmission(m)   (m).payload[6]
+#define principledDensity(m)        (m).payload[7]
+#define principledAnisotropic(m)    (m).payload[8]
+#define principledAlpha(m)          (m).payload[9]
 
-void mat_setAlbedo(inout Material m, vec3 v) {
+void setAlbedo(inout Material m, vec3 v) {
     m.payload[0] = v.r; m.payload[1] = v.g; m.payload[2] = v.b;
 }
 
-Material mat_makeDiffuse(vec3 albedo) {
+Material Diffuse(vec3 albedo) {
     Material m;
     m.type = mat_Diffuse;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
     return m;
 }
 
-Material mat_makeGlossy(vec3 albedo, float roughness, float ior) {
+Material Glossy(vec3 albedo, float roughness, float ior) {
     Material m;
     m.type = mat_Glossy;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
@@ -59,7 +59,7 @@ Material mat_makeGlossy(vec3 albedo, float roughness, float ior) {
     return m;
 }
 
-Material mat_makeMetal(vec3 albedo, float roughness) {
+Material Metal(vec3 albedo, float roughness) {
     Material m;
     m.type = mat_Metal;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
@@ -116,7 +116,7 @@ vec3 schlickAlbedo(float cosine, vec3 albedo) {
 
 bool isTransmissive(in Material mat) {
     if (mat.type == mat_Dielectric) return true;
-    if (mat.type == mat_Principled) return (1.0 - mat_principled_metalness(mat)) * mat_principled_transmission(mat) > EPS;
+    if (mat.type == mat_Principled) return (1.0 - principledMetalness(mat)) * principledTransmission(mat) > EPS;
     return false;
 }
 

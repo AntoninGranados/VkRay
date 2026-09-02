@@ -1,5 +1,7 @@
 #include "component_type.hpp"
 
+#include "utils/string_utils.hpp"
+
 namespace ecs {
 
 ComponentType::Builder ComponentType::builder(std::string id) {
@@ -7,7 +9,7 @@ ComponentType::Builder ComponentType::builder(std::string id) {
 }
 
 ComponentType::Builder::Builder(std::string id) {
-    type.label = ComponentType::deriveLabel(id);
+    type.label = snakeCaseToLabel(id);
     type.id = std::move(id);
 }
 
@@ -43,21 +45,8 @@ ComponentType& ComponentType::Builder::build() {
     return ComponentType::storage.back();
 }
 
-std::string ComponentType::deriveLabel(const std::string& id) {
-    std::string result;
-    bool capitalize = true;
-    for (const auto& c : id) {
-        if (capitalize) {
-            result += std::toupper(c);
-            capitalize = false;
-        } else if (c == '_') {
-            result += ' ';
-            capitalize = true;
-        } else {
-            result += c;
-        }
-    }
-    return result;
+ComponentType ComponentType::Builder::buildDetached() {
+    return std::move(type);
 }
 
 } // namespace ecs

@@ -10,7 +10,7 @@ void evaluateAnimation(Registry& registry) {
     if (store.isEmpty()) return;
 
     store.evaluate(registry, Core::getAnimation().getSampleFrame());
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 void animationSystem(Registry& registry) {

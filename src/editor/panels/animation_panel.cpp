@@ -108,7 +108,7 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
         AnimationClock& anim = Core::getAnimation();
         anim.reset(std::min(static_cast<int>(std::round(t * float(ctx.endFrame - 1))), ctx.endFrame - 1));
         anim.pause();
-        Core::markDirty();
+        Core::markRenderDirty();
     }
     const bool rightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     ImGui::PopID();
@@ -191,7 +191,7 @@ void AnimationPanel::content() {
         if (ImGui::DragInt("##CurrentFrame", &currentFrame, 1, 0, animation.getEndFrame() - 1)) {
             animation.reset(currentFrame);
             animation.pause();
-            Core::markDirty();
+            Core::markRenderDirty();
         }
         ImGui::SameLine();
         ImGui::TextDisabled("/");
@@ -253,20 +253,20 @@ void AnimationPanel::content() {
             for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
                 if (!registry.has(entity, ct)) continue;
 
-                bool hasAnim = false;
-                for (const ecs::ComponentField& f : ct.getFields())
-                    if (f.isAnimatable()) { hasAnim = true; break; }
-                if (!hasAnim) continue;
+                std::vector<ecs::ComponentField*> animatable;
+                registry.get(entity, ct).forEachField([&](ecs::ComponentField& f) {
+                    if (f.isAnimatable()) animatable.push_back(&f);
+                });
+                if (animatable.empty()) continue;
 
                 if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
                 firstGroup = false;
 
                 ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
-                for (const ecs::ComponentField& f : ct.getFields()) {
-                    if (!f.isAnimatable()) continue;
-                    if (auto seg = drawRow(ctx, f.getLabel().c_str(), f.getId().c_str(), store.keyframes(entity, ct, f.getId()))) {
-                        pendingSegment = { f.getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f.getId() } };
+                for (const ecs::ComponentField* f : animatable) {
+                    if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(entity, ct, f->getId()))) {
+                        pendingSegment = { f->getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f->getId() } };
                         ImGui::OpenPopup("##segment_interp");
                     }
                 }

@@ -389,6 +389,12 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
         }
     }
 
+    for (const ecs::Entity entity : scene.getChildren(scene.getMaterialsRoot())) {
+        if (!registry.has(entity, ecs::ProgrammableMaterial)) continue;
+        ecs::Component& programmableComp = registry.get(entity, ecs::ProgrammableMaterial);
+        programmableComp.payload<ProgrammableShader>("shader").parse(programmableComp.get<std::filesystem::path>("path"));
+    }
+
     for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
         if (entity == scene.getDefaultCamera()) continue;
         scene.setActiveCamera(entity);

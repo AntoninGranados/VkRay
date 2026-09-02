@@ -44,9 +44,9 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": 80.0, "shutter_speed": 0.0333333333 },
+            "camera": { "shutter_speed": 0.0333333333 },
             "thin_lens": {
-                "focal_length": 1.4,
+                "focal_length": 40,
                 "focal_distance": 15.0,
                 "f_stop": 1.4
             },

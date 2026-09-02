@@ -2,7 +2,7 @@
 #define DIELECTRIC_GLSL
 
 #include "../utils.glsl"
-#include "../random.glsl"
+#include "../random/utils.glsl"
 
 #include "material_utils.glsl"
 
@@ -13,12 +13,12 @@ BSDFEval evalDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi)
     );
 }
 
-BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
     float etaI = 1.0;   // TODO: keep track of the current IOR as we traverse the scene
-    float etaT = mat_dielectric_ior(mat);
+    float etaT = dielectricIor(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
-    vec3 normal = hit.normal + randomInSphere(seed) * mat_dielectric_roughness(mat);
+    vec3 normal = hit.normal + randomInSphere(rng) * dielectricRoughness(mat);
     if (length(normal) < EPS) normal = hit.normal;
     else normal = normalize(normal);
 
@@ -30,7 +30,7 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     vec3 wi;
     vec3 weight;
     float pdf;
-    if (rand(seed) < F) {
+    if (rand(rng) < F) {
         wi = reflect(-wo, normal);
 
         pdf = max(F, EPS);
@@ -51,11 +51,11 @@ BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout u
     bsdf.pdf                  = pdf;
     bsdf.isDelta              = true;
     bsdf.medium.isDielectric  = entering;
-    bsdf.medium.isVolume      = entering && mat_dielectric_density(mat) > 0.0;
-    bsdf.medium.absorption    = mat_albedo(mat);
-    bsdf.medium.density       = mat_dielectric_density(mat);
-    bsdf.medium.scatterAlbedo = mat_dielectric_transmission(mat);
-    bsdf.medium.anisotropic   = mat_dielectric_anisotropic(mat);
+    bsdf.medium.isVolume      = entering && dielectricDensity(mat) > 0.0;
+    bsdf.medium.absorption    = albedo(mat);
+    bsdf.medium.density       = dielectricDensity(mat);
+    bsdf.medium.scatterAlbedo = dielectricTransmission(mat);
+    bsdf.medium.anisotropic   = dielectricAnisotropic(mat);
     return bsdf;
 }
 

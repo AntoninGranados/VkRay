@@ -2,17 +2,40 @@
 #define OBJECT_GLSL
 
 #include "utils.glsl"
-#include "materials/materials.glsl"
+#include "random/utils.glsl"
 #include "inputs.glsl"
 
-Hit makeHit(in Ray ray, in Object obj, float t, vec3 normal) {
+Hit makeHit(in Ray ray, in Object obj, float t, vec2 uv, vec3 normal) {
     vec3 p = ray.origin + ray.dir * t;
     bool frontFace = true;
     if (dot(ray.dir, normal) > 0.0) {
         normal = -normal;
         frontFace = false;
     }
-    return Hit(p, normal, t, frontFace, obj, vec3(1.0));
+    return Hit(p, uv, normal, t, frontFace, obj, vec3(1.0));
+}
+
+// ================ UV ================
+vec2 sphereUV(in Sphere sphere, in vec3 n) {
+    vec3 a = abs(n);
+    if (a.x > a.y && a.x > a.z) return vec2(n.x < 0.0 ? n.z : -n.z, n.y) / a.x * 0.5 + 0.5;
+    if (a.y > a.x && a.y > a.z) return vec2(n.x, n.y > 0.0 ? n.z : -n.z) / a.y * 0.5 + 0.5;
+    return vec2(n.z > 0.0 ? n.x : -n.x, n.y) / a.z * 0.5 + 0.5;
+}
+
+vec2 planeUV(in Plane plane, in vec3 p) {
+    // TODO: precompute the basis
+    vec3 up = abs(plane.normal.z) < (1.0 - EPS) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+    vec3 u = normalize(cross(up, plane.normal));
+    vec3 v = cross(plane.normal, u);
+    return vec2(dot(plane.point - p, u), dot(plane.point - p, v));
+}
+
+vec2 aabbUV(in vec3 p, in vec3 n) {
+    vec3 a = abs(n);
+    if (a.x > a.y && a.x > a.z) return vec2(n.x < 0.0 ? p.z : -p.z, p.y) * 0.5 + 0.5;
+    if (a.y > a.x && a.y > a.z) return vec2(p.x, n.y > 0.0 ? p.z : -p.z) * 0.5 + 0.5;
+    return vec2(n.z > 0.0 ? p.x : -p.x, p.y) * 0.5 + 0.5;
 }
 
 // ================ NORMALS ================
@@ -91,13 +114,15 @@ Hit raySphereIntersection(in Ray ray, in Object obj, in Sphere sphere, bool anyH
     float t1 = dp - sqrt(delta);
     if (t1 >= 0) {
         vec3 hitP = ray.origin + ray.dir * t1;
-        return makeHit(ray, obj, t1, sphereNormal(sphere, hitP));
+        vec3 normal = sphereNormal(sphere, hitP);
+        return makeHit(ray, obj, t1, sphereUV(sphere, normal), normal);
     }
 
     float t2 = dp + sqrt(delta);
     if (t2 >= 0) {
         vec3 hitP = ray.origin + ray.dir * t2;
-        return makeHit(ray, obj, t2, sphereNormal(sphere, hitP));
+        vec3 normal = sphereNormal(sphere, hitP);
+        return makeHit(ray, obj, t2, sphereUV(sphere, normal), normal);
     }
 
     return NO_HIT;
@@ -108,7 +133,10 @@ Hit rayPlaneIntersection(in Ray ray, in Object obj, in Plane plane, bool anyHit,
     
     if (abs(denom) > EPS) {
         float t = dot(plane.point - ray.origin, plane.normal) / denom;
-        if (t >= EPS) return makeHit(ray, obj, t, plane.normal);
+        if (t >= EPS) {
+            vec3 p = ray.origin + ray.dir * t;
+            return makeHit(ray, obj, t, planeUV(plane, p), plane.normal);
+        }
     }
     return NO_HIT;
 }
@@ -127,7 +155,7 @@ Hit rayQuadIntersection(in Ray ray, in Object obj, in Quad quad, bool anyHit, fl
     float pv = dot(p, quad.v) / vv;
     if (pu < 0.0 || pu > 1.0 || pv < 0.0 || pv > 1.0) return NO_HIT;
 
-    return makeHit(ray, obj, t, quad.normal);
+    return makeHit(ray, obj, t, vec2(pu, pv), quad.normal);
 }
 
 Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool computeNormal) {
@@ -167,7 +195,9 @@ Hit rayAabbIntersection(in Ray ray, in vec3 aabbMin, in vec3 aabbMax, in bool co
         }
     }
 
-    return makeHit(ray, OBJECT_AABB, tHit, normal);
+    vec3 a = abs(normal);
+    vec3 p = ray.origin + ray.dir * tHit;
+    return makeHit(ray, OBJECT_AABB, tHit, aabbUV(p, normal), normal);
 }
 
 Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box, bool anyHit, float tMax, inout Statistics stats) {
@@ -178,13 +208,12 @@ Hit rayBoxIntersection(in Ray ray, in Object obj, in Box box, bool anyHit, float
     Hit hit = rayAabbIntersection(localRay, vec3(-1.0), vec3(1.0), true);
     if (!foundIntersection(hit)) return hit;
 
-
     mat3 normalMat = mat3(transpose(box.invModelMatrix));
     vec3 localOutwardNormal = hit.frontFace ? hit.normal : -hit.normal;
     vec3 worldNormal = normalize(normalMat * localOutwardNormal);
     vec3 worldP = (box.modelMatrix * vec4(hit.p, 1.0)).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);
-    return makeHit(ray, obj, tWorld, worldNormal);
+    return makeHit(ray, obj, tWorld, hit.uv, worldNormal);
 }
 
 float rayAabbTNear(in Ray ray, in vec3 invDir, in vec3 aabbMin, in vec3 aabbMax) {
@@ -274,7 +303,7 @@ Hit rayMeshIntersectionBvhDebug(in Ray ray, in Object obj, in Mesh mesh) {
 
     mat3 normalMat = mat3(transpose(mesh.invModelMatrix));
     vec3 normal = normalize(normalMat * bestNormal);
-    return makeHit(ray, obj, tClosest, normal);
+    return makeHit(ray, obj, tClosest, vec2(0), normal);
 }
 
 Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, float tMax, inout Statistics stats) {
@@ -322,7 +351,7 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
                 float u, v;
                 float tLocal = rayTriangleTNear(localRay, v0, v1, v2, u, v);
                 if (tLocal > 0.0 && tLocal < tClosest) {
-                    if (anyHit) return makeHit(ray, obj, tLocal, vec3(0.0, 1.0, 0.0));
+                    if (anyHit) return makeHit(ray, obj, tLocal, vec2(0), vec3(0.0, 1.0, 0.0));
                     tClosest = tLocal;
                     foundHit = true;
                     bestI0 = i0;
@@ -376,7 +405,7 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
     vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);
 
-    Hit meshHit = makeHit(ray, obj, tWorld, worldNormal);
+    Hit meshHit = makeHit(ray, obj, tWorld, vec2(0), worldNormal);
     if (mesh.hasVertexColor == 1u) {
         vec3 c0 = vertexBuffer.vertices[bestI0].color;
         vec3 c1 = vertexBuffer.vertices[bestI1].color;
@@ -387,17 +416,17 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
 }
 
 // ================ SURFACE SAMPLING ================
-SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout uint seed) {
+SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout RngState rng) {
     SurfaceSample surfaceSample;
     
-    vec3 onLightDir = normalize(randomInSphere(seed));
+    vec3 onLightDir = normalize(randomInSphere(rng));
     surfaceSample.p = sphere.center + onLightDir * sphere.radius;
 
     surfaceSample.normal = (surfaceSample.p - sphere.center) / sphere.radius;
     return surfaceSample;
 }
 
-SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
+SurfaceSample sampleBoxSurface(in Box box, in float area, inout RngState rng) {
     SurfaceSample surfaceSample;
 
     vec3 axisX = vec3(box.modelMatrix[0]);
@@ -406,8 +435,8 @@ SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
     vec3 size = 2.0 * vec3(length(axisX), length(axisY), length(axisZ));
     vec3 pairArea = vec3(size.y * size.z, size.z * size.x, size.x * size.y);
 
-    float r = rand(seed) * area;
-    vec2 uv = vec2(rand(seed), rand(seed));
+    float r = rand(rng) * area;
+    vec2 uv = vec2(rand(rng), rand(rng));
 
     int axis;
     float side;
@@ -460,16 +489,16 @@ SurfaceSample sampleBoxSurface(in Box box, in float area, inout uint seed) {
     return surfaceSample;
 }
 
-SurfaceSample sampleQuadSurface(in Quad quad, in float area, inout uint seed) {
+SurfaceSample sampleQuadSurface(in Quad quad, in float area, inout RngState rng) {
     SurfaceSample surfaceSample;
-    float r1 = rand(seed);
-    float r2 = rand(seed);
+    float r1 = rand(rng);
+    float r2 = rand(rng);
     surfaceSample.p = quad.point + r1 * quad.u + r2 * quad.v;
     surfaceSample.normal = quad.normal;
     return surfaceSample;
 }
 
-SurfaceSample sampleMeshSurface(in Mesh mesh, in float area, inout uint seed) {
+SurfaceSample sampleMeshSurface(in Mesh mesh, in float area, inout RngState rng) {
     SurfaceSample surfaceSample;
     if (mesh.triangleCount == 0u) {
         surfaceSample.p = vec3(0.0);
@@ -477,7 +506,7 @@ SurfaceSample sampleMeshSurface(in Mesh mesh, in float area, inout uint seed) {
         return surfaceSample;
     }
 
-    uint tri = uint(rand(seed) * float(mesh.triangleCount));
+    uint tri = uint(rand(rng) * float(mesh.triangleCount));
     if (tri >= mesh.triangleCount) tri = mesh.triangleCount - 1u;
     uint base = mesh.indexOffset + tri * 3u;
     uint i0 = indexBuffer.indices[base + 0u];
@@ -488,8 +517,8 @@ SurfaceSample sampleMeshSurface(in Mesh mesh, in float area, inout uint seed) {
     vec3 v1 = vertexBuffer.vertices[i1].position;
     vec3 v2 = vertexBuffer.vertices[i2].position;
 
-    float r1 = sqrt(rand(seed));
-    float r2 = rand(seed);
+    float r1 = sqrt(rand(rng));
+    float r2 = rand(rng);
     vec3 localP = v0 * (1.0 - r1) + v1 * (r1 * (1.0 - r2)) + v2 * (r1 * r2);
     vec3 worldP = (mesh.modelMatrix * vec4(localP, 1.0)).xyz;
 

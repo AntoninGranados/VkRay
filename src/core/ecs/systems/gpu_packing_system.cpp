@@ -10,9 +10,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "core/render/programmable_shader.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
+
+#include "utils/log.hpp"
 
 namespace ecs {
 
@@ -44,6 +47,7 @@ uint32_t resolveMeshSlot(Registry& registry, const ComponentStorage& meshRefs, c
 const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
     return registry.has(e, Mesh) ? &registry.get(e, Mesh).payload<MeshAsset>("geometry") : nullptr;
 }
+
 } // namespace
 
 template <typename T>
@@ -62,7 +66,6 @@ void spherePackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& spheres = registry.storage(Sphere);
     auto& transforms = registry.storage(Transform);
-    auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuSphere> gpuSpheres;
 
@@ -74,7 +77,6 @@ void spherePackingSystem(Registry& registry) {
         gpuSpheres.push_back(GpuSphere{
             .center = transform.get<glm::vec3>("position"),
             .radius = sphere.get<float>("radius"),
-            .materialHandle = resolveMaterialSlot(registry, materialRefs, entity),
         });
     }
 
@@ -85,7 +87,6 @@ void planePackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& planes = registry.storage(Plane);
     auto& transforms = registry.storage(Transform);
-    auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuPlane> gpuPlanes;
 
@@ -97,7 +98,6 @@ void planePackingSystem(Registry& registry) {
         gpuPlanes.push_back(GpuPlane{
             .point = transform.get<glm::vec3>("position"),
             .normal = glm::normalize(rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
-            .materialHandle = resolveMaterialSlot(registry, materialRefs, entity),
         });
     }
 
@@ -108,7 +108,6 @@ void boxPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& boxes = registry.storage(Box);
     auto& transforms = registry.storage(Transform);
-    auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuBox> gpuBoxes;
 
@@ -122,7 +121,6 @@ void boxPackingSystem(Registry& registry) {
         gpuBoxes.push_back(GpuBox{
             .transform = local,
             .invTransform = glm::inverse(local),
-            .materialHandle = resolveMaterialSlot(registry, materialRefs, entity),
         });
     }
 
@@ -133,7 +131,6 @@ void quadPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& quads = registry.storage(Quad);
     auto& transforms = registry.storage(Transform);
-    auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuQuad> gpuQuads;
 
@@ -152,7 +149,6 @@ void quadPackingSystem(Registry& registry) {
             .u = u,
             .v = v,
             .normal = glm::normalize(normal),
-            .materialHandle = resolveMaterialSlot(registry, materialRefs, entity),
         });
     }
 
@@ -163,7 +159,6 @@ void meshPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& meshRefs = registry.storage(MeshRef);
     auto& transforms = registry.storage(Transform);
-    auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuMesh> meshTemplates;
     std::vector<Vertex> vertices;
@@ -241,7 +236,6 @@ void meshPackingSystem(Registry& registry) {
             .bvhNodeCount = meshTemplate.bvhNodeCount,
             .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
             .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
-            .materialHandle = resolveMaterialSlot(registry, materialRefs, entity),
             .smoothShading = meshTemplate.smoothShading,
             .hasVertexColor = meshTemplate.hasVertexColor,
         });
@@ -253,6 +247,7 @@ void meshPackingSystem(Registry& registry) {
 void materialPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
+
     std::vector<GpuMaterial> gpuMaterials;
     gpuMaterials.reserve(materialEntities.size());
 
@@ -313,6 +308,11 @@ void materialPackingSystem(Registry& registry) {
             gpu.payload[4] = c.get<float>("anisotropic");
         } else if (registry.has(entity, ecs::ProgrammableMaterial)) {
             gpu.type = 7;
+            Component& c = registry.get(entity, ecs::ProgrammableMaterial);
+            ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
+            shader.parse(c.get<std::filesystem::path>("path"));
+            gpu.payload[0] = static_cast<float>(shader.getSlot());
+            gpu.payload[1] = static_cast<float>(shader.getBaseOffset());
         } else if (slot > 0 && !gpuMaterials.empty()) {
             gpu = gpuMaterials[0];
         }
@@ -326,14 +326,19 @@ void materialPackingSystem(Registry& registry) {
 void objectPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     const auto& transforms = registry.storage(Transform);
+    const auto& materialRefs = registry.storage(MaterialRef);
 
-    std::vector<ObjectHandle> objectHandles;
+    std::vector<GpuObject> gpuObjects;
 
     auto packType = [&](const ecs::ComponentStorage& storage, ObjectType type) {
-        int idx = 0;
+        uint32_t idx = 0;
         for (const auto& entity : storage.entities()) {
             if (!transforms.has(entity)) continue;
-            objectHandles.push_back(ObjectHandle{ .type = type, .id = idx });
+            gpuObjects.push_back(GpuObject{
+                .type = type,
+                .id = idx,
+                .materialHandle = resolveMaterialSlot(registry, materialRefs, entity)
+            });
             idx++;
         }
     };
@@ -344,19 +349,19 @@ void objectPackingSystem(Registry& registry) {
     packType(registry.storage(MeshRef), ObjectType::Mesh);
 
     SceneGpuBufferEntry& objectEntry = registry.ctx().get<SceneGpuBuffers>().object;
-    size_t objectRequired = sceneCapacityFromCount(objectHandles.size());
+    size_t objectRequired = sceneCapacityFromCount(gpuObjects.size());
     if (objectRequired > objectEntry.capacity) {
-        Core::getEngine().resizeBuffer(objectEntry.handle, sizeof(GpuObjectHeader) + objectRequired * sizeof(ObjectHandle));
+        Core::getEngine().resizeBuffer(objectEntry.handle, sizeof(GpuObjectHeader) + objectRequired * sizeof(GpuObject));
         objectEntry.capacity = objectRequired;
     }
-    uint32_t objectCount = static_cast<uint32_t>(objectHandles.size());
-    objectHandles.resize(objectEntry.capacity);
+    uint32_t objectCount = static_cast<uint32_t>(gpuObjects.size());
+    gpuObjects.resize(objectEntry.capacity);
 
-    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(ObjectHandle) * objectEntry.capacity, 0);
+    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(GpuObject) * objectEntry.capacity, 0);
     size_t offset = 0;
     std::memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
     offset += sizeof(objectCount);
-    std::memcpy(objectData.data() + offset, objectHandles.data(), objectHandles.size() * sizeof(ObjectHandle));
+    std::memcpy(objectData.data() + offset, gpuObjects.data(), gpuObjects.size() * sizeof(GpuObject));
 
     Core::getEngine().fillBuffer(Core::getEngine().getBuffer(objectEntry.handle, frame.currentFrame), objectData.data());
 }

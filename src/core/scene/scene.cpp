@@ -15,6 +15,11 @@
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 
+std::vector<ProgrammableShader*>& Scene::getProgrammableShaders() {
+    static std::vector<ProgrammableShader*> shaders;
+    return shaders;
+}
+
 void Scene::init() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
@@ -70,13 +75,22 @@ ecs::Entity Scene::loadMeshAsset(std::string name, const std::string& path, bool
 void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
     if (newActiveCamera == activeCamera) return;
     activeCamera = newActiveCamera;
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 bool Scene::resetActiveCamera() {
     if (activeCamera == defaultCamera) return true;
     setActiveCamera(defaultCamera);
     return false;
+}
+
+void Scene::activateSceneCamera() {
+    for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
+        if (entity == defaultCamera) continue;
+        setActiveCamera(entity);
+        return;
+    }
+    setActiveCamera(defaultCamera);
 }
 
 void Scene::bakePhysics() {

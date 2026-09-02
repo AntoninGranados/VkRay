@@ -90,7 +90,7 @@ void InputHandler::handlePreview(float dt) {
     }
 
     if (!blockKeyboardInput && Core::getPlatform().getKey(GLFW_KEY_R))
-        Core::markDirty();
+        Core::markRenderDirty();
 }
 
 bool InputHandler::justPressed(int key) {
@@ -112,7 +112,7 @@ void InputHandler::handleFrameStepKey(int key, int direction, float dt, bool blo
     const auto step = [&]() {
         anim.reset(std::clamp(anim.getFrame() + direction, 0, anim.getEndFrame() - 1));
         anim.pause();
-        Core::markDirty();
+        Core::markRenderDirty();
     };
 
     if (!prevKeys[key]) {

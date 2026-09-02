@@ -4,6 +4,7 @@
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/parameters/parameter_serializer.hpp"
+#include "core/render/programmable_shader.hpp"
 
 Core& Core::get() {
     static Core instance;
@@ -26,7 +27,7 @@ void Core::terminate() {
     c.engine.waitIdle();
     c.coreRenderer.destroy();
     c.engine.destroyGraph();
-    c.scene.destroy();
+    c.coreRenderer.getScene().destroy();
     c.engine.terminate();
 }
 
@@ -39,10 +40,10 @@ void Core::restartAccumulation() {
     }
 }
 
-bool Core::consumeDirty() {
+bool Core::consumeRenderDirty() {
     Core& c = get();
-    if (!c.dirty) return false;
-    c.dirty = false;
+    if (!c.renderDirty) return false;
+    c.renderDirty = false;
     c.restartAccumulation();
     return true;
 }
@@ -62,29 +63,38 @@ bool Core::consumeResize() {
 
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Core& c = get();
+    Scene& scene = c.coreRenderer.getScene();
+    c.fileWatcher.poll();
     float jitterRange = 0.0f;
     if (c.renderMode != RenderMode::Preview) {
-        const float shutterSpeed = c.scene.getRegistry().get(c.scene.getCamera(), ecs::Camera).get<float>("shutter_speed");
+        const float shutterSpeed = scene.getRegistry().get(scene.getCamera(), ecs::Camera).get<float>("shutter_speed");
         jitterRange = blurFractionFromShutter(shutterSpeed, static_cast<float>(c.animation.getFps()));
     }
-    if (c.animation.sample(jitterRange)) markDirty();
-    if (!c.animation.isPaused()) markDirty();
-    consumeDirty();
-    c.scene.runPreRender();
+    if (c.animation.sample(jitterRange)) markRenderDirty();
+    if (!c.animation.isPaused()) markRenderDirty();
+    consumeRenderDirty();
+    scene.runPreRender();
     auto frameContext = c.engine.beginFrame();
     if (!frameContext) {
         c.engine.advanceFrame();
         return;
     }
-    c.scene.runOnRender(*frameContext);
-    c.coreRenderer.render(*frameContext, c.scene.getRegistry(), c.scene.getCamera());
+    scene.runOnRender(*frameContext);
+    ProgrammableShader::packAll(*frameContext);
+    if (c.pipelinesDirty) {
+        c.pipelinesDirty = false;
+        reloadShaders();
+    }
+    c.coreRenderer.render(*frameContext, scene.getRegistry(), scene.getCamera());
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
 }
 
 void Core::reloadShaders() {
-    get().coreRenderer.buildPipelines();
-    markDirty();
+    Core& c = get();
+    ProgrammableShader::generateDispatch();
+    c.coreRenderer.buildPipelines();
+    markRenderDirty();
 }
 
 void Core::startRender() {
@@ -94,7 +104,7 @@ void Core::startRender() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    markDirty();
+    markRenderDirty();
 }
 
 void Core::startRenderAnim() {
@@ -104,6 +114,6 @@ void Core::startRenderAnim() {
     c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
-    markDirty();
+    markRenderDirty();
     c.animation.reset(0);
 }

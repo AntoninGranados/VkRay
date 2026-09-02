@@ -16,6 +16,7 @@
 #include "version.hpp"
 
 #include "core/core.hpp"
+#include "core/render/programmable_shader.hpp"
 #include "core/scene/scene_serializer.hpp"
 
 #include "editor/ecs/component_ui_registry.hpp"
@@ -92,12 +93,19 @@ void Application::buildRenderGraph(bool offline) {
         previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
     }
 
+    ProgrammableShader::generateDispatch();
+
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();
 
     if (!offline) {
         Editor::getEditorRenderer().registerImGuiTextures();
         Editor::getMaterialPreview().onGraphCompiled(previewResources);
+
+        for (const std::string& entry : Core::getEngine().getShaderPaths())
+            for (const std::string& file : Shader::getSourceFiles(entry))
+                if (file.find("/generated/") == std::string::npos)
+                    Core::getFileWatcher().watch(file, Core::markPipelinesDirty);
     }
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }

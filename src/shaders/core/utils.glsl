@@ -26,27 +26,25 @@
 struct Object {
     Enum type;
     uint id;
+    MaterialHandle materialHandle;
 };
 
-#define OBJECT_NONE Object(obj_None, -1)
-#define OBJECT_AABB Object(obj_Aabb, -1)
+#define OBJECT_NONE Object(obj_None, -1, 0)
+#define OBJECT_AABB Object(obj_Aabb, -1, 0)
 
 struct Sphere {
     vec3 center;
     float radius;
-    MaterialHandle materialHandle;
 };
 
 struct Plane {
     vec3 point;
     vec3 normal;
-    MaterialHandle materialHandle;
 };
 
 struct Box {
     mat4 modelMatrix;
     mat4 invModelMatrix;
-    MaterialHandle materialHandle;
 };
 
 struct Quad {
@@ -54,7 +52,6 @@ struct Quad {
     vec3 u;
     vec3 v;
     vec3 normal;
-    MaterialHandle materialHandle;
 };
 
 struct Vertex {
@@ -85,7 +82,6 @@ struct Mesh {
     uint bvhNodeCount;
     float aabbMinX, aabbMinY, aabbMinZ;
     float aabbMaxX, aabbMaxY, aabbMaxZ;
-    MaterialHandle materialHandle;
     uint smoothShading;
     uint hasVertexColor;
 };
@@ -110,13 +106,14 @@ struct Statistics {
 
 struct Hit {
     vec3 p;
+    vec2 uv;
     vec3 normal;
     float t;
     bool frontFace;
     Object object;
     vec3 vertexColor;
 };
-#define NO_HIT Hit(vec3(0), vec3(0), INFINITY, true, OBJECT_NONE, vec3(1.0))
+#define NO_HIT Hit(vec3(0), vec2(0), vec3(0), INFINITY, true, OBJECT_NONE, vec3(1.0))
 #define foundIntersection(h) ((h).object.type != obj_None)
 
 // ============== LIGHTS ==============

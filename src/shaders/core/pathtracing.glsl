@@ -8,7 +8,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "objects.glsl"
 #include "lights.glsl"
 #include "global.glsl"
-#include "random.glsl"
+#include "random/utils.glsl"
 #include "sky.glsl"
 #include "adaptive_sampling.glsl"
 #include "camera.glsl"
@@ -27,7 +27,7 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     return bestHit;
 }
 
-void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
+void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo, inout RngState rng) {
     Statistics dummy = Statistics(0u, 0u);
     Hit firstHit = intersection(ray, false, INFINITY, dummy);
 
@@ -36,8 +36,8 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
         return;
     }
 
-    Material mat = resolveMaterial(getMaterial(firstHit.object), firstHit);
-    mat_setAlbedo(mat, mat_albedo(mat) * firstHit.vertexColor);
+    Material mat = resolveMaterial(getMaterial(firstHit.object), firstHit, -ray.dir, rng);
+    setAlbedo(mat, albedo(mat) * firstHit.vertexColor);
     float guideMix = 1.0 / float(pixelInfo.count);
 
     vec3 right = normalize(camera.U);
@@ -45,7 +45,7 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
 
     vec3 normalW = normalize(firstHit.normal);
     vec3 positionW = firstHit.p;
-    vec3 albedo = mat_albedo(mat);
+    vec3 albedo = albedo(mat);
     float roughness = (mat.type == mat_Metal || mat.type == mat_Glossy || mat.type == mat_Dielectric || mat.type == mat_Principled)
                       ? mat.payload[3] : 1.0;
     vec3 hitOff = positionW - camera.eye;
@@ -72,7 +72,7 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo) {
     }
 }
 
-vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pixelInfo) {
+vec3 traceRay(in Camera camera, in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
 
@@ -110,15 +110,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             float sigma_s = sigma_t * omega;
             float sigma_a = sigma_t * (1.0 - omega);
 
-            float t_scatter = (sigma_s > EPS) ? (-log(rand(seed)) / sigma_s) : INFINITY;
+            float t_scatter = (sigma_s > EPS) ? (-log(rand(rng)) / sigma_s) : INFINITY;
             if (t_scatter < hit.t) {
                 ray.origin += ray.dir * t_scatter;
 
                 throughput *= pow(max(currentMedium.absorption, vec3(1e-4)), vec3(sigma_a * t_scatter));
 
                 if (ubo.render.importanceSampling == 1) {
-                    Hit scatterHit = Hit(ray.origin, vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
-                    LightSample volLight = sampleLight(scatterHit, seed);
+                    Hit scatterHit = Hit(ray.origin, vec2(0), vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
+                    LightSample volLight = sampleLight(scatterHit, rng);
                     prevIsSkipped = volLight.skip;
                     if (volLight.pdf > EPS) {
                         float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
@@ -130,7 +130,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
                 }
 
                 vec3 incomingDir = ray.dir;
-                ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, seed);
+                ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, rng);
                 throughput *= omega * currentMedium.absorption;
 
                 prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
@@ -145,15 +145,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         }
 
         mat = getMaterial(hit.object);
-        mat_setAlbedo(mat, mat_albedo(mat) * hit.vertexColor);
+        setAlbedo(mat, albedo(mat) * hit.vertexColor);
 
         if (mat.type == mat_Emissive) {
             if (i == 0) {
-                radiance = mat_albedo(mat) * mat_emissive_emissionStrength(mat);
+                radiance = albedo(mat) * emissionStrength(mat);
                 break;
             }
 
-            vec3 Le = mat_albedo(mat) * mat_emissive_emissionStrength(mat);
+            vec3 Le = albedo(mat) * emissionStrength(mat);
             float w = 1.0;
             if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
                 float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
@@ -164,7 +164,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
             break;
         }
 
-        bsdf = sampleBSDF(mat, hit, -ray.dir, seed);
+        bsdf = sampleBSDF(mat, hit, -ray.dir, rng);
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
         }
@@ -175,10 +175,10 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         }
         bool isSkipped = false;
         if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
-            lightSample = sampleLight(hit, seed);
+            lightSample = sampleLight(hit, rng);
             isSkipped = lightSample.skip;
             if (lightSample.pdf > EPS) {
-                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi);
+                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi, rng);
                 float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
                 float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
                 radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
@@ -190,7 +190,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
         // Russian Roulette
         if (i >= 2 && !bsdf.isDelta) {
             float p = clamp(luma(throughput), 0.1, 1.0);
-            if (rand(seed) > p) break;
+            if (rand(rng) > p) break;
             throughput /= p;
         }
         if (mat.type != mat_Volume && !((mat.type == mat_Dielectric || mat.type == mat_Principled) && bsdf.medium.isVolume)) {
@@ -213,15 +213,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout uint seed, inout PixelInfo pix
     return radiance;
 }
 
-vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout uint seed, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
+vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout RngState rng, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
-    if (sampleProb >= 1.0 || rand(seed) <= sampleProb) {
+    if (sampleProb >= 1.0 || rand(rng) <= sampleProb) {
         pixelInfo.count++;
-        vec2 offset = vec2(rand(seed), rand(seed)) / ubo.screen.size;
-        Ray ray = getRay(camera, fragPos + offset, seed);
-        collectGBuffer(ray, camera, pixelInfo);
-        vec3 rayColor = traceRay(camera, ray, seed, pixelInfo);
+        vec2 offset = vec2(rand(rng), rand(rng)) / ubo.screen.size;
+        Ray ray = getRay(camera, fragPos + offset, rng);
+        collectGBuffer(ray, camera, pixelInfo, rng);
+        vec3 rayColor = traceRay(camera, ray, rng, pixelInfo);
         if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
             pixelInfo.count--;
         } else {
@@ -266,7 +266,7 @@ void main() {
     }
 
     Camera camera = Camera(ubo.camera.eye, ubo.camera.U, ubo.camera.V, ubo.camera.W);
-    uint seed = initSeed(uvec2(pixelCoord), uint(ubo.sampleCount));
+    RngState rng = initRngState(uvec2(pixelCoord), uint(ubo.sampleCount));
 
     uint blockVarianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
@@ -277,7 +277,7 @@ void main() {
         sampleProb = computeSampleProbability(pixelInfo, pixelCoord, texSize);
 
     float takenSamples = 0.0;
-    vec3 colorSum = computeFragmentColor(camera, fragPos, seed, sampleProb, pixelInfo, takenSamples);
+    vec3 colorSum = computeFragmentColor(camera, fragPos, rng, sampleProb, pixelInfo, takenSamples);
     PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
     updatedInfo.aov             = pixelInfo.aov;
     updatedInfo.mean            = pixelInfo.mean;

@@ -37,6 +37,10 @@ public:
     TimestampHandle getCompositingTimestamp() const { return compositingTimestamp; }
     ImageHandle getOutputImageHandle() const { return resources.outputImageHandle; }
 
+    static BufferHandle getProgrammableParamsHandle() { return programmableParamsHandle; }
+
+    Scene& getScene() { return scene; }
+
 protected:
     PathtracerUBO  pathtracerUBO;
     CompositingUBO compositingUBO;
@@ -48,6 +52,10 @@ protected:
 
 private:
     void setDefaultUBOs();
+
+    static BufferHandle programmableParamsHandle;
+
+    Scene scene;
 
     RenderResources resources = {};
 

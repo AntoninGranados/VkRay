@@ -90,4 +90,8 @@ layout(set = 0, binding = 13) buffer readonly LightBuffer {
 
 layout(set = 0, binding = 15) uniform sampler2D lensSampler;
 
+layout(set = 0, binding = 16) buffer readonly ProgrammableParamsBuffer {
+    float values[];
+} programmableParams;
+
 #endif

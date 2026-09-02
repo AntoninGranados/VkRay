@@ -2,7 +2,7 @@
 #define VOLUME_GLSL
 
 #include "../utils.glsl"
-#include "../random.glsl"
+#include "../random/utils.glsl"
 
 #include "material_utils.glsl"
 
@@ -14,8 +14,8 @@ float phaseFunctionHG(float g, in vec3 wi, in vec3 wo) {
     return (1.0f - g_sq) / denom / PI * 0.25f;
 }
 
-vec3 sampleHG(float g, vec3 wi, inout uint seed) {
-    vec2 xi = vec2(rand(seed), rand(seed));
+vec3 sampleHG(float g, vec3 wi, inout RngState rng) {
+    vec2 xi = vec2(rand(rng), rand(rng));
 
     // Sample cos_theta
     float cos_theta;
@@ -48,7 +48,7 @@ BSDFEval evalVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     );
 }
 
-BSDFSample sampleVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint seed) {
+BSDFSample sampleVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
     BSDFSample bsdf;
     bsdf.wi      = -wo;
     bsdf.weight  = vec3(1.0);
@@ -56,10 +56,10 @@ BSDFSample sampleVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, inout uint 
     bsdf.isDelta = true;
     bsdf.medium.isDielectric  = false;
     bsdf.medium.isVolume      = hit.frontFace;
-    bsdf.medium.absorption    = mat_albedo(mat);
-    bsdf.medium.density       = mat_volume_density(mat);
+    bsdf.medium.absorption    = albedo(mat);
+    bsdf.medium.density       = volumeDensity(mat);
     bsdf.medium.scatterAlbedo = 1.0;
-    bsdf.medium.anisotropic   = mat_volume_anisotropic(mat);
+    bsdf.medium.anisotropic   = volumeAnisotropic(mat);
     return bsdf;
 }
 

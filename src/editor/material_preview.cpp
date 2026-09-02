@@ -2,32 +2,36 @@
 
 #include <algorithm>
 
+#include "core/ecs/components/material.hpp"
+#include "core/scene/scene.hpp"
 #include "imgui/imgui_impl_vulkan.h"
 
 #include "VkSmol/graph/render_graph_builder.hpp"
 
 #include "core/core.hpp"
+#include "core/render/programmable_shader.hpp"
 #include "editor/ui_utils.hpp"
 
 RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {
+    Scene& scene = renderer.getScene();
     scene.init();
 
     ecs::Registry& registry = scene.getRegistry();
     registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("fov", 15.0f);
 
-    previewMaterialEntity = scene.createNamedEntity("PreviewMaterial", scene.getMaterialsRoot());
+    previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
     registry.add(previewMaterialEntity, ecs::Diffuse);
 
-    const ecs::Entity previewObject = scene.createNamedEntity("PreviewSphere", scene.getObjectsRoot());
+    const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
     registry.add(previewObject, ecs::Sphere);
     registry.add(previewObject, ecs::MaterialRef);
     registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
-    const ecs::Entity lightMaterialEntity = scene.createNamedEntity("PreviewLightMaterial", scene.getMaterialsRoot());
+    const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
     registry.add(lightMaterialEntity, ecs::Emissive);
     registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
 
-    const ecs::Entity lightObject = scene.createNamedEntity("PreviewLight", scene.getObjectsRoot());
+    const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
     registry.add(lightObject, ecs::Sphere);
     registry.get(lightObject, ecs::Sphere).set<float>("radius", 1.5f);
     registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
@@ -41,7 +45,7 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
 }
 
 void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
-    scene.setGpuBufferHandles(resources.sceneHandles);
+    renderer.getScene().setGpuBufferHandles(resources.sceneHandles);
     liveTextureId = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
 }
 
@@ -67,9 +71,16 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
 
     MaterialFingerprint fingerprint;
     fingerprint.type = resolveBsdfType(registry, entity);
-    if (fingerprint.type)
-        for (const ecs::ComponentField& field : registry.get(entity, *fingerprint.type).getFields())
+    if (fingerprint.type) {
+        const ecs::Component& component = registry.get(entity, *fingerprint.type);
+        for (const ecs::ComponentField& field : component.getFields())
             fingerprint.fields.push_back(field);
+        if (fingerprint.type == &ecs::ProgrammableMaterial) {
+            const ProgrammableShader& shader = component.payload<ProgrammableShader>("shader");
+            fingerprint.programmableBody = shader.getMainBody();
+            fingerprint.programmableValues = shader.packValues();
+        }
+    }
     return fingerprint;
 }
 
@@ -87,9 +98,10 @@ ImTextureID MaterialPreview::registerTexture(VkImageView view) const {
 }
 
 void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource) {
-    ecs::Registry& previewRegistry = scene.getRegistry();
+    ecs::Registry& previewRegistry = renderer.getScene().getRegistry();
     if (!previewRegistry.has(previewMaterialEntity, type)) {
-        if (const ecs::ComponentType* previousType = resolveBsdfType(previewRegistry, previewMaterialEntity)) {
+        const ecs::ComponentType* previousType = resolveBsdfType(previewRegistry, previewMaterialEntity);
+        if (previousType) {
             previewRegistry.remove(previewMaterialEntity, *previousType);
             previewRegistry.flush();
         }
@@ -98,8 +110,18 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
 
     ecs::Component& source = Core::getScene().getRegistry().get(fieldSource, type);
     ecs::Component& preview = previewRegistry.get(previewMaterialEntity, type);
+
     for (const ecs::ComponentField& field : source.getFields())
         preview.getField(field.getId()) = field;
+
+    if (type == ecs::ProgrammableMaterial) {
+        ProgrammableShader& previewShader = preview.payload<ProgrammableShader>("shader");
+        previewShader.parse(source.get<std::filesystem::path>("path"));
+
+        const ProgrammableShader& sourceShader = source.payload<ProgrammableShader>("shader");
+        for (const ecs::ComponentField& field : sourceShader.getParams())
+            previewShader.getField(field.getId()) = field;
+    }
 }
 
 void MaterialPreview::startGeneration(ecs::Entity materialEntity) {
@@ -172,6 +194,7 @@ void MaterialPreview::tick(const FrameContext& frameContext) {
         startGeneration(inFlight->entity);
     }
 
+    Scene& scene = renderer.getScene();
     scene.runOnRender(frameContext);
     renderer.render(frameContext, scene.getRegistry(), scene.getCamera());
 

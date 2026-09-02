@@ -4,6 +4,7 @@
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
+#include "core/render/programmable_shader.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
@@ -83,8 +84,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Sphere);
     ui_reg.add(ecs::Plane);
     ui_reg.add(ecs::Box);
-    ui_reg.add(ecs::Collider);
-    ui_reg.add(ecs::RigidBody);
+    ui_reg.add(ecs::Quad);
 
     ui_reg.add(ecs::Mesh, [](Component&, Registry&, Entity e) {
         if (const MeshAsset* mesh = Core::getScene().getMeshAsset(e)) {
@@ -129,6 +129,9 @@ void ComponentUiRegistry::init() {
 
     ui_reg.add(ecs::MeshRef);
 
+    ui_reg.add(ecs::Collider);
+    ui_reg.add(ecs::RigidBody);
+
     ui_reg.add(ecs::Camera);
 
     ui_reg.add(ecs::ThinLens);
@@ -151,16 +154,25 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Dielectric);
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
-    ui_reg.add(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity) {
+    ui_reg.addCustom(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity e) {
+        const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
+        if (!ImGui::CollapsingHeader(header.c_str())) return false;
+
+        const bool pathChanged = ui::drawField(c.getField("path"), "##path");
+
         ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
-        shader.parse(c.get<std::filesystem::path>("path"));
+        if (pathChanged) shader.reload(c.get<std::filesystem::path>("path"));
+        else shader.parse(c.get<std::filesystem::path>("path"));
 
         if (!shader.getError().empty())
             ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", shader.getError().c_str());
 
-        for (Field& param : shader.getParams())
-            ui::drawField(param, "##" + param.getId());
-        return false;
+        bool update = pathChanged;
+        for (ecs::ComponentField& param : shader.getParams()) {
+            if (param.isAnimatable()) ui::drawKeyframeButton(e, c, param.getId());
+            update |= ui::drawField(param, "##" + param.getId());
+        }
+        return update;
     });
 }
 

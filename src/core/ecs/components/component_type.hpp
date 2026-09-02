@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <functional>
 #include <optional>
 #include <stdexcept>
@@ -9,14 +10,18 @@
 #include <vector>
 
 #include "core/field.hpp"
+#include "utils/string_utils.hpp"
 
 namespace ecs {
+
+class Component;
 
 struct ComponentField : Field {
     ComponentField() = default;
     explicit ComponentField(bool isAnimatable) : animatable(isAnimatable) {}
 
     bool isAnimatable() const { return animatable; }
+    void setAnimatable(bool newAnimatable) { animatable = newAnimatable; }
 
 private:
     bool animatable = false;
@@ -27,6 +32,11 @@ struct ComponentPayload {
     std::type_index typeId;
     std::function<void*()> construct;
     std::function<void(void*)> destroy;
+    std::function<Component*(void*)> asComponent = nullptr;
+
+    bool operator==(const ComponentPayload& other) const {
+        return id == other.id && typeId == other.typeId;
+    };
 };
 
 class ComponentType {
@@ -48,10 +58,10 @@ public:
     const std::vector<ComponentPayload>& getPayloads() const { return payloads; }
     size_t getPayloadIndex(const std::string& id) const { return payloadIndex.at(id); }
 
-    static std::string deriveLabel(const std::string& id);
-
     static const std::vector<ComponentType>& all();
     static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
+
+    bool operator==(const ComponentType&) const = default;
 
 private:
     friend class ComponentType::Builder;
@@ -85,7 +95,15 @@ public:
         if (type.fieldIndex.contains(id))
             throw std::invalid_argument("duplicate field id: " + id);
         ComponentField f(animatable);
-        static_cast<Field&>(f) = Field::make<T>(id, deriveLabel(id), defaultValue, std::move(metadata));
+        static_cast<Field&>(f) = Field::make<T>(id, snakeCaseToLabel(id), defaultValue, std::move(metadata));
+        type.fieldIndex[f.getId()] = type.fields.size();
+        type.fields.push_back(std::move(f));
+        return *this;
+    }
+
+    Builder& field(ComponentField f) {
+        if (type.fieldIndex.contains(f.getId()))
+            throw std::invalid_argument("duplicate field id: " + f.getId());
         type.fieldIndex[f.getId()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;
@@ -96,12 +114,15 @@ public:
         if (type.payloadIndex.contains(id))
             throw std::invalid_argument("duplicate payload id: " + id);
         type.payloadIndex[id] = type.payloads.size();
-        type.payloads.push_back(ComponentPayload{
+        ComponentPayload p{
             std::move(id),
             std::type_index(typeid(T)),
             []() -> void* { return new T(); },
             [](void* p) { delete static_cast<T*>(p); },
-        });
+        };
+        if constexpr (requires (T& t) { { t.getComponent() } -> std::same_as<Component&>; })
+            p.asComponent = [](void* p) -> Component* { return &static_cast<T*>(p)->getComponent(); };
+        type.payloads.push_back(std::move(p));
         return *this;
     }
 
@@ -118,6 +139,7 @@ public:
     }
 
     ComponentType& build();
+    ComponentType buildDetached();
 
 private:
     ComponentType type = {};

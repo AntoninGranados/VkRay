@@ -2,18 +2,18 @@
 #define CAMERA_GLSL
 
 #include "inputs.glsl"
-#include "random.glsl"
+#include "random/utils.glsl"
 
-vec2 sampleLens(inout uint seed) {
+vec2 sampleLens(inout RngState rng) {
     for (int i = 0; i < 16; i++) {
-        vec2 p = vec2(rand(seed), rand(seed)) * 2.0 - 1.0;
+        vec2 p = vec2(rand(rng), rand(rng)) * 2.0 - 1.0;
         float mask = texture(lensSampler, p * 0.5 + 0.5).r;
-        if (rand(seed) < mask) return p;
+        if (rand(rng) < mask) return p;
     }
     return vec2(0.0);
 }
 
-Ray getRay(Camera camera, vec2 ndc_pos, inout uint seed) {
+Ray getRay(Camera camera, vec2 ndc_pos, inout RngState rng) {
     vec3 camRight = normalize(camera.U);
     vec3 camUp = normalize(camera.V);
 
@@ -41,7 +41,7 @@ Ray getRay(Camera camera, vec2 ndc_pos, inout uint seed) {
 
     vec3 offset = vec3(0.0);
     if (ubo.camera.thinLens.lensRadius > 0.0) {
-        vec2 p = sampleLens(seed);
+        vec2 p = sampleLens(rng);
         offset = ubo.camera.thinLens.lensRadius * (camRight * p.x + camUp * p.y);
     }
 

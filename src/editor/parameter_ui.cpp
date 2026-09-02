@@ -111,7 +111,7 @@ void ParameterUI::drawGroup(const ParameterPath& root) {
         bool changed = false, restartNeeded = false;
         for (auto& item : child.children)
             drawItem(item, changed, restartNeeded);
-        if (restartNeeded) Core::markDirty();
+        if (restartNeeded) Core::markRenderDirty();
         return;
     }
 }

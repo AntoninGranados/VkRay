@@ -56,7 +56,7 @@ void ViewportPanel::content() {
             auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
             if (hit.has_value()) {
                 scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focus_distance", dist);
-                Core::markDirty();
+                Core::markRenderDirty();
             }
         }
     }
@@ -120,7 +120,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         t.set<glm::vec3>("scale", scale);
         if (glm::abs(glm::dot(oldRotation, rotation)) < 0.99999f)
             t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(rotation)));
-        Core::markDirty();
+        Core::markRenderDirty();
     }
     ImGuizmo::PopID();
 
@@ -146,7 +146,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
                 glm::value_ptr(scale));
             ts.set<glm::vec3>("plane_position", translation);
             ts.set<glm::vec3>("plane_rotation", rotationEuler);
-            Core::markDirty();
+            Core::markRenderDirty();
         }
     }
     ImGuizmo::PopID();

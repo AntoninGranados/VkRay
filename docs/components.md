@@ -170,13 +170,13 @@ PBR principled BSDF.
 | `alpha` | float | 1 | 0 ... 1 | yes |
 
 ### Programmable
-Programmable custom BSDF.
+Programmable custom BSDF, defined by a GLSL shader-definition file.
 
 **Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `volume` `principled`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
+| `path` | path |  |  | no |
 
 ## Movement
 

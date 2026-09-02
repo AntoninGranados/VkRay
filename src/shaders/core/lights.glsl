@@ -3,12 +3,12 @@
 
 #include "inputs.glsl"
 #include "global.glsl"
-#include "random.glsl"
+#include "random/utils.glsl"
 
-int getRandomLightId(inout uint seed) {
+int getRandomLightId(inout RngState rng) {
     if (lightBuffer.totalArea <= EPS) return -1;
 
-    float r = rand(seed);
+    float r = rand(rng);
     float t = 0.0;
     int i = 0;
     while (r > t) {
@@ -47,17 +47,17 @@ float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in v
     return light.pdfA * dist*dist / max(cosLight, EPS) * light.area / lightBuffer.totalArea;
 }
 
-LightSample sampleLight(in Hit hit, inout uint seed) {
+LightSample sampleLight(in Hit hit, inout RngState rng) {
     LightSample light;
     light.skip = false;
-    int lightId = getRandomLightId(seed);
+    int lightId = getRandomLightId(rng);
     if (lightId < 0) {
         light.pdf = -1.0;
         return light;
     }
 
     Object lightObj = objectBuffer.objects[lightBuffer.lights[lightId].objectId];
-    SurfaceSample surfaceSample = sampleSurface(lightObj, lightBuffer.lights[lightId].area, seed);
+    SurfaceSample surfaceSample = sampleSurface(lightObj, lightBuffer.lights[lightId].area, rng);
 
     vec3 toLight = surfaceSample.p - hit.p;
     float dist = length(toLight);
@@ -85,7 +85,7 @@ LightSample sampleLight(in Hit hit, inout uint seed) {
 
     light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
     Material lightMat = getMaterial(lightObj);
-    light.Le = mat_albedo(lightMat) * mat_emissive_emissionStrength(lightMat);
+    light.Le = albedo(lightMat) * emissionStrength(lightMat);
     return light;
 }
 

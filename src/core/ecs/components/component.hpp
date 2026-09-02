@@ -3,8 +3,8 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -32,16 +32,25 @@ public:
     void set(const std::string& id, const T& v) { getField(id).set(v); }
 
     ComponentField& getField(const std::string& id) {
-        assert(fieldIndex.contains(id));
-        return fields[fieldIndex.at(id)];
+        ComponentField* found = nullptr;
+        forEachField([&](ComponentField& f) { if (!found && f.getId() == id) found = &f; });
+        if (!found) throw std::out_of_range("unknown field id: " + id);
+        return *found;
     }
     const ComponentField& getField(const std::string& id) const {
-        assert(fieldIndex.contains(id));
-        return fields[fieldIndex.at(id)];
+        return const_cast<Component*>(this)->getField(id);
     }
 
     std::vector<ComponentField>& getFields() { return fields; }
     const std::vector<ComponentField>& getFields() const { return fields; }
+
+    void forEachField(const std::function<void(ComponentField&)>& fn) {
+        for (ComponentField& f : fields) fn(f);
+        const auto& payloadTypes = type->getPayloads();
+        for (size_t i = 0; i < payloads.size(); ++i)
+            if (payloadTypes[i].asComponent)
+                payloadTypes[i].asComponent(payloads[i].get())->forEachField(fn);
+    }
 
     template<typename T>
     T& payload(const std::string& id) {

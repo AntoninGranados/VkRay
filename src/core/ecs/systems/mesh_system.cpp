@@ -20,7 +20,7 @@ void requestMeshSimplify(Registry& registry, Entity meshEntity, float ratio) {
         original = live;
 
     live = (ratio >= 1.0f - 1e-6f) ? original : simplifyMesh(original, ratio);
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 void applyMeshSimplification(Registry& registry, Entity meshEntity) {
@@ -29,7 +29,7 @@ void applyMeshSimplification(Registry& registry, Entity meshEntity) {
     const MeshAsset& live = registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry");
     registry.get(meshEntity, MeshSimplify).payload<MeshAsset>("original") = live;
     registry.get(meshEntity, MeshSimplify).set<float>("ratio", 1.0f);
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 void revertMeshSimplification(Registry& registry, Entity meshEntity) {
@@ -40,7 +40,7 @@ void revertMeshSimplification(Registry& registry, Entity meshEntity) {
 
     registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry") = original;
     registry.get(meshEntity, MeshSimplify).set<float>("ratio", 1.0f);
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 } // namespace ecs

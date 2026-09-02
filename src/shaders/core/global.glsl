@@ -3,7 +3,7 @@
 
 #include "inputs.glsl"
 #include "utils.glsl"
-#include "materials/materials.glsl"
+#include "materials/material_utils.glsl"
 #include "objects.glsl"
 
 Hit rayObjectIntersection(in Ray ray, in Object obj, bool anyHit, float tMax, inout Statistics stats) {
@@ -18,23 +18,16 @@ Hit rayObjectIntersection(in Ray ray, in Object obj, bool anyHit, float tMax, in
 }
 
 Material getMaterial(in Object obj) {
-    switch (obj.type) {
-        case obj_Sphere: return materialBuffer.materials[sphereBuffer.spheres[obj.id].materialHandle];
-        case obj_Plane:  return materialBuffer.materials[planeBuffer.planes[obj.id].materialHandle];
-        case obj_Box:    return materialBuffer.materials[boxBuffer.boxes[obj.id].materialHandle];
-        case obj_Quad:   return materialBuffer.materials[quadBuffer.quads[obj.id].materialHandle];
-        case obj_Mesh:   return materialBuffer.materials[meshBuffer.meshes[obj.id].materialHandle];
-        default:         return DEFAULT_MATERIAL;
-    }
+    return materialBuffer.materials[obj.materialHandle];
 }
 
-SurfaceSample sampleSurface(in Object obj, in float area, inout uint seed) {
+SurfaceSample sampleSurface(in Object obj, in float area, inout RngState rng) {
     switch (obj.type) {
-        case obj_Sphere: return sampleSphereSurface(sphereBuffer.spheres[obj.id], area, seed);
+        case obj_Sphere: return sampleSphereSurface(sphereBuffer.spheres[obj.id], area, rng);
         case obj_Plane:  return SurfaceSample(vec3(0.0), vec3(0.0));
-        case obj_Box:    return sampleBoxSurface(boxBuffer.boxes[obj.id], area, seed);
-        case obj_Quad:   return sampleQuadSurface(quadBuffer.quads[obj.id], area, seed);
-        case obj_Mesh:   return sampleMeshSurface(meshBuffer.meshes[obj.id], area, seed);
+        case obj_Box:    return sampleBoxSurface(boxBuffer.boxes[obj.id], area, rng);
+        case obj_Quad:   return sampleQuadSurface(quadBuffer.quads[obj.id], area, rng);
+        case obj_Mesh:   return sampleMeshSurface(meshBuffer.meshes[obj.id], area, rng);
         default:         return SurfaceSample(vec3(0.0), vec3(0.0));
     }
 }

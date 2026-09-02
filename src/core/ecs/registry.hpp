@@ -86,10 +86,18 @@ public:
         return storages.at(type.getId());
     }
 
-    bool add(const Entity& e, const ComponentType& type) {
+    bool canAdd(const Entity& e, const ComponentType& type) const {
         if (has(e, type)) return true;
         for (const auto& id : type.getConflicts())
             if (hasById(e, id)) return false;
+        for (const auto& id : type.getNeeds())
+            if (auto t = ComponentType::find(id); t && !canAdd(e, t->get())) return false;
+        return true;
+    }
+
+    bool add(const Entity& e, const ComponentType& type) {
+        if (has(e, type)) return true;
+        if (!canAdd(e, type)) return false;
 
         for (const auto& id : type.getNeeds())
             if (auto t = ComponentType::find(id); t && !has(e, t->get())) add(e, t->get());

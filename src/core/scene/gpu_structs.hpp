@@ -15,19 +15,16 @@ struct GpuMaterial {
 struct GpuSphere {
     alignas(16) glm::vec3 center;
     float radius;
-    uint32_t materialHandle;
 };
 
 struct GpuPlane {
     alignas(16) glm::vec3 point;
     alignas(16) glm::vec3 normal;
-    uint32_t materialHandle;
 };
 
 struct GpuBox {
     alignas(16) glm::mat4 transform;
     alignas(16) glm::mat4 invTransform;
-    uint32_t materialHandle;
 };
 
 struct GpuQuad {
@@ -35,7 +32,6 @@ struct GpuQuad {
     alignas(16) glm::vec3 u;
     alignas(16) glm::vec3 v;
     alignas(16) glm::vec3 normal;
-    uint32_t materialHandle;
 };
 
 struct GpuBvhChild {
@@ -59,7 +55,6 @@ struct GpuMesh {
     uint32_t bvhNodeCount;
     float aabbMinX, aabbMinY, aabbMinZ;
     float aabbMaxX, aabbMaxY, aabbMaxZ;
-    uint32_t materialHandle;
     uint32_t smoothShading;
     uint32_t hasVertexColor;
 };
@@ -76,9 +71,10 @@ enum class ObjectType : int {
     Camera = 6,
 };
 
-struct ObjectHandle {
+struct GpuObject {
     ObjectType type;
-    int id;
+    uint32_t id;
+    uint32_t materialHandle;
 };
 
 struct GpuObjectHeader {

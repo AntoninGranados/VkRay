@@ -67,7 +67,7 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
         groups[type.getGroup()].push_back(&type);
 
     for (const auto& [group, types] : groups) {
-        file << "\n## " << ecs::ComponentType::deriveLabel(group) << "\n";
+        file << "\n## " << snakeCaseToLabel(group) << "\n";
         for (const auto* type : types) {
             file << "\n### " << type->getLabel() << "\n";
             if (!type->getDescription().empty())

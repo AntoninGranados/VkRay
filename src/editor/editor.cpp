@@ -20,18 +20,16 @@ EditorUi& Editor::getUi() { return get().ui; }
 EditorRenderer& Editor::getEditorRenderer() { return get().editorRenderer; }
 MaterialPreview& Editor::getMaterialPreview() { return get().materialPreview; }
 
-std::optional<ecs::Entity> Editor::getSelectedEntity(){ return get().selectedEntity; }
+std::optional<ecs::Entity> Editor::getSelectedEntity() { return get().selectedEntity; }
 void Editor::setSelectedEntity(ecs::Entity entity) { get().selectedEntity = entity; }
 void Editor::clearSelectedEntity() { get().selectedEntity.reset(); }
 
 void Editor::selectEntity(std::optional<ecs::Entity> entity) {
-    Core::getScene().resetActiveCamera();
-
     const bool changed = get().selectedEntity != entity;
     if (entity.has_value()) setSelectedEntity(*entity);
     else clearSelectedEntity();
 
-    if (changed) Core::markDirty();
+    if (changed) Core::markRenderDirty();
 }
 
 void Editor::stepAnimation(float deltaTime) {
@@ -41,9 +39,7 @@ void Editor::stepAnimation(float deltaTime) {
 void Editor::handleViewportResize() {
     ImVec2 vpSize = get().ui.getViewportSize();
     float xscale = 1.0f, yscale = 1.0f;
-    glfwGetWindowContentScale(
-        static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()),
-        &xscale, &yscale);
+    glfwGetWindowContentScale(static_cast<GLFWwindow *>(Core::getPlatform().getNativeWindowHandle()), &xscale, &yscale);
     VkExtent2D vpExtent = {
         static_cast<uint32_t>(vpSize.x * xscale),
         static_cast<uint32_t>(vpSize.y * yscale)
@@ -59,12 +55,12 @@ void Editor::handleViewportResize() {
         } else {
             get().editorRenderer.registerImGuiTextures();
         }
-        Core::markDirty();
+        Core::markRenderDirty();
     }
 }
 
 void Editor::handleRenderModeCompletion() {
-    if (Core::getRenderMode() == RenderMode::Preview || Core::isDirty()) return;
+    if (Core::getRenderMode() == RenderMode::Preview || Core::isRenderDirty()) return;
     if (!Core::getCoreRenderer().isRenderFinished()) return;
 
     if (Core::getRenderMode() == RenderMode::RenderAnimation) {
@@ -80,7 +76,7 @@ void Editor::handleRenderModeCompletion() {
         Core::setRenderMode(RenderMode::Preview);
     }
 
-    Core::markDirty();
+    Core::markRenderDirty();
 }
 
 void Editor::run() {
@@ -99,7 +95,7 @@ void Editor::run() {
         handleViewportResize();
         handleRenderModeCompletion();
 
-        Core::renderFrame([&](FrameContext& frameContext) {
+        Core::renderFrame([&](FrameContext &frameContext) {
             get().editorRenderer.render(frameContext);
             get().materialPreview.tick(frameContext);
             Core::getEngine().present();

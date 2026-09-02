@@ -3,7 +3,7 @@
 
 #include "inputs.glsl"
 #include "utils.glsl"
-#include "random.glsl"
+#include "random/utils.glsl"
 
 uint varianceIndexFromCoord(ivec2 coord, ivec2 texSize) {
     return uint(coord.y * texSize.x + coord.x);

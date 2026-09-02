@@ -8,7 +8,7 @@
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/materials/programmable_shader.hpp"
+#include "core/render/programmable_shader.hpp"
 
 namespace ecs {
 

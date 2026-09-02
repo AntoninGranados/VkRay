@@ -30,7 +30,7 @@ void ScenePanel::content() {
                     Core::getParameters().set("scene/light_mode", mode);
                     const ecs::Entity camera = scene.getCamera();
                     Editor::selectEntity(camera == scene.getDefaultCamera() ? std::nullopt : std::optional{camera});
-                    Core::markDirty();
+                    Core::markRenderDirty();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
             }
@@ -84,20 +84,20 @@ void ScenePanel::content() {
         if (ImGui::Button("+ Object")) {
             const ecs::Entity e = scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
             reg.add(e, ecs::Transform);
-            Core::markDirty();
+            Core::markRenderDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("+ Material")) {
             const ecs::Entity e = scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
             scene.getRegistry().add(e, ecs::Diffuse);
-            Core::markDirty();
+            Core::markRenderDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("+ Mesh")) {
             if (auto path = ui::openFileDialog({{"OBJ Mesh", "obj"}}, "assets/models/")) {
                 const ecs::Entity meshAssetEntity = scene.loadMeshAsset(path->stem().string(), path->string());
                 if (meshAssetEntity != ecs::Entity{}) {
-                    Core::markDirty();
+                    Core::markRenderDirty();
                     Editor::selectEntity(meshAssetEntity);
                     Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
                 }
@@ -133,7 +133,7 @@ void ScenePanel::content() {
                 }
             }
             reg.destroyEntity(entityToDelete);
-            Core::markDirty();
+            Core::markRenderDirty();
             Editor::selectEntity(std::nullopt);
         }
         if (!canDelete) ImGui::EndDisabled();

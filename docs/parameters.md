@@ -72,7 +72,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ### Sampling
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/sampling/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | - |
+| `renderer/sampling/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | ✓ |
 | `renderer/sampling/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | - |
 | `renderer/sampling/importance_sampling` | Importance Sampling | - | Boolean | true | - | - |
 | `renderer/sampling/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | ✓ |

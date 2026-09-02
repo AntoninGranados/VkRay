@@ -11,7 +11,7 @@
         },
         "sampling": {
             "label": "Sampling",
-            "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
+            "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1, "restart_accumulation": true },
             "render_samples": { "label": "Render Samples", "default": 2048, "min": 1, "max": 4096, "step": 1 },
             "importance_sampling": { "label": "Importance Sampling", "default": true },
             "clamp": { "label": "Clamp Fireflies", "description": "Clamps high-luminance samples to reduce fireflies.", "default": false, "restart_accumulation": true },

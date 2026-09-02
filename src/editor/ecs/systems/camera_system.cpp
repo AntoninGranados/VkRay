@@ -234,7 +234,7 @@ void cameraControlSystem(Registry& registry) {
         if (moved) {
             state.anchor += position - t.get<glm::vec3>("position");
             t.set<glm::vec3>("position", position);
-            Core::markDirty();
+            Core::markRenderDirty();
         }
     }
 }
@@ -260,7 +260,7 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
 
     float xoffset = x - state.lastX;
     float yoffset = state.lastY - y;
-    if (xoffset != 0 || yoffset != 0) Core::markDirty();
+    if (xoffset != 0 || yoffset != 0) Core::markRenderDirty();
     state.lastX = x;
     state.lastY = y;
 
@@ -309,7 +309,7 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, double xoffset
 
     auto& c = registry.get(camera, ecs::Camera);
     c.set<float>("fov", c.get<float>("fov") - static_cast<float>(yoffset));
-    if (yoffset != 0) Core::markDirty();
+    if (yoffset != 0) Core::markRenderDirty();
 }
 
 } // namespace ecs

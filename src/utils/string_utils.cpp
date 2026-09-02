@@ -1,5 +1,7 @@
 #include "string_utils.hpp"
 
+#include <cctype>
+
 std::string trim(const std::string& s) {
     size_t begin = s.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) return "";
@@ -31,4 +33,30 @@ std::vector<float> parseNumbers(const std::string& expr) {
         }
     }
     return values;
+}
+
+std::string snakeCaseToLabel(const std::string& id) {
+    std::string result;
+    bool capitalize = true;
+    for (const char c : id) {
+        if (capitalize) {
+            result += std::toupper(c);
+            capitalize = false;
+        } else if (c == '_') {
+            result += ' ';
+            capitalize = true;
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
+std::string camelCaseToLabel(const std::string& id) {
+    std::string result;
+    for (size_t i = 0; i < id.size(); i++) {
+        if (i > 0 && std::isupper(id[i])) result += ' ';
+        result += i == 0 ? static_cast<char>(std::toupper(id[i])) : id[i];
+    }
+    return result;
 }

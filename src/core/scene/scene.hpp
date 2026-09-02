@@ -43,8 +43,12 @@ struct SceneRoots {
     ecs::Entity internalsRoot;
 };
 
+class ProgrammableShader;
+
 class Scene {
 public:
+    static std::vector<ProgrammableShader*>& getProgrammableShaders();
+
     void init();
     void destroy();
     void clear();
@@ -65,6 +69,7 @@ public:
     bool isPreviewing() { return activeCamera != defaultCamera; }   // TODO: find a better name
     void setActiveCamera(ecs::Entity newActiveCamera);
     bool resetActiveCamera();
+    void activateSceneCamera();
 
     void bakePhysics();
     bool isPhysicsBakeInProgress() const;

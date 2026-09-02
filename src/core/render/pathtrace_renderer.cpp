@@ -12,6 +12,8 @@
 #include "core/scene/gpu_structs.hpp"
 #include <cmath>
 
+BufferHandle PathtraceRenderer::programmableParamsHandle;
+
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {
     renderExtent = extent;
     groupHandle = builder.addSubmissionGroup(tag.empty() ? "Core" : tag);
@@ -55,7 +57,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     resources.sceneHandles.bvh = { builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.mesh = { builder.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.material = { builder.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.object = { builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(ObjectHandle), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.object = { builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.light = { builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
 
     // Pathtracing pass
@@ -78,6 +80,9 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.readBuffer(13, resources.sceneHandles.light.handle, BufferUsageType::Storage);
     pathtrace.writeImage(14, currentPathtracingImageHandle, ImageUsageType::Storage);
     pathtrace.readImage(15, lensImageHandle, ImageUsageType::Sampled);
+    if (programmableParamsHandle.id == InvalidHandle)
+        programmableParamsHandle = builder.createBuffer("ProgrammableParamsBuffer", 16 * sizeof(float), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    pathtrace.readBuffer(16, programmableParamsHandle, BufferUsageType::Storage);
     pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
     pathtracingTimestamp = pathtrace.setTimestamp();
 
