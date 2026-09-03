@@ -7,7 +7,7 @@
 #include "nlohmann/json.hpp"
 
 #include "core/render_structures.hpp"
-#include "utils/json_resolve.hpp"
+#include "utils/json_dsl.hpp"
 
 using json = nlohmann::json;
 

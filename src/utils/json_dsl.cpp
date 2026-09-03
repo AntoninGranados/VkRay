@@ -1,5 +1,6 @@
-#include "utils/json_resolve.hpp"
+#include "utils/json_dsl.hpp"
 
+#include <algorithm>
 #include <format>
 #include <sstream>
 #include <vector>
@@ -10,7 +11,7 @@ using json = nlohmann::ordered_json;
 
 bool expectArray(const json& v, size_t n, const std::string& fieldId) {
     if (v.is_array() && v.size() >= n) return true;
-    Log::error("SceneSerializer", std::format("Field '{}': expected array of {}, got: {}", fieldId, n, v.dump()));
+    Log::error("JsonDsl", std::format("Field '{}': expected array of {}, got: {}", fieldId, n, v.dump()));
     return false;
 }
 
@@ -135,5 +136,68 @@ std::string resolveTemplate(std::string tmpl, const ResolveCtx& ctx) {
 std::string trimmed(const std::string& s) {
     const auto pos = s.find('\0');
     return pos != std::string::npos ? s.substr(0, pos) : s;
+}
+
+static std::string inlineJson(const json& j) {
+    if (j.is_object()) {
+        std::string s = "{ ";
+        bool first = true;
+        for (const auto& [k, v] : j.items()) {
+            if (!first) s += ", ";
+            s += '"' + k + "\": " + inlineJson(v);
+            first = false;
+        }
+        return s + " }";
+    }
+    if (j.is_array()) {
+        std::string s = "[";
+        for (size_t i = 0; i < j.size(); i++) {
+            if (i > 0) s += ", ";
+            s += inlineJson(j[i]);
+        }
+        return s + "]";
+    }
+    return j.dump();
+}
+
+static bool isInlineVector(const json& v) { return v.is_array() && std::all_of(v.begin(), v.end(), [](const json& e){ return e.is_number(); }); }
+static bool isInlineExpression(const json& v) { return v.is_object() && v.size() == 1 && (v.contains("rand") || v.contains("lerp")); }
+static bool isInlineKeyframe(const json& v) {
+    if (!v.is_object()) return false;
+    const size_t n = v.size();
+    return (n == 2 || n == 3) && v.contains("frame") && v.contains("value") && (n == 2 || v.contains("ease"));
+}
+
+std::string prettifyJson(const json& j, int indent) {
+    if (isInlineVector(j) || isInlineExpression(j) || isInlineKeyframe(j)) return inlineJson(j);
+
+    if (j.is_object()) {
+        std::string inlined = inlineJson(j);
+        if (inlined.size() <= 60) return inlined;
+    }
+
+    const std::string pad(indent * 4, ' ');
+    const std::string inner((indent + 1) * 4, ' ');
+
+    if (j.is_array()) {
+        std::string s = "[\n";
+        for (size_t i = 0; i < j.size(); i++) {
+            s += inner + prettifyJson(j[i], indent + 1);
+            if (i + 1 < j.size()) s += ',';
+            s += '\n';
+        }
+        return s + pad + "]";
+    }
+    if (j.is_object()) {
+        std::string s = "{\n";
+        size_t i = 0;
+        for (const auto& [k, v] : j.items()) {
+            s += inner + '"' + k + "\": " + prettifyJson(v, indent + 1);
+            if (++i < j.size()) s += ',';
+            s += '\n';
+        }
+        return s + pad + "}";
+    }
+    return j.dump();
 }
 

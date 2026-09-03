@@ -4,7 +4,9 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <sstream>
+#include <string>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/material.hpp"
@@ -12,23 +14,30 @@
 #include "core/scene/gpu_structs.hpp"
 #include "utils/string_utils.hpp"
 
-std::string MaterialTable::glslMacroName(const ecs::ComponentType& type, const ecs::ComponentField& field) {
+namespace {
+
+struct Entry {
+    const ecs::ComponentType* type;
+    std::function<std::vector<float>(ecs::Component&)> customValues;
+};
+
+std::string glslMacroName(const ecs::ComponentType& type, const ecs::ComponentField& field) {
     std::string prefix = snakeCaseToPascalCase(type.getId());
     prefix[0] = static_cast<char>(std::tolower(prefix[0]));
     return prefix + snakeCaseToPascalCase(field.getId());
 }
 
-bool MaterialTable::isPackableField(const ecs::ComponentField& field) {
+bool isPackableField(const ecs::ComponentField& field) {
     return field.getId() != "albedo" && field.getType() == FieldType::Float;
 }
 
-bool MaterialTable::hasAlbedoField(const ecs::ComponentType& type) {
+bool hasAlbedoField(const ecs::ComponentType& type) {
     for (const ecs::ComponentField& field : type.getFields())
         if (field.getId() == "albedo") return true;
     return false;
 }
 
-const std::vector<MaterialTable::Entry>& MaterialTable::entries() {
+const std::vector<Entry>& entries() {
     static const std::vector<Entry> table = {
         { &ecs::Principled },
         { &ecs::Emissive },
@@ -48,6 +57,8 @@ const std::vector<MaterialTable::Entry>& MaterialTable::entries() {
     };
     return table;
 }
+
+} // namespace
 
 bool MaterialTable::pack(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu, std::vector<float>& params) {
     const std::vector<Entry>& table = entries();

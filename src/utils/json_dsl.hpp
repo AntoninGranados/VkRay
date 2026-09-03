@@ -26,3 +26,5 @@ glm::vec3 resolveVec3(const nlohmann::ordered_json& v, const ResolveCtx& ctx);
 std::string resolveTemplate(std::string tmpl, const ResolveCtx& ctx);
 
 std::string trimmed(const std::string& s);
+
+std::string prettifyJson(const nlohmann::ordered_json& j, int indent = 0);

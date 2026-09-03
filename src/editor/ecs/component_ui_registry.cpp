@@ -75,11 +75,7 @@ void ComponentUiRegistry::init() {
     auto& ui_reg = ComponentUiRegistry::get();
 
     ui_reg.add(ecs::Name);
-
-    ui_reg.add(ecs::Material, [](Component&, Registry&, Entity e) {
-        Editor::getMaterialPreview().drawPreview(e);
-        return false;
-    });
+    ui_reg.add(ecs::Transform);
 
     ui_reg.add(ecs::Sphere);
     ui_reg.add(ecs::Plane);
@@ -133,12 +129,15 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::RigidBody);
 
     ui_reg.add(ecs::Camera);
-
     ui_reg.add(ecs::ThinLens);
     ui_reg.add(ecs::TiltShiftLens);
     ui_reg.add(ecs::GeometricAperture);
     ui_reg.add(ecs::ImageAperture);
-    ui_reg.add(ecs::Transform);
+
+    ui_reg.add(ecs::Material, [](Component&, Registry&, Entity e) {
+        Editor::getMaterialPreview().drawPreview(e);
+        return false;
+    });
 
     ui_reg.add(ecs::MaterialRef, [](Component& c, Registry&, Entity) {
         const ecs::Entity handle = c.get<ecs::Entity>("handle");

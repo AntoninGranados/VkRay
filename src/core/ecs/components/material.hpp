@@ -22,7 +22,7 @@ inline const ComponentType Material = ComponentType::builder("material")
 inline const ComponentType MaterialRef = ComponentType::builder("material_ref")
     .description("Material reference.")
     .icon(ICON_FA_PALETTE)
-    .group("other")
+    .group("material")
     .field<ecs::Entity>("handle", ecs::Entity{}, EntityMeta{ .needs = {"material"} })
     .build();
 

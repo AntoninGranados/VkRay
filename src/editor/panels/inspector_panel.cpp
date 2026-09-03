@@ -59,9 +59,13 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
     auto& registry = scene.getRegistry();
 
+    ImGui::BeginChild("AddComponentList", ImVec2(ui::kButtonSize.x + 40.0f, 450.0f), ImGuiChildFlags_Borders);
+
     std::string currentGroup;
     bool groupOpen = false;
     for (const ecs::ComponentType* type : sortedTypes) {
+        if (type->getGroup() == "internal") continue;
+
         if (type->getGroup() != currentGroup) {
             currentGroup = type->getGroup();
             std::string groupLabel = currentGroup;
@@ -120,6 +124,8 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
             ImGui::EndTooltip();
         }
     }
+
+    ImGui::EndChild();
 
     ui::endCenteredModal();
 }

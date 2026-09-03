@@ -93,6 +93,40 @@ float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
     return fStop > 0.0f ? normalizedFocalLength / (2.0f * fStop) : 0.0f;
 }
 
+CameraUBO buildCameraUBO(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
+    const ecs::Component& t = registry.get(camera, ecs::Transform);
+
+    const glm::vec3 dir = directionFromRotation(t.get<glm::vec3>("rotation"));
+    const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
+    const glm::vec3 camUp = glm::cross(right, dir);
+    const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
+
+    CameraUBO ubo{};
+    ubo.eye = t.get<glm::vec3>("position");
+    ubo.U = right * aspect * tanHFov;
+    ubo.V = camUp * tanHFov;
+    ubo.W = dir;
+
+    ubo.thinLens.lensRadius = 0.0f;
+    ubo.thinLens.focusDistance = 10.0f;
+    if (registry.has(camera, ecs::ThinLens)) {
+        const ecs::Component& tl = registry.get(camera, ecs::ThinLens);
+        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+        ubo.thinLens.lensRadius = lensRadiusFromFStop(tl.get<float>("focal_length") / sensorWidth, tl.get<float>("f_stop"));
+        ubo.thinLens.focusDistance = tl.get<float>("focal_distance");
+    }
+
+    const auto ts = getTiltShiftState(registry, camera);
+    ubo.tiltShift.enabled = ts.has_value();
+    if (ts.has_value()) {
+        ubo.tiltShift.focusA = ts->focusA;
+        ubo.tiltShift.focusB = ts->focusB;
+        ubo.tiltShift.focusC = ts->focusC;
+    }
+
+    return ubo;
+}
+
 float blurFractionFromShutter(float seconds, float fps) {
     return seconds * fps;
 }

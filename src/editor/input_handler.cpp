@@ -18,7 +18,7 @@
 #include "editor/editor.hpp"
 #include "editor/editor_ui.hpp"
 #include "editor/ecs/components/camera.hpp"
-#include "editor/ecs/systems/camera_system.hpp"
+#include "editor/ecs/systems/camera_control_system.hpp"
 
 bool InputHandler::isMouseInputBlocked() {
     if (ImGuizmo::IsUsing()) return true;

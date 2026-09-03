@@ -4,16 +4,20 @@
     "Materials": [
         {
             "name": "Floor",
-            "programmable": { "albedo": [0.75, 0.75, 0.78] }
+            "programmable": { "path": "assets/materials/voronoi.glsl" }
         },
         {
             "name": "Cube",
-            "principled": {
-                "albedo": [1.0, 0.05, 0.1],
-                "roughness": 0.02,
-                "ior": 1.5
-            }
+            "programmable": { "path": "assets/materials/brick.glsl" }
         }
+        // {
+        //     "name": "Cube",
+        //     "principled": {
+        //         "albedo": [1.0, 0.05, 0.1],
+        //         "roughness": 0.02,
+        //         "ior": 1.5
+        //     }
+        // }
     ],
     "Objects": [
         {

@@ -20,7 +20,7 @@ float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
     vec3 q = NOISE_ROTATION * p;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude * perlinNoise(q, rng);
+        sum += amplitude * perlinNoise(q, rng) * 2 - 1;
         maxAmplitude += amplitude;
         amplitude *= gain;
         q = NOISE_ROTATION * (q * lacunarity);
@@ -36,7 +36,7 @@ float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
     vec3 q = NOISE_ROTATION * p;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude * abs(perlinNoise(q, rng));
+        sum += amplitude * abs(perlinNoise(q, rng) * 2 - 1);
         maxAmplitude += amplitude;
         amplitude *= gain;
         q = NOISE_ROTATION * (q * lacunarity);

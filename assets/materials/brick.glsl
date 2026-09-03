@@ -234,7 +234,8 @@ void main() {
     }
 
     if (hasDirt) {
-        float dirt = fractalNoise(vec3(uv.x, uv.y * 0.4, 0) * 20, 8, 2.0, 0.5);
+        RngState tempState = RngState(0);
+        float dirt = perlinNoise(vec2(uv.x, uv.y * 0.4) * 20, tempState);
         dirt = mix(dirt, 1, smoothstep(dirtHeight - dirtFalloff, dirtHeight + dirtFalloff, mix(dirtFalloff, 1 - dirtFalloff, uv.y)));
         
         dirt = smoothstep(0.4, 0.6, dirt);

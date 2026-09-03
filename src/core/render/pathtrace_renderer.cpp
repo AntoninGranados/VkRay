@@ -3,14 +3,11 @@
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
 #include "VkSmol/graph/render_graph_builder.hpp"
 
+#include "core/camera/camera.hpp"
 #include "core/core.hpp"
-#include "core/ecs/components/camera.hpp"
-#include "core/ecs/components/component.hpp"
-#include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/parameters/parameters.hpp"
 #include "core/scene/gpu_structs.hpp"
-#include <cmath>
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {
     renderExtent = extent;
@@ -128,39 +125,7 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
 
     pathtracerUBO.screen.size = { static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height) };
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
-
-    const ecs::Component& t = registry.get(camera, ecs::Transform);
-
-    const glm::vec3 dir = directionFromRotation(t.get<glm::vec3>("rotation"));
-    const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
-    const glm::vec3 camUp = glm::cross(right, dir);
-    const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
-    const float aspect = pathtracerUBO.screen.aspect;
-
-    pathtracerUBO.camera.eye = t.get<glm::vec3>("position");
-    pathtracerUBO.camera.U = right * aspect * tanHFov;
-    pathtracerUBO.camera.V = camUp * tanHFov;
-    pathtracerUBO.camera.W = dir;
-
-    const bool hasTL = registry.has(camera, ecs::ThinLens);
-    float lensRadius = 0.0f;
-    float focusDistance = 10.0f;
-    if (hasTL) {
-        const ecs::Component& tl = registry.get(camera, ecs::ThinLens);
-        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-        lensRadius = lensRadiusFromFStop(tl.get<float>("focal_length") / sensorWidth, tl.get<float>("f_stop"));
-        focusDistance = tl.get<float>("focal_distance");
-    }
-    pathtracerUBO.camera.thinLens.lensRadius = lensRadius;
-    pathtracerUBO.camera.thinLens.focusDistance = focusDistance;
-
-    const auto ts = getTiltShiftState(registry, camera);
-    pathtracerUBO.camera.tiltShift.enabled = ts.has_value();
-    if (ts.has_value()) {
-        pathtracerUBO.camera.tiltShift.focusA = ts->focusA;
-        pathtracerUBO.camera.tiltShift.focusB = ts->focusB;
-        pathtracerUBO.camera.tiltShift.focusC = ts->focusC;
-    }
+    pathtracerUBO.camera = buildCameraUBO(registry, camera, pathtracerUBO.screen.aspect);
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
     engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);

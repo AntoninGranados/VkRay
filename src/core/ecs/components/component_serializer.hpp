@@ -2,7 +2,6 @@
 
 #include <filesystem>
 
-class ComponentSerializer {
-public:
-    static void saveDocumentation(std::filesystem::path path);
-};
+namespace ComponentSerializer {
+    void saveDocumentation(std::filesystem::path path);
+}

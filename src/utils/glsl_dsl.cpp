@@ -1,4 +1,4 @@
-#include "glsl_dsl_file.hpp"
+#include "glsl_dsl.hpp"
 
 #include <cctype>
 #include <format>
@@ -7,17 +7,17 @@
 
 #include "string_utils.hpp"
 
-const std::unordered_set<std::string> GlslDslFile::kKeywords = {
+const std::unordered_set<std::string> GlslDsl::kKeywords = {
     "return", "if", "else", "for", "while", "do", "break", "continue",
     "true", "false", "discard", "switch", "case", "default",
 };
 
-const std::unordered_set<std::string> GlslDslFile::kQualifiers = { "in", "out", "inout", "const" };
+const std::unordered_set<std::string> GlslDsl::kQualifiers = { "in", "out", "inout", "const" };
 
-bool GlslDslFile::isIdentStart(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_'; }
-bool GlslDslFile::isIdentChar(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
+bool GlslDsl::isIdentStart(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_'; }
+bool GlslDsl::isIdentChar(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
 
-std::vector<GlslDslFile::Token> GlslDslFile::tokenize(const std::string& source) {
+std::vector<GlslDsl::Token> GlslDsl::tokenize(const std::string& source) {
     std::vector<Token> result;
     size_t i = 0;
     const size_t n = source.size();
@@ -47,23 +47,23 @@ std::vector<GlslDslFile::Token> GlslDslFile::tokenize(const std::string& source)
     return result;
 }
 
-bool GlslDslFile::isIdentTok(size_t i) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Identifier; }
-bool GlslDslFile::isIdent(size_t i, const std::string& text) const { return isIdentTok(i) && tokens[i].text == text; }
-bool GlslDslFile::isSymbol(size_t i, char c) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Symbol && tokens[i].text[0] == c; }
+bool GlslDsl::isIdentTok(size_t i) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Identifier; }
+bool GlslDsl::isIdent(size_t i, const std::string& text) const { return isIdentTok(i) && tokens[i].text == text; }
+bool GlslDsl::isSymbol(size_t i, char c) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Symbol && tokens[i].text[0] == c; }
 
-std::string GlslDslFile::mangle(const std::string& name, int scopeId) const {
+std::string GlslDsl::mangle(const std::string& name, int scopeId) const {
     return scopeId == 0 ? std::format("{}{}", manglePrefix, name) : std::format("{}{}_{}", manglePrefix, scopeId, name);
 }
 
-void GlslDslFile::declare(const std::string& name, int scopeId) {
+void GlslDsl::declare(const std::string& name, int scopeId) {
     for (Scope& s : scopes)
         if (s.id == scopeId) { s.names[name] = mangle(name, scopeId); return; }
 }
 
-void GlslDslFile::pushScope() { scopes.push_back({ nextScopeId++, {} }); }
-void GlslDslFile::popScope() { scopes.pop_back(); }
+void GlslDsl::pushScope() { scopes.push_back({ nextScopeId++, {} }); }
+void GlslDsl::popScope() { scopes.pop_back(); }
 
-void GlslDslFile::resolveToken(size_t i) {
+void GlslDsl::resolveToken(size_t i) {
     if (tokens[i].kind != Token::Kind::Identifier) return;
     if (kKeywords.contains(tokens[i].text) || kQualifiers.contains(tokens[i].text)) return;
     if (i > 0 && isSymbol(i - 1, '.')) {
@@ -77,7 +77,7 @@ void GlslDslFile::resolveToken(size_t i) {
     }
 }
 
-bool GlslDslFile::tryDeclaration(int scopeId) {
+bool GlslDsl::tryDeclaration(int scopeId) {
     size_t p = pos;
     while (isIdentTok(p) && kQualifiers.contains(tokens[p].text)) p++;
     if (!isIdentTok(p) || kKeywords.contains(tokens[p].text)) return false;
@@ -94,7 +94,7 @@ bool GlslDslFile::tryDeclaration(int scopeId) {
     return true;
 }
 
-void GlslDslFile::step() {
+void GlslDsl::step() {
     if (isSymbol(pos, '#') && isIdent(pos + 1, "define") && isIdentTok(pos + 2)) {
         declare(tokens[pos + 2].text, 0);
         tokens[pos + 2].text = mangle(tokens[pos + 2].text, 0);
@@ -163,7 +163,7 @@ void GlslDslFile::step() {
     }
 }
 
-void GlslDslFile::mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::string>& globalNames) {
+void GlslDsl::mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::string>& globalNames) {
     tokens = tokenize(body);
     manglePrefix = prefix;
     pos = 0;
@@ -187,7 +187,7 @@ void GlslDslFile::mangleBody(const std::string& body, const std::string& prefix,
     if (!statements.empty() && statements.back() != '\n') statements += '\n';
 }
 
-bool GlslDslFile::parse(const std::filesystem::path& path, const Options& options) {
+bool GlslDsl::parse(const std::filesystem::path& path, const Options& options) {
     error.clear();
     paramLines.clear();
     declarations.clear();

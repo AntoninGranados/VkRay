@@ -8,7 +8,7 @@
 #include "core/core.hpp"
 #include "core/field.hpp"
 #include "core/scene/scene.hpp"
-#include "utils/glsl_dsl_file.hpp"
+#include "utils/glsl_dsl.hpp"
 #include "utils/log.hpp"
 #include "utils/string_utils.hpp"
 
@@ -182,7 +182,7 @@ std::string ProgrammableShader::generateParamAssignments() const {
 
 void ProgrammableShader::load(bool migrate) {
     slot = slotForPath(path);
-    if (!GlslDslFile::parse(path, { .manglePrefix = mangledPrefix(), .expectedVersion = static_cast<int>(kShaderVersion) }))
+    if (!GlslDsl::parse(path, { .manglePrefix = mangledPrefix(), .expectedVersion = static_cast<int>(kShaderVersion) }))
         return;
 
     std::vector<ecs::ComponentField> newFields;

@@ -18,7 +18,7 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/gpu_structs.hpp"
-#include "editor/ecs/systems/camera_system.hpp"
+#include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"
 #include "editor/ui_utils.hpp"

@@ -3,12 +3,18 @@
 #include <fstream>
 #include <limits>
 
+#include "nlohmann/json.hpp"
+
 #include "core/core.hpp"
+
+using json = nlohmann::ordered_json;
 
 static constexpr int kParameterVersion = 1;
 
+namespace {
+
 template <typename T>
-T ParameterSerializer::readJsonVec(const json& arr) {
+T readJsonVec(const json& arr) {
     T v{};
     for (int i = 0; i < T::length(); i++)
         v[i] = arr[static_cast<size_t>(i)].get<typename T::value_type>();
@@ -16,7 +22,7 @@ T ParameterSerializer::readJsonVec(const json& arr) {
 }
 
 template <typename T>
-Parameter& ParameterSerializer::parseVecNode(
+Parameter& parseVecNode(
     const json& obj, ParameterRegistry& parameters, const std::string& path,
     const std::string& label, bool restart, T defMin, T defMax, float step
 ) {
@@ -30,79 +36,7 @@ Parameter& ParameterSerializer::parseVecNode(
     return parameters.add<T>(path, label, val, std::move(meta), restart);
 }
 
-void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
-    std::ofstream file(path);
-
-    file << R"(# Parameters
-
-Parameters are defined in `src/config/parameters.json`. The file is a hierarchical JSON structure where nested objects form display groups, and leaf objects are parameters
-
-## File Format
-All objects may carry an optional `"label"` that is used instead of the full path in the UI.
-
-### Groups Format
-A nested object without `"default"` is a display group.
-
-```json
-"sampling": {
-    "label": "Sampling",
-    "max_bounces":     { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
-    "clamp":           { "label": "Clamp Fireflies", "default": false, "restart_accumulation": true },
-    "clamp_threshold": {
-        "label": "Clamp Threshold",
-        "default": 50.0,
-        "restart_accumulation": true,
-        "condition": { "param": "renderer/sampling/clamp" }
-    }
-}
-```
-
-### Parameters Format
-The parameter type is inferred from the value in `"default"`:
-
-| `"default"` value | Type | Example |
-|-------------------|------|---------|
-| `true` / `false` | Boolean | `"default": false` |
-| Integer literal | Integer | `"default": 8` |
-| Float literal | Float | `"default": 50.0` |
-| Array of 2–4 integers | Vec (integer) | `"default": [1920, 1080]` |
-| Array of 2–4 floats | Vec (float) | `"default": [0.0, 0.0, 1.0]` |
-| String + `"items"` array | Enumeration | `"default": "None"` |
-| String + `"extensions"` array | Path | `"default": "outputs/render.png"` |
-
-All parameters support these fields:
-
-| Field | Description |
-|-------|-------------|
-| `"label"` | Display name shown in the UI. Required. |
-| `"default"` | Default value. Determines the type. Required. |
-| `"description"` | Optional tooltip text. |
-| `"restart_accumulation"` | If `true`, changing this parameter restarts path tracing. |
-| `"condition"` | Disables the parameter unless a condition is met. See [Conditions](#conditions). |
-
-Integer, float, and vec parameters additionally support `"min"`, `"max"`, and `"step"`. For vec parameters, `"min"` and `"max"` are arrays matching the component count; `"step"` is a scalar float.
-
-Enumeration parameters require an `"items"` array listing the valid string values.
-
-Path parameters use an `"extensions"` array of `{ "ext", "name" }` objects to filter the file picker. An empty array makes the picker select a directory instead of a file.
-
-### Conditions
-Parameters can be disabled in the UI, this is defined using a `"condition"` object:
-
-```json
-"condition": { "param": "renderer/sampling/clamp" }
-"condition": { "param": "renderer/sampling/clamp", "when": false }
-```
-
-`"param"` is the full path to a boolean parameter and `"when "` is `true` by default.
-
----
-)";
-
-    serializeParameterPath(file, "");
-}
-
-void ParameterSerializer::serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth) {
+void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0) {
     for (const auto& parameter : Core::getParameters().getAll()) {
         if (parameter->getPath().parent_path() != prefix) continue;
         file << parameter->print() << std::endl;
@@ -130,29 +64,7 @@ void ParameterSerializer::serializeParameterPath(std::ofstream& file, const Para
     }
 }
 
-ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
-    std::ifstream f(path);
-    if (!f.is_open())
-        throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
-
-    ParameterRegistry parameters;
-    json root = json::parse(f, nullptr, true, true);
-
-    const int version = root.value("version", -1);
-    if (version != kParameterVersion)
-        throw std::runtime_error(std::format(
-            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), kParameterVersion, version
-        ));
-
-    for (const auto& [key, val] : root.items()) {
-        if (!val.is_object()) continue;
-        parseNode(val, parameters, key);
-    }
-
-    return parameters;
-}
-
-void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& parameters, const std::string& path) {
+void parseNode(const json& obj, ParameterRegistry& parameters, const std::string& path) {
     if (obj.contains("default")) {
         std::string label = obj.at("label").get<std::string>();
         bool restart = obj.value("restart_accumulation", false);
@@ -227,4 +139,100 @@ void ParameterSerializer::parseNode(const json& obj, ParameterRegistry& paramete
             parseNode(val, parameters, path + "/" + key);
         }
     }
+}
+
+} // namespace
+
+void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
+    std::ofstream file(path);
+
+    file << R"(# Parameters
+
+Parameters are defined in `src/config/parameters.json`. The file is a hierarchical JSON structure where nested objects form display groups, and leaf objects are parameters
+
+## File Format
+All objects may carry an optional `"label"` that is used instead of the full path in the UI.
+
+### Groups Format
+A nested object without `"default"` is a display group.
+
+```json
+"sampling": {
+    "label": "Sampling",
+    "max_bounces":     { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1 },
+    "clamp":           { "label": "Clamp Fireflies", "default": false, "restart_accumulation": true },
+    "clamp_threshold": {
+        "label": "Clamp Threshold",
+        "default": 50.0,
+        "restart_accumulation": true,
+        "condition": { "param": "renderer/sampling/clamp" }
+    }
+}
+```
+
+### Parameters Format
+The parameter type is inferred from the value in `"default"`:
+
+| `"default"` value | Type | Example |
+|-------------------|------|---------|
+| `true` / `false` | Boolean | `"default": false` |
+| Integer literal | Integer | `"default": 8` |
+| Float literal | Float | `"default": 50.0` |
+| Array of 2–4 integers | Vec (integer) | `"default": [1920, 1080]` |
+| Array of 2–4 floats | Vec (float) | `"default": [0.0, 0.0, 1.0]` |
+| String + `"items"` array | Enumeration | `"default": "None"` |
+| String + `"extensions"` array | Path | `"default": "outputs/render.png"` |
+
+All parameters support these fields:
+
+| Field | Description |
+|-------|-------------|
+| `"label"` | Display name shown in the UI. Required. |
+| `"default"` | Default value. Determines the type. Required. |
+| `"description"` | Optional tooltip text. |
+| `"restart_accumulation"` | If `true`, changing this parameter restarts path tracing. |
+| `"condition"` | Disables the parameter unless a condition is met. See [Conditions](#conditions). |
+
+Integer, float, and vec parameters additionally support `"min"`, `"max"`, and `"step"`. For vec parameters, `"min"` and `"max"` are arrays matching the component count; `"step"` is a scalar float.
+
+Enumeration parameters require an `"items"` array listing the valid string values.
+
+Path parameters use an `"extensions"` array of `{ "ext", "name" }` objects to filter the file picker. An empty array makes the picker select a directory instead of a file.
+
+### Conditions
+Parameters can be disabled in the UI, this is defined using a `"condition"` object:
+
+```json
+"condition": { "param": "renderer/sampling/clamp" }
+"condition": { "param": "renderer/sampling/clamp", "when": false }
+```
+
+`"param"` is the full path to a boolean parameter and `"when "` is `true` by default.
+
+---
+)";
+
+    serializeParameterPath(file, "");
+}
+
+ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
+    std::ifstream f(path);
+    if (!f.is_open())
+        throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
+
+    ParameterRegistry parameters;
+    json root = json::parse(f, nullptr, true, true);
+
+    const int version = root.value("version", -1);
+    if (version != kParameterVersion)
+        throw std::runtime_error(std::format(
+            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), kParameterVersion, version
+        ));
+
+    for (const auto& [key, val] : root.items()) {
+        if (!val.is_object()) continue;
+        parseNode(val, parameters, key);
+    }
+
+    return parameters;
 }

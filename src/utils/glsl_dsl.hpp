@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <vector>
 
-class GlslDslFile {
+class GlslDsl {
 public:
     struct Options {
         std::string manglePrefix;

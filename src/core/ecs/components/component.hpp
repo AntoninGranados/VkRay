@@ -32,10 +32,8 @@ public:
     void set(const std::string& id, const T& v) { getField(id).set(v); }
 
     ComponentField& getField(const std::string& id) {
-        ComponentField* found = nullptr;
-        forEachField([&](ComponentField& f) { if (!found && f.getId() == id) found = &f; });
-        if (!found) throw std::out_of_range("unknown field id: " + id);
-        return *found;
+        if (ComponentField* found = findField(id)) return *found;
+        throw std::out_of_range("unknown field id: " + id);
     }
     const ComponentField& getField(const std::string& id) const {
         return const_cast<Component*>(this)->getField(id);
@@ -66,6 +64,19 @@ public:
     const ComponentType& getType() const { return *type; }
 
 private:
+    ComponentField* findField(const std::string& id) {
+        const auto it = fieldIndex.find(id);
+        if (it != fieldIndex.end()) return &fields[it->second];
+
+        const auto& payloadTypes = type->getPayloads();
+        for (size_t i = 0; i < payloads.size(); ++i) {
+            if (!payloadTypes[i].asComponent) continue;
+            if (ComponentField* found = payloadTypes[i].asComponent(payloads[i].get())->findField(id))
+                return found;
+        }
+        return nullptr;
+    }
+
     const ComponentType* type;
     std::vector<ComponentField> fields;
     std::unordered_map<std::string, size_t> fieldIndex;

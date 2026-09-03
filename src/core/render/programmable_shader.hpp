@@ -8,11 +8,11 @@
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/component_type.hpp"
-#include "utils/glsl_dsl_file.hpp"
+#include "utils/glsl_dsl.hpp"
 
-class ProgrammableShader : private GlslDslFile {
+class ProgrammableShader : private GlslDsl {
 public:
-    using GlslDslFile::getError;
+    using GlslDsl::getError;
 
     ProgrammableShader();
     ~ProgrammableShader();

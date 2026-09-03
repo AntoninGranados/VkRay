@@ -88,6 +88,13 @@ Material marker.
 
  **Conflicts:** `transform`
 
+### Material Ref
+Material reference.
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `handle` | entity |  |  | no |
+
 ### Diffuse
 Diffuse BSDF.
 
@@ -232,13 +239,6 @@ Display name.
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `value` | string |  |  | no |
-
-### Material Ref
-Material reference.
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `handle` | entity |  |  | no |
 
 ## Physics
 
