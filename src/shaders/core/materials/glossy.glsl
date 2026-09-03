@@ -8,7 +8,7 @@
 #include "diffuse.glsl"
 #include "ggx_utils.glsl"
 
-BSDFEval evalGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalGlossyBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {
     if (dot(hit.normal, wi) <= 0.0) return BSDFEval(vec3(0.0), 0.0);
 
     float alpha = max(glossyRoughness(mat) * glossyRoughness(mat), EPS_HIGH);
@@ -28,7 +28,7 @@ BSDFEval evalGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     );
 }
 
-BSDFSample sampleGlossyBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
+BSDFSample sampleGlossyBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
     float alpha = max(glossyRoughness(mat) * glossyRoughness(mat), EPS_HIGH);
 
     float NoV = max(dot(hit.normal, wo), 0.0);

@@ -13,13 +13,12 @@
 #include "volume.glsl"
 #include "generated/programmable_dispatch.glsl"
 
-Material resolveMaterial(in Material mat, inout Hit hit, in vec3 wo, inout RngState rng) {
-    if (mat.type != mat_Programmable) return mat;
-    return dispatchProgrammable(mat, hit, wo, rng);
+ResolvedMaterial resolveMaterial(in Material mat, inout Hit hit, in vec3 wo, inout RngState rng) {
+    if (mat.type == mat_Programmable) return dispatchProgrammable(mat, hit, wo, rng);
+    return unpackMaterial(mat);
 }
 
-BSDFEval evalBSDF(in Material mat, inout Hit hit, in vec3 wo, in vec3 wi, inout RngState rng) {
-    mat = resolveMaterial(mat, hit, wo, rng);
+BSDFEval evalBSDF(in ResolvedMaterial mat, inout Hit hit, in vec3 wo, in vec3 wi, inout RngState rng) {
     switch (mat.type) {
         case mat_Principled: return evalPrincipledBSDF(mat, hit, wo, wi);
         case mat_Diffuse: return evalDiffuseBSDF(mat, hit, wo, wi);
@@ -31,8 +30,7 @@ BSDFEval evalBSDF(in Material mat, inout Hit hit, in vec3 wo, in vec3 wi, inout 
     }
 }
 
-BSDFSample sampleBSDF(in Material mat, inout Hit hit, in vec3 wo, inout RngState rng) {
-    mat = resolveMaterial(mat, hit, wo, rng);
+BSDFSample sampleBSDF(in ResolvedMaterial mat, inout Hit hit, in vec3 wo, inout RngState rng) {
     switch (mat.type) {
         case mat_Principled: return samplePrincipledBSDF(mat, hit, wo, rng);
         case mat_Diffuse:    return sampleDiffuseBSDF(mat, hit, wo, rng);

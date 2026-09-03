@@ -13,10 +13,6 @@ layout(set = 0, binding = 2) buffer PixelInfoBuffer {
 } pixelInfoBuffer;
 layout(rgba32f, set = 0, binding = 3) writeonly uniform image2D outputTex;
 
-float luma(vec3 c) {
-    return dot(c, vec3(0.2126, 0.7152, 0.0722));
-}
-
 PixelInfo fetchPixelInfoAt(ivec2 coord, ivec2 texSize) {
     ivec2 c = clamp(coord, ivec2(0), texSize - ivec2(1));
     uint index = uint(c.y * texSize.x + c.x);

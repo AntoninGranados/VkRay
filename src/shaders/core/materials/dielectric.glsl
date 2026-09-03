@@ -6,14 +6,14 @@
 
 #include "material_utils.glsl"
 
-BSDFEval evalDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {
     return BSDFEval(
         vec3(0.0),
         -1.0
     );
 }
 
-BSDFSample sampleDielectricBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
+BSDFSample sampleDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
     float etaI = 1.0;   // TODO: keep track of the current IOR as we traverse the scene
     float etaT = dielectricIor(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }

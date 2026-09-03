@@ -9,21 +9,22 @@
 #include "glossy.glsl"
 #include "dielectric.glsl"
 
-Material principledGlossyProxy(in Material mat) {
+ResolvedMaterial principledGlossyProxy(in ResolvedMaterial mat) {
     return Glossy(albedo(mat), principledRoughness(mat), principledIor(mat));
 }
 
-Material principledDielectricProxy(in Material mat) {
-    Material proxy;
-    proxy.type = mat_Dielectric;
-    setAlbedo(proxy, albedo(mat));
-    proxy.payload[3] = principledRoughness(mat);
-    proxy.payload[4] = principledIor(mat);
-    proxy.payload[6] = principledDensity(mat);
-    return proxy;
+ResolvedMaterial principledDielectricProxy(in ResolvedMaterial mat) {
+    return Dielectric(
+        albedo(mat),
+        principledRoughness(mat),
+        principledIor(mat),
+        principledTransmission(mat),
+        principledDensity(mat),
+        principledAnisotropic(mat)
+    );
 }
 
-BSDFEval evalPrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalPrincipledBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {
     float pMetal  = principledMetalness(mat);
     float pTrans  = (1.0 - pMetal) * principledTransmission(mat);
     float pGlossy = 1.0 - pMetal - pTrans;
@@ -37,7 +38,7 @@ BSDFEval evalPrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi)
     );
 }
 
-BSDFSample samplePrincipledBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
+BSDFSample samplePrincipledBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
     if (principledAlpha(mat) < rand(rng)) {
         BSDFSample bsdf;
         bsdf.wi      = -wo;

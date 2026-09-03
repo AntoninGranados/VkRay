@@ -3,67 +3,65 @@
 
 #include "../utils.glsl"
 
-float luma(vec3 c) {
-    return dot(c, vec3(0.2126, 0.7152, 0.0722));
-}
-
-
 struct Material {
+    int  type;
+    uint base;
+};
+
+struct ResolvedMaterial {
     int   type;
     float payload[12];
 };
 
-#define albedo(m)                    vec3((m).payload[0], (m).payload[1], (m).payload[2])
-
-#define emissionStrength(m) (m).payload[3]
-
-#define metalRoughness(m)           (m).payload[3]
-
-#define glossyRoughness(m)          (m).payload[3]
-#define glossyIor(m)                (m).payload[4]
-
-#define dielectricRoughness(m)      (m).payload[3]
-#define dielectricIor(m)            (m).payload[4]
-#define dielectricTransmission(m)   (m).payload[5]
-#define dielectricDensity(m)        (m).payload[6]
-#define dielectricAnisotropic(m)    (m).payload[7]
-
-#define volumeDensity(m)            (m).payload[3]
-#define volumeAnisotropic(m)        (m).payload[4]
-
-#define principledRoughness(m)      (m).payload[3]
-#define principledMetalness(m)      (m).payload[4]
-#define principledIor(m)            (m).payload[5]
-#define principledTransmission(m)   (m).payload[6]
-#define principledDensity(m)        (m).payload[7]
-#define principledAnisotropic(m)    (m).payload[8]
-#define principledAlpha(m)          (m).payload[9]
-
-void setAlbedo(inout Material m, vec3 v) {
+void setAlbedo(inout ResolvedMaterial m, vec3 v) {
     m.payload[0] = v.r; m.payload[1] = v.g; m.payload[2] = v.b;
 }
 
-Material Diffuse(vec3 albedo) {
-    Material m;
+ResolvedMaterial Diffuse(vec3 albedo) {
+    ResolvedMaterial m;
     m.type = mat_Diffuse;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
     return m;
 }
 
-Material Glossy(vec3 albedo, float roughness, float ior) {
-    Material m;
+ResolvedMaterial Glossy(vec3 albedo, float roughness, float ior) {
+    ResolvedMaterial m;
     m.type = mat_Glossy;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
-    m.payload[3] = roughness;
-    m.payload[4] = ior;
+    glossyRoughness(m) = roughness;
+    glossyIor(m) = ior;
     return m;
 }
 
-Material Metal(vec3 albedo, float roughness) {
-    Material m;
+ResolvedMaterial Metal(vec3 albedo, float roughness) {
+    ResolvedMaterial m;
     m.type = mat_Metal;
     m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
-    m.payload[3] = roughness;
+    metalRoughness(m) = roughness;
+    return m;
+}
+
+ResolvedMaterial Dielectric(vec3 albedo, float roughness, float ior, float transmission, float density, float anisotropic) {
+    ResolvedMaterial m;
+    m.type = mat_Dielectric;
+    m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
+    dielectricRoughness(m) = roughness;
+    dielectricIor(m) = ior;
+    dielectricTransmission(m) = transmission;
+    dielectricDensity(m) = density;
+    dielectricAnisotropic(m) = anisotropic;
+    return m;
+}
+
+// TODO: implement all parameters
+ResolvedMaterial Principled(vec3 albedo, float roughness, float metalness, float ior, float alpha) {
+    ResolvedMaterial m;
+    m.type = mat_Principled;
+    m.payload[0] = albedo.r; m.payload[1] = albedo.g; m.payload[2] = albedo.b;
+    principledRoughness(m) = roughness;
+    principledMetalness(m) = metalness;
+    principledIor(m) = ior;
+    principledAlpha(m) = alpha;
     return m;
 }
 
@@ -90,7 +88,7 @@ struct BSDFEval {
     float pdf;
 };
 
-#define DEFAULT_MATERIAL materialBuffer.materials[0]
+#define DEFAULT_MATERIAL unpackMaterial(materialBuffer.materials[0])
 
 // ============== REFRACTION/REFLECTION ==============
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
@@ -114,7 +112,7 @@ vec3 schlickAlbedo(float cosine, vec3 albedo) {
     return SCHLICK_APPROX(cosine, albedo);
 }
 
-bool isTransmissive(in Material mat) {
+bool isTransmissive(in ResolvedMaterial mat) {
     if (mat.type == mat_Dielectric) return true;
     if (mat.type == mat_Principled) return (1.0 - principledMetalness(mat)) * principledTransmission(mat) > EPS;
     return false;

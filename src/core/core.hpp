@@ -56,6 +56,8 @@ private:
     static Core& get();
 
     static void reloadShaders();
+    static void updateAnimationDirty(Core& c, Scene& scene);
+    static void reloadPipelinesIfDirty(Core& c);
 
     Platform*         platform = nullptr;
     VkSmol            engine;

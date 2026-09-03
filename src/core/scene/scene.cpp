@@ -24,6 +24,8 @@ void Scene::init() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
     registry.ctx().emplace<FrameContext>();
+    registry.ctx().emplace<ecs::ApertureState>();
+    registry.ctx().emplace<ecs::PhysicsBakeState>();
     registry.ctx().emplace<AnimationStore*>(&animationStore);
     registry.ctx().emplace<ecs::Entity*>(&activeCamera);
     initSystems();
@@ -47,6 +49,7 @@ void Scene::clear() {
     gpuBuffers.bvh.capacity      = 0;
     gpuBuffers.mesh.capacity     = 0;
     gpuBuffers.material.capacity = 0;
+    gpuBuffers.materialParams.capacity = 0;
     gpuBuffers.object.capacity   = 0;
     gpuBuffers.light.capacity    = 0;
     resetSceneState();
@@ -98,15 +101,15 @@ void Scene::bakePhysics() {
 }
 
 bool Scene::isPhysicsBakeInProgress() const {
-    return ecs::isPhysicsBakeInProgress();
+    return ecs::isPhysicsBakeInProgress(registry);
 }
 
 int Scene::getPhysicsBakeCurrentFrame() const {
-    return ecs::getPhysicsBakeCurrentFrame();
+    return ecs::getPhysicsBakeCurrentFrame(registry);
 }
 
 int Scene::getPhysicsBakeTotalFrames() const {
-    return ecs::getPhysicsBakeTotalFrames();
+    return ecs::getPhysicsBakeTotalFrames(registry);
 }
 
 void Scene::initSystems() {

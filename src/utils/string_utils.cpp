@@ -60,3 +60,19 @@ std::string camelCaseToLabel(const std::string& id) {
     }
     return result;
 }
+
+std::string snakeCaseToPascalCase(const std::string& id) {
+    std::string result;
+    bool capitalize = true;
+    for (const char c : id) {
+        if (c == '_') {
+            capitalize = true;
+        } else if (capitalize) {
+            result += static_cast<char>(std::toupper(c));
+            capitalize = false;
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}

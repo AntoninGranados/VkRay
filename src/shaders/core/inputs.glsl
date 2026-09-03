@@ -79,21 +79,27 @@ layout(set = 0, binding = 10) buffer readonly MeshBuffer {
 layout(set = 0, binding = 11) buffer readonly MaterialBuffer {
     Material materials[];
 } materialBuffer;
-layout(set = 0, binding = 12) buffer readonly ObjectBuffer {
+layout(set = 0, binding = 12) buffer readonly MaterialParamsBuffer {
+    float values[];
+} materialParams;
+layout(set = 0, binding = 13) buffer readonly ObjectBuffer {
     uint objectCount;
     Object objects[];
 } objectBuffer;
-layout(set = 0, binding = 13) buffer readonly LightBuffer {
+layout(set = 0, binding = 14) buffer readonly LightBuffer {
     float totalArea;
     Light lights[];
 } lightBuffer;
 
-layout(rgba32f, set = 0, binding = 14) writeonly uniform image2D outputImage;
+layout(rgba32f, set = 0, binding = 15) writeonly uniform image2D outputImage;
 
-layout(set = 0, binding = 15) uniform sampler2D lensSampler;
+layout(set = 0, binding = 16) uniform sampler2D lensSampler;
 
-layout(set = 0, binding = 16) buffer readonly ProgrammableParamsBuffer {
-    float values[];
-} programmableParams;
+ResolvedMaterial unpackMaterial(in Material mat) {
+    ResolvedMaterial resolved;
+    resolved.type = mat.type;
+    for (int i = 0; i < MATERIAL_PAYLOAD_SIZE; i++) resolved.payload[i] = materialParams.values[mat.base + i];
+    return resolved;
+}
 
 #endif

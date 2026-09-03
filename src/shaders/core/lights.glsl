@@ -76,7 +76,7 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
     if (foundIntersection(shadowHit) &&
         !(shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type)) {
         Material shadowMat = getMaterial(shadowHit.object);
-        if (shadowMat.type == mat_Volume || isTransmissive(shadowMat)) {
+        if (shadowMat.type == mat_Volume || isTransmissive(unpackMaterial(shadowMat))) {
             light.skip = true;
         }
         light.pdf = -1.0;
@@ -84,8 +84,8 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
     }
 
     light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
-    Material lightMat = getMaterial(lightObj);
-    light.Le = albedo(lightMat) * emissionStrength(lightMat);
+    ResolvedMaterial lightMat = unpackMaterial(getMaterial(lightObj));
+    light.Le = albedo(lightMat) * emissiveEmissionStrength(lightMat);
     return light;
 }
 

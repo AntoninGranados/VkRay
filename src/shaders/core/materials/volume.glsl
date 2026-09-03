@@ -41,14 +41,14 @@ vec3 sampleHG(float g, vec3 wi, inout RngState rng) {
     );
 }
 
-BSDFEval evalVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalVolumeBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {
     return BSDFEval(
         vec3(1.0),
         0.0
     );
 }
 
-BSDFSample sampleVolumeBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
+BSDFSample sampleVolumeBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
     BSDFSample bsdf;
     bsdf.wi      = -wo;
     bsdf.weight  = vec3(1.0);

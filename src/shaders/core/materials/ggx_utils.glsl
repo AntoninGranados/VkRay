@@ -6,7 +6,7 @@
 
 #include "material_utils.glsl"
 
-vec3 ggxScatter(in Material mat, in Hit hit, in vec3 wo, in float alpha, out vec3 h, inout RngState rng) {
+vec3 ggxScatter(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in float alpha, out vec3 h, inout RngState rng) {
     float s1 = rand(rng);
     float s2 = rand(rng);
 

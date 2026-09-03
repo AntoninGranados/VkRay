@@ -32,6 +32,7 @@ struct SceneGpuBuffers {
     SceneGpuBufferEntry bvh;
     SceneGpuBufferEntry mesh;
     SceneGpuBufferEntry material;
+    SceneGpuBufferEntry materialParams;
     SceneGpuBufferEntry object;
     SceneGpuBufferEntry light;
 };

@@ -1,14 +1,11 @@
 #ifndef COMMON_GLSL
 #define COMMON_GLSL
 
-#define mat_Principled   0
-#define mat_Emissive     1
-#define mat_Diffuse      2
-#define mat_Metal        3
-#define mat_Glossy       4
-#define mat_Dielectric   5
-#define mat_Volume       6
-#define mat_Programmable 7
+#include "core/materials/generated/material_types.glsl"
+
+float luma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
 
 struct AOVBuffer {
     uint  hitValid;

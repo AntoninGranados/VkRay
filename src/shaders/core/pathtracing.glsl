@@ -34,7 +34,7 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo, ino
         return;
     }
 
-    Material mat = resolveMaterial(getMaterial(firstHit.object), firstHit, -ray.dir, rng);
+    ResolvedMaterial mat = resolveMaterial(getMaterial(firstHit.object), firstHit, -ray.dir, rng);
     setAlbedo(mat, albedo(mat) * firstHit.vertexColor);
     float guideMix = 1.0 / float(pixelInfo.count);
 
@@ -83,7 +83,7 @@ vec3 traceRay(in Camera camera, in Ray ray, inout RngState rng, inout PixelInfo 
     int i = 0;
     BSDFSample bsdf;
     LightSample lightSample;
-    Material mat;
+    ResolvedMaterial mat;
 
     BSDFSample prevBsdf = BSDFSample(
         vec3(0.0),
@@ -142,16 +142,16 @@ vec3 traceRay(in Camera camera, in Ray ray, inout RngState rng, inout PixelInfo 
             }
         }
 
-        mat = getMaterial(hit.object);
+        mat = resolveMaterial(getMaterial(hit.object), hit, -ray.dir, rng);
         setAlbedo(mat, albedo(mat) * hit.vertexColor);
 
         if (mat.type == mat_Emissive) {
             if (i == 0) {
-                radiance = albedo(mat) * emissionStrength(mat);
+                radiance = albedo(mat) * emissiveEmissionStrength(mat);
                 break;
             }
 
-            vec3 Le = albedo(mat) * emissionStrength(mat);
+            vec3 Le = albedo(mat) * emissiveEmissionStrength(mat);
             float w = 1.0;
             if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
                 float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);

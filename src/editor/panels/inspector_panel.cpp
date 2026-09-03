@@ -35,7 +35,6 @@ void InspectorPanel::content() {
     auto& reg = scene.getRegistry();
     auto& uiReg = ecs::ComponentUiRegistry::get();
     bool changed = uiReg.draw(reg, entity);
-    reg.flush();
     if (changed) Core::markRenderDirty();
 
     ImGui::End();

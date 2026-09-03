@@ -18,6 +18,10 @@ public:
     static EditorRenderer& getEditorRenderer();
     static MaterialPreview& getMaterialPreview();
 
+    static ImVec2      getViewportPos()      { return getUi().getViewportPos(); }
+    static ImVec2      getViewportSize()     { return getUi().getViewportSize(); }
+    static ImDrawList* getViewportDrawList() { return getUi().getViewportDrawList(); }
+
     static std::optional<ecs::Entity> getSelectedEntity();
     static void selectEntity(std::optional<ecs::Entity> entity);
 

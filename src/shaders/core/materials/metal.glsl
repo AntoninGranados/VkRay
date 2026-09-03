@@ -7,7 +7,7 @@
 #include "material_utils.glsl"
 #include "ggx_utils.glsl"
 
-BSDFEval evalMetalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
+BSDFEval evalMetalBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {
     float alpha = max(metalRoughness(mat) * metalRoughness(mat), EPS_HIGH);
     vec3 h = normalize(wo + wi);
     GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, h);
@@ -18,7 +18,7 @@ BSDFEval evalMetalBSDF(in Material mat, in Hit hit, in vec3 wo, in vec3 wi) {
     );
 }
 
-BSDFSample sampleMetalBSDF(in Material mat, in Hit hit, in vec3 wo, inout RngState rng) {
+BSDFSample sampleMetalBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
     float alpha = max(metalRoughness(mat) * metalRoughness(mat), EPS_HIGH);
     vec3 h;
     vec3 wi = ggxScatter(mat, hit, wo, alpha, h, rng);

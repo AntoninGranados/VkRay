@@ -14,16 +14,6 @@ namespace ecs {
 
 namespace physics_detail {
 
-static bool gIsBaking = false;
-struct BakeState {
-    bool inProgress = false;
-    int nextFrame = 0;
-    int totalFrames = 0;
-    int savedFrame = 0;
-    bool wasPaused = true;
-};
-static BakeState gBakeState;
-
 void computeMeshBounds(const MeshAsset& mesh, glm::vec3& outMin, glm::vec3& outMax) {
     const auto& vertices = mesh.getVertices();
     if (vertices.empty()) {
@@ -94,6 +84,8 @@ glm::vec3 gravityFor(const ecs::Component& rb) {
 
 void physicsSolverSystem(Registry& registry) {
     using namespace ecs::physics_detail;
+
+    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
 
     auto& rigidBodies = registry.storage(RigidBody);
     auto& transforms = registry.storage(Transform);
@@ -195,7 +187,7 @@ void physicsSolverSystem(Registry& registry) {
         }
 
         // Should only be applied by the baking function
-        if (!gIsBaking) continue;
+        if (!bakeState.isBaking) continue;
 
         int startFrame = state.initializedFrame;
         auto bestStart = state.snapshots.end();
@@ -230,7 +222,7 @@ void physicsSolverSystem(Registry& registry) {
         }
     }
 
-    if (gIsBaking) {
+    if (bakeState.isBaking) {
         for (const ecs::Entity& e : colliders.entities()) {
             if (!transforms.has(e)) continue;
             const Component& tc = transforms.get(e);
@@ -244,7 +236,8 @@ void physicsSolverSystem(Registry& registry) {
 }
 
 void bakePhysicsSimulation(Registry& registry) {
-    if (physics_detail::gBakeState.inProgress) return;
+    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
+    if (bakeState.inProgress) return;
 
     AnimationClock& animation = Core::getAnimation();
     const int endFrame = std::max(1, animation.getEndFrame());
@@ -256,47 +249,49 @@ void bakePhysicsSimulation(Registry& registry) {
     for (const Entity& e : registry.storage(Collider).entities())
         registry.get(e, Collider).payload<physics_detail::ColliderState>("prev_transform") = physics_detail::ColliderState{};
 
-    physics_detail::gIsBaking = true;
-    physics_detail::gBakeState.inProgress = true;
-    physics_detail::gBakeState.nextFrame = 0;
-    physics_detail::gBakeState.totalFrames = endFrame;
-    physics_detail::gBakeState.savedFrame = animation.getFrame();
-    physics_detail::gBakeState.wasPaused = animation.isPaused();
+    bakeState.isBaking    = true;
+    bakeState.inProgress  = true;
+    bakeState.nextFrame   = 0;
+    bakeState.totalFrames = endFrame;
+    bakeState.savedFrame  = animation.getFrame();
+    bakeState.wasPaused   = animation.isPaused();
 
     animation.pause();
     Core::markRenderDirty();
 }
 
-bool isPhysicsBakeInProgress() {
-    return physics_detail::gBakeState.inProgress;
+bool isPhysicsBakeInProgress(const Registry& registry) {
+    return registry.ctx().get<PhysicsBakeState>().inProgress;
 }
 
-int getPhysicsBakeCurrentFrame() {
-    return physics_detail::gBakeState.nextFrame;
+int getPhysicsBakeCurrentFrame(const Registry& registry) {
+    return registry.ctx().get<PhysicsBakeState>().nextFrame;
 }
 
-int getPhysicsBakeTotalFrames() {
-    return physics_detail::gBakeState.totalFrames;
+int getPhysicsBakeTotalFrames(const Registry& registry) {
+    return registry.ctx().get<PhysicsBakeState>().totalFrames;
 }
 
 void physicsSystem(Registry& registry) {
     using namespace ecs::physics_detail;
 
-    if (gBakeState.inProgress) {
-        Core::getAnimation().reset(gBakeState.nextFrame);
+    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
+
+    if (bakeState.inProgress) {
+        Core::getAnimation().reset(bakeState.nextFrame);
         Core::getAnimation().sample();
         evaluateAnimation(registry);
         physicsSolverSystem(registry);
         Core::markRenderDirty();
 
-        gBakeState.nextFrame++;
-        if (gBakeState.nextFrame >= gBakeState.totalFrames) {
-            gIsBaking = false;
-            gBakeState.inProgress = false;
-            Core::getAnimation().reset(gBakeState.savedFrame);
-            if (!gBakeState.wasPaused) Core::getAnimation().play();
+        bakeState.nextFrame++;
+        if (bakeState.nextFrame >= bakeState.totalFrames) {
+            bakeState.isBaking   = false;
+            bakeState.inProgress = false;
+            Core::getAnimation().reset(bakeState.savedFrame);
+            if (!bakeState.wasPaused) Core::getAnimation().play();
         } else {
-            Core::getAnimation().reset(gBakeState.savedFrame);
+            Core::getAnimation().reset(bakeState.savedFrame);
         }
         return;
     }

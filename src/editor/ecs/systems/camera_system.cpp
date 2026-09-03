@@ -39,11 +39,11 @@ void cameraDrawingSystem(Registry& registry) {
 
     if (ImGui::GetCurrentContext() == nullptr) return;
 
-    ImVec2 windowPos = Editor::getUi().getViewportPos();
-    ImVec2 windowSize = Editor::getUi().getViewportSize();
+    ImVec2 windowPos = Editor::getViewportPos();
+    ImVec2 windowSize = Editor::getViewportSize();
     if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
 
-    ImDrawList* drawList = Editor::getUi().getViewportDrawList();
+    ImDrawList* drawList = Editor::getViewportDrawList();
     if (!drawList) return;
     drawList->PushClipRect(windowPos, ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y), true);
 

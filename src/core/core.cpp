@@ -61,10 +61,7 @@ bool Core::consumeResize() {
     return true;
 }
 
-void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
-    Core& c = get();
-    Scene& scene = c.coreRenderer.getScene();
-    c.fileWatcher.poll();
+void Core::updateAnimationDirty(Core& c, Scene& scene) {
     float jitterRange = 0.0f;
     if (c.renderMode != RenderMode::Preview) {
         const float shutterSpeed = scene.getRegistry().get(scene.getCamera(), ecs::Camera).get<float>("shutter_speed");
@@ -73,19 +70,32 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     if (c.animation.sample(jitterRange)) markRenderDirty();
     if (!c.animation.isPaused()) markRenderDirty();
     consumeRenderDirty();
+}
+
+void Core::reloadPipelinesIfDirty(Core& c) {
+    if (!c.pipelinesDirty) return;
+    c.pipelinesDirty = false;
+    reloadShaders();
+}
+
+void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
+    Core& c = get();
+    Scene& scene = c.coreRenderer.getScene();
+    c.fileWatcher.poll();
+
+    updateAnimationDirty(c, scene);
     scene.runPreRender();
+
     auto frameContext = c.engine.beginFrame();
     if (!frameContext) {
         c.engine.advanceFrame();
         return;
     }
+
     scene.runOnRender(*frameContext);
-    ProgrammableShader::packAll(*frameContext);
-    if (c.pipelinesDirty) {
-        c.pipelinesDirty = false;
-        reloadShaders();
-    }
-    c.coreRenderer.render(*frameContext, scene.getRegistry(), scene.getCamera());
+    reloadPipelinesIfDirty(c);
+
+    c.coreRenderer.render(*frameContext);
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
 }

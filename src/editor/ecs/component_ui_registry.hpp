@@ -22,6 +22,7 @@ public:
         bool changed = false;
         for (const Drawer& drawer : drawers)
             changed |= drawer(registry, e);
+        registry.flush();
         return changed;
     }
 

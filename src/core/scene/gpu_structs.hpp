@@ -8,8 +8,8 @@
 static constexpr int kMaterialPayloadSize = 12;
 
 struct GpuMaterial {
-    int   type;
-    float payload[kMaterialPayloadSize];
+    int      type;
+    uint32_t base;
 };
 
 struct GpuSphere {
@@ -74,7 +74,7 @@ enum class ObjectType : int {
 struct GpuObject {
     ObjectType type;
     uint32_t id;
-    uint32_t materialHandle;
+    uint32_t materialSlot;
 };
 
 struct GpuObjectHeader {

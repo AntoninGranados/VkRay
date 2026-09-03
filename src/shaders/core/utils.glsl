@@ -11,7 +11,7 @@
 
 #define Enum int
 
-#define MaterialHandle int
+#define MaterialSlot int
 
 // ============== OBJECTS  ==============
 #define obj_None    Enum(0)
@@ -26,7 +26,7 @@
 struct Object {
     Enum type;
     uint id;
-    MaterialHandle materialHandle;
+    MaterialSlot materialSlot;
 };
 
 #define OBJECT_NONE Object(obj_None, -1, 0)

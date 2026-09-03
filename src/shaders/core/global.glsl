@@ -18,7 +18,7 @@ Hit rayObjectIntersection(in Ray ray, in Object obj, bool anyHit, float tMax, in
 }
 
 Material getMaterial(in Object obj) {
-    return materialBuffer.materials[obj.materialHandle];
+    return materialBuffer.materials[obj.materialSlot];
 }
 
 SurfaceSample sampleSurface(in Object obj, in float area, inout RngState rng) {

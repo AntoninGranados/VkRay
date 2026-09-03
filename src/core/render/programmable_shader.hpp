@@ -10,8 +10,6 @@
 #include "core/ecs/components/component_type.hpp"
 #include "utils/glsl_dsl_file.hpp"
 
-struct FrameContext;
-
 class ProgrammableShader : private GlslDslFile {
 public:
     using GlslDslFile::getError;
@@ -35,10 +33,8 @@ public:
     std::vector<float> packValues() const;
 
     int getSlot() const { return slot; }
-    int getBaseOffset() const { return baseOffset; }
 
     static int slotForPath(const std::filesystem::path& path);
-    static void packAll(const FrameContext& frame);
     static void generateDispatch();
 
 private:
@@ -61,7 +57,6 @@ private:
 
     static std::optional<ecs::ComponentField> parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber);
     static TypeSpec typeSpecFor(FieldType type);
-    static size_t capacityFromCount(size_t count);
 
     void load(bool migrate);
     std::string mangledPrefix() const;
@@ -75,5 +70,4 @@ private:
 
     std::filesystem::path path;
     int slot = -1;
-    int baseOffset = 0;
 };

@@ -10,22 +10,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "core/render/programmable_shader.hpp"
+#include "core/render/material_table.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
 #include "utils/log.hpp"
+#include "utils/math_utils.hpp"
 
 namespace ecs {
 
 namespace {
-size_t sceneCapacityFromCount(size_t count) {
-    size_t cap = 16;
-    while (cap < count) cap <<= 1;
-    return cap;
-}
-
 uint32_t resolveMaterialSlot(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {
     if (!materialRefs.has(entity)) return 0u;
     const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
@@ -48,11 +43,17 @@ const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
     return registry.has(e, Mesh) ? &registry.get(e, Mesh).payload<MeshAsset>("geometry") : nullptr;
 }
 
+glm::mat4 composeTransform(const Component& transform) {
+    return glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
+        * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
+        * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+}
+
 } // namespace
 
 template <typename T>
 inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry& entry, std::vector<T>& data) {
-    size_t required = sceneCapacityFromCount(data.size());
+    size_t required = nextPowerOfTwo(data.size());
     if (required > entry.capacity) {
         Core::getEngine().resizeBuffer(entry.handle, required * sizeof(T));
         entry.capacity = required;
@@ -60,6 +61,22 @@ inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry
     Buffer& buf = Core::getEngine().getBuffer(entry.handle, frame.currentFrame);
     data.resize(buf.getSize() / sizeof(T));
     Core::getEngine().fillBuffer(buf, data.data());
+}
+
+template <typename Header, typename T>
+inline void fillBufferWithHeader(const FrameContext& frame, SceneGpuBufferEntry& entry, const Header& header, std::vector<T>& data) {
+    size_t required = nextPowerOfTwo(data.size());
+    if (required > entry.capacity) {
+        Core::getEngine().resizeBuffer(entry.handle, sizeof(Header) + required * sizeof(T));
+        entry.capacity = required;
+    }
+    data.resize(entry.capacity);
+
+    std::vector<char> buffer(sizeof(Header) + sizeof(T) * entry.capacity, 0);
+    std::memcpy(buffer.data(), &header, sizeof(Header));
+    std::memcpy(buffer.data() + sizeof(Header), data.data(), data.size() * sizeof(T));
+
+    Core::getEngine().fillBuffer(Core::getEngine().getBuffer(entry.handle, frame.currentFrame), buffer.data());
 }
 
 void spherePackingSystem(Registry& registry) {
@@ -114,9 +131,7 @@ void boxPackingSystem(Registry& registry) {
     for (const auto& entity : boxes.entities()) {
         if (!transforms.has(entity)) continue;
         const Component& transform = transforms.get(entity);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+        const glm::mat4 local = composeTransform(transform);
 
         gpuBoxes.push_back(GpuBox{
             .transform = local,
@@ -223,9 +238,7 @@ void meshPackingSystem(Registry& registry) {
         if (meshSlot >= static_cast<uint32_t>(meshTemplates.size())) continue;
         const GpuMesh& meshTemplate = meshTemplates[meshSlot];
         const Component& transform = transforms.get(entity);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+        const glm::mat4 local = composeTransform(transform);
 
         meshes.push_back(GpuMesh{
             .transform = local,
@@ -249,78 +262,24 @@ void materialPackingSystem(Registry& registry) {
     const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
 
     std::vector<GpuMaterial> gpuMaterials;
+    std::vector<float> materialParams;
     gpuMaterials.reserve(materialEntities.size());
 
     for (int slot = 0; slot < static_cast<int>(materialEntities.size()); ++slot) {
         const ecs::Entity entity = materialEntities[slot];
         GpuMaterial gpu{};
 
-        auto albedo = [&](const Component& c) {
-            const glm::vec3 a = c.get<glm::vec3>("albedo");
-            gpu.payload[0] = a.r; gpu.payload[1] = a.g; gpu.payload[2] = a.b;
-        };
-
-        if (registry.has(entity, ecs::Principled)) {
-            const Component& c = registry.get(entity, ecs::Principled);
-            gpu.type = 0;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("roughness");
-            gpu.payload[4] = c.get<float>("metalness");
-            gpu.payload[5] = c.get<float>("ior");
-            gpu.payload[6] = c.get<float>("transmission");
-            gpu.payload[7] = c.get<float>("density");
-            gpu.payload[8] = c.get<float>("anisotropic");
-            gpu.payload[9] = c.get<float>("alpha");
-        } else if (registry.has(entity, ecs::Emissive)) {
-            const Component& c = registry.get(entity, ecs::Emissive);
-            gpu.type = 1;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("emission_strength");
-        } else if (registry.has(entity, ecs::Diffuse)) {
-            const Component& c = registry.get(entity, ecs::Diffuse);
-            gpu.type = 2;
-            albedo(c);
-        } else if (registry.has(entity, ecs::Metal)) {
-            const Component& c = registry.get(entity, ecs::Metal);
-            gpu.type = 3;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("roughness");
-        } else if (registry.has(entity, ecs::Glossy)) {
-            const Component& c = registry.get(entity, ecs::Glossy);
-            gpu.type = 4;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("roughness");
-            gpu.payload[4] = c.get<float>("ior");
-        } else if (registry.has(entity, ecs::Dielectric)) {
-            const Component& c = registry.get(entity, ecs::Dielectric);
-            gpu.type = 5;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("roughness");
-            gpu.payload[4] = c.get<float>("ior");
-            gpu.payload[5] = c.get<float>("transmission");
-            gpu.payload[6] = c.get<float>("density");
-            gpu.payload[7] = c.get<float>("anisotropic");
-        } else if (registry.has(entity, ecs::Volume)) {
-            const Component& c = registry.get(entity, ecs::Volume);
-            gpu.type = 6;
-            albedo(c);
-            gpu.payload[3] = c.get<float>("density");
-            gpu.payload[4] = c.get<float>("anisotropic");
-        } else if (registry.has(entity, ecs::ProgrammableMaterial)) {
-            gpu.type = 7;
-            Component& c = registry.get(entity, ecs::ProgrammableMaterial);
-            ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
-            shader.parse(c.get<std::filesystem::path>("path"));
-            gpu.payload[0] = static_cast<float>(shader.getSlot());
-            gpu.payload[1] = static_cast<float>(shader.getBaseOffset());
-        } else if (slot > 0 && !gpuMaterials.empty()) {
+        if (!MaterialTable::pack(registry, entity, gpu, materialParams) && slot > 0 && !gpuMaterials.empty())
             gpu = gpuMaterials[0];
-        }
 
         gpuMaterials.push_back(gpu);
     }
 
+    // Slack so unpackMaterial's fixed-size read past the last material's base never goes out of bounds.
+    materialParams.resize(materialParams.size() + kMaterialPayloadSize, 0.0f);
+
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().material, gpuMaterials);
+    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().materialParams, materialParams);
 }
 
 void objectPackingSystem(Registry& registry) {
@@ -337,7 +296,7 @@ void objectPackingSystem(Registry& registry) {
             gpuObjects.push_back(GpuObject{
                 .type = type,
                 .id = idx,
-                .materialHandle = resolveMaterialSlot(registry, materialRefs, entity)
+                .materialSlot = resolveMaterialSlot(registry, materialRefs, entity)
             });
             idx++;
         }
@@ -348,22 +307,8 @@ void objectPackingSystem(Registry& registry) {
     packType(registry.storage(Quad),    ObjectType::Quad);
     packType(registry.storage(MeshRef), ObjectType::Mesh);
 
-    SceneGpuBufferEntry& objectEntry = registry.ctx().get<SceneGpuBuffers>().object;
-    size_t objectRequired = sceneCapacityFromCount(gpuObjects.size());
-    if (objectRequired > objectEntry.capacity) {
-        Core::getEngine().resizeBuffer(objectEntry.handle, sizeof(GpuObjectHeader) + objectRequired * sizeof(GpuObject));
-        objectEntry.capacity = objectRequired;
-    }
-    uint32_t objectCount = static_cast<uint32_t>(gpuObjects.size());
-    gpuObjects.resize(objectEntry.capacity);
-
-    std::vector<char> objectData(sizeof(GpuObjectHeader) + sizeof(GpuObject) * objectEntry.capacity, 0);
-    size_t offset = 0;
-    std::memcpy(objectData.data() + offset, &objectCount, sizeof(objectCount));
-    offset += sizeof(objectCount);
-    std::memcpy(objectData.data() + offset, gpuObjects.data(), gpuObjects.size() * sizeof(GpuObject));
-
-    Core::getEngine().fillBuffer(Core::getEngine().getBuffer(objectEntry.handle, frame.currentFrame), objectData.data());
+    const GpuObjectHeader header{ .objectCount = static_cast<uint32_t>(gpuObjects.size()) };
+    fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().object, header, gpuObjects);
 }
 
 void lightPackingSystem(Registry& registry) {
@@ -409,9 +354,7 @@ void lightPackingSystem(Registry& registry) {
         if (!isEmissive(entity)) continue;
 
         const Component& boxTransform = transforms.get(entity);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), boxTransform.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(boxTransform.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), boxTransform.get<glm::vec3>("scale"));
+        const glm::mat4 local = composeTransform(boxTransform);
         const glm::vec3 axisX = glm::vec3(local[0]);
         const glm::vec3 axisY = glm::vec3(local[1]);
         const glm::vec3 axisZ = glm::vec3(local[2]);
@@ -433,9 +376,7 @@ void lightPackingSystem(Registry& registry) {
         if (!isEmissive(entity)) continue;
 
         const Component& quadTransform = transforms.get(entity);
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), quadTransform.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(quadTransform.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), quadTransform.get<glm::vec3>("scale"));
+        const glm::mat4 local = composeTransform(quadTransform);
         const glm::vec3 u = glm::vec3(local[0]);
         const glm::vec3 v = glm::vec3(local[1]);
         const float area = glm::length(glm::cross(u, v));
@@ -453,9 +394,7 @@ void lightPackingSystem(Registry& registry) {
         if (!isEmissive(entity)) continue;
 
         const Component& meshTransform = transforms.get(entity);
-        const glm::mat4 mLocal = glm::translate(glm::mat4(1.0f), meshTransform.get<glm::vec3>("position"))
-            * glm::mat4_cast(glm::quat(glm::radians(meshTransform.get<glm::vec3>("rotation"))))
-            * glm::scale(glm::mat4(1.0f), meshTransform.get<glm::vec3>("scale"));
+        const glm::mat4 mLocal = composeTransform(meshTransform);
         const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
         const MeshAsset* meshAsset = getMeshAsset(registry, meshAssetEntity);
         if (!meshAsset) continue;
@@ -468,21 +407,8 @@ void lightPackingSystem(Registry& registry) {
         });
     }
 
-    SceneGpuBufferEntry& lightEntry = registry.ctx().get<SceneGpuBuffers>().light;
-    size_t lightRequired = sceneCapacityFromCount(lights.size());
-    if (lightRequired > lightEntry.capacity) {
-        Core::getEngine().resizeBuffer(lightEntry.handle, sizeof(GpuLightHeader) + lightRequired * sizeof(GpuLight));
-        lightEntry.capacity = lightRequired;
-    }
-    lights.resize(lightEntry.capacity);
-
-    std::vector<char> lightData(sizeof(GpuLightHeader) + sizeof(GpuLight) * lightEntry.capacity, 0);
-    size_t offset = 0;
-    std::memcpy(lightData.data() + offset, &totalArea, sizeof(totalArea));
-    offset += sizeof(totalArea);
-    std::memcpy(lightData.data() + offset, lights.data(), lights.size() * sizeof(GpuLight));
-
-    Core::getEngine().fillBuffer(Core::getEngine().getBuffer(lightEntry.handle, frame.currentFrame), lightData.data());
+    const GpuLightHeader header{ .totalArea = totalArea };
+    fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().light, header, lights);
 }
 
 } // namespace ecs

@@ -16,6 +16,7 @@
 #include "version.hpp"
 
 #include "core/core.hpp"
+#include "core/render/material_table.hpp"
 #include "core/render/programmable_shader.hpp"
 #include "core/scene/scene_serializer.hpp"
 
@@ -101,6 +102,7 @@ void Application::buildRenderGraph(bool offline) {
         previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
     }
 
+    MaterialTable::generateGlsl();
     ProgrammableShader::generateDispatch();
 
     Core::getEngine().setGraph(builder);
