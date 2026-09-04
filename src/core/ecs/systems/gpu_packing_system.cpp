@@ -51,6 +51,16 @@ glm::mat4 composeTransform(const Component& transform) {
 
 } // namespace
 
+const std::vector<const ComponentType*>& objectTypeOrder() {
+    static const std::vector<const ComponentType*> order = [] {
+        std::vector<const ComponentType*> result;
+        for (const ComponentType& type : ComponentType::all())
+            if (type.getGroup() == "object") result.push_back(&type);
+        return result;
+    }();
+    return order;
+}
+
 template <typename T>
 inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry& entry, std::vector<T>& data) {
     size_t required = nextPowerOfTwo(data.size());
@@ -289,23 +299,20 @@ void objectPackingSystem(Registry& registry) {
 
     std::vector<GpuObject> gpuObjects;
 
-    auto packType = [&](const ecs::ComponentStorage& storage, ObjectType type) {
+    const std::vector<const ComponentType*>& order = objectTypeOrder();
+    for (size_t i = 0; i < order.size(); i++) {
+        const ObjectType objectType = static_cast<ObjectType>(i + 1);
         uint32_t idx = 0;
-        for (const auto& entity : storage.entities()) {
+        for (const auto& entity : registry.storage(*order[i]).entities()) {
             if (!transforms.has(entity)) continue;
             gpuObjects.push_back(GpuObject{
-                .type = type,
+                .type = objectType,
                 .id = idx,
                 .materialSlot = resolveMaterialSlot(registry, materialRefs, entity)
             });
             idx++;
         }
-    };
-    packType(registry.storage(Sphere),  ObjectType::Sphere);
-    packType(registry.storage(Plane),   ObjectType::Plane);
-    packType(registry.storage(Box),     ObjectType::Box);
-    packType(registry.storage(Quad),    ObjectType::Quad);
-    packType(registry.storage(MeshRef), ObjectType::Mesh);
+    }
 
     const GpuObjectHeader header{ .objectCount = static_cast<uint32_t>(gpuObjects.size()) };
     fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().object, header, gpuObjects);

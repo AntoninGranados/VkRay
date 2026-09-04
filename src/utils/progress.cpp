@@ -20,6 +20,13 @@ double ProgressTimer::eta(float progress) const {
     return e / static_cast<double>(progress) - e;
 }
 
+ProgressStats ProgressTimer::stats(uint32_t current, uint32_t total) const {
+    const float progress = total > 0 ? static_cast<float>(current) / static_cast<float>(total) : 0.0f;
+    const double e = elapsed();
+    const double rate = e > 0.0 ? static_cast<double>(current) / e : 0.0;
+    return { progress, e, eta(progress), rate };
+}
+
 std::string ProgressTimer::formatTime(double seconds) {
     const int total = static_cast<int>(seconds);
     const int h = total / 3600;
@@ -63,42 +70,39 @@ static void drawBlocks(int width, float progress) {
 
 void ProgressBar::close() {
     current = total;
-    const double elapsed = timer.elapsed();
-    const double rate    = elapsed > 0.0 ? static_cast<double>(total) / elapsed : 0.0;
+    const ProgressStats stats = timer.stats(total, total);
 
     std::cout << '\r';
     if (!prefix.empty())  std::cout << prefix << ' ';
-    
+
     std::cout << "100%";
     std::cout << '|'; drawBlocks(width, 1.0f); std::cout << "| ";
 
     std::cout << total << '/' << total << unit << ' ';
 
-    std::cout << '[' << ProgressTimer::formatTime(elapsed) << ", "
-              << std::fixed << std::setprecision(1) << rate << unit << "/s]";
-    
+    std::cout << '[' << ProgressTimer::formatTime(stats.elapsed) << ", "
+              << std::fixed << std::setprecision(1) << stats.rate << unit << "/s]";
+
     if (!postfix.empty()) std::cout << ' ' << postfix;
     std::cout << "\033[K\n";
 }
 
 void ProgressBar::redraw() {
-    const float  progress = static_cast<float>(current) / static_cast<float>(total);
-    const double elapsed  = timer.elapsed();
-    const double rate     = elapsed > 0.0 ? static_cast<double>(current) / elapsed : 0.0;
-    const int    digits   = static_cast<int>(std::to_string(total).size());
+    const ProgressStats stats = timer.stats(current, total);
+    const int digits = static_cast<int>(std::to_string(total).size());
 
     std::cout << '\r';
     if (!prefix.empty())  std::cout << prefix << ' ';
-    
-    std::cout << std::setw(3) << static_cast<int>(progress * 100.0f) << '%';
-    std::cout << '|'; drawBlocks(width, progress); std::cout << "| ";
+
+    std::cout << std::setw(3) << static_cast<int>(stats.progress * 100.0f) << '%';
+    std::cout << '|'; drawBlocks(width, stats.progress); std::cout << "| ";
 
     std::cout << std::setw(digits) << current << '/' << total << unit << ' ';
 
-    std::cout << '[' << ProgressTimer::formatTime(elapsed)
-              << '<' << ProgressTimer::formatTime(timer.eta(progress)) << ", "
-              << std::fixed << std::setprecision(1) << rate << unit << "/s]";
-    
+    std::cout << '[' << ProgressTimer::formatTime(stats.elapsed)
+              << '<' << ProgressTimer::formatTime(stats.eta) << ", "
+              << std::fixed << std::setprecision(1) << stats.rate << unit << "/s]";
+
     if (!postfix.empty()) std::cout << "  " << postfix;
     std::cout << "\033[K";
     std::cout.flush();

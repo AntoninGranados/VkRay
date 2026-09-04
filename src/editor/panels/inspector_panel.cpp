@@ -13,34 +13,34 @@
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
 
-void InspectorPanel::content() {
-    ImGui::Begin("Inspector");
-
+void InspectorPanel::draw() {
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
-    if (!selectedEntity.has_value()) {
-        ImGui::TextDisabled("No entity selected");
-        ImGui::End();
-        return;
-    }
-
-    ecs::Entity entity = *selectedEntity;
-    Scene& scene = Core::getScene();
     bool openNewComponentPopup = false;
 
-    ImGui::Text("Add Component");
-    ImGui::SameLine();
-    if (ImGui::Button("+##AddComponent", {32, 0}))
-        openNewComponentPopup = true;
+    ui::drawWindow(getTitle(), ImGuiWindowFlags_None, [&] {
+        if (!selectedEntity.has_value()) {
+            ImGui::TextDisabled("No entity selected");
+            return;
+        }
 
-    auto& reg = scene.getRegistry();
-    auto& uiReg = ecs::ComponentUiRegistry::get();
-    bool changed = uiReg.draw(reg, entity);
-    if (changed) Core::markRenderDirty();
+        ecs::Entity entity = *selectedEntity;
+        Scene& scene = Core::getScene();
 
-    ImGui::End();
+        ImGui::Text("Add Component");
+        ImGui::SameLine();
+        if (ImGui::Button("+##AddComponent", {32, 0}))
+            openNewComponentPopup = true;
+
+        auto& reg = scene.getRegistry();
+        auto& uiReg = ecs::ComponentUiRegistry::get();
+        bool changed = uiReg.draw(reg, entity);
+        if (changed) Core::markRenderDirty();
+    });
+
+    if (!selectedEntity.has_value()) return;
 
     if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
-    drawAddComponentPopup(scene, entity);
+    drawAddComponentPopup(Core::getScene(), *selectedEntity);
 }
 
 void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {

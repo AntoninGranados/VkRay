@@ -3,6 +3,7 @@
 #include "panel.hpp"
 
 class RenderViewportPanel : public Panel {
-private:
-    void content() override;
+public:
+    std::string getTitle() const override { return "RenderView"; }
+    void draw() override;
 };

@@ -4,6 +4,7 @@
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/core_renderer.hpp"
+#include "editor/imgui_texture.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
@@ -16,9 +17,9 @@ public:
     void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
     void render(const FrameContext& frameContext);
 
-    ImTextureID getDisplayTexId() const { return displayTexId; }
-    ImTextureID getDebugTexId()   const { return debugTexId; }
-    ImTextureID getOutputTexId()  const { return outputTexId; }
+    ImTextureID getDisplayTexId() const { return displayTex; }
+    ImTextureID getDebugTexId()   const { return debugTex; }
+    ImTextureID getOutputTexId()  const { return outputTex; }
 
     TimestampHandle getDisplayTimestamp() const { return displayTimestamp; }
     TimestampHandle getDebugTimestamp()   const { return debugTimestamp; }
@@ -48,7 +49,7 @@ private:
     VkExtent2D renderExtent   = {};
     VkExtent2D viewportExtent = {};
 
-    ImTextureID displayTexId = 0;
-    ImTextureID debugTexId   = 0;
-    ImTextureID outputTexId  = 0;
+    ui::ImGuiTexture displayTex;
+    ui::ImGuiTexture debugTex;
+    ui::ImGuiTexture outputTex;
 };

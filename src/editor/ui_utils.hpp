@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -106,6 +107,9 @@ inline void setNextWindowFixed(bool noTabBar = false) {
 
 bool beginCenteredModal(const char* name);
 void endCenteredModal();
+
+// Pairs ImGui::Begin/End and only runs body() when the window is visible; End() always runs.
+void drawWindow(const std::string& title, ImGuiWindowFlags flags, const std::function<void()>& body, bool* pOpen = nullptr);
 
 struct FileFilter { std::string name; std::string extensions; };
 std::optional<std::filesystem::path> openFileDialog(const std::vector<FileFilter>& filters, const std::filesystem::path& defaultDir = {});

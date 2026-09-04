@@ -10,6 +10,9 @@ class ToastNotifications : public Panel {
 public:
     ToastNotifications();
 
+    std::string getTitle() const override { return "Notifications"; }
+    void draw() override;
+
 private:
     struct Toast {
         LogEntry entry;
@@ -17,7 +20,6 @@ private:
     };
 
     void push(const LogEntry& entry);
-    void content() override;
 
     std::vector<Toast>                    toasts;
     std::chrono::steady_clock::time_point lastTick = std::chrono::steady_clock::now();

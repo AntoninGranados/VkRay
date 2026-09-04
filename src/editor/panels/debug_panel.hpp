@@ -3,6 +3,7 @@
 #include "panel.hpp"
 
 class DebugPanel : public Panel {
-private:
-    void content() override;
+public:
+    std::string getTitle() const override { return "Debug View"; }
+    void draw() override;
 };

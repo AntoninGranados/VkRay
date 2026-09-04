@@ -23,7 +23,7 @@
 #include "editor/scene/raycast.hpp"
 #include "editor/ui_utils.hpp"
 
-void ViewportPanel::content() {
+void ViewportPanel::draw() {
     Scene& scene = Core::getScene();
 
     ImGuizmo::SetOrthographic(false);
@@ -32,36 +32,37 @@ void ViewportPanel::content() {
 
     ui::setNextWindowFixed(true);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Viewport", nullptr,
+    drawList = nullptr;
+    ui::drawWindow(getTitle(),
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse
-    );
-    hovered = ImGui::IsWindowHovered();
-    pos = ImGui::GetWindowPos();
-    size = ImGui::GetContentRegionAvail();
-    drawList = ImGui::GetWindowDrawList();
-    ImGui::Image(Editor::getEditorRenderer().getDisplayTexId(), size);
+        ImGuiWindowFlags_NoScrollWithMouse,
+        [&] {
+            hovered = ImGui::IsWindowHovered();
+            pos = ImGui::GetWindowPos();
+            size = ImGui::GetContentRegionAvail();
+            drawList = ImGui::GetWindowDrawList();
+            ImGui::Image(Editor::getEditorRenderer().getDisplayTexId(), size);
 
-    if (ImGui::IsItemHovered()) {
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
-            ImVec2 mp = ImGui::GetMousePos();
-            float dist;
-            auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
-            if (onEntitySelection) onEntitySelection(entityId);
-        }
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && scene.getRegistry().has(scene.getCamera(), ecs::ThinLens)) {
-            ImVec2 mp = ImGui::GetMousePos();
-            float dist;
-            auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
-            if (hit.has_value()) {
-                scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focus_distance", dist);
-                Core::markRenderDirty();
+            if (ImGui::IsItemHovered()) {
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
+                    ImVec2 mp = ImGui::GetMousePos();
+                    float dist;
+                    auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
+                    if (onEntitySelection) onEntitySelection(entityId);
+                }
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && scene.getRegistry().has(scene.getCamera(), ecs::ThinLens)) {
+                    ImVec2 mp = ImGui::GetMousePos();
+                    float dist;
+                    auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
+                    if (hit.has_value()) {
+                        scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focus_distance", dist);
+                        Core::markRenderDirty();
+                    }
+                }
             }
         }
-    }
-
-    ImGui::End();
+    );
     ImGui::PopStyleVar();
 
     if (!drawList) return;

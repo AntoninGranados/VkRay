@@ -21,10 +21,9 @@ static void startRender(const char* paramPath, auto startFn) {
     startFn();
 }
 
-void RendererPanel::content() {
+void RendererPanel::draw() {
     ui::setNextWindowFixed();
-    ImGui::Begin(ICON_FA_CAMERA " Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    {
+    ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [] {
         if (ImGui::Button(ICON_FA_PLAY " Render", { -FLT_MIN, 0 }))
             startRender("renderer/output/output_image", Core::startRender);
         if (ImGui::Button(ICON_FA_FILM " Render Animation", { -FLT_MIN, 0 }))
@@ -32,6 +31,5 @@ void RendererPanel::content() {
 
         ImGui::Separator();
         ParameterUI::drawGroup("renderer");
-    }
-    ImGui::End();
+    });
 }

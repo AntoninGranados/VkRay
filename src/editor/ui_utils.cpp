@@ -72,6 +72,12 @@ void endCenteredModal() {
     ImGui::EndPopup();
 }
 
+void drawWindow(const std::string& title, ImGuiWindowFlags flags, const std::function<void()>& body, bool* pOpen) {
+    const bool visible = ImGui::Begin(title.c_str(), pOpen, flags);
+    if (visible) body();
+    ImGui::End();
+}
+
 namespace {
 std::vector<nfdfilteritem_t> toNfdFilters(const std::vector<FileFilter>& filters) {
     std::vector<nfdfilteritem_t> items;

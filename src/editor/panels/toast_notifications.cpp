@@ -25,7 +25,7 @@ void ToastNotifications::push(const LogEntry& entry) {
     toasts.push_back({ entry, kToastTTL });
 }
 
-void ToastNotifications::content() {
+void ToastNotifications::draw() {
     auto  now = std::chrono::steady_clock::now();
     float dt  = std::chrono::duration<float>(now - lastTick).count();
     lastTick  = now;
@@ -78,40 +78,39 @@ void ToastNotifications::content() {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { kToastWindowPadX, kToastWindowPadY });
 
-        ImGui::Begin(id, nullptr, kFlags);
-        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+        ui::drawWindow(id, kFlags, [&] {
+            ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
-        // Header row: icon / log level / source / close button
-        float btnW = ImGui::CalcTextSize(ICON_FA_XMARK).x + ImGui::GetStyle().FramePadding.x * 2.f;
-        ImGui::TextColored(accent, "%s %s", icon, label);
-        ImGui::SameLine();
-        if (!t.entry.source.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, { 1.f, 1.f, 1.f, alpha * 0.55f });
-            ImGui::TextUnformatted(t.entry.source.c_str());
-            ImGui::PopStyleColor();
+            // Header row: icon / log level / source / close button
+            float btnW = ImGui::CalcTextSize(ICON_FA_XMARK).x + ImGui::GetStyle().FramePadding.x * 2.f;
+            ImGui::TextColored(accent, "%s %s", icon, label);
             ImGui::SameLine();
-        }
-        ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - btnW);
-        ImGui::PushStyleColor(ImGuiCol_Text,          { 1.f, 1.f, 1.f, alpha * 0.5f });
-        ImGui::PushStyleColor(ImGuiCol_Button,        { 0.f, 0.f, 0.f, 0.f });
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, { 1.f, 1.f, 1.f, 0.15f });
-        char closeId[48];
-        snprintf(closeId, sizeof(closeId), ICON_FA_XMARK "##c%d", i);
-        if (ImGui::SmallButton(closeId)) t.timeLeft = 0.f;
-        ImGui::PopStyleColor(3);
+            if (!t.entry.source.empty()) {
+                ImGui::PushStyleColor(ImGuiCol_Text, { 1.f, 1.f, 1.f, alpha * 0.55f });
+                ImGui::TextUnformatted(t.entry.source.c_str());
+                ImGui::PopStyleColor();
+                ImGui::SameLine();
+            }
+            ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - btnW);
+            ImGui::PushStyleColor(ImGuiCol_Text,          { 1.f, 1.f, 1.f, alpha * 0.5f });
+            ImGui::PushStyleColor(ImGuiCol_Button,        { 0.f, 0.f, 0.f, 0.f });
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, { 1.f, 1.f, 1.f, 0.15f });
+            char closeId[48];
+            snprintf(closeId, sizeof(closeId), ICON_FA_XMARK "##c%d", i);
+            if (ImGui::SmallButton(closeId)) t.timeLeft = 0.f;
+            ImGui::PopStyleColor(3);
 
-        // Message
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, { 0.f, 0.f, 0.f, 0.f });
-        ImGui::BeginChild("##msg", { 0.f, childH });
-        ImGui::PushTextWrapPos(0.f);
-        ImGui::PushStyleColor(ImGuiCol_Text, { 1.f, 1.f, 1.f, alpha });
-        ImGui::TextUnformatted(t.entry.message.c_str());
-        ImGui::PopStyleColor();
-        ImGui::PopTextWrapPos();
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-
-        ImGui::End();
+            // Message
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, { 0.f, 0.f, 0.f, 0.f });
+            ImGui::BeginChild("##msg", { 0.f, childH });
+            ImGui::PushTextWrapPos(0.f);
+            ImGui::PushStyleColor(ImGuiCol_Text, { 1.f, 1.f, 1.f, alpha });
+            ImGui::TextUnformatted(t.entry.message.c_str());
+            ImGui::PopStyleColor();
+            ImGui::PopTextWrapPos();
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+        });
 
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor();

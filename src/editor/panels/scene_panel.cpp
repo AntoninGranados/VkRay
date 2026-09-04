@@ -16,13 +16,12 @@
 #include "editor/ui_utils.hpp"
 
 
-void ScenePanel::content() {
+void ScenePanel::draw() {
     Scene& scene = Core::getScene();
     ecs::Registry& reg = scene.getRegistry();
 
     ui::setNextWindowFixed();
-    ImGui::Begin(ICON_FA_CUBES " Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    {
+    ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [&] {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", { -FLT_MIN, 0 })) {
             if (auto path = ui::openFileDialog({{"Scene", "json"}}, "assets/scenes/")) {
                 LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
@@ -137,6 +136,5 @@ void ScenePanel::content() {
             Editor::selectEntity(std::nullopt);
         }
         if (!canDelete) ImGui::EndDisabled();
-    }
-    ImGui::End();
+    });
 }

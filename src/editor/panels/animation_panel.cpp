@@ -153,142 +153,140 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
 }
 
 
-void AnimationPanel::content() {
+void AnimationPanel::draw() {
     Scene& scene = Core::getScene();
     AnimationClock& animation = Core::getAnimation();
 
     ui::setNextWindowFixed();
-    ImGui::Begin("Animation");
+    ui::drawWindow(getTitle(), ImGuiWindowFlags_None, [&] {
+        // Controls
+        {
+            bool paused = animation.isPaused();
+            if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, { 24, 0 }))
+                animation.toggle();
+            ImGui::SameLine();
 
-    // Controls
-    {
-        bool paused = animation.isPaused();
-        if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, { 24, 0 }))
-            animation.toggle();
-        ImGui::SameLine();
+            if (scene.isPhysicsBakeInProgress()) {
+                const int total = std::max(1, scene.getPhysicsBakeTotalFrames());
+                const int current = std::clamp(scene.getPhysicsBakeCurrentFrame(), 0, total);
+                const float progress = float(current) / float(total);
+                char overlay[16];
+                std::snprintf(overlay, sizeof(overlay), "%.0f%%", progress * 100.0f);
+                ImGui::ProgressBar(progress, ImVec2(120.0f, 0.0f), "");
+                const ImVec2 textSize = ImGui::CalcTextSize(overlay);
+                const ImVec2 barMin = ImGui::GetItemRectMin();
+                const ImVec2 barMax = ImGui::GetItemRectMax();
+                ImGui::GetWindowDrawList()->AddText(
+                    ImVec2((barMin.x + barMax.x - textSize.x) * 0.5f, (barMin.y + barMax.y - textSize.y) * 0.5f),
+                    ImGui::GetColorU32(ImGuiCol_Text), overlay);
+            } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
+                scene.bakePhysics();
+            }
+            ImGui::SameLine();
 
-        if (scene.isPhysicsBakeInProgress()) {
-            const int total = std::max(1, scene.getPhysicsBakeTotalFrames());
-            const int current = std::clamp(scene.getPhysicsBakeCurrentFrame(), 0, total);
-            const float progress = float(current) / float(total);
-            char overlay[16];
-            std::snprintf(overlay, sizeof(overlay), "%.0f%%", progress * 100.0f);
-            ImGui::ProgressBar(progress, ImVec2(120.0f, 0.0f), "");
-            const ImVec2 textSize = ImGui::CalcTextSize(overlay);
-            const ImVec2 barMin = ImGui::GetItemRectMin();
-            const ImVec2 barMax = ImGui::GetItemRectMax();
-            ImGui::GetWindowDrawList()->AddText(
-                ImVec2((barMin.x + barMax.x - textSize.x) * 0.5f, (barMin.y + barMax.y - textSize.y) * 0.5f),
-                ImGui::GetColorU32(ImGuiCol_Text), overlay);
-        } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
-            scene.bakePhysics();
+            // TODO: put this in the constants
+            ImGui::PushItemWidth(50);
+            int currentFrame = animation.getFrame();
+            if (ImGui::DragInt("##CurrentFrame", &currentFrame, 1, 0, animation.getEndFrame() - 1)) {
+                animation.reset(currentFrame);
+                animation.pause();
+                Core::markRenderDirty();
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled("/");
+            ImGui::SameLine();
+            int endFrame = animation.getEndFrame();
+            if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1))
+                animation.setEndFrame(endFrame);
+            ImGui::PopItemWidth();
         }
-        ImGui::SameLine();
 
-        // TODO: put this in the constants
-        ImGui::PushItemWidth(50);
-        int currentFrame = animation.getFrame();
-        if (ImGui::DragInt("##CurrentFrame", &currentFrame, 1, 0, animation.getEndFrame() - 1)) {
-            animation.reset(currentFrame);
-            animation.pause();
-            Core::markRenderDirty();
-        }
-        ImGui::SameLine();
-        ImGui::TextDisabled("/");
-        ImGui::SameLine();
-        int endFrame = animation.getEndFrame();
-        if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1))
-            animation.setEndFrame(endFrame);
-        ImGui::PopItemWidth();
-    }
+        ImGui::Separator();
 
-    ImGui::Separator();
+        ImGui::BeginChild("##timeline", ImVec2(0, 0));
 
-    ImGui::BeginChild("##timeline", ImVec2(0, 0));
+        // Timeline
+        {
+            const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
 
-    // Timeline
-    {
-        const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
+            if (!selectedEntity.has_value()) {
+                ImGui::TextDisabled("No selection");
+            } else {
+                AnimationStore& store = scene.getAnimationStore();
+                ecs::Registry& registry = scene.getRegistry();
+                const ecs::Entity entity = *selectedEntity;
 
-        if (!selectedEntity.has_value()) {
-            ImGui::TextDisabled("No selection");
-        } else {
-            AnimationStore& store = scene.getAnimationStore();
-            ecs::Registry& registry = scene.getRegistry();
-            const ecs::Entity entity = *selectedEntity;
+                constexpr float labelWidth = 150.0f;
+                constexpr float rowHeight = 18.0f;
+                constexpr float rowSpacing = 3.0f;
+                const float timelineWidth = ImGui::GetContentRegionAvail().x - labelWidth;
+                const int endFrame = animation.getEndFrame();
+                const int currentFrame = animation.getFrame();
+                ImDrawList* dl = ImGui::GetWindowDrawList();
 
-            constexpr float labelWidth = 150.0f;
-            constexpr float rowHeight = 18.0f;
-            constexpr float rowSpacing = 3.0f;
-            const float timelineWidth = ImGui::GetContentRegionAvail().x - labelWidth;
-            const int endFrame = animation.getEndFrame();
-            const int currentFrame = animation.getFrame();
-            ImDrawList* dl = ImGui::GetWindowDrawList();
+                const int fps = animation.getFps();
+                const ImU32 barBg = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+                const ImU32 keyframeColor = ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor);
+                const ImVec4 textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+                const ImU32 tickFrame = ImGui::ColorConvertFloat4ToU32(ImVec4(textCol.x, textCol.y, textCol.z, 0.12f));
+                const ImU32 tickSecond = ImGui::ColorConvertFloat4ToU32(ImVec4(textCol.x, textCol.y, textCol.z, 0.35f));
+                const ImU32 labelColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
 
-            const int fps = animation.getFps();
-            const ImU32 barBg = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-            const ImU32 keyframeColor = ImGui::ColorConvertFloat4ToU32(ui::kKeyframeOnColor);
-            const ImVec4 textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-            const ImU32 tickFrame = ImGui::ColorConvertFloat4ToU32(ImVec4(textCol.x, textCol.y, textCol.z, 0.12f));
-            const ImU32 tickSecond = ImGui::ColorConvertFloat4ToU32(ImVec4(textCol.x, textCol.y, textCol.z, 0.35f));
-            const ImU32 labelColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
+                const RowContext ctx {
+                    .dl = dl,
+                    .labelWidth = labelWidth,
+                    .rowHeight = rowHeight,
+                    .rowSpacing = rowSpacing,
+                    .timelineWidth = timelineWidth,
+                    .endFrame = endFrame,
+                    .currentFrame = currentFrame,
+                    .fps = fps,
+                    .barBg = barBg,
+                    .keyframeColor = keyframeColor,
+                    .labelColor = labelColor,
+                    .tickFrame = tickFrame,
+                    .tickSecond = tickSecond,
+                };
 
-            const RowContext ctx {
-                .dl = dl,
-                .labelWidth = labelWidth,
-                .rowHeight = rowHeight,
-                .rowSpacing = rowSpacing,
-                .timelineWidth = timelineWidth,
-                .endFrame = endFrame,
-                .currentFrame = currentFrame,
-                .fps = fps,
-                .barBg = barBg,
-                .keyframeColor = keyframeColor,
-                .labelColor = labelColor,
-                .tickFrame = tickFrame,
-                .tickSecond = tickSecond,
-            };
+                bool firstGroup = true;
+                for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
+                    if (!registry.has(entity, ct)) continue;
 
-            bool firstGroup = true;
-            for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
-                if (!registry.has(entity, ct)) continue;
+                    std::vector<ecs::ComponentField*> animatable;
+                    registry.get(entity, ct).forEachField([&](ecs::ComponentField& f) {
+                        if (f.isAnimatable()) animatable.push_back(&f);
+                    });
+                    if (animatable.empty()) continue;
 
-                std::vector<ecs::ComponentField*> animatable;
-                registry.get(entity, ct).forEachField([&](ecs::ComponentField& f) {
-                    if (f.isAnimatable()) animatable.push_back(&f);
-                });
-                if (animatable.empty()) continue;
+                    if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
+                    firstGroup = false;
 
-                if (!firstGroup) ImGui::Dummy(ImVec2(0, 4.0f));
-                firstGroup = false;
+                    ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
-                ImGui::TextDisabled("%s", ct.getLabel().c_str());
-
-                for (const ecs::ComponentField* f : animatable) {
-                    if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(entity, ct, f->getId()))) {
-                        pendingSegment = { f->getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f->getId() } };
-                        ImGui::OpenPopup("##segment_interp");
+                    for (const ecs::ComponentField* f : animatable) {
+                        if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(entity, ct, f->getId()))) {
+                            pendingSegment = { f->getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f->getId() } };
+                            ImGui::OpenPopup("##segment_interp");
+                        }
                     }
                 }
-            }
 
-            static const char* kInterpolationNames[] = { "Step", "Linear", "Cubic", "Ease In", "Ease Out", "Ease In-Out" };
-            ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Always);
-            if (pendingSegment && ImGui::BeginPopup("##segment_interp")) {
-                int current = static_cast<int>(pendingSegment->from.getInterpolation());
-                if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
-                    const Interpolation interpolation = static_cast<Interpolation>(current);
-                    pendingSegment->from.setInterpolation(interpolation);
-                    const EntityTrack& t = pendingSegment->track;
-                    store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
+                static const char* kInterpolationNames[] = { "Step", "Linear", "Cubic", "Ease In", "Ease Out", "Ease In-Out" };
+                ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Always);
+                if (pendingSegment && ImGui::BeginPopup("##segment_interp")) {
+                    int current = static_cast<int>(pendingSegment->from.getInterpolation());
+                    if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
+                        const Interpolation interpolation = static_cast<Interpolation>(current);
+                        pendingSegment->from.setInterpolation(interpolation);
+                        const EntityTrack& t = pendingSegment->track;
+                        store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
+                    }
+                    drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);
+                    ImGui::EndPopup();
                 }
-                drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);
-                ImGui::EndPopup();
             }
         }
-    }
 
-    ImGui::EndChild();
-
-    ImGui::End();
+        ImGui::EndChild();
+    });
 }

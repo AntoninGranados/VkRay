@@ -6,7 +6,10 @@
 class Scene;
 
 class InspectorPanel : public Panel {
+public:
+    std::string getTitle() const override { return "Inspector"; }
+    void draw() override;
+
 private:
-    void content() override;
     void drawAddComponentPopup(Scene& scene, ecs::Entity entity);
 };

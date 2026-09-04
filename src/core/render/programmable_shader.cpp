@@ -30,6 +30,7 @@ ProgrammableShader::ProgrammableShader() {
 
 ProgrammableShader::~ProgrammableShader() {
     std::erase(Scene::getProgrammableShaders(), this);
+    if (watchId) Core::getFileWatcher().unwatch(*watchId);
 }
 
 std::optional<ecs::ComponentField> ProgrammableShader::parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber) {
@@ -211,7 +212,8 @@ void ProgrammableShader::load(bool migrate) {
 bool ProgrammableShader::reload(const std::filesystem::path& newPath) {
     path = newPath;
     load(false);
-    Core::getFileWatcher().watch(path, [this] { load(true); });
+    if (watchId) Core::getFileWatcher().unwatch(*watchId);
+    watchId = Core::getFileWatcher().watch(path, [this] { load(true); });
     return getError().empty();
 }
 

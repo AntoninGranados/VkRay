@@ -7,8 +7,9 @@
 
 #include "core/core.hpp"
 #include "editor/editor.hpp"
+#include "editor/ui_utils.hpp"
 
-void StatsPanel::content() {
+void StatsPanel::draw() {
     static constexpr float kTargetMs  = 1000.0f / 60.0f;
     static constexpr int   kAvg       = 5;
     static constexpr float kCanvasW   = 300.0f;
@@ -45,12 +46,12 @@ void StatsPanel::content() {
     }
 
     ImGui::SetNextWindowPos(Editor::getUi().getViewportPos(), ImGuiCond_Always);
-    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
-    ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-    ImGui::Text("%u samples", coreRenderer.getSampleCount());
-    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-        showGraph = !showGraph;
-    ImGui::End();
+    ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking, [&] {
+        ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        ImGui::Text("%u samples", coreRenderer.getSampleCount());
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+            showGraph = !showGraph;
+    });
 
     if (!showGraph) return;
 
@@ -63,56 +64,54 @@ void StatsPanel::content() {
     }
 
     ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::Begin("GPU Timings", &showGraph, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+    ui::drawWindow("GPU Timings", ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar, [&] {
+        ImVec2 origin = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(kCanvasW, kCanvasH));
+        ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    ImVec2 origin = ImGui::GetCursorScreenPos();
-    ImGui::Dummy(ImVec2(kCanvasW, kCanvasH));
-    ImDrawList* dl = ImGui::GetWindowDrawList();
+        dl->AddRectFilled(origin, ImVec2(origin.x + kCanvasW, origin.y + kCanvasH), IM_COL32(30, 30, 36, 255));
 
-    dl->AddRectFilled(origin, ImVec2(origin.x + kCanvasW, origin.y + kCanvasH), IM_COL32(30, 30, 36, 255));
+        const float barW = kCanvasW / kHistorySize;
+        for (int i = 0; i < historyCount; ++i) {
+            int idx = (historyHead - historyCount + i + kHistorySize * 2) % kHistorySize;
+            const FrameSample& s = history[idx];
 
-    const float barW = kCanvasW / kHistorySize;
-    for (int i = 0; i < historyCount; ++i) {
-        int idx = (historyHead - historyCount + i + kHistorySize * 2) % kHistorySize;
-        const FrameSample& s = history[idx];
+            float x0    = origin.x + i * barW;
+            float x1    = x0 + barW;
+            float yBase = origin.y + kCanvasH;
 
-        float x0    = origin.x + i * barW;
-        float x1    = x0 + barW;
-        float yBase = origin.y + kCanvasH;
+            for (int p = 0; p < kNumPasses; ++p) {
+                float h = (s.ms[p] / maxTotal) * (kCanvasH - kPaddingTop);
+                dl->AddRectFilled(ImVec2(x0, yBase - h), ImVec2(x1, yBase), passes[p].color);
+                yBase -= h;
+            }
+        }
 
+        float targetY = origin.y + kCanvasH - (kTargetMs / maxTotal) * (kCanvasH - kPaddingTop);
+        dl->AddLine(ImVec2(origin.x, targetY), ImVec2(origin.x + kCanvasW, targetY), IM_COL32(255, 255, 255, 120));
+
+        ImGui::Spacing();
+
+        struct LabelEntry { int passIdx; float avgMs; };
+        std::array<LabelEntry, kNumPasses> labels;
         for (int p = 0; p < kNumPasses; ++p) {
-            float h = (s.ms[p] / maxTotal) * (kCanvasH - kPaddingTop);
-            dl->AddRectFilled(ImVec2(x0, yBase - h), ImVec2(x1, yBase), passes[p].color);
-            yBase -= h;
+            float sum = 0.0f;
+            int n = std::min(historyCount, kAvg);
+            for (int j = 0; j < n; ++j) {
+                int idx = (historyHead - 1 - j + kHistorySize * 2) % kHistorySize;
+                sum += history[idx].ms[p];
+            }
+            labels[p] = { p, n > 0 ? sum / n : 0.0f };
         }
-    }
+        std::sort(labels.begin(), labels.end(), [](const LabelEntry& a, const LabelEntry& b) {
+            return a.avgMs > b.avgMs;
+        });
 
-    float targetY = origin.y + kCanvasH - (kTargetMs / maxTotal) * (kCanvasH - kPaddingTop);
-    dl->AddLine(ImVec2(origin.x, targetY), ImVec2(origin.x + kCanvasW, targetY), IM_COL32(255, 255, 255, 120));
-
-    ImGui::Spacing();
-
-    struct LabelEntry { int passIdx; float avgMs; };
-    std::array<LabelEntry, kNumPasses> labels;
-    for (int p = 0; p < kNumPasses; ++p) {
-        float sum = 0.0f;
-        int n = std::min(historyCount, kAvg);
-        for (int j = 0; j < n; ++j) {
-            int idx = (historyHead - 1 - j + kHistorySize * 2) % kHistorySize;
-            sum += history[idx].ms[p];
+        for (const auto& l : labels) {
+            ImGui::ColorButton("##col", ImGui::ColorConvertU32ToFloat4(passes[l.passIdx].color),
+                ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(10, 10));
+            ImGui::SameLine();
+            ImGui::Text("%-14s %.3f ms", passes[l.passIdx].name, l.avgMs);
         }
-        labels[p] = { p, n > 0 ? sum / n : 0.0f };
-    }
-    std::sort(labels.begin(), labels.end(), [](const LabelEntry& a, const LabelEntry& b) {
-        return a.avgMs > b.avgMs;
-    });
-
-    for (const auto& l : labels) {
-        ImGui::ColorButton("##col", ImGui::ColorConvertU32ToFloat4(passes[l.passIdx].color),
-            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(10, 10));
-        ImGui::SameLine();
-        ImGui::Text("%-14s %.3f ms", passes[l.passIdx].name, l.avgMs);
-    }
-
-    ImGui::End();
+    }, &showGraph);
 }

@@ -1,5 +1,7 @@
 #include "camera_control_system.hpp"
 
+#include <variant>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -155,7 +157,9 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, double xoffset
     if (Core::getRenderMode() != RenderMode::Preview) return;
 
     auto& c = registry.get(camera, ecs::Camera);
-    c.set<float>("fov", c.get<float>("fov") - static_cast<float>(yoffset));
+    ecs::ComponentField& fovField = c.getField("fov");
+    const NumericMeta& meta = std::get<NumericMeta>(fovField.getMetadata());
+    fovField.set<float>(glm::clamp(fovField.get<float>() - static_cast<float>(yoffset), meta.min, meta.max));
     if (yoffset != 0) Core::markRenderDirty();
 }
 

@@ -70,4 +70,5 @@ private:
 
     std::filesystem::path path;
     int slot = -1;
+    std::optional<size_t> watchId;
 };

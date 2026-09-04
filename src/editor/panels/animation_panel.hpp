@@ -14,6 +14,11 @@
 struct RowContext;
 
 class AnimationPanel : public Panel {
+public:
+    std::string getTitle() const override { return "Animation"; }
+    void draw() override;
+
+private:
     struct EntityTrack {
         ecs::Entity entity;
         const ecs::ComponentType* type;
@@ -32,6 +37,4 @@ class AnimationPanel : public Panel {
     static std::optional<std::pair<Keyframe, Keyframe>> drawRow(const RowContext& ctx, const char* label, const char* id, const std::map<int, Keyframe>& keyframes);
 
     std::optional<SegmentPopupState> pendingSegment;
-
-    void content() override;
 };

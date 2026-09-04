@@ -20,8 +20,10 @@ public:
     bool        isHovered()   const { return hovered; }
     ImDrawList* getDrawList() const { return drawList; }
 
+    std::string getTitle() const override { return "Viewport"; }
+    void draw() override;
+
 private:
-    void content() override;
     void drawGizmo(Scene& scene);
     std::optional<ecs::Entity> raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras = true);
 

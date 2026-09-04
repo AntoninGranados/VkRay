@@ -1,8 +1,11 @@
 #pragma once
 
+#include "FontAwesome/IconsFontAwesome7.h"
+
 #include "panel.hpp"
 
 class ScenePanel : public Panel {
-private:
-    void content() override;
+public:
+    std::string getTitle() const override { return ICON_FA_CUBES " Scene"; }
+    void draw() override;
 };

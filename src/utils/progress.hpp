@@ -4,11 +4,19 @@
 #include <string>
 #include <string_view>
 
+struct ProgressStats {
+    float  progress;
+    double elapsed;
+    double eta;
+    double rate;
+};
+
 class ProgressTimer {
 public:
     void   start();
     double elapsed() const;
     double eta(float progress) const;
+    ProgressStats stats(uint32_t current, uint32_t total) const;
 
     static std::string formatTime(double seconds);
 

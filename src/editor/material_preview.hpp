@@ -12,6 +12,7 @@
 #include "core/field.hpp"
 #include "core/render/pathtrace_renderer.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/imgui_texture.hpp"
 
 struct FrameContext;
 
@@ -27,7 +28,7 @@ struct MaterialFingerprint {
 struct PreviewImage {
     Image image;
     ImageView view;
-    ImTextureID textureId;
+    ui::ImGuiTexture textureId;
     MaterialFingerprint fingerprint;
 };
 
@@ -55,7 +56,7 @@ private:
     ecs::Entity resolveMaterialSource(ecs::Entity entity) const;
     MaterialFingerprint captureFingerprint(ecs::Entity entity) const;
     bool isStale(ecs::Entity entity, const MaterialFingerprint& fingerprint) const;
-    ImTextureID registerTexture(VkImageView view) const;
+    ui::ImGuiTexture registerTexture(VkImageView view) const;
 
     void syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource);
     void startGeneration(ecs::Entity materialEntity);
@@ -65,7 +66,7 @@ private:
 
     PathtraceRenderer renderer;
     ecs::Entity previewMaterialEntity;
-    ImTextureID liveTextureId = 0;
+    ui::ImGuiTexture liveTexture;
 
     std::optional<InFlight> inFlight;
     std::deque<ecs::Entity> pendingMaterials;

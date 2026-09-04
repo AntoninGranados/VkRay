@@ -1,10 +1,10 @@
 #pragma once
 
+#include <string>
+
 class Panel {
 public:
     virtual ~Panel() = default;
-    void draw() { content(); };
-    
-private:
-    virtual void content() = 0;
+    virtual std::string getTitle() const = 0;
+    virtual void draw() = 0;
 };

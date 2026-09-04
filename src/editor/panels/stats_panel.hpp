@@ -8,9 +8,11 @@
 #include "panel.hpp"
 
 class StatsPanel: public Panel {
-private:
-    void content() override;
+public:
+    std::string getTitle() const override { return "FPS"; }
+    void draw() override;
 
+private:
     static constexpr int kHistorySize = 128;
     static constexpr int kNumPasses   = 5;
 

@@ -4,7 +4,6 @@
 
 #include "core/ecs/components/material.hpp"
 #include "core/scene/scene.hpp"
-#include "imgui/imgui_impl_vulkan.h"
 
 #include "VkSmol/graph/render_graph_builder.hpp"
 
@@ -46,7 +45,7 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
 
 void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
     renderer.getScene().setGpuBufferHandles(resources.sceneHandles);
-    liveTextureId = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
+    liveTexture = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
@@ -88,9 +87,9 @@ bool MaterialPreview::isStale(ecs::Entity entity, const MaterialFingerprint& fin
     return captureFingerprint(entity) != fingerprint;
 }
 
-ImTextureID MaterialPreview::registerTexture(VkImageView view) const {
+ui::ImGuiTexture MaterialPreview::registerTexture(VkImageView view) const {
     VkSmol& engine = Core::getEngine();
-    return (ImTextureID)ImGui_ImplVulkan_AddTexture(
+    return ui::ImGuiTexture(
         engine.getSampler(renderer.getOutputImageHandle()).get(),
         view,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
@@ -161,7 +160,6 @@ void MaterialPreview::evict(ecs::Entity materialEntity) {
     if (it == previewImages.end()) return;
 
     VkSmol& engine = Core::getEngine();
-    ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)it->second.textureId);
     engine.destroyImageView(it->second.view);
     engine.destroyImage(it->second.image);
     previewImages.erase(it);
@@ -203,11 +201,11 @@ void MaterialPreview::tick(const FrameContext& frameContext) {
 }
 
 std::optional<ImTextureID> MaterialPreview::getPreview(ecs::Entity materialEntity) {
-    if (inFlight.has_value() && inFlight->entity == materialEntity) return liveTextureId;
+    if (inFlight.has_value() && inFlight->entity == materialEntity) return liveTexture.get();
 
     auto it = previewImages.find(materialEntity);
     if (it != previewImages.end() && !isStale(materialEntity, it->second.fingerprint))
-        return it->second.textureId;
+        return it->second.textureId.get();
 
     const bool alreadyQueued = std::find(pendingMaterials.begin(), pendingMaterials.end(), materialEntity) != pendingMaterials.end();
     if (!alreadyQueued) pendingMaterials.push_back(materialEntity);

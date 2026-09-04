@@ -13,8 +13,8 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
+#include "core/ecs/systems/gpu_packing_system.hpp"
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_vulkan.h"
 
 #include "core/core.hpp"
 #include "core/parameters/parameters.hpp"
@@ -25,22 +25,15 @@ namespace {
 
 int resolveSelectedObjectIndex(const ecs::Registry& reg, ecs::Entity selected) {
     const auto& allTransforms = reg.storage(ecs::Transform);
-    int flatIdx = -1;
-    int i = 0;
-    auto check = [&](const ecs::ComponentType& type) {
-        if (flatIdx >= 0) return;
-        for (const auto& entity : reg.storage(type).entities()) {
+    int flatIdx = 0;
+    for (const ecs::ComponentType* type : ecs::objectTypeOrder()) {
+        for (const auto& entity : reg.storage(*type).entities()) {
             if (!allTransforms.has(entity)) continue;
-            if (entity == selected) { flatIdx = i; return; }
-            i++;
+            if (entity == selected) return flatIdx;
+            flatIdx++;
         }
-    };
-    check(ecs::Sphere);
-    check(ecs::Plane);
-    check(ecs::Box);
-    check(ecs::Quad);
-    check(ecs::MeshRef);
-    return flatIdx;
+    }
+    return -1;
 }
 
 struct FocusPlane {
@@ -154,21 +147,17 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
 void EditorRenderer::registerImGuiTextures() {
     VkSmol& engine = Core::getEngine();
 
-    if (outputTexId)  ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)outputTexId);
-    if (displayTexId) ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)displayTexId);
-    if (debugTexId)   ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)debugTexId);
-
-    outputTexId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
+    outputTex = ui::ImGuiTexture(
         engine.getSampler(outputImageHandle).get(),
         engine.getView(outputImageHandle).get(),
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
-    displayTexId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
+    displayTex = ui::ImGuiTexture(
         engine.getSampler(displayImageHandle).get(),
         engine.getView(displayImageHandle).get(),
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
-    debugTexId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
+    debugTex = ui::ImGuiTexture(
         engine.getSampler(debugImageHandle).get(),
         engine.getView(debugImageHandle).get(),
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL

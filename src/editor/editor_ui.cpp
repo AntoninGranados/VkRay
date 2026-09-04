@@ -4,7 +4,6 @@
 #include <GLFW/glfw3.h>
 #include <optional>
 
-#include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
@@ -146,11 +145,11 @@ void EditorUi::setupDockspace() {
         ImGui::DockBuilderSplitNode(dock_center,  ImGuiDir_Left,  0.25f, &dock_left,   &dock_center);
         ImGui::DockBuilderSplitNode(dock_center,  ImGuiDir_Right, 0.30f, &dock_right,  &dock_center);
 
-        ImGui::DockBuilderDockWindow("Animation",                dock_bottom);
-        ImGui::DockBuilderDockWindow(ICON_FA_CAMERA " Renderer", dock_left);
-        ImGui::DockBuilderDockWindow(ICON_FA_CUBES " Scene",     dock_left);
-        ImGui::DockBuilderDockWindow("Inspector",                dock_right);
-        ImGui::DockBuilderDockWindow("Viewport",                 dock_center);
+        ImGui::DockBuilderDockWindow(animationPanel.getTitle().c_str(),       dock_bottom);
+        ImGui::DockBuilderDockWindow(renderParameterPanel.getTitle().c_str(), dock_left);
+        ImGui::DockBuilderDockWindow(scenePanel.getTitle().c_str(),           dock_left);
+        ImGui::DockBuilderDockWindow(inspectorPanel.getTitle().c_str(),       dock_right);
+        ImGui::DockBuilderDockWindow(viewportPanel.getTitle().c_str(),        dock_center);
         ImGui::DockBuilderFinish(dockspace_id);
     }
 }
