@@ -58,8 +58,12 @@ public:
         storages.clear();
         parentMap.clear();
         childrenMap.clear();
-        generations.clear();
+        removalQueue.clear();
+
+        for (uint32_t& gen : generations) gen++;
         freeIds.clear();
+        freeIds.reserve(generations.size());
+        for (uint32_t id = 0; id < generations.size(); id++) freeIds.push_back(id);
     }
 
     bool isAlive(const Entity& e) const {

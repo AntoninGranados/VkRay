@@ -8,12 +8,12 @@
 #include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/entity.hpp"
-#include "utils/log.hpp"
-#include "core/ecs/systems/gpu_packing_system.hpp"
+#include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
 #include "core/ecs/systems/camera_system.hpp"
-#include "core/ecs/systems/animation_system.hpp"
+#include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
+#include "utils/log.hpp"
 
 std::vector<ProgrammableShader*>& Scene::getProgrammableShaders() {
     static std::vector<ProgrammableShader*> shaders;

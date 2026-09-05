@@ -9,15 +9,15 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "core/ecs/components/camera.hpp"
-#include "core/ecs/entity.hpp"
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
-#include "core/scene/scene.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/entity.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include "core/scene/scene.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
 #include "editor/scene/raycast.hpp"
@@ -56,7 +56,7 @@ void ViewportPanel::draw() {
                     float dist;
                     auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
                     if (hit.has_value()) {
-                        scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focus_distance", dist);
+                        scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focal_distance", dist);
                         Core::markRenderDirty();
                     }
                 }

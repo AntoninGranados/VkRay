@@ -2,13 +2,12 @@
 
 #include <algorithm>
 
-#include "core/ecs/components/material.hpp"
-#include "core/scene/scene.hpp"
-
 #include "VkSmol/graph/render_graph_builder.hpp"
 
 #include "core/core.hpp"
+#include "core/ecs/components/material.hpp"
 #include "core/render/programmable_shader.hpp"
+#include "core/scene/scene.hpp"
 #include "editor/ui_utils.hpp"
 
 RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {

@@ -45,6 +45,11 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/external/VkSmol" engine)
 # ── NFD (Native File Dialog Extended) ────────────────────────────────────────
 add_subdirectory("${CMAKE_SOURCE_DIR}/external/nfd")
 
+# ── GLM ───────────────────────────────────────────────────────────────────────
+set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
+set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory("${CMAKE_SOURCE_DIR}/external/glm")
+
 # ── Sources ───────────────────────────────────────────────────────────────────
 file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
 set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
@@ -58,11 +63,13 @@ target_include_directories(VkRay PRIVATE
   "${CMAKE_BINARY_DIR}"
 )
 
-target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr)
-target_compile_options(VkRay PRIVATE -Wall)
+target_link_libraries(VkRay PRIVATE VkSmol nfd tinyexr glm::glm)
+target_compile_options(VkRay PRIVATE -Wall -Wextra)
 
+# stb_image_write.h/tinyexr.h are vendored single-header libs included directly as source here;
+# these warnings come from their own internals, not from VkRay code.
 set_source_files_properties("${CMAKE_SOURCE_DIR}/src/core/export_service.cpp" PROPERTIES
-  COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-function"
+  COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-function;-Wno-unused-parameter;-Wno-missing-field-initializers"
 )
 target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})

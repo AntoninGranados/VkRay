@@ -1,8 +1,9 @@
 #include "editor_ui.hpp"
 
+#include <optional>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <optional>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
@@ -11,8 +12,8 @@
 
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
-#include "editor/editor.hpp"
 #include "editor/ecs/components/camera.hpp"
+#include "editor/editor.hpp"
 #include "ui_utils.hpp"
 
 EditorUi::EditorUi() {

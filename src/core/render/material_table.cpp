@@ -37,6 +37,17 @@ bool hasAlbedoField(const ecs::ComponentType& type) {
     return false;
 }
 
+void packFields(ecs::Component& c, std::vector<float>& params) {
+    if (hasAlbedoField(c.getType())) {
+        const glm::vec3 a = c.get<glm::vec3>("albedo");
+        params.push_back(a.r); params.push_back(a.g); params.push_back(a.b);
+    }
+    for (const ecs::ComponentField& field : c.getType().getFields()) {
+        if (!isPackableField(field)) continue;
+        params.push_back(c.get<float>(field.getId()));
+    }
+}
+
 const std::vector<Entry>& entries() {
     static const std::vector<Entry> table = {
         { &ecs::Principled },
@@ -76,15 +87,17 @@ bool MaterialTable::pack(ecs::Registry& registry, ecs::Entity entity, GpuMateria
             return true;
         }
 
-        if (hasAlbedoField(*entry.type)) {
-            const glm::vec3 a = c.get<glm::vec3>("albedo");
-            params.push_back(a.r); params.push_back(a.g); params.push_back(a.b);
-        }
-        for (const ecs::ComponentField& field : entry.type->getFields()) {
-            if (!isPackableField(field)) continue;
-            params.push_back(c.get<float>(field.getId()));
-        }
+        packFields(c, params);
         return true;
+    }
+
+    for (size_t i = 0; i < table.size(); i++) {
+        if (table[i].type != &ecs::Diffuse) continue;
+        gpu.type = static_cast<int>(i);
+        gpu.base = static_cast<uint32_t>(params.size());
+        ecs::Component fallback(*table[i].type);
+        packFields(fallback, params);
+        break;
     }
     return false;
 }

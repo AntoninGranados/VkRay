@@ -33,7 +33,8 @@ void Editor::selectEntity(std::optional<ecs::Entity> entity) {
 }
 
 void Editor::stepAnimation(float deltaTime) {
-    if (!Core::getAnimation().isPaused()) Core::getAnimation().step(deltaTime);
+    if (Core::getRenderMode() == RenderMode::Preview && !Core::getAnimation().isPaused())
+        Core::getAnimation().step(deltaTime);
 }
 
 void Editor::handleViewportResize() {

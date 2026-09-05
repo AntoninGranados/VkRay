@@ -128,7 +128,7 @@ void InputHandler::handleFrameStepKey(int key, int direction, float dt, bool blo
     prevKeys[key] = true;
 }
 
-void InputHandler::handleRender(float dt) {
+void InputHandler::handleRender([[maybe_unused]] float dt) {
     Core::getPlatform().setCursorMode(GLFW_CURSOR_NORMAL);
     if (Core::getPlatform().getKey(GLFW_KEY_ESCAPE)) {
         returnToPreview();

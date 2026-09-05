@@ -45,8 +45,8 @@ protected:
 
     SubmissionGroupHandle getGroupHandle() const { return groupHandle; }
 
-    virtual void onAfterDispatch(CommandBuffer& commandBuffer) {}
-    virtual void onResize(uint32_t width, uint32_t height) {}
+    virtual void onAfterDispatch([[maybe_unused]] CommandBuffer& commandBuffer) {}
+    virtual void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) {}
 
 private:
     void setDefaultUBOs();

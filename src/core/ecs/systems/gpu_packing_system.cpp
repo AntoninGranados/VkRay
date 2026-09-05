@@ -275,13 +275,9 @@ void materialPackingSystem(Registry& registry) {
     std::vector<float> materialParams;
     gpuMaterials.reserve(materialEntities.size());
 
-    for (int slot = 0; slot < static_cast<int>(materialEntities.size()); ++slot) {
-        const ecs::Entity entity = materialEntities[slot];
+    for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
-
-        if (!MaterialTable::pack(registry, entity, gpu, materialParams) && slot > 0 && !gpuMaterials.empty())
-            gpu = gpuMaterials[0];
-
+        MaterialTable::pack(registry, entity, gpu, materialParams);
         gpuMaterials.push_back(gpu);
     }
 
@@ -335,83 +331,50 @@ void lightPackingSystem(Registry& registry) {
     int32_t objectId = 0;
     float totalArea = 0.0f;
 
-    // Spheres
-    for (const auto& entity : registry.storage(Sphere).entities()) {
-        if (!transforms.has(entity)) continue;
-        objectId++;
-        if (!isEmissive(entity)) continue;
+    for (const ComponentType* type : objectTypeOrder()) {
+        for (const auto& entity : registry.storage(*type).entities()) {
+            if (!transforms.has(entity)) continue;
+            objectId++;
 
-        const float area = 4.0f * glm::pi<float>() * std::pow(spheres.get(entity).get<float>("radius"), 2.0f);
-        totalArea += area;
-        lights.push_back(GpuLight{
-            .objectId = objectId-1,
-            .area = area,
-            .pdfA = 1.0f / area,
-        });
-    }
-    // Planes can't be used for importance sampling (infinite area)
-    for (const auto& entity : registry.storage(Plane).entities()) {
-        if (!transforms.has(entity)) continue;
-        objectId++;
-    }
-    // Boxes
-    for (const auto& entity : registry.storage(Box).entities()) {
-        if (!transforms.has(entity)) continue;
-        objectId++;
-        if (!isEmissive(entity)) continue;
+            // Planes can't be used for importance sampling (infinite area)
+            if (type == &Plane) continue;
+            if (!isEmissive(entity)) continue;
 
-        const Component& boxTransform = transforms.get(entity);
-        const glm::mat4 local = composeTransform(boxTransform);
-        const glm::vec3 axisX = glm::vec3(local[0]);
-        const glm::vec3 axisY = glm::vec3(local[1]);
-        const glm::vec3 axisZ = glm::vec3(local[2]);
-        const float hx = glm::length(axisX);
-        const float hy = glm::length(axisY);
-        const float hz = glm::length(axisZ);
-        const float area = 8.0f * (hx * hy + hx * hz + hy * hz);
-        totalArea += area;
-        lights.push_back(GpuLight{
-            .objectId = objectId-1,
-            .area = area,
-            .pdfA = 1.0f / area,
-        });
-    }
-    // Quads
-    for (const auto& entity : registry.storage(Quad).entities()) {
-        if (!transforms.has(entity)) continue;
-        objectId++;
-        if (!isEmissive(entity)) continue;
+            float area;
+            if (type == &Sphere) {
+                area = 4.0f * glm::pi<float>() * std::pow(spheres.get(entity).get<float>("radius"), 2.0f);
+            } else if (type == &Box) {
+                const Component& boxTransform = transforms.get(entity);
+                const glm::mat4 local = composeTransform(boxTransform);
+                const glm::vec3 axisX = glm::vec3(local[0]);
+                const glm::vec3 axisY = glm::vec3(local[1]);
+                const glm::vec3 axisZ = glm::vec3(local[2]);
+                const float hx = glm::length(axisX);
+                const float hy = glm::length(axisY);
+                const float hz = glm::length(axisZ);
+                area = 8.0f * (hx * hy + hx * hz + hy * hz);
+            } else if (type == &Quad) {
+                const Component& quadTransform = transforms.get(entity);
+                const glm::mat4 local = composeTransform(quadTransform);
+                const glm::vec3 u = glm::vec3(local[0]);
+                const glm::vec3 v = glm::vec3(local[1]);
+                area = glm::length(glm::cross(u, v));
+            } else {
+                const Component& meshTransform = transforms.get(entity);
+                const glm::mat4 mLocal = composeTransform(meshTransform);
+                const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
+                const MeshAsset* meshAsset = getMeshAsset(registry, meshAssetEntity);
+                if (!meshAsset) continue;
+                area = meshAsset->computeArea(mLocal);
+            }
 
-        const Component& quadTransform = transforms.get(entity);
-        const glm::mat4 local = composeTransform(quadTransform);
-        const glm::vec3 u = glm::vec3(local[0]);
-        const glm::vec3 v = glm::vec3(local[1]);
-        const float area = glm::length(glm::cross(u, v));
-        totalArea += area;
-        lights.push_back(GpuLight{
-            .objectId = objectId-1,
-            .area = area,
-            .pdfA = 1.0f / area,
-        });
-    }
-    // Meshes
-    for (const auto& entity : registry.storage(MeshRef).entities()) {
-        if (!transforms.has(entity)) continue;
-        objectId++;
-        if (!isEmissive(entity)) continue;
-
-        const Component& meshTransform = transforms.get(entity);
-        const glm::mat4 mLocal = composeTransform(meshTransform);
-        const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
-        const MeshAsset* meshAsset = getMeshAsset(registry, meshAssetEntity);
-        if (!meshAsset) continue;
-        const float area = meshAsset->computeArea(mLocal);
-        totalArea += area;
-        lights.push_back(GpuLight{
-            .objectId = objectId-1,
-            .area = area,
-            .pdfA = 1.0f / area,
-        });
+            totalArea += area;
+            lights.push_back(GpuLight{
+                .objectId = objectId - 1,
+                .area = area,
+                .pdfA = 1.0f / area,
+            });
+        }
     }
 
     const GpuLightHeader header{ .totalArea = totalArea };

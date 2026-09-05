@@ -153,7 +153,7 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
     }
 }
 
-void cameraScrollCallback(Registry& registry, ecs::Entity camera, double xoffset, double yoffset) {
+void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused]] double xoffset, double yoffset) {
     if (Core::getRenderMode() != RenderMode::Preview) return;
 
     auto& c = registry.get(camera, ecs::Camera);

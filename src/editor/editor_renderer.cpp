@@ -9,14 +9,14 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+#include "imgui/imgui.h"
+
 #include "core/camera/camera.hpp"
+#include "core/core.hpp"
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
-#include "imgui/imgui.h"
-
-#include "core/core.hpp"
 #include "core/parameters/parameters.hpp"
 #include "editor.hpp"
 #include "editor/ui_utils.hpp"
