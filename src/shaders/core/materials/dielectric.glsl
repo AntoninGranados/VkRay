@@ -18,7 +18,7 @@ BSDFSample sampleDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo,
     float etaT = dielectricIor(mat);
     if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
 
-    vec3 normal = hit.normal + randomInSphere(rng) * dielectricRoughness(mat);
+    vec3 normal = hit.normal + randomInBall(rng) * dielectricRoughness(mat);
     if (length(normal) < EPS) normal = hit.normal;
     else normal = normalize(normal);
 

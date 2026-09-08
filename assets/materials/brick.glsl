@@ -1,13 +1,3 @@
-// --------------- INPUTS ---------------
-// vec3 pos
-// vec3 normal
-// vec3 wo
-// RngState rng
-
-// --------------- OUTPUTS ---------------
-// vec3 new_normal = normal
-// Material mat
-
 #material: version(1)
 
 #param float scale = 0.25: min(0)
@@ -18,7 +8,7 @@
 #param float randomWiggle = 0.1: min(0), max(0.2)
 
 #param vec3 brickColor = vec3(0.9, 0.15, 0.05): color
-#param float randomBrickColorVariation = 0.3: min(0), max(0.8)
+#param float randomBrickColorVariation = 0.1: min(0), max(1)
 
 #param vec3 cementColor = vec3(0.5): color
 #param float cementWidth = 0.08: min(0), max(0.1)
@@ -138,7 +128,7 @@ void main() {
     {
         idx = ivec2(floor(local));
         local = fract(local);
-        
+
         rng = initRngState(idx, 0);
         float r = 1 - rand(rng) * randomWidth;
 
@@ -174,12 +164,14 @@ void main() {
             x = xL;
             brickWidth = xR - xL;
         }
-        
+
         local.x = (local.x - x) / brickWidth;
     }
 
     RngState rngBrick = initRngState(idx, 0);
-    vec3 albedo = brickColor * (1 - randomBrickColorVariation * rand(rngBrick));
+    vec3 hsvBrick = rgb2hsv(brickColor);
+    hsvBrick.x = mod(hsvBrick.x + randomBrickColorVariation * (rand(rngBrick)*2 - 1) * 60 + 360, 360);
+    vec3 albedo = hsv2rgb(hsvBrick);
 
     local += mix(vec2(-randomWiggle*0.5), vec2(randomWiggle*0.5), vec2(rand(rngBrick), rand(rngBrick)));
 
@@ -235,9 +227,9 @@ void main() {
 
     if (hasDirt) {
         RngState tempState = RngState(0);
-        float dirt = perlinNoise(vec2(uv.x, uv.y * 0.4) * 20, tempState);
+        float dirt = perlinNoise(vec2(uv.x, uv.y * 0.4) * 20, tempState).value;
         dirt = mix(dirt, 1, smoothstep(dirtHeight - dirtFalloff, dirtHeight + dirtFalloff, mix(dirtFalloff, 1 - dirtFalloff, uv.y)));
-        
+
         dirt = smoothstep(0.4, 0.6, dirt);
         dirt = clamp(dirt, 0, 1);
         albedo = mix(dirtColor, albedo, dirt);
@@ -250,3 +242,4 @@ void main() {
 
     mat = Diffuse(albedo);
 }
+

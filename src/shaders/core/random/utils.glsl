@@ -3,6 +3,9 @@
 
 #include "basics.glsl"
 #include "perlin.glsl"
+#include "simplex.glsl"
+#include "voronoi.glsl"
+#include "value.glsl"
 
 const mat3 NOISE_ROTATION = mat3(
     0.00,  0.80,  0.60,
@@ -20,7 +23,7 @@ float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
     vec3 q = NOISE_ROTATION * p;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude * perlinNoise(q, rng) * 2 - 1;
+        sum += amplitude * perlinNoise(q, rng).value * 2 - 1;
         maxAmplitude += amplitude;
         amplitude *= gain;
         q = NOISE_ROTATION * (q * lacunarity);
@@ -36,7 +39,7 @@ float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
     vec3 q = NOISE_ROTATION * p;
     for (int i = 0; i < octaves; i++) {
-        sum += amplitude * abs(perlinNoise(q, rng) * 2 - 1);
+        sum += amplitude * abs(perlinNoise(q, rng).value * 2 - 1);
         maxAmplitude += amplitude;
         amplitude *= gain;
         q = NOISE_ROTATION * (q * lacunarity);

@@ -419,7 +419,7 @@ Hit rayMeshIntersection(in Ray ray, in Object obj, in Mesh mesh, bool anyHit, fl
 SurfaceSample sampleSphereSurface(in Sphere sphere, in float area, inout RngState rng) {
     SurfaceSample surfaceSample;
     
-    vec3 onLightDir = normalize(randomInSphere(rng));
+    vec3 onLightDir = normalize(randomInBall(rng));
     surfaceSample.p = sphere.center + onLightDir * sphere.radius;
 
     surfaceSample.normal = (surfaceSample.p - sphere.center) / sphere.radius;

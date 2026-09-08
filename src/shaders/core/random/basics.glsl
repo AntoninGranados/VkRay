@@ -5,6 +5,16 @@ struct RngState {
     uint seed;
 };
 
+struct NoiseState2D {
+    float value;
+    vec2 gradient;
+};
+
+struct NoiseState3D {
+    float value;
+    vec3 gradient;
+};
+
 void offsetRngState(inout RngState rng, in RngState rngOffset) {
     rng.seed += rngOffset.seed;
 }
@@ -47,7 +57,16 @@ vec4 rand4(inout RngState rng) {
     return vec4(rand3(rng), rand(rng));
 }
 
-vec3 randomInSphere(inout RngState rng) {
+vec3 randomOnSphere(inout RngState rng) {
+    float theta = rand(rng) * PI;
+    float phi = rand(rng) * 2 * PI;
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+    return vec3(x, y, z);
+}
+
+vec3 randomInBall(inout RngState rng) {
     float z  = 1.0 - 2.0 * rand(rng);
     float r  = sqrt(max(0.0, 1.0 - z*z));
     float phi = 6.2831853 * rand(rng);
@@ -57,16 +76,20 @@ vec3 randomInSphere(inout RngState rng) {
 }
 
 vec3 randomInHemisphere(inout RngState rng, vec3 normal) {
-    vec3 v = randomInSphere(rng);
+    vec3 v = randomInBall(rng);
     return dot(v, normal) < 0.0 ? -v : v;
+}
+
+vec2 randomOnCircle(inout RngState rng) {
+    float theta = 6.2831853 * rand(rng);
+    float x = cos(theta);
+    float y = sin(theta);
+    return vec2(x, y);
 }
 
 vec2 randomInDisk(inout RngState rng) {
     float r  = sqrt(rand(rng));
-    float theta = 6.2831853 * rand(rng);
-    float x = r * cos(theta);
-    float y = r * sin(theta);
-    return vec2(x, y);
+    return randomOnCircle(rng) * r;
 }
 
 #endif

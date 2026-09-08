@@ -9,7 +9,7 @@
 // Lambertian BSDF: perfectly diffuse with cosine-weighted importance sampling.
 
 vec3 cosineScatter(in ResolvedMaterial mat, in vec3 normal, in vec3 wo, inout RngState rng) {
-    vec3 dir = normal + normalize(randomInSphere(rng));
+    vec3 dir = normal + normalize(randomInBall(rng));
     if (length(dir) < EPS) return normal;
     return normalize(dir);
 }

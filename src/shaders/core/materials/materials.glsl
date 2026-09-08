@@ -3,6 +3,7 @@
 
 #include "../utils.glsl"
 #include "../random/utils.glsl"
+#include "../colors/utils.glsl"
 
 #include "material_utils.glsl"
 #include "principled.glsl"
