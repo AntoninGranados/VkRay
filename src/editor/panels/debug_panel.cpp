@@ -3,7 +3,7 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "core/core_renderer.hpp"
 #include "core/render_structures.hpp"
 #include "editor/editor.hpp"

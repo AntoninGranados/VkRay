@@ -21,18 +21,18 @@ struct Entry {
     std::function<std::vector<float>(ecs::Component&)> customValues;
 };
 
-std::string glslMacroName(const ecs::ComponentType& type, const ecs::ComponentField& field) {
+std::string glslMacroName(const ecs::ComponentType& type, const Field& field) {
     std::string prefix = snakeCaseToPascalCase(type.getId());
     prefix[0] = static_cast<char>(std::tolower(prefix[0]));
     return prefix + snakeCaseToPascalCase(field.getId());
 }
 
-bool isPackableField(const ecs::ComponentField& field) {
+bool isPackableField(const Field& field) {
     return field.getId() != "albedo" && field.getType() == FieldType::Float;
 }
 
 bool hasAlbedoField(const ecs::ComponentType& type) {
-    for (const ecs::ComponentField& field : type.getFields())
+    for (const Field& field : type.getFields())
         if (field.getId() == "albedo") return true;
     return false;
 }
@@ -42,7 +42,7 @@ void packFields(ecs::Component& c, std::vector<float>& params) {
         const glm::vec3 a = c.get<glm::vec3>("albedo");
         params.push_back(a.r); params.push_back(a.g); params.push_back(a.b);
     }
-    for (const ecs::ComponentField& field : c.getType().getFields()) {
+    for (const Field& field : c.getType().getFields()) {
         if (!isPackableField(field)) continue;
         params.push_back(c.get<float>(field.getId()));
     }
@@ -116,7 +116,7 @@ void MaterialTable::generateGlsl() {
         if (entry.customValues) continue;
 
         int idx = hasAlbedoField(*entry.type) ? 3 : 0;
-        for (const ecs::ComponentField& field : entry.type->getFields()) {
+        for (const Field& field : entry.type->getFields()) {
             if (!isPackableField(field)) continue;
             content += std::format("#define {}(m) (m).payload[{}]\n", glslMacroName(*entry.type, field), idx++);
         }

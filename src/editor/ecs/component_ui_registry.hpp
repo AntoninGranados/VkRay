@@ -34,8 +34,6 @@ private:
 
     void addWithFields(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty);
 
-    static bool drawField(Component& component, const ComponentField& schema);
-
     static bool beginDraw(void* id) {
         ImGui::PushID(id);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));

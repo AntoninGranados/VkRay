@@ -3,7 +3,7 @@
 #include "core/camera/camera.hpp"
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_serializer.hpp"
-#include "core/parameters/parameter_serializer.hpp"
+#include "core/fields/parameter_serializer.hpp"
 #include "core/render/programmable_shader.hpp"
 
 Core& Core::get() {

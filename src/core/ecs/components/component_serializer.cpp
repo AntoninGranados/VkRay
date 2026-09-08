@@ -88,7 +88,7 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
                 }
             }
 
-            std::vector<const ecs::ComponentField*> publicFields;
+            std::vector<const Field*> publicFields;
             for (const auto& f : type->getFields())
                 publicFields.push_back(&f);
 
@@ -97,7 +97,7 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
                 file <<   "|-------|------|---------|-------------|------------|\n";
                 for (const auto* f : publicFields) {
                     file << std::format("| `{}` | {} | {} | {} | {} |\n",
-                        f->getId(), fieldTypeName(f->getType()), fieldDefaultStr(*f),
+                        f->getId().string(), fieldTypeName(f->getType()), fieldDefaultStr(*f),
                         fieldConstraintStr(f->getMetadata()), f->isAnimatable() ? "yes" : "no");
                 }
             }

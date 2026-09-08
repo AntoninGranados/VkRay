@@ -17,7 +17,7 @@
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "editor.hpp"
 #include "editor/ui_utils.hpp"
 
@@ -229,22 +229,22 @@ void EditorRenderer::render(const FrameContext& frameContext) {
 
         engine.dispatch(cmd, displayPassHandle, (viewportE.width + 7) / 8, (viewportE.height + 7) / 8);
         engine.dispatch(cmd, debugPassHandle,   (renderE.width   + 7) / 8, (renderE.height   + 7) / 8);
-     
+
         engine.endRecording(editorGroupHandle);
     }
-    
+
     {
         CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
-     
+
         engine.beginGraphics(commandBuffer, uiPassHandle, &ui::kDraculaBg.x);
         Editor::getUi().draw(commandBuffer);
         engine.endGraphics(commandBuffer, uiPassHandle);
-    
+
         engine.emitBarriers(commandBuffer, presentPassHandle);
-    
+
         // @warning this is out of place, but I need a command buffer
         engine.emitOutputBarriers(commandBuffer);
-    
+
         engine.endRecording(uiGroupHandle);
     }
 }

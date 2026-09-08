@@ -31,19 +31,19 @@ public:
     template<typename T>
     void set(const std::string& id, const T& v) { getField(id).set(v); }
 
-    ComponentField& getField(const std::string& id) {
-        if (ComponentField* found = findField(id)) return *found;
+    Field& getField(const std::string& id) {
+        if (Field* found = findField(id)) return *found;
         throw std::out_of_range("unknown field id: " + id);
     }
-    const ComponentField& getField(const std::string& id) const {
+    const Field& getField(const std::string& id) const {
         return const_cast<Component*>(this)->getField(id);
     }
 
-    std::vector<ComponentField>& getFields() { return fields; }
-    const std::vector<ComponentField>& getFields() const { return fields; }
+    std::vector<Field>& getFields() { return fields; }
+    const std::vector<Field>& getFields() const { return fields; }
 
-    void forEachField(const std::function<void(ComponentField&)>& fn) {
-        for (ComponentField& f : fields) fn(f);
+    void forEachField(const std::function<void(Field&)>& fn) {
+        for (Field& f : fields) fn(f);
         const auto& payloadTypes = type->getPayloads();
         for (size_t i = 0; i < payloads.size(); ++i)
             if (payloadTypes[i].asComponent)
@@ -64,21 +64,21 @@ public:
     const ComponentType& getType() const { return *type; }
 
 private:
-    ComponentField* findField(const std::string& id) {
+    Field* findField(const std::string& id) {
         const auto it = fieldIndex.find(id);
         if (it != fieldIndex.end()) return &fields[it->second];
 
         const auto& payloadTypes = type->getPayloads();
         for (size_t i = 0; i < payloads.size(); ++i) {
             if (!payloadTypes[i].asComponent) continue;
-            if (ComponentField* found = payloadTypes[i].asComponent(payloads[i].get())->findField(id))
+            if (Field* found = payloadTypes[i].asComponent(payloads[i].get())->findField(id))
                 return found;
         }
         return nullptr;
     }
 
     const ComponentType* type;
-    std::vector<ComponentField> fields;
+    std::vector<Field> fields;
     std::unordered_map<std::string, size_t> fieldIndex;
     std::vector<std::unique_ptr<void, std::function<void(void*)>>> payloads;
 };

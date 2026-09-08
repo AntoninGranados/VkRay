@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #include "VkSmol/engine.hpp"
@@ -10,7 +11,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "core/ecs/components/geometry.hpp"
 #include "core/render/material_table.hpp"
+#include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
@@ -341,9 +344,9 @@ void lightPackingSystem(Registry& registry) {
             if (!isEmissive(entity)) continue;
 
             float area;
-            if (type == &Sphere) {
+            if (*type == Sphere) {
                 area = 4.0f * glm::pi<float>() * std::pow(spheres.get(entity).get<float>("radius"), 2.0f);
-            } else if (type == &Box) {
+            } else if (*type == Box) {
                 const Component& boxTransform = transforms.get(entity);
                 const glm::mat4 local = composeTransform(boxTransform);
                 const glm::vec3 axisX = glm::vec3(local[0]);
@@ -353,19 +356,21 @@ void lightPackingSystem(Registry& registry) {
                 const float hy = glm::length(axisY);
                 const float hz = glm::length(axisZ);
                 area = 8.0f * (hx * hy + hx * hz + hy * hz);
-            } else if (type == &Quad) {
+            } else if (*type == Quad) {
                 const Component& quadTransform = transforms.get(entity);
                 const glm::mat4 local = composeTransform(quadTransform);
                 const glm::vec3 u = glm::vec3(local[0]);
                 const glm::vec3 v = glm::vec3(local[1]);
                 area = glm::length(glm::cross(u, v));
-            } else {
+            } else if (*type == MeshRef) {
                 const Component& meshTransform = transforms.get(entity);
                 const glm::mat4 mLocal = composeTransform(meshTransform);
                 const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
                 const MeshAsset* meshAsset = getMeshAsset(registry, meshAssetEntity);
                 if (!meshAsset) continue;
                 area = meshAsset->computeArea(mLocal);
+            } else {
+                std::unreachable();
             }
 
             totalArea += area;

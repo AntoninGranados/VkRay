@@ -71,7 +71,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
     fingerprint.type = resolveBsdfType(registry, entity);
     if (fingerprint.type) {
         const ecs::Component& component = registry.get(entity, *fingerprint.type);
-        for (const ecs::ComponentField& field : component.getFields())
+        for (const Field& field : component.getFields())
             fingerprint.fields.push_back(field);
         if (fingerprint.type == &ecs::ProgrammableMaterial) {
             const ProgrammableShader& shader = component.payload<ProgrammableShader>("shader");
@@ -109,7 +109,7 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
     ecs::Component& source = Core::getScene().getRegistry().get(fieldSource, type);
     ecs::Component& preview = previewRegistry.get(previewMaterialEntity, type);
 
-    for (const ecs::ComponentField& field : source.getFields())
+    for (const Field& field : source.getFields())
         preview.getField(field.getId()) = field;
 
     if (type == ecs::ProgrammableMaterial) {
@@ -117,7 +117,7 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
         previewShader.parse(source.get<std::filesystem::path>("path"));
 
         const ProgrammableShader& sourceShader = source.payload<ProgrammableShader>("shader");
-        for (const ecs::ComponentField& field : sourceShader.getParams())
+        for (const Field& field : sourceShader.getParams())
             previewShader.getField(field.getId()) = field;
     }
 }

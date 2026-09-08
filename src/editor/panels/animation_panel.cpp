@@ -252,8 +252,8 @@ void AnimationPanel::draw() {
                 for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
                     if (!registry.has(entity, ct)) continue;
 
-                    std::vector<ecs::ComponentField*> animatable;
-                    registry.get(entity, ct).forEachField([&](ecs::ComponentField& f) {
+                    std::vector<Field*> animatable;
+                    registry.get(entity, ct).forEachField([&](Field& f) {
                         if (f.isAnimatable()) animatable.push_back(&f);
                     });
                     if (animatable.empty()) continue;
@@ -263,9 +263,9 @@ void AnimationPanel::draw() {
 
                     ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
-                    for (const ecs::ComponentField* f : animatable) {
-                        if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(entity, ct, f->getId()))) {
-                            pendingSegment = { f->getLabel(), seg->first, seg->second, EntityTrack{ entity, &ct, f->getId() } };
+                    for (Field* f : animatable) {
+                        if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(*f))) {
+                            pendingSegment = { f->getLabel(), seg->first, seg->second, f };
                             ImGui::OpenPopup("##segment_interp");
                         }
                     }
@@ -278,8 +278,7 @@ void AnimationPanel::draw() {
                     if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
                         const Interpolation interpolation = static_cast<Interpolation>(current);
                         pendingSegment->from.setInterpolation(interpolation);
-                        const EntityTrack& t = pendingSegment->track;
-                        store.setInterpolation(t.entity, *t.type, t.fieldId, pendingSegment->from.getFrame(), interpolation);
+                        store.setInterpolation(*pendingSegment->field, pendingSegment->from.getFrame(), interpolation);
                     }
                     drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);
                     ImGui::EndPopup();

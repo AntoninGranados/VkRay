@@ -17,7 +17,7 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/components/camera.hpp"
 
@@ -157,7 +157,7 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
     if (Core::getRenderMode() != RenderMode::Preview) return;
 
     auto& c = registry.get(camera, ecs::Camera);
-    ecs::ComponentField& fovField = c.getField("fov");
+    Field& fovField = c.getField("fov");
     const NumericMeta& meta = std::get<NumericMeta>(fovField.getMetadata());
     fovField.set<float>(glm::clamp(fovField.get<float>() - static_cast<float>(yoffset), meta.min, meta.max));
     if (yoffset != 0) Core::markRenderDirty();

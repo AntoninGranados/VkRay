@@ -138,9 +138,9 @@ void applyKeyframes(const json& anim, FieldType type, const std::string& fieldId
     }
 }
 
-json serializeComponent(const ecs::Component& comp, ecs::Entity e, const AnimationStore& animStore, const ecs::Registry& registry) {
+json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, const ecs::Registry& registry) {
     json j = json::object();
-    for (const auto& f : comp.getFields()) {
+    for (Field& f : comp.getFields()) {
         if (f.getType() == FieldType::Entity) {
             const ecs::Entity referenced = f.get<ecs::Entity>();
             if (referenced != ecs::Entity{} && registry.has(referenced, ecs::Name)) {
@@ -149,19 +149,19 @@ json serializeComponent(const ecs::Component& comp, ecs::Entity e, const Animati
             }
             continue;
         }
-        j[f.getId()] = serializeField(f, animStore.keyframes(e, comp.getType(), f.getId()));
+        j[f.getId()] = serializeField(f, animStore.keyframes(f));
     }
     return j;
 }
 
-void applyComponent(const json& obj, ecs::Component& comp, ecs::Entity e, AnimationStore& animStore, const ResolveCtx& ctx) {
-    for (auto& f : comp.getFields()) {
+void applyComponent(const json& obj, ecs::Component& comp, AnimationStore& animStore, const ResolveCtx& ctx) {
+    for (Field& f : comp.getFields()) {
         if (!obj.contains(f.getId())) continue;
         if (f.getType() == FieldType::Entity) continue;
         const json& val = obj[f.getId()];
         if (val.is_object() && val.contains("anim") && val["anim"].is_array())
             applyKeyframes(val["anim"], f.getType(), f.getId(), [&](int frame, FieldValue value, Interpolation interp) {
-                animStore.insert(e, comp.getType(), f.getId(), frame, std::move(value), interp);
+                animStore.insert(f, value, frame, interp);
             });
         else
             applyField(val, f, ctx);
@@ -230,7 +230,7 @@ void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveC
                 if (!value.contains(field.getId()) || !value[field.getId()].is_string()) continue;
                 spawn.deferredEntityFields.push_back({e, &type->get(), field.getId(), resolveTemplate(value[field.getId()].get<std::string>(), resolveCtx)});
             }
-            applyComponent(value, spawn.registry.get(e, type->get()), e, spawn.animStore, resolveCtx);
+            applyComponent(value, spawn.registry.get(e, type->get()), spawn.animStore, resolveCtx);
         }
     }
 }
@@ -369,7 +369,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     reparseProgrammableMaterials(spawn.registry, scene);
     activateFirstNonDefaultCamera(spawn.registry, scene);
 
-    spawn.animStore.evaluate(spawn.registry, 0.0f);
+    spawn.animStore.evaluate(0.0f);
     return true;
 }
 
@@ -392,7 +392,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
             if (!reg.has(e, type)) continue;
             if (type.getId() == "name") continue;
             if (type.getId() == "material") continue;
-            node[type.getId()] = serializeComponent(reg.get(e, type), e, animStore, reg);
+            node[type.getId()] = serializeComponent(reg.get(e, type), animStore, reg);
         }
 
         json childrenJson = json::array();

@@ -6,7 +6,7 @@
 
 #include "core/core.hpp"
 #include "core/animation/animation_clock.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "editor/ui_utils.hpp"
 
 void RenderProgressPanel::draw() {

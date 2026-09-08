@@ -14,7 +14,7 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
 

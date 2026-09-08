@@ -6,7 +6,7 @@
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 #include "core/scene/gpu_structs.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {

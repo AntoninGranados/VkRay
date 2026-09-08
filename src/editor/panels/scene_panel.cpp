@@ -1,6 +1,5 @@
 #include "scene_panel.hpp"
 
-#include <filesystem>
 #include <format>
 #include <functional>
 
@@ -12,7 +11,7 @@
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "editor/editor.hpp"
-#include "editor/parameter_ui.hpp"
+#include "editor/fields/parameter_ui.hpp"
 #include "editor/ui_utils.hpp"
 
 
@@ -113,8 +112,8 @@ void ScenePanel::draw() {
             && *selectedEntity != scene.getObjectsRoot();
         if (!canDelete) ImGui::BeginDisabled();
         if (ImGui::Button("- Delete")) {
-            const ecs::Entity entityToDelete = *selectedEntity;
-            scene.getAnimationStore().remove(entityToDelete);
+            ecs::Entity entityToDelete = *selectedEntity;
+            scene.getAnimationStore().remove(reg, entityToDelete);
             const auto parent = reg.getParent(entityToDelete);
             if (parent.has_value() && *parent == scene.getMaterialsRoot()) {
                 auto& materialRefStorage = reg.storage(ecs::MaterialRef);

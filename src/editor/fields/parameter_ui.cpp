@@ -7,11 +7,23 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
-#include "editor/field_ui.hpp"
+#include "editor/fields/field_ui.hpp"
 #include "editor/ui_utils.hpp"
 
-bool ParameterUI::drawParameter(Parameter& p) {
-    ImGui::PushID(p.getPath().generic_string().c_str());
+namespace ParameterUI {
+
+namespace {
+
+struct ParameterItem {
+    Parameter* parameter = nullptr;
+    FieldPath id;
+    bool collapsible = false;
+    std::optional<ParameterCondition> condition;
+    std::vector<ParameterItem> children;
+};
+
+bool drawParameter(Parameter& p) {
+    ImGui::PushID(p.getId().c_str());
     ImGui::BeginGroup();
 
     bool changed = ui::drawField(p, "##value");
@@ -25,13 +37,13 @@ bool ParameterUI::drawParameter(Parameter& p) {
     return changed;
 }
 
-std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) {
+std::vector<ParameterItem> buildItems(const FieldPath& prefix) {
     ParameterRegistry& parameters = Core::getParameters();
     std::vector<ParameterItem> items;
     std::unordered_map<std::string, size_t> conditionGroups;
 
     for (const auto& param : parameters.getAll()) {
-        if (param->getPath().parent_path() != prefix) continue;
+        if (param->getId().parent_path() != prefix) continue;
         if (!param->getCondition()) {
             items.push_back({ .parameter = param.get() });
             continue;
@@ -47,7 +59,7 @@ std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) 
 
     std::vector<std::string> seen;
     for (const auto& param : parameters.getAll()) {
-        const auto rel = param->getPath().lexically_relative(prefix);
+        const auto rel = param->getId().lexically_relative(prefix);
         if (rel.empty()) continue;
         const std::string seg = rel.begin()->string();
         if (seg == "..") continue;
@@ -55,7 +67,7 @@ std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) 
         if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
         seen.push_back(seg);
         items.push_back({
-            .path = prefix / seg,
+            .id = prefix / seg,
             .collapsible = true,
             .children = buildItems(prefix / seg)
         });
@@ -64,7 +76,7 @@ std::vector<ParameterItem> ParameterUI::buildItems(const ParameterPath& prefix) 
     return items;
 }
 
-void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeeded) {
+void drawItem(ParameterItem& item, bool& changed, bool& restartNeeded) {
     if (item.parameter) {
         if (drawParameter(*item.parameter)) {
             changed = true;
@@ -76,8 +88,8 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     if (item.collapsible) {
         ParameterRegistry& parameters = Core::getParameters();
         const auto& labels = parameters.getNodeLabels();
-        auto it = labels.find(item.path.generic_string());
-        const std::string& label = it != labels.end() ? it->second : item.path.filename().string();
+        auto it = labels.find(item.id.generic_string());
+        const std::string& label = it != labels.end() ? it->second : item.id.filename().string();
         ImGui::SeparatorText(label.c_str());
     }
 
@@ -96,18 +108,16 @@ void ParameterUI::drawItem(ParameterItem& item, bool& changed, bool& restartNeed
     ui::drawIndentLine(lineX, startY, endY);
 }
 
-ParameterUI& ParameterUI::get() {
-    static ParameterUI instance;
-    return instance;
-}
+} // namespace
 
-void ParameterUI::drawGroup(const ParameterPath& root) {
-    ParameterItem& cached = get().root;
+void drawGroup(const FieldPath& root) {
+    static ParameterItem cached;
+
     if (cached.children.empty())
         cached.children = buildItems("");
 
     for (auto& child : cached.children) {
-        if (child.path != root) continue;
+        if (child.id != root) continue;
         bool changed = false, restartNeeded = false;
         for (auto& item : child.children)
             drawItem(item, changed, restartNeeded);
@@ -115,3 +125,5 @@ void ParameterUI::drawGroup(const ParameterPath& root) {
         return;
     }
 }
+
+} // namespace ParameterUI

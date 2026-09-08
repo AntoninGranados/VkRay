@@ -36,15 +36,15 @@ Parameter& parseVecNode(
     return parameters.add<T>(path, label, val, std::move(meta), restart);
 }
 
-void serializeParameterPath(std::ofstream& file, const ParameterPath& prefix, int depth = 0) {
+void serializeParameterPath(std::ofstream& file, const FieldPath& prefix, int depth = 0) {
     for (const auto& parameter : Core::getParameters().getAll()) {
-        if (parameter->getPath().parent_path() != prefix) continue;
+        if (parameter->getId().parent_path() != prefix) continue;
         file << parameter->print() << std::endl;
     }
 
     std::vector<std::string> seen;
     for (const auto& parameter : Core::getParameters().getAll()) {
-        auto rel = parameter->getPath().lexically_relative(prefix);
+        auto rel = parameter->getId().lexically_relative(prefix);
         if (rel.empty()) continue;
         auto it = rel.begin();
         std::string seg = it->string();

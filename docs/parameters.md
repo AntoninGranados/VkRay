@@ -66,50 +66,50 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ## Renderer
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/denoising` | Denoising | - | Boolean | false | - | - |
-| `renderer/debug_view` | Debug View | - | Enumeration | `None` | `None` • `Position W` • `Position` • `Normal W` • `Normal` • `Albedo` • `Roughness` • `Mat Type` • `Bounces` • `Hit Checks` • `Variance` • `Selection Mask` • `Sky Mask` | ✓ |
+| `renderer/denoising` | Denoising | - | Boolean | false | - | no |
+| `renderer/debug_view` | Debug View | - | Enumeration | `None` | `None` • `Position W` • `Position` • `Normal W` • `Normal` • `Albedo` • `Roughness` • `Mat Type` • `Bounces` • `Hit Checks` • `Variance` • `Selection Mask` • `Sky Mask` | yes |
 
 ### Sampling
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/sampling/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | ✓ |
-| `renderer/sampling/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | - |
-| `renderer/sampling/importance_sampling` | Importance Sampling | - | Boolean | true | - | - |
-| `renderer/sampling/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | ✓ |
-| `renderer/sampling/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0 ... 1000 | ✓ |
-| `renderer/sampling/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | - |
-| `renderer/sampling/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | - |
+| `renderer/sampling/max_bounces` | Max Bounces | - | Integer | 8 | 1 ... 20 | yes |
+| `renderer/sampling/render_samples` | Render Samples | - | Integer | 2048 | 1 ... 4096 | no |
+| `renderer/sampling/importance_sampling` | Importance Sampling | - | Boolean | true | - | no |
+| `renderer/sampling/clamp` | Clamp Fireflies | Clamps high-luminance samples to reduce fireflies. | Boolean | false | - | yes |
+| `renderer/sampling/clamp_threshold` | Clamp Threshold | Luminance value above which samples are clamped. | Float | 50 | 0 ... 1000 | yes |
+| `renderer/sampling/adaptive_sampling` | Adaptive Sampling | Skips already-converged pixels to focus samples where needed. | Boolean | true | - | no |
+| `renderer/sampling/adaptive_warmup` | Adaptive Warmup | Number of samples accumulated before adaptive sampling activates. | Integer | 64 | 0 ... 2048 | no |
 
 ### Viewport
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/viewport/max_samples` | Max Samples | - | Integer | 0 | 0 ... 4096 | - |
-| `renderer/viewport/pixel_scale` | Pixel Scale | Render at reduced resolution per axis. | Integer | 2 | 1 ... 8 | - |
+| `renderer/viewport/max_samples` | Max Samples | - | Integer | 0 | 0 ... 4096 | no |
+| `renderer/viewport/pixel_scale` | Pixel Scale | Render at reduced resolution per axis. | Integer | 2 | 1 ... 8 | no |
 
 ### Output
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/output/render_size` | Render Size | - | IVec2 | - | - | - |
-| `renderer/output/output_image` | Image | - | Path | `outputs/render.png` | PNG Image (.png), OpenEXR Image (.exr) | - |
-| `renderer/output/output_video` | Video | - | Path | `outputs/render.mp4` | MP4 Video (.mp4) | - |
-| `renderer/output/frame_cache` | Frame Cache | Directory where animation frames are stored before video conversion. | Path | `outputs/cache` | - | - |
+| `renderer/output/render_size` | Render Size | - | IVec2 | - | - | no |
+| `renderer/output/output_image` | Image | - | Path | `outputs/render.png` | PNG Image (.png), OpenEXR Image (.exr) | no |
+| `renderer/output/output_video` | Video | - | Path | `outputs/render.mp4` | MP4 Video (.mp4) | no |
+| `renderer/output/frame_cache` | Frame Cache | Directory where animation frames are stored before video conversion. | Path | `outputs/cache` | - | no |
 
 ### Arbitrary Output Variables
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/aov/position_w` | Position W | World-space hit position. | Boolean | false | - | - |
-| `renderer/aov/position` | Position | Camera-space hit position. | Boolean | false | - | - |
-| `renderer/aov/normal_w` | Normal W | World-space surface normal. | Boolean | false | - | - |
-| `renderer/aov/normal` | Normal | Camera-space surface normal. | Boolean | false | - | - |
-| `renderer/aov/albedo` | Albedo | Unlit surface color. | Boolean | false | - | - |
-| `renderer/aov/roughness` | Roughness | Surface roughness value. | Boolean | false | - | - |
-| `renderer/aov/mat_type` | Mat Type | Encoded material type per pixel. | Boolean | false | - | - |
-| `renderer/aov/sky_mask` | Sky Mask | White for background pixels, black for geometry. | Boolean | false | - | - |
+| `renderer/aov/position_w` | Position W | World-space hit position. | Boolean | false | - | no |
+| `renderer/aov/position` | Position | Camera-space hit position. | Boolean | false | - | no |
+| `renderer/aov/normal_w` | Normal W | World-space surface normal. | Boolean | false | - | no |
+| `renderer/aov/normal` | Normal | Camera-space surface normal. | Boolean | false | - | no |
+| `renderer/aov/albedo` | Albedo | Unlit surface color. | Boolean | false | - | no |
+| `renderer/aov/roughness` | Roughness | Surface roughness value. | Boolean | false | - | no |
+| `renderer/aov/mat_type` | Mat Type | Encoded material type per pixel. | Boolean | false | - | no |
+| `renderer/aov/sky_mask` | Sky Mask | White for background pixels, black for geometry. | Boolean | false | - | no |
 
 ## Scene
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `scene/light_mode` | Light Mode | - | Enumeration | `Day` | `Day` • `Sunset` • `Night` • `Empty` • `Studio` | ✓ |
+| `scene/light_mode` | Light Mode | - | Enumeration | `Day` | `Day` • `Sunset` • `Night` • `Empty` • `Studio` | yes |
 
 ## Editor
 | Path | Label | Description | Type | Default | Constraints | Restart |
@@ -118,12 +118,12 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ### Camera
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `editor/camera/speed` | Speed | - | Float | 20 | 0.1 ... | - |
-| `editor/camera/sensitivity` | Sensitivity | - | Float | 0.2 | 0.01 ... | - |
-| `editor/camera/pan_sensitivity` | Pan Sensitivity | - | Float | 0.003 | 1e-04 ... | - |
-| `editor/camera/dolly_sensitivity` | Dolly Sensitivity | - | Float | 0.01 | 1e-04 ... | - |
+| `editor/camera/speed` | Speed | - | Float | 20 | 0.1 ... | no |
+| `editor/camera/sensitivity` | Sensitivity | - | Float | 0.2 | 0.01 ... | no |
+| `editor/camera/pan_sensitivity` | Pan Sensitivity | - | Float | 0.003 | 1e-04 ... | no |
+| `editor/camera/dolly_sensitivity` | Dolly Sensitivity | - | Float | 0.01 | 1e-04 ... | no |
 
 ## internal
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `internal/sensor_width` | Sensor Width | Reference sensor width (mm). | Float | 36 | 1 ... | - |
+| `internal/sensor_width` | Sensor Width | Reference sensor width (mm). | Float | 36 | 1 ... | no |

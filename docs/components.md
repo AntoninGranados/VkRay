@@ -190,6 +190,8 @@ Programmable custom BSDF, defined by a GLSL shader-definition file.
 ### Transform
 World-space transform.
 
+ **Conflicts:** `material`
+
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `position` | vec3 | [0, 0, 0] |  | yes |

@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 #include "core/core.hpp"
-#include "core/field.hpp"
+#include "core/fields/field.hpp"
 #include "core/scene/scene.hpp"
 #include "utils/glsl_dsl.hpp"
 #include "utils/log.hpp"
@@ -33,7 +33,7 @@ ProgrammableShader::~ProgrammableShader() {
     if (watchId) Core::getFileWatcher().unwatch(*watchId);
 }
 
-std::optional<ecs::ComponentField> ProgrammableShader::parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber) {
+std::optional<Field> ProgrammableShader::parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber) {
     std::string location = std::format("{}:{}", path.string(), lineNumber);
 
     std::vector<std::string> sections = split(trim(line.substr(7)), ':');
@@ -94,7 +94,7 @@ std::optional<ecs::ComponentField> ProgrammableShader::parseParam(const std::str
         }
     }
 
-    ecs::ComponentField field;
+    Field field;
     if (typeInfo.fieldType == FieldType::Bool) {
         static_cast<Field&>(field) = Field::make<bool>(name, camelCaseToLabel(name), static_cast<bool>(values[0]));
     } else {
@@ -122,14 +122,14 @@ std::string ProgrammableShader::mangledPrefix() const {
     return std::format("_{}{}_", KIND, slot);
 }
 
-std::string ProgrammableShader::declareGlobal(const ecs::ComponentField& field) const {
+std::string ProgrammableShader::declareGlobal(const Field& field) const {
     const TypeSpec spec = typeSpecFor(field.getType());
-    return std::format("{} {}{};", spec.glsl, mangledPrefix(), field.getId());
+    return std::format("{} {}{};", spec.glsl, mangledPrefix(), field.getId().string());
 }
 
-std::string ProgrammableShader::assignParam(const ecs::ComponentField& field, int& offset) const {
+std::string ProgrammableShader::assignParam(const Field& field, int& offset) const {
     const TypeSpec spec = typeSpecFor(field.getType());
-    const std::string mangled = mangledPrefix() + field.getId();
+    const std::string mangled = std::format("{}{}", mangledPrefix(), field.getId().string());
 
     std::string args;
     for (int i = 0; i < spec.components; i++) {
@@ -154,7 +154,7 @@ std::string ProgrammableShader::assignParam(const ecs::ComponentField& field, in
 
 std::vector<float> ProgrammableShader::packValues() const {
     std::vector<float> values;
-    for (const ecs::ComponentField& field : params.getFields()) {
+    for (const Field& field : params.getFields()) {
         field.dispatch([&](auto v) {
             using V = std::decay_t<decltype(v)>;
             if constexpr (std::is_same_v<V, bool>) values.push_back(v ? 1.0f : 0.0f);
@@ -168,7 +168,7 @@ std::vector<float> ProgrammableShader::packValues() const {
 
 std::string ProgrammableShader::generateGlobalDecls() const {
     std::string decls;
-    for (const ecs::ComponentField& field : params.getFields())
+    for (const Field& field : params.getFields())
         decls += declareGlobal(field) + "\n";
     return decls;
 }
@@ -176,7 +176,7 @@ std::string ProgrammableShader::generateGlobalDecls() const {
 std::string ProgrammableShader::generateParamAssignments() const {
     std::string assignments;
     int offset = 0;
-    for (const ecs::ComponentField& field : params.getFields())
+    for (const Field& field : params.getFields())
         assignments += assignParam(field, offset) + "\n";
     return assignments;
 }
@@ -186,20 +186,20 @@ void ProgrammableShader::load(bool migrate) {
     if (!GlslDsl::parse(path, { .manglePrefix = mangledPrefix(), .expectedVersion = static_cast<int>(kShaderVersion) }))
         return;
 
-    std::vector<ecs::ComponentField> newFields;
+    std::vector<Field> newFields;
     const std::vector<std::string>& paramLines = getParamLines();
     for (size_t i = 0; i < paramLines.size(); i++)
-        if (std::optional<ecs::ComponentField> field = parseParam(paramLines[i], path, static_cast<int>(i) + 1))
+        if (std::optional<Field> field = parseParam(paramLines[i], path, static_cast<int>(i) + 1))
             newFields.push_back(std::move(*field));
 
     ecs::ComponentType::Builder builder = ecs::ComponentType::builder(path.string());
-    for (ecs::ComponentField& f : newFields) builder.field(f);
+    for (Field& f : newFields) builder.field(f);
     schema = builder.buildDetached();
 
     ecs::Component newParams(schema);
     if (migrate)
-        for (ecs::ComponentField& newField : newParams.getFields())
-            for (const ecs::ComponentField& oldField : params.getFields())
+        for (Field& newField : newParams.getFields())
+            for (const Field& oldField : params.getFields())
                 if (oldField.getId() == newField.getId() && oldField.getType() == newField.getType()) {
                     oldField.dispatch([&](auto v) { newField.set(v); });
                     break;

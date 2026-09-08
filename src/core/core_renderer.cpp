@@ -7,7 +7,7 @@
 
 #include "utils/log.hpp"
 #include "core/core.hpp"
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 
 RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     VkSmol& engine = Core::getEngine();

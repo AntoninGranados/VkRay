@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -12,18 +11,15 @@
 
 #include <glm/glm.hpp>
 
-#include "core/field.hpp"
-
-using ParameterPath = std::filesystem::path;
+#include "field.hpp"
 
 struct ParameterCondition {
-    ParameterPath param;
+    FieldPath param;
     bool when = true;
 };
 
 class Parameter : public Field {
 public:
-    const ParameterPath& getPath() const { return path; }
     const std::optional<std::string>& getDescription() const { return description; }
     bool isRestartingAnimation() const { return restartAccumulation; }
     const std::optional<ParameterCondition>& getCondition() const { return condition; }
@@ -65,16 +61,14 @@ public:
     std::string print() const;
 
     template<typename T>
-    static Parameter make(const ParameterPath& path, const std::string& label, const T& value, FieldMetadata metadata = {}, bool restartAccumulation = false) {
+    static Parameter make(const FieldPath& id, const std::string& label, const T& value, FieldMetadata metadata = {}, bool restartAccumulation = false) {
         Parameter p;
-        static_cast<Field&>(p) = Field::make<T>(path.generic_string(), label, value, std::move(metadata));
-        p.path = path;
+        static_cast<Field&>(p) = Field::make<T>(id, label, value, std::move(metadata));
         p.restartAccumulation = restartAccumulation;
         return p;
     }
 
 private:
-    ParameterPath path;
     std::optional<std::string> description;
     bool restartAccumulation = false;
     std::optional<ParameterCondition> condition;
@@ -83,47 +77,47 @@ private:
 
 class ParameterRegistry {
 public:
-    void setNodeLabel(const ParameterPath& path, const std::string& label) { nodeLabels[path.generic_string()] = label; }
+    void setNodeLabel(const FieldPath& id, const std::string& label) { nodeLabels[id.string()] = label; }
     const std::vector<std::unique_ptr<Parameter>>& getAll() const { return parameters; }
     const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
     void resetAll();
     void syncAll();
 
     template <typename T>
-    Parameter& add(const ParameterPath& path, const std::string& label, const T& value, FieldMetadata metadata = {}, bool restartAccumulation = false) {
-        auto up = std::make_unique<Parameter>(Parameter::make<T>(path, label, value, std::move(metadata), restartAccumulation));
-        index[up->getPath().generic_string()] = up.get();
+    Parameter& add(const FieldPath& id, const std::string& label, const T& value, FieldMetadata metadata = {}, bool restartAccumulation = false) {
+        std::unique_ptr<Parameter> up = std::make_unique<Parameter>(Parameter::make<T>(id, label, value, std::move(metadata), restartAccumulation));
+        index[up->getId().string()] = up.get();
         parameters.push_back(std::move(up));
         return *parameters.back();
     }
 
-    template <typename T> T get(const ParameterPath& path) requires (!std::is_enum_v<T>) {
-        return getParam(path).get<T>();
+    template <typename T> T get(const FieldPath& id) requires (!std::is_enum_v<T>) {
+        return getParam(id).get<T>();
     }
-    template <typename T> T get(const ParameterPath& path) requires (std::is_enum_v<T>) {
-        return static_cast<T>(getParam(path).get<int>());
-    }
-
-    template <typename T> void set(const ParameterPath& path, const T& value) requires (!std::is_enum_v<T>) {
-        getParam(path).set(value);
-    }
-    template <typename T> void set(const ParameterPath& path, T value) requires (std::is_enum_v<T>) {
-        getParam(path).set(std::to_underlying(value));
+    template <typename T> T get(const FieldPath& id) requires (std::is_enum_v<T>) {
+        return static_cast<T>(getParam(id).get<int>());
     }
 
-    template <typename T> void bind(const ParameterPath& path, T* ptr) {
-        getParam(path).bind<T>(ptr);
+    template <typename T> void set(const FieldPath& id, const T& value) requires (!std::is_enum_v<T>) {
+        getParam(id).set(value);
     }
-    template <typename T> void bind(const ParameterPath& path, std::function<void(T)> cb) {
-        getParam(path).bind<T>(std::move(cb));
+    template <typename T> void set(const FieldPath& id, T value) requires (std::is_enum_v<T>) {
+        getParam(id).set(std::to_underlying(value));
     }
 
-    void setEnumByName(const ParameterPath& path, const std::string& name);
+    template <typename T> void bind(const FieldPath& id, T* ptr) {
+        getParam(id).bind<T>(ptr);
+    }
+    template <typename T> void bind(const FieldPath& id, std::function<void(T)> cb) {
+        getParam(id).bind<T>(std::move(cb));
+    }
+
+    void setEnumByName(const FieldPath& id, const std::string& name);
 
 private:
     std::vector<std::unique_ptr<Parameter>> parameters;
     std::unordered_map<std::string, Parameter*> index;
     std::unordered_map<std::string, std::string> nodeLabels;
 
-    Parameter& getParam(const ParameterPath& path);
+    Parameter& getParam(const FieldPath& id);
 };

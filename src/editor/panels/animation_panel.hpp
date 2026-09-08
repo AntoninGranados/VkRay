@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "core/animation/keyframe.hpp"
-#include "core/ecs/components/component_type.hpp"
-#include "core/ecs/entity.hpp"
 #include "panel.hpp"
 
 struct RowContext;
@@ -19,16 +17,11 @@ public:
     void draw() override;
 
 private:
-    struct EntityTrack {
-        ecs::Entity entity;
-        const ecs::ComponentType* type;
-        std::string fieldId;
-    };
     struct SegmentPopupState {
         std::string label;
         Keyframe from;
         Keyframe to;
-        EntityTrack track;
+        Field* field;
     };
 
     template<typename T> static std::vector<float> decompose(T v);

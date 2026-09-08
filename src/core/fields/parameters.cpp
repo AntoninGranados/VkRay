@@ -16,8 +16,8 @@ void ParameterRegistry::syncAll() {
     for (auto& p : parameters) p->sync();
 }
 
-void ParameterRegistry::setEnumByName(const ParameterPath& path, const std::string& name) {
-    auto& p = getParam(path);
+void ParameterRegistry::setEnumByName(const FieldPath& id, const std::string& name) {
+    auto& p = getParam(id);
     const auto* enumMeta = std::get_if<EnumMeta>(&p.getMetadata());
     if (!enumMeta) return;
     const auto& items = enumMeta->items;
@@ -27,12 +27,12 @@ void ParameterRegistry::setEnumByName(const ParameterPath& path, const std::stri
             return;
         }
     }
-    Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, path.string()));
+    Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, id.string()));
 }
 
-Parameter& ParameterRegistry::getParam(const ParameterPath& path) {
-    auto it = index.find(path.generic_string());
-    if (it == index.end()) throw std::runtime_error("Parameter not found: " + path.generic_string());
+Parameter& ParameterRegistry::getParam(const FieldPath& id) {
+    auto it = index.find(id.string());
+    if (it == index.end()) throw std::runtime_error("Parameter not found: " + id.string());
     return *it->second;
 }
 
@@ -46,14 +46,14 @@ std::string Parameter::print() const {
         return "-";
     };
 
-    const char* p = path.c_str();
+    const char* p = id.c_str();
     const char* l = getLabel().c_str();
     std::string desc = description.value_or("-");
     const FieldMetadata& metadata = getMetadata();
     const auto* numMeta = std::get_if<NumericMeta>(&metadata);
     const auto* enumMeta = std::get_if<EnumMeta>(&metadata);
     const auto* pathMeta = std::get_if<PathMeta>(&metadata);
-    const char* r = restartAccumulation ? "✓" : "-";
+    const char* r = restartAccumulation ? "yes" : "no";
 
     switch (type) {
         case FieldType::Bool:

@@ -24,9 +24,9 @@ public:
     bool parse(const std::filesystem::path& path);
     bool reload(const std::filesystem::path& path);
 
-    std::vector<ecs::ComponentField>& getParams() { return params.getFields(); }
-    const std::vector<ecs::ComponentField>& getParams() const { return params.getFields(); }
-    ecs::ComponentField& getField(const std::string& id) { return params.getField(id); }
+    std::vector<Field>& getParams() { return params.getFields(); }
+    const std::vector<Field>& getParams() const { return params.getFields(); }
+    Field& getField(const std::string& id) { return params.getField(id); }
     ecs::Component& getComponent() { return params; }
     const std::string& getMainBody() const { return getStatements(); }
     const std::string& getOutBody() const { return getDeclarations(); }
@@ -55,13 +55,13 @@ private:
 
     static const std::unordered_map<std::string, TypeInfo> typeTable;
 
-    static std::optional<ecs::ComponentField> parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber);
+    static std::optional<Field> parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber);
     static TypeSpec typeSpecFor(FieldType type);
 
     void load(bool migrate);
     std::string mangledPrefix() const;
-    std::string declareGlobal(const ecs::ComponentField& field) const;
-    std::string assignParam(const ecs::ComponentField& field, int& offset) const;
+    std::string declareGlobal(const Field& field) const;
+    std::string assignParam(const Field& field, int& offset) const;
     std::string generateGlobalDecls() const;
     std::string generateParamAssignments() const;
 

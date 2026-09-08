@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "core/parameters/parameters.hpp"
+#include "core/fields/parameters.hpp"
 
 namespace ParameterSerializer {
     void saveDocumentation(std::filesystem::path path);

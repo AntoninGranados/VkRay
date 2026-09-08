@@ -8,7 +8,7 @@
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
-#include "editor/field_ui.hpp"
+#include "editor/fields/field_ui.hpp"
 #include "editor/ui_utils.hpp"
 
 namespace ecs {
@@ -16,10 +16,6 @@ namespace ecs {
 ComponentUiRegistry& ComponentUiRegistry::get() {
     static ComponentUiRegistry r;
     return r;
-}
-
-bool ComponentUiRegistry::drawField(Component& component, const ecs::ComponentField& schema) {
-    return ui::drawField(component.getField(schema.getId()), "##" + schema.getId());
 }
 
 void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
@@ -35,17 +31,17 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::fun
         if (!registry.has(e, type)) return false;
 
         Component& component = registry.get(e, type);
-        const std::string header = component.getType().getIcon() + " " + component.getType().getLabel();
-        const auto& fields = component.getType().getFields();
+        const std::string header = std::format("{} {}", component.getType().getIcon(), component.getType().getLabel());
+        auto& fields = component.getFields();
 
         bool remove = ComponentUiRegistry::beginDraw(&component);
         if (remove) registry.remove(e, type);
         bool update = false;
         const bool useBullet = bulletIfEmpty && fields.empty();
         if (!remove && ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
-            for (const ecs::ComponentField& schema : fields) {
-                if (schema.isAnimatable()) ui::drawKeyframeButton(e, component, schema.getId());
-                update |= ComponentUiRegistry::drawField(component, schema);
+            for (Field& field : fields) {
+                if (field.isAnimatable()) ui::drawKeyframeButton(field);
+                update |= ui::drawField(field, std::format("##{}", field.getId().string()));
             }
             update |= extra(component, registry, e);
         }
@@ -153,7 +149,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Dielectric);
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
-    ui_reg.addCustom(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity e) {
+    ui_reg.addCustom(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity) {
         const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
         if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
@@ -167,9 +163,9 @@ void ComponentUiRegistry::init() {
             ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", shader.getError().c_str());
 
         bool update = pathChanged;
-        for (ecs::ComponentField& param : shader.getParams()) {
-            if (param.isAnimatable()) ui::drawKeyframeButton(e, c, param.getId());
-            update |= ui::drawField(param, "##" + param.getId());
+        for (Field& param : shader.getParams()) {
+            if (param.isAnimatable()) ui::drawKeyframeButton(param);
+            update |= ui::drawField(param, "##" + param.getId().string());
         }
         return update;
     });

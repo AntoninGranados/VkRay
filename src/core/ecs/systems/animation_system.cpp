@@ -9,7 +9,7 @@ void evaluateAnimation(Registry& registry) {
     AnimationStore& store = *registry.ctx().get<AnimationStore*>();
     if (store.isEmpty()) return;
 
-    store.evaluate(registry, Core::getAnimation().getSampleFrame());
+    store.evaluate(Core::getAnimation().getSampleFrame());
     Core::markRenderDirty();
 }
 

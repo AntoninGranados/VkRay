@@ -2,15 +2,13 @@
 
 #include <filesystem>
 #include <functional>
-#include <unordered_set>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/frame_context.hpp"
 #include "VkSmol/platform/platform.hpp"
 
 #include "core/animation/animation_clock.hpp"
-#include "core/parameters/parameters.hpp"
-#include "core/parameters/parameter_serializer.hpp"
+#include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
 #include "core/core_renderer.hpp"
 #include "core/render_structures.hpp"

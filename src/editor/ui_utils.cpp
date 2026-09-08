@@ -36,21 +36,21 @@ void drawKeyframeIcon(bool has, bool hovered, bool active) {
 
 } // namespace
 
-void drawKeyframeButton(ecs::Entity e, ecs::Component& c, const std::string& fieldId) {
+void drawKeyframeButton(Field& field) {
     AnimationStore& store = Core::getScene().getAnimationStore();
     const int frame = Core::getAnimation().getFrame();
-    const bool has = store.has(e, c.getType(), fieldId, frame);
+    const bool has = store.has(field, frame);
 
     constexpr float iconSize = 10.0f;
-    ImGui::PushID((fieldId + "_keyframe").c_str());
+    ImGui::PushID((field.getId().string() + "_keyframe").c_str());
     const bool clicked = ImGui::InvisibleButton("##keyframe", ImVec2(iconSize, ImGui::GetTextLineHeight()));
     const bool hovered = ImGui::IsItemHovered();
     const bool active = ImGui::IsItemActive();
     ImGui::PopID();
 
     if (clicked) {
-        if (has) store.remove(e, c.getType(), fieldId, frame);
-        else store.capture(e, c, fieldId, frame);
+        if (has) store.remove(field, frame);
+        else store.capture(field, frame);
         Core::markRenderDirty();
     }
 

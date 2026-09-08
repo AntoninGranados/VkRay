@@ -12,8 +12,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "core/ecs/entity.hpp"
-
 enum class FieldType {
     Bool,
     Int, IVec2, IVec3, IVec4,
@@ -137,16 +135,18 @@ protected:
     }
 };
 
+using FieldPath = std::filesystem::path;
+
 class Field : public FieldValue {
 public:
     virtual ~Field() = default;
 
-    const std::string& getId() const { return id; }
+    const FieldPath& getId() const { return id; }
     const std::string& getLabel() const { return label; }
     const FieldMetadata& getMetadata() const { return metadata; }
 
     template<typename T>
-    static Field make(std::string id, std::string label, const T& def, FieldMetadata metadata = {}) {
+    static Field make(std::string id, std::string label, const T& def, FieldMetadata metadata = {}, bool animatable = false) {
         Field f;
         f.id = std::move(id);
         f.label = std::move(label);
@@ -163,13 +163,14 @@ public:
         f.value.resize(f.size, std::byte{0});
         writeBlob(f.value, def);
         f.defaultValue = f.value;
+        f.animatable = animatable;
         return f;
     }
 
     template<typename T> T getDefault() const { return readBlob<T>(defaultValue); }
     template<typename T> void setDefault(const T& v) { writeBlob(defaultValue, v); }
 
-    static Field makeNumeric(FieldType type, std::string id, std::string label, const std::vector<float>& values, NumericMeta metadata = {});
+    static Field makeNumeric(FieldType type, std::string id, std::string label, const std::vector<float>& values, NumericMeta metadata = {}, bool animatable = false);
 
     void reset() { value = defaultValue; }
 
@@ -216,9 +217,13 @@ public:
         return nullptr;
     }
 
-private:
-    std::string id;
+    bool isAnimatable() const { return animatable; }
+    void setAnimatable(bool newAnimatable) { animatable = newAnimatable; }
+
+protected:
+    FieldPath id;
     std::string label;
     FieldMetadata metadata;
     std::vector<std::byte> defaultValue;
+    bool animatable;
 };

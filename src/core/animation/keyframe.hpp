@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "core/field.hpp"
+#include "core/fields/field.hpp"
 
 enum class Interpolation { Step, Linear, Cubic, EaseIn, EaseOut, EaseInOut };
 

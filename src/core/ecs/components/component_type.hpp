@@ -5,27 +5,17 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <format>
 #include <typeindex>
 #include <unordered_map>
 #include <vector>
 
-#include "core/field.hpp"
+#include "core/fields/field.hpp"
 #include "utils/string_utils.hpp"
 
 namespace ecs {
 
 class Component;
-
-struct ComponentField : Field {
-    ComponentField() = default;
-    explicit ComponentField(bool isAnimatable) : animatable(isAnimatable) {}
-
-    bool isAnimatable() const { return animatable; }
-    void setAnimatable(bool newAnimatable) { animatable = newAnimatable; }
-
-private:
-    bool animatable = false;
-};
 
 struct ComponentPayload {
     std::string id;
@@ -52,8 +42,8 @@ public:
     const std::vector<std::string>& getNeeds() const { return needs; }
     const std::vector<std::string>& getConflicts() const { return conflicts; }
 
-    const std::vector<ComponentField>& getFields() const { return fields; }
-    const ComponentField& getField(const std::string& id) const { return fields[fieldIndex.at(id)]; }
+    const std::vector<Field>& getFields() const { return fields; }
+    const Field& getField(const std::string& id) const { return fields[fieldIndex.at(id)]; }
 
     const std::vector<ComponentPayload>& getPayloads() const { return payloads; }
     size_t getPayloadIndex(const std::string& id) const { return payloadIndex.at(id); }
@@ -61,7 +51,7 @@ public:
     static const std::vector<ComponentType>& all();
     static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
 
-    bool operator==(const ComponentType&) const = default;
+    bool operator==(const ComponentType& other) const { return id == other.id;  }
 
 private:
     friend class ComponentType::Builder;
@@ -76,7 +66,7 @@ private:
 
     std::vector<std::string> needs;
     std::vector<std::string> conflicts;
-    std::vector<ComponentField> fields;
+    std::vector<Field> fields;
     std::unordered_map<std::string, size_t> fieldIndex;
     std::vector<ComponentPayload> payloads;
     std::unordered_map<std::string, size_t> payloadIndex;
@@ -93,17 +83,16 @@ public:
     template <typename T>
     Builder& field(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
         if (type.fieldIndex.contains(id))
-            throw std::invalid_argument("duplicate field id: " + id);
-        ComponentField f(animatable);
-        static_cast<Field&>(f) = Field::make<T>(id, snakeCaseToLabel(id), defaultValue, std::move(metadata));
+            throw std::invalid_argument(std::format("duplicate field id: {}", id));
+        Field f = Field::make<T>(id, snakeCaseToLabel(id), defaultValue, std::move(metadata), animatable);
         type.fieldIndex[f.getId()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;
     }
 
-    Builder& field(ComponentField f) {
+    Builder& field(Field f) {
         if (type.fieldIndex.contains(f.getId()))
-            throw std::invalid_argument("duplicate field id: " + f.getId());
+            throw std::invalid_argument(std::format("duplicate field id: {}", f.getId().string()));
         type.fieldIndex[f.getId()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;

@@ -1,6 +1,6 @@
 [submodule "external/VkSmol"]
 	path = external/VkSmol
-	url = https://github.com/AntoninGranados/VkSmol.git
+	url = git@github.com:AntoninGranados/VkSmol.git
 [submodule "external/nfd"]
 	path = external/nfd
 	url = https://github.com/btzy/nativefiledialog-extended.git

@@ -9,7 +9,7 @@
 
 #include "core/ecs/entity.hpp"
 #include "core/ecs/registry.hpp"
-#include "core/field.hpp"
+#include "core/fields/field.hpp"
 #include "core/render/pathtrace_renderer.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/imgui_texture.hpp"
