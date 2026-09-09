@@ -6,6 +6,7 @@
 
 #include "nlohmann/json.hpp"
 
+#include "core/fields/field_serializer.hpp"
 #include "core/render_structures.hpp"
 #include "utils/json_dsl.hpp"
 
@@ -56,19 +57,10 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
         }
         if (j.contains("parameters")) {
             for (const auto& [key, val] : j.at("parameters").items()) {
-                if      (val.is_boolean())        parameterOverrides.push_back({key, val.get<bool>()});
-                else if (val.is_number_integer()) parameterOverrides.push_back({key, val.get<int32_t>()});
-                else if (val.is_number_float())   parameterOverrides.push_back({key, val.get<float>()});
-                else if (val.is_string())         parameterOverrides.push_back({key, val.get<std::string>()});
-                else if (val.is_array() && val.size() >= 2) {
-                    bool isInt = val[0].is_number_integer();
-                    if      ( isInt && val.size() == 2) parameterOverrides.push_back({key, glm::ivec2(val[0].get<int>(), val[1].get<int>())});
-                    else if ( isInt && val.size() == 3) parameterOverrides.push_back({key, glm::ivec3(val[0].get<int>(), val[1].get<int>(), val[2].get<int>())});
-                    else if ( isInt && val.size() == 4) parameterOverrides.push_back({key, glm::ivec4(val[0].get<int>(), val[1].get<int>(), val[2].get<int>(), val[3].get<int>())});
-                    else if (!isInt && val.size() == 2) parameterOverrides.push_back({key, glm::vec2(val[0].get<float>(), val[1].get<float>())});
-                    else if (!isInt && val.size() == 3) parameterOverrides.push_back({key, glm::vec3(val[0].get<float>(), val[1].get<float>(), val[2].get<float>())});
-                    else if (!isInt && val.size() == 4) parameterOverrides.push_back({key, glm::vec4(val[0].get<float>(), val[1].get<float>(), val[2].get<float>(), val[3].get<float>())});
-                }
+                std::optional<FieldValue> fv = inferFieldValueFromJson(val);
+                if (!fv) continue;
+                if (fv->getType() == FieldType::String) parameterOverrides.push_back({key, fv->get<std::string>()});
+                else fv->dispatch([&](auto v) { parameterOverrides.push_back({key, v}); });
             }
         }
 

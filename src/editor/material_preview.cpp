@@ -181,6 +181,12 @@ void MaterialPreview::evictDeadEntries() {
     }
 }
 
+void MaterialPreview::destroy() {
+    while (!previewImages.empty())
+        evict(previewImages.begin()->first);
+    liveTexture = ui::ImGuiTexture();
+}
+
 void MaterialPreview::tick(const FrameContext& frameContext) {
     evictDeadEntries();
 

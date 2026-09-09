@@ -3,6 +3,7 @@
 #include <format>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <unordered_set>
 
 #include "core/core.hpp"
@@ -33,7 +34,7 @@ ProgrammableShader::~ProgrammableShader() {
     if (watchId) Core::getFileWatcher().unwatch(*watchId);
 }
 
-std::optional<Field> ProgrammableShader::parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber) {
+std::optional<Field> ProgrammableShader::parseParam(const std::string& group, const std::string& line, const std::filesystem::path& path, int lineNumber) {
     std::string location = std::format("{}:{}", path.string(), lineNumber);
 
     std::vector<std::string> sections = split(trim(line.substr(7)), ':');
@@ -95,10 +96,11 @@ std::optional<Field> ProgrammableShader::parseParam(const std::string& line, con
     }
 
     Field field;
+    FieldPath fieldPath = group.empty() ? name : std::format("{}/{}", group, name);
     if (typeInfo.fieldType == FieldType::Bool) {
-        static_cast<Field&>(field) = Field::make<bool>(name, camelCaseToLabel(name), static_cast<bool>(values[0]));
+        static_cast<Field&>(field) = Field::make<bool>(fieldPath, camelCaseToLabel(name), static_cast<bool>(values[0]));
     } else {
-        static_cast<Field&>(field) = Field::makeNumeric(typeInfo.fieldType, name, camelCaseToLabel(name), values, meta);
+        static_cast<Field&>(field) = Field::makeNumeric(typeInfo.fieldType, fieldPath, camelCaseToLabel(name), values, meta);
     }
     field.setAnimatable(isAnimatable);
     return field;
@@ -124,12 +126,22 @@ std::string ProgrammableShader::mangledPrefix() const {
 
 std::string ProgrammableShader::declareGlobal(const Field& field) const {
     const TypeSpec spec = typeSpecFor(field.getType());
-    return std::format("{} {}{};", spec.glsl, mangledPrefix(), field.getId().string());
+    std::string name = "";
+    for (char c : field.getId().string()) {
+        if (c == '/') name += "_";
+        else name += c;
+    }
+    return std::format("{} {}{};", spec.glsl, mangledPrefix(), name);
 }
 
 std::string ProgrammableShader::assignParam(const Field& field, int& offset) const {
     const TypeSpec spec = typeSpecFor(field.getType());
-    const std::string mangled = std::format("{}{}", mangledPrefix(), field.getId().string());
+    std::string name = "";
+    for (char c : field.getId().string()) {
+        if (c == '/') name += "_";
+        else name += c;
+    }
+    const std::string mangled = std::format("{}{}", mangledPrefix(), name);
 
     std::string args;
     for (int i = 0; i < spec.components; i++) {
@@ -187,9 +199,9 @@ void ProgrammableShader::load(bool migrate) {
         return;
 
     std::vector<Field> newFields;
-    const std::vector<std::string>& paramLines = getParamLines();
+    const std::vector<std::pair<std::string, std::string>>& paramLines = getParamLines();
     for (size_t i = 0; i < paramLines.size(); i++)
-        if (std::optional<Field> field = parseParam(paramLines[i], path, static_cast<int>(i) + 1))
+        if (std::optional<Field> field = parseParam(paramLines[i].first, paramLines[i].second, path, static_cast<int>(i) + 1))
             newFields.push_back(std::move(*field));
 
     ecs::ComponentType::Builder builder = ecs::ComponentType::builder(path.string());

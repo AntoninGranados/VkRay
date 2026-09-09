@@ -24,7 +24,6 @@ ImGuiTexture::~ImGuiTexture() {
     reset();
 }
 
-// FIXME: this crashes the app (backend not working with ImGui ?)
 void ImGuiTexture::reset() {
     if (id) ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)id);
     id = 0;

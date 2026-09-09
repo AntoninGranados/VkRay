@@ -55,7 +55,7 @@ private:
 
     static const std::unordered_map<std::string, TypeInfo> typeTable;
 
-    static std::optional<Field> parseParam(const std::string& line, const std::filesystem::path& path, int lineNumber);
+    static std::optional<Field> parseParam(const std::string& group, const std::string& line, const std::filesystem::path& path, int lineNumber);
     static TypeSpec typeSpecFor(FieldType type);
 
     void load(bool migrate);

@@ -16,7 +16,7 @@ public:
     bool parse(const std::filesystem::path& path, const Options& options);
 
     const std::string& getError() const { return error; }
-    const std::vector<std::string>& getParamLines() const { return paramLines; }
+    const std::vector<std::pair<std::string, std::string>>& getParamLines() const { return paramLines; }
     const std::string& getDeclarations() const { return declarations; }
     const std::string& getStatements() const { return statements; }
     bool foundEntryPoint() const { return entryPointFound; }
@@ -40,13 +40,13 @@ private:
     static bool isIdentChar(char c);
     static std::vector<Token> tokenize(const std::string& source);
 
-    void mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::string>& globalNames);
+    void mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::pair<std::string, std::string>>& globalNames);
 
     bool isIdentTok(size_t i) const;
     bool isIdent(size_t i, const std::string& text) const;
     bool isSymbol(size_t i, char c) const;
-    std::string mangle(const std::string& name, int scopeId) const;
-    void declare(const std::string& name, int scopeId);
+    std::string mangle(const std::string& group, const std::string& name, int scopeId) const;
+    void declare(const std::string& group, const std::string& name, int scopeId);
     void pushScope();
     void popScope();
     void resolveToken(size_t i);
@@ -54,7 +54,7 @@ private:
     void step();
 
     std::string error;
-    std::vector<std::string> paramLines;
+    std::vector<std::pair<std::string, std::string>> paramLines;
     std::string declarations;
     std::string statements;
     bool entryPointFound = false;

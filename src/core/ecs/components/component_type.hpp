@@ -67,7 +67,7 @@ private:
     std::vector<std::string> needs;
     std::vector<std::string> conflicts;
     std::vector<Field> fields;
-    std::unordered_map<std::string, size_t> fieldIndex;
+    std::unordered_map<FieldPath, size_t> fieldIndex;
     std::vector<ComponentPayload> payloads;
     std::unordered_map<std::string, size_t> payloadIndex;
 };

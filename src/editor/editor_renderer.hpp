@@ -16,6 +16,7 @@ public:
     void registerImGuiTextures();
     void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
     void render(const FrameContext& frameContext);
+    void destroy();
 
     ImTextureID getDisplayTexId() const { return displayTex; }
     ImTextureID getDebugTexId()   const { return debugTex; }

@@ -39,10 +39,7 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::fun
         bool update = false;
         const bool useBullet = bulletIfEmpty && fields.empty();
         if (!remove && ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
-            for (Field& field : fields) {
-                if (field.isAnimatable()) ui::drawKeyframeButton(field);
-                update |= ui::drawField(field, std::format("##{}", field.getId().string()));
-            }
+            ui::drawGroupedFields(fields, std::format("##{}", header));
             update |= extra(component, registry, e);
         }
         ComponentUiRegistry::endDraw();
@@ -163,10 +160,7 @@ void ComponentUiRegistry::init() {
             ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", shader.getError().c_str());
 
         bool update = pathChanged;
-        for (Field& param : shader.getParams()) {
-            if (param.isAnimatable()) ui::drawKeyframeButton(param);
-            update |= ui::drawField(param, "##" + param.getId().string());
-        }
+        update |= ui::drawGroupedFields(shader.getParams(), std::format("##{}", header));
         return update;
     });
 }

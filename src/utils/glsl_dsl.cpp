@@ -51,13 +51,16 @@ bool GlslDsl::isIdentTok(size_t i) const { return i < tokens.size() && tokens[i]
 bool GlslDsl::isIdent(size_t i, const std::string& text) const { return isIdentTok(i) && tokens[i].text == text; }
 bool GlslDsl::isSymbol(size_t i, char c) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Symbol && tokens[i].text[0] == c; }
 
-std::string GlslDsl::mangle(const std::string& name, int scopeId) const {
-    return scopeId == 0 ? std::format("{}{}", manglePrefix, name) : std::format("{}{}_{}", manglePrefix, scopeId, name);
+std::string GlslDsl::mangle(const std::string& group, const std::string& name, int scopeId) const {
+    std::string prefix = manglePrefix;
+    if (scopeId != 0) prefix = std::format("{}{}_", prefix, scopeId);
+    if (!group.empty()) prefix = std::format("{}{}_", prefix, group);
+    return std::format("{}{}", prefix, name);
 }
 
-void GlslDsl::declare(const std::string& name, int scopeId) {
+void GlslDsl::declare(const std::string& group, const std::string& name, int scopeId) {
     for (Scope& s : scopes)
-        if (s.id == scopeId) { s.names[name] = mangle(name, scopeId); return; }
+        if (s.id == scopeId) { s.names[name] = mangle(group, name, scopeId); return; }
 }
 
 void GlslDsl::pushScope() { scopes.push_back({ nextScopeId++, {} }); }
@@ -88,23 +91,23 @@ bool GlslDsl::tryDeclaration(int scopeId) {
 
     for (size_t i = pos; i < typePos; i++) resolveToken(i);
     resolveToken(typePos);
-    declare(tokens[namePos].text, scopeId);
-    tokens[namePos].text = mangle(tokens[namePos].text, scopeId);
+    declare("", tokens[namePos].text, scopeId);
+    tokens[namePos].text = mangle("", tokens[namePos].text, scopeId);
     pos = namePos + 1;
     return true;
 }
 
 void GlslDsl::step() {
     if (isSymbol(pos, '#') && isIdent(pos + 1, "define") && isIdentTok(pos + 2)) {
-        declare(tokens[pos + 2].text, 0);
-        tokens[pos + 2].text = mangle(tokens[pos + 2].text, 0);
+        declare("", tokens[pos + 2].text, 0);
+        tokens[pos + 2].text = mangle("", tokens[pos + 2].text, 0);
         pos += 3;
         return;
     }
 
     if (isIdent(pos, "struct") && isIdentTok(pos + 1) && isSymbol(pos + 2, '{')) {
-        declare(tokens[pos + 1].text, 0);
-        tokens[pos + 1].text = mangle(tokens[pos + 1].text, 0);
+        declare("", tokens[pos + 1].text, 0);
+        tokens[pos + 1].text = mangle("", tokens[pos + 1].text, 0);
         pos += 3;
         int depth = 1;
         while (pos < tokens.size() && depth > 0) {
@@ -121,8 +124,8 @@ void GlslDsl::step() {
         const bool isMain = tokens[pos].text == "void" && tokens[pos + 1].text == "main" && isSymbol(pos + 3, ')');
 
         resolveToken(pos);
-        declare(tokens[pos + 1].text, 0);
-        tokens[pos + 1].text = mangle(tokens[pos + 1].text, 0);
+        declare("", tokens[pos + 1].text, 0);
+        tokens[pos + 1].text = mangle("", tokens[pos + 1].text, 0);
         pos += 3;
 
         pushScope();
@@ -163,7 +166,7 @@ void GlslDsl::step() {
     }
 }
 
-void GlslDsl::mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::string>& globalNames) {
+void GlslDsl::mangleBody(const std::string& body, const std::string& prefix, const std::vector<std::pair<std::string, std::string>>& globalNames) {
     tokens = tokenize(body);
     manglePrefix = prefix;
     pos = 0;
@@ -172,7 +175,7 @@ void GlslDsl::mangleBody(const std::string& body, const std::string& prefix, con
     entryPointFound = false;
     mainFuncStart = mainFuncEnd = mainBodyStart = mainBodyEnd = 0;
 
-    for (const std::string& name : globalNames) declare(name, 0);
+    for (const auto& [group, name] : globalNames) declare(group, name, 0);
     while (pos < tokens.size()) step();
 
     declarations.clear();
@@ -205,7 +208,8 @@ bool GlslDsl::parse(const std::filesystem::path& path, const Options& options) {
 
     bool hasVersion = false;
     std::string body;
-    std::vector<std::string> globalNames;
+    std::string group = "";
+    std::vector<std::pair<std::string, std::string>> globalNames;
 
     for (const std::string& line : split(buffer.str(), '\n')) {
         std::string trimmed = trim(line);
@@ -214,10 +218,17 @@ bool GlslDsl::parse(const std::filesystem::path& path, const Options& options) {
         if (trimmed.empty()) continue;
 
         if (trimmed.starts_with("#param ")) {
-            paramLines.push_back(trimmed);
+            paramLines.push_back({ group, trimmed });
             std::istringstream iss(trimmed.substr(7));
             std::string type, name;
-            if (iss >> type >> name) globalNames.push_back(name.substr(0, name.find_first_of("=:")));
+            if (iss >> type >> name) {
+                name = name.substr(0, name.find_first_of("=:"));
+                globalNames.push_back({ group, name });
+            }
+        } else if (trimmed.starts_with("#group ")) {
+            std::istringstream iss(trimmed.substr(7));
+            trimmed = trimmed.substr(trimmed.find("\"")+1);
+            group = trimmed.substr(0, trimmed.find("\""));
         } else if (trimmed.starts_with("#material") && trimmed.find(':') != std::string::npos) {
             const std::vector<float> version = parseNumbers(trimmed);
             hasVersion = !version.empty() && static_cast<int>(version[0]) == options.expectedVersion;

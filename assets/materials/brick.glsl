@@ -1,27 +1,33 @@
 #material: version(1)
 
 #param float scale = 0.25: min(0)
-#param float brickHeight = 0.4: min(0), max(1), animatable
+#param float brickHeight = 0.4: min(0), max(1)
 
+#group "Random"
 #param float randomLineTranslation = 0.1: animatable
 #param float randomWidth = 0.2: min(0), max(0.8)
 #param float randomWiggle = 0.1: min(0), max(0.2)
 
+#group "Brick"
 #param vec3 brickColor = vec3(0.9, 0.15, 0.05): color
 #param float randomBrickColorVariation = 0.1: min(0), max(1)
 
+#group "Cement"
 #param vec3 cementColor = vec3(0.5): color
 #param float cementWidth = 0.08: min(0), max(0.1)
 
+#group "Dirst"
 #param bool hasDirt = false
 #param vec3 dirtColor = vec3(0.05, 0.15, 0): color
 #param float dirtHeight = 0.5: min(0), max(1)
 #param float dirtFalloff = 0.2: min(0), max(0.5)
 
+#group "Border"
 #param bool hasBorder = false
 #param vec3 borderColor = vec3(0): color
 #param float borderWidth = 0.02: min(0), max(0.1)
 
+#group "Tag"
 #param bool hasTag = false
 #param vec3 tagColor = vec3(0, 1, 0): color
 #param int tagValue = 42: min(0), max(99)

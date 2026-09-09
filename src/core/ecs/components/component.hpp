@@ -79,7 +79,7 @@ private:
 
     const ComponentType* type;
     std::vector<Field> fields;
-    std::unordered_map<std::string, size_t> fieldIndex;
+    std::unordered_map<FieldPath, size_t> fieldIndex;
     std::vector<std::unique_ptr<void, std::function<void(void*)>>> payloads;
 };
 

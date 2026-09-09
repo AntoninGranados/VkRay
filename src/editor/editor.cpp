@@ -16,6 +16,11 @@ Editor& Editor::get() {
 
 void Editor::init() { get().inputHandler.initCallbacks(); }
 
+void Editor::terminate() {
+    get().editorRenderer.destroy();
+    get().materialPreview.destroy();
+}
+
 EditorUi& Editor::getUi() { return get().ui; }
 EditorRenderer& Editor::getEditorRenderer() { return get().editorRenderer; }
 MaterialPreview& Editor::getMaterialPreview() { return get().materialPreview; }

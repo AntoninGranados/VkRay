@@ -6,6 +6,7 @@
 #include "nlohmann/json.hpp"
 
 #include "core/core.hpp"
+#include "core/fields/field_serializer.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -14,21 +15,13 @@ static constexpr int kParameterVersion = 1;
 namespace {
 
 template <typename T>
-T readJsonVec(const json& arr) {
-    T v{};
-    for (int i = 0; i < T::length(); i++)
-        v[i] = arr[static_cast<size_t>(i)].get<typename T::value_type>();
-    return v;
-}
-
-template <typename T>
 Parameter& parseVecNode(
     const json& obj, ParameterRegistry& parameters, const std::string& path,
-    const std::string& label, bool restart, T defMin, T defMax, float step
+    const std::string& label, bool restart, FieldType type, T defMin, T defMax, float step
 ) {
-    T val = readJsonVec<T>(obj.at("default"));
-    T mn = obj.contains("min") ? readJsonVec<T>(obj.at("min")) : defMin;
-    T mx = obj.contains("max") ? readJsonVec<T>(obj.at("max")) : defMax;
+    T val = fieldValueFromJson(obj.at("default"), type).get<T>();
+    T mn = obj.contains("min") ? fieldValueFromJson(obj.at("min"), type).get<T>() : defMin;
+    T mx = obj.contains("max") ? fieldValueFromJson(obj.at("max"), type).get<T>() : defMax;
     NumericMeta meta;
     meta.min = static_cast<float>(mn[0]);
     meta.max = static_cast<float>(mx[0]);
@@ -112,14 +105,14 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
             int n = static_cast<int>(def.size());
             if (!isFloat) {
                 const int lo = std::numeric_limits<int>::lowest(), hi = std::numeric_limits<int>::max();
-                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec2(lo), glm::ivec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec3(lo), glm::ivec3(hi), step);
-                else             parameter = &parseVecNode(obj, parameters, path, label, restart, glm::ivec4(lo), glm::ivec4(hi), step);
+                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec2, glm::ivec2(lo), glm::ivec2(hi), step);
+                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec3, glm::ivec3(lo), glm::ivec3(hi), step);
+                else             parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec4, glm::ivec4(lo), glm::ivec4(hi), step);
             } else {
                 const float lo = std::numeric_limits<float>::lowest(), hi = std::numeric_limits<float>::max();
-                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec2(lo), glm::vec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec3(lo), glm::vec3(hi), step);
-                else             parameter = &parseVecNode(obj, parameters, path, label, restart, glm::vec4(lo), glm::vec4(hi), step);
+                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec2, glm::vec2(lo), glm::vec2(hi), step);
+                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec3, glm::vec3(lo), glm::vec3(hi), step);
+                else             parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec4, glm::vec4(lo), glm::vec4(hi), step);
             }
         }
 

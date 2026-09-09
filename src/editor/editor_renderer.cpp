@@ -164,6 +164,12 @@ void EditorRenderer::registerImGuiTextures() {
     );
 }
 
+void EditorRenderer::destroy() {
+    outputTex  = ui::ImGuiTexture();
+    displayTex = ui::ImGuiTexture();
+    debugTex   = ui::ImGuiTexture();
+}
+
 void EditorRenderer::resize(VkExtent2D renderExt, VkExtent2D viewportExt) {
     VkSmol& engine = Core::getEngine();
     renderExtent   = renderExt;

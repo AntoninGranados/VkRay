@@ -16,6 +16,7 @@
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
+#include "core/fields/field_serializer.hpp"
 #include "scene.hpp"
 #include "utils/json_dsl.hpp"
 #include "utils/log.hpp"
@@ -53,66 +54,12 @@ const char* toStr(const std::pair<const char*, T> (&table)[N], T e) {
     std::unreachable();
 }
 
-json valueToJson(const FieldValue& f) {
-    switch (f.getType()) {
-        case FieldType::Bool:   return f.get<bool>();
-        case FieldType::Int:
-        case FieldType::Enum:   return f.get<int>();
-        case FieldType::Float:  return f.get<float>();
-        case FieldType::IVec2: { auto v = f.get<glm::ivec2>(); return json{v.x, v.y}; }
-        case FieldType::IVec3: { auto v = f.get<glm::ivec3>(); return json{v.x, v.y, v.z}; }
-        case FieldType::IVec4: { auto v = f.get<glm::ivec4>(); return json{v.x, v.y, v.z, v.w}; }
-        case FieldType::Vec2:  { auto v = f.get<glm::vec2>(); return json{v.x, v.y}; }
-        case FieldType::Vec3:  { auto v = f.get<glm::vec3>(); return json{v.x, v.y, v.z}; }
-        case FieldType::Vec4:  { auto v = f.get<glm::vec4>(); return json{v.x, v.y, v.z, v.w}; }
-        case FieldType::Quat:  { auto v = f.get<glm::quat>(); return json{v.x, v.y, v.z, v.w}; }
-        case FieldType::Entity: return nullptr;
-        case FieldType::String: return trimmed(f.get<std::string>());
-        case FieldType::Path:   return f.get<std::filesystem::path>().string();
-    }
-    std::unreachable();
-}
-
-void applyField(const json& j, Field& f, const ResolveCtx& ctx) {
-    switch (f.getType()) {
-        case FieldType::Bool:   f.set<bool>(j.get<bool>()); break;
-        case FieldType::Int:
-        case FieldType::Enum:   f.set<int>(j.is_number_integer() ? j.get<int>() : static_cast<int>(std::round(resolveFloat(j, ctx)))); break;
-        case FieldType::IVec2:  if (expectArray(j, 2, f.getId())) f.set<glm::ivec2>({j[0].get<int>(), j[1].get<int>()}); break;
-        case FieldType::IVec3:  if (expectArray(j, 3, f.getId())) f.set<glm::ivec3>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>()}); break;
-        case FieldType::IVec4:  if (expectArray(j, 4, f.getId())) f.set<glm::ivec4>({j[0].get<int>(), j[1].get<int>(), j[2].get<int>(), j[3].get<int>()}); break;
-        case FieldType::Float:  f.set<float>(resolveFloat(j, ctx)); break;
-        case FieldType::Vec2:   f.set<glm::vec2>(resolveVec2(j, ctx)); break;
-        case FieldType::Vec3:   f.set<glm::vec3>(resolveVec3(j, ctx)); break;
-        case FieldType::Vec4:   if (expectArray(j, 4, f.getId())) f.set<glm::vec4>({resolveFloat(j[0], ctx), resolveFloat(j[1], ctx), resolveFloat(j[2], ctx), resolveFloat(j[3], ctx)}); break;
-        case FieldType::Quat:   if (expectArray(j, 4, f.getId())) f.set<glm::quat>(glm::quat(j[3].get<float>(), j[0].get<float>(), j[1].get<float>(), j[2].get<float>())); break;
-        case FieldType::Entity: break;
-        case FieldType::String: f.set<std::string>(resolveTemplate(j.get<std::string>(), ctx)); break;
-        case FieldType::Path:   f.set<std::filesystem::path>(j.get<std::string>()); break;
-    }
-}
-
-FieldValue toFieldValue(const json& v, FieldType type) {
-    switch (type) {
-        case FieldType::Bool:  return FieldValue::make(v.get<bool>());
-        case FieldType::Int:
-        case FieldType::Enum:  return FieldValue::make(v.get<int>());
-        case FieldType::Float: return FieldValue::make(v.get<float>());
-        case FieldType::Vec2:  return FieldValue::make(glm::vec2{v[0].get<float>(), v[1].get<float>()});
-        case FieldType::Vec3:  return FieldValue::make(glm::vec3{v[0].get<float>(), v[1].get<float>(), v[2].get<float>()});
-        case FieldType::Vec4:  return FieldValue::make(glm::vec4{v[0].get<float>(), v[1].get<float>(), v[2].get<float>(), v[3].get<float>()});
-        default:
-            Log::error("SceneSerializer", std::format("Unsupported keyframe field type: {}", static_cast<int>(type)));
-            return FieldValue::make(false);
-    }
-}
-
 json serializeKeyframes(const std::map<int, Keyframe>& kfs) {
     json arr = json::array();
     for (const auto& [frame, kf] : kfs) {
         json kfj;
         kfj["frame"] = frame;
-        kfj["value"] = valueToJson(kf.getValue());
+        kfj["value"] = fieldValueToJson(kf.getValue());
         if (kf.getInterpolation() != Interpolation::Linear)
             kfj["ease"] = toStr(kInterpolations, kf.getInterpolation());
         arr.push_back(kfj);
@@ -122,7 +69,7 @@ json serializeKeyframes(const std::map<int, Keyframe>& kfs) {
 
 json serializeField(const Field& f, const std::map<int, Keyframe>& kfs) {
     if (!kfs.empty()) return json{{"anim", serializeKeyframes(kfs)}};
-    return valueToJson(f);
+    return fieldValueToJson(f);
 }
 
 void applyKeyframes(const json& anim, FieldType type, const std::string& fieldId, const std::function<void(int, FieldValue, Interpolation)>& insert) {
@@ -134,33 +81,35 @@ void applyKeyframes(const json& anim, FieldType type, const std::string& fieldId
         const Interpolation interp = kf.contains("ease")
             ? fromStr(kInterpolations, kf["ease"].get<std::string>(), Interpolation::Linear)
             : Interpolation::Linear;
-        insert(kf["frame"].get<int>(), toFieldValue(kf["value"], type), interp);
+        insert(kf["frame"].get<int>(), fieldValueFromJson(kf["value"], type), interp);
     }
 }
 
 json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, const ecs::Registry& registry) {
     json j = json::object();
     for (Field& f : comp.getFields()) {
+        const std::string id = f.getId().generic_string();
         if (f.getType() == FieldType::Entity) {
             const ecs::Entity referenced = f.get<ecs::Entity>();
             if (referenced != ecs::Entity{} && registry.has(referenced, ecs::Name)) {
                 const std::string name = registry.get(referenced, ecs::Name).get<std::string>("value");
-                if (!name.empty()) j[f.getId()] = name;
+                if (!name.empty()) j[id] = name;
             }
             continue;
         }
-        j[f.getId()] = serializeField(f, animStore.keyframes(f));
+        j[id] = serializeField(f, animStore.keyframes(f));
     }
     return j;
 }
 
 void applyComponent(const json& obj, ecs::Component& comp, AnimationStore& animStore, const ResolveCtx& ctx) {
     for (Field& f : comp.getFields()) {
-        if (!obj.contains(f.getId())) continue;
+        const std::string id = f.getId().generic_string();
+        if (!obj.contains(id)) continue;
         if (f.getType() == FieldType::Entity) continue;
-        const json& val = obj[f.getId()];
+        const json& val = obj[id];
         if (val.is_object() && val.contains("anim") && val["anim"].is_array())
-            applyKeyframes(val["anim"], f.getType(), f.getId(), [&](int frame, FieldValue value, Interpolation interp) {
+            applyKeyframes(val["anim"], f.getType(), id, [&](int frame, FieldValue value, Interpolation interp) {
                 animStore.insert(f, value, frame, interp);
             });
         else
@@ -227,8 +176,9 @@ void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveC
         if (spawn.registry.add(e, type->get()) && value.is_object()) {
             for (const auto& field : spawn.registry.get(e, type->get()).getFields()) {
                 if (field.getType() != FieldType::Entity) continue;
-                if (!value.contains(field.getId()) || !value[field.getId()].is_string()) continue;
-                spawn.deferredEntityFields.push_back({e, &type->get(), field.getId(), resolveTemplate(value[field.getId()].get<std::string>(), resolveCtx)});
+                const std::string id = field.getId().generic_string();
+                if (!value.contains(id) || !value[id].is_string()) continue;
+                spawn.deferredEntityFields.push_back({e, &type->get(), id, resolveTemplate(value[id].get<std::string>(), resolveCtx)});
             }
             applyComponent(value, spawn.registry.get(e, type->get()), spawn.animStore, resolveCtx);
         }

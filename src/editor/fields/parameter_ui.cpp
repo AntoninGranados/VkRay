@@ -1,9 +1,11 @@
 #include "parameter_ui.hpp"
 
-#include <algorithm>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "core/fields/parameters.hpp"
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
@@ -13,14 +15,6 @@
 namespace ParameterUI {
 
 namespace {
-
-struct ParameterItem {
-    Parameter* parameter = nullptr;
-    FieldPath id;
-    bool collapsible = false;
-    std::optional<ParameterCondition> condition;
-    std::vector<ParameterItem> children;
-};
 
 bool drawParameter(Parameter& p) {
     ImGui::PushID(p.getId().c_str());
@@ -37,90 +31,64 @@ bool drawParameter(Parameter& p) {
     return changed;
 }
 
-std::vector<ParameterItem> buildItems(const FieldPath& prefix) {
-    ParameterRegistry& parameters = Core::getParameters();
-    std::vector<ParameterItem> items;
-    std::unordered_map<std::string, size_t> conditionGroups;
-
-    for (const auto& param : parameters.getAll()) {
-        if (param->getId().parent_path() != prefix) continue;
-        if (!param->getCondition()) {
-            items.push_back({ .parameter = param.get() });
-            continue;
-        }
-        const auto& cond = *param->getCondition();
-        const std::string key = cond.param.string();
-        if (!conditionGroups.contains(key)) {
-            conditionGroups[key] = items.size();
-            items.push_back({ .condition = cond });
-        }
-        items[conditionGroups.at(key)].children.push_back({ .parameter = param.get() });
-    }
-
-    std::vector<std::string> seen;
-    for (const auto& param : parameters.getAll()) {
-        const auto rel = param->getId().lexically_relative(prefix);
-        if (rel.empty()) continue;
-        const std::string seg = rel.begin()->string();
-        if (seg == "..") continue;
-        if (std::next(rel.begin()) == rel.end()) continue;
-        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
-        seen.push_back(seg);
-        items.push_back({
-            .id = prefix / seg,
-            .collapsible = true,
-            .children = buildItems(prefix / seg)
-        });
-    }
-
-    return items;
+std::string groupLabel(const FieldPath& id) {
+    const auto& labels = Core::getParameters().getNodeLabels();
+    auto it = labels.find(id.generic_string());
+    return it != labels.end() ? it->second : id.filename().string();
 }
 
-void drawItem(ParameterItem& item, bool& changed, bool& restartNeeded) {
-    if (item.parameter) {
-        if (drawParameter(*item.parameter)) {
-            changed = true;
-            if (item.parameter->isRestartingAnimation()) restartNeeded = true;
+void clusterByCondition(std::vector<ui::FieldGroup>& groups) {
+    std::vector<ui::FieldGroup> result;
+    std::unordered_map<std::string, size_t> conditionGroups;
+
+    for (auto& item : groups) {
+        Parameter* param = item.field ? static_cast<Parameter*>(item.field) : nullptr;
+        if (!param || !param->getCondition()) {
+            result.push_back(std::move(item));
+            continue;
         }
-        return;
+
+        const ParameterCondition& cond = *param->getCondition();
+        const std::string key = cond.param.string();
+        if (!conditionGroups.contains(key)) {
+            conditionGroups[key] = result.size();
+            ui::FieldGroup group;
+            group.showHeader = false;
+            group.disabledWhen = [cond] { return Core::getParameters().get<bool>(cond.param) != cond.when; };
+            result.push_back(std::move(group));
+        }
+        result[conditionGroups.at(key)].children.push_back(std::move(item));
     }
 
-    if (item.collapsible) {
-        ParameterRegistry& parameters = Core::getParameters();
-        const auto& labels = parameters.getNodeLabels();
-        auto it = labels.find(item.id.generic_string());
-        const std::string& label = it != labels.end() ? it->second : item.id.filename().string();
-        ImGui::SeparatorText(label.c_str());
-    }
-
-    bool conditionMet = !item.condition ||
-        (Core::getParameters().get<bool>(item.condition->param) == item.condition->when);
-
-    float lineX = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
-    float startY = ImGui::GetCursorScreenPos().y;
-    ImGui::Indent();
-    if (!conditionMet) ImGui::BeginDisabled();
-    for (auto& child : item.children)
-        drawItem(child, changed, restartNeeded);
-    if (!conditionMet) ImGui::EndDisabled();
-    float endY = ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y;
-    ImGui::Unindent();
-    ui::drawIndentLine(lineX, startY, endY);
+    groups = std::move(result);
+    for (auto& item : groups)
+        if (item.showHeader) clusterByCondition(item.children);
 }
 
 } // namespace
 
 void drawGroup(const FieldPath& root) {
-    static ParameterItem cached;
+    static std::vector<ui::FieldGroup> cached;
 
-    if (cached.children.empty())
-        cached.children = buildItems("");
+    if (cached.empty()) {
+        std::vector<Field*> ptrs;
+        for (const auto& param : Core::getParameters().getAll()) ptrs.push_back(param.get());
+        cached = ui::buildFieldGroups(ptrs);
+        clusterByCondition(cached);
+    }
 
-    for (auto& child : cached.children) {
+    for (auto& child : cached) {
         if (child.id != root) continue;
-        bool changed = false, restartNeeded = false;
-        for (auto& item : child.children)
-            drawItem(item, changed, restartNeeded);
+
+        bool restartNeeded = false;
+        auto drawLeaf = [&](Field& field, const std::string&) {
+            Parameter& param = static_cast<Parameter&>(field);
+            const bool changed = drawParameter(param);
+            if (changed && param.isRestartingAnimation()) restartNeeded = true;
+            return changed;
+        };
+
+        ui::drawFieldGroups(child.children, "", drawLeaf, groupLabel);
         if (restartNeeded) Core::markRenderDirty();
         return;
     }

@@ -46,6 +46,7 @@ void Application::run() {
 }
 
 Application::~Application() {
+    if (!platform->isHeadless()) Editor::terminate();
     Core::terminate();
 }
 

@@ -13,6 +13,7 @@ class Editor {
 public:
     static void init();
     static void run();
+    static void terminate();
 
     static EditorUi& getUi();
     static EditorRenderer& getEditorRenderer();

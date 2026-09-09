@@ -8,6 +8,7 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "core/fields/field.hpp"
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
@@ -64,6 +65,8 @@ bool drawField(Field& field, const std::string& widgetId) {
 
     const std::vector<FieldPreset>* presets = field.getPresets();
     const bool hasPresets = presets != nullptr && !presets->empty();
+
+    if (field.isAnimatable()) ui::drawKeyframeButton(field);
 
     if (hasPresets) {
         ImGui::Text("%s", field.getLabel().c_str());
@@ -254,6 +257,75 @@ bool drawField(Field& field, const std::string& widgetId) {
         }
     }
     return changed;
+}
+
+std::vector<FieldGroup> buildFieldGroups(const std::vector<Field*>& fields, const FieldPath& prefix) {
+    std::vector<FieldGroup> groups;
+
+    for (Field* field : fields) {
+        if (field->getId().parent_path() != prefix) continue;
+        groups.push_back({ .field = field });
+    }
+
+    std::vector<std::string> seen;
+    for (Field* field : fields) {
+        const auto rel = field->getId().lexically_relative(prefix);
+        if (rel.empty()) continue;
+        const std::string seg = rel.begin()->string();
+        if (seg == "..") continue;
+        if (std::next(rel.begin()) == rel.end()) continue;
+        if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
+        seen.push_back(seg);
+        groups.push_back({
+            .id = prefix / seg,
+            .children = buildFieldGroups(fields, prefix / seg)
+        });
+    }
+
+    return groups;
+}
+
+bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetId,
+                      const DrawFieldLeaf& drawLeaf, const FieldGroupLabel& label) {
+    bool changed = false;
+
+    for (auto& item : groups) {
+        if (item.field) {
+            changed |= drawLeaf(*item.field, widgetId);
+            continue;
+        }
+
+        if (item.showHeader) {
+            const std::string text = label ? label(item.id) : item.id.filename().string();
+            ImGui::SeparatorText(text.c_str());
+        }
+
+        const float lineX = ImGui::GetCursorScreenPos().x + ImGui::GetStyle().IndentSpacing * 0.5f;
+        const float startY = ImGui::GetCursorScreenPos().y;
+        ImGui::Indent();
+
+        const bool disabled = item.disabledWhen && item.disabledWhen();
+        if (disabled) ImGui::BeginDisabled();
+        changed |= drawFieldGroups(item.children, widgetId, drawLeaf, label);
+        if (disabled) ImGui::EndDisabled();
+
+        const float endY = ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y;
+        ImGui::Unindent();
+        ui::drawIndentLine(lineX, startY, endY);
+    }
+
+    return changed;
+}
+
+bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId) {
+    std::vector<Field*> ptrs;
+    ptrs.reserve(fields.size());
+    for (Field& field : fields) ptrs.push_back(&field);
+
+    auto groups = buildFieldGroups(ptrs);
+    return drawFieldGroups(groups, widgetId, [](Field& field, const std::string& id) {
+        return drawField(field, std::format("{}##{}", id, field.getId().string()));
+    });
 }
 
 }
