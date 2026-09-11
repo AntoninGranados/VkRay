@@ -39,6 +39,7 @@ struct NumericMeta {
     float max =  std::numeric_limits<float>::infinity();
     float step = 0.0f;
     bool color = false;
+    bool linkable = false;
     std::vector<FieldPreset> presets;
 };
 
@@ -220,10 +221,14 @@ public:
     bool isAnimatable() const { return animatable; }
     void setAnimatable(bool newAnimatable) { animatable = newAnimatable; }
 
+    bool isLinked() const { return linked; }
+    void setLinked(bool newLinked) { linked = newLinked; }
+
 protected:
     FieldPath id;
     std::string label;
     FieldMetadata metadata;
     std::vector<std::byte> defaultValue;
     bool animatable;
+    bool linked = true;
 };

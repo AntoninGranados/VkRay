@@ -58,6 +58,21 @@ void drawKeyframeButton(Field& field) {
     ImGui::SameLine();
 }
 
+void drawCenteredIcon(const char* icon, const ImVec2& rectMin, const ImVec2& rectMax, ImU32 color) {
+    unsigned int codepoint = 0;
+    ImTextCharFromUtf8(&codepoint, icon, nullptr);
+    ImFont* font = ImGui::GetFont();
+    const ImFontGlyph* glyph = font->FindGlyph(static_cast<ImWchar>(codepoint));
+
+    ImVec2 pos((rectMin.x + rectMax.x) * 0.5f, (rectMin.y + rectMax.y) * 0.5f);
+    if (glyph) {
+        const float scale = ImGui::GetFontSize() / font->FontSize;
+        pos.x -= (glyph->X0 + glyph->X1) * 0.5f * scale;
+        pos.y -= (glyph->Y0 + glyph->Y1) * 0.5f * scale;
+    }
+    ImGui::GetWindowDrawList()->AddText(pos, color, icon);
+}
+
 bool beginCenteredModal(const char* name) {
     ImGuiViewport* mainViewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(mainViewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));

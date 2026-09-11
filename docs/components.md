@@ -196,7 +196,7 @@ World-space transform.
 |-------|------|---------|-------------|------------|
 | `position` | vec3 | [0, 0, 0] |  | yes |
 | `rotation` | vec3 | [0, 0, 0] |  | yes |
-| `scale` | vec3 | [1, 1, 1] |  | yes |
+| `scale` | vec3 | [1, 1, 1] | ≥ 1e-08 | yes |
 
 ## Object
 

@@ -43,6 +43,37 @@ std::vector<ecs::Entity> findEntityCandidates(Scene& scene, ecs::Registry& regis
     }
     return candidates;
 }
+
+void drawLinkButton(Field& field) {
+    ImGui::PushID((field.getId().string() + "_link").c_str());
+    const float size = ImGui::GetFrameHeight();
+    const char* icon = field.isLinked() ? ICON_FA_LINK : ICON_FA_LINK_SLASH;
+
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const bool clicked = ImGui::InvisibleButton("##link", ImVec2(size, size));
+    const bool hovered = ImGui::IsItemHovered();
+    const ImVec2 rectMax(pos.x + size, pos.y + size);
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        pos, rectMax,
+        ImGui::GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), ImGui::GetStyle().FrameRounding);
+
+    ui::drawCenteredIcon(icon, pos, rectMax, ImGui::GetColorU32(ImGuiCol_Text));
+
+    if (clicked) field.setLinked(!field.isLinked());
+    ImGui::PopID();
+    ImGui::SameLine();
+}
+
+template<typename Vec>
+Vec linkedRatio(const Vec& oldV, const Vec& newV) {
+    for (int i = 0; i < oldV.length(); i++) {
+        if (newV[i] != oldV[i]) {
+            const float ratio = (oldV[i] != 0.0f) ? newV[i] / oldV[i] : 1.0f;
+            return oldV * ratio;
+        }
+    }
+    return newV;
+}
 } // namespace
 
 bool drawField(Field& field, const std::string& widgetId) {
@@ -145,25 +176,51 @@ bool drawField(Field& field, const std::string& widgetId) {
         }
         case FieldType::Vec2: {
             setup();
-            glm::vec2 v = field.get<glm::vec2>();
+            const glm::vec2 oldV = field.get<glm::vec2>();
+            glm::vec2 v = oldV;
+            if (numMeta && numMeta->linkable) drawLinkButton(field);
+            ImGui::SetNextItemWidth(-FLT_MIN);
             bool c = ImGui::DragFloat2(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
-            if (c) { field.set<glm::vec2>(v); changed = true; }
+            if (c) {
+                if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
+                field.set<glm::vec2>(v);
+                changed = true;
+            }
             return changed;
         }
         case FieldType::Vec3: {
             setup();
-            glm::vec3 v = field.get<glm::vec3>();
-            bool c = (numMeta && numMeta->color)
-                ? ImGui::ColorEdit3(widgetId.c_str(), glm::value_ptr(v))
-                : ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
-            if (c) { field.set<glm::vec3>(v); changed = true; }
+            const glm::vec3 oldV = field.get<glm::vec3>();
+            glm::vec3 v = oldV;
+            bool c;
+            bool linkable = false;
+            if (numMeta && numMeta->color) {
+                c = ImGui::ColorEdit3(widgetId.c_str(), glm::value_ptr(v));
+            } else {
+                linkable = numMeta && numMeta->linkable;
+                if (linkable) drawLinkButton(field);
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
+            }
+            if (c) {
+                if (linkable && field.isLinked()) v = linkedRatio(oldV, v);
+                field.set<glm::vec3>(v);
+                changed = true;
+            }
             return changed;
         }
         case FieldType::Vec4: {
             setup();
-            glm::vec4 v = field.get<glm::vec4>();
+            const glm::vec4 oldV = field.get<glm::vec4>();
+            glm::vec4 v = oldV;
+            if (numMeta && numMeta->linkable) drawLinkButton(field);
+            ImGui::SetNextItemWidth(-FLT_MIN);
             bool c = ImGui::DragFloat4(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
-            if (c) { field.set<glm::vec4>(v); changed = true; }
+            if (c) {
+                if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
+                field.set<glm::vec4>(v);
+                changed = true;
+            }
             return changed;
         }
         case FieldType::String: {

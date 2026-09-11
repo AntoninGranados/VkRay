@@ -85,6 +85,8 @@ inline const ImVec4 kKeyframeOnColor = kDraculaOrange;
 
 void drawKeyframeButton(Field& field);
 
+void drawCenteredIcon(const char* icon, const ImVec2& rectMin, const ImVec2& rectMax, ImU32 color);
+
 inline void drawIndentLine(float x, float startY, float endY) {
     ImGui::GetWindowDrawList()->AddLine(
         { x, startY },

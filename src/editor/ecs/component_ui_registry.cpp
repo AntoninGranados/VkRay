@@ -40,7 +40,7 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::fun
         bool update = false;
         const bool useBullet = bulletIfEmpty && fields.empty();
         if (!remove && ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
-            ui::drawGroupedFields(fields, std::format("##{}", header));
+            update |= ui::drawGroupedFields(fields, std::format("##{}", header));
             update |= extra(component, registry, e);
         }
         ComponentUiRegistry::endDraw();

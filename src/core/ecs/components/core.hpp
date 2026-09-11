@@ -24,7 +24,7 @@ inline const ComponentType Transform = ComponentType::builder("transform")
     .conflicts("material")
     .field<glm::vec3>("position", glm::vec3(0.0f), NumericMeta{ .step = 0.1f }, true)
     .field<glm::vec3>("rotation", glm::vec3(0.0f), NumericMeta{ .step = 0.1f }, true)
-    .field<glm::vec3>("scale", glm::vec3(1.0f), NumericMeta{ .step = 0.1f }, true)
+    .field<glm::vec3>("scale", glm::vec3(1.0f), NumericMeta{ .min = 1e-8f, .step = 0.1f, .linkable = true }, true)
     .build();
 
 }   // namespace ecs
