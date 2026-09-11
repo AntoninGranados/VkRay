@@ -6,8 +6,9 @@
 
 #include "core/core.hpp"
 #include "core/ecs/components/material.hpp"
-#include "core/render/programmable_shader.hpp"
+#include "core/render/material_table.hpp"
 #include "core/scene/scene.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 #include "editor/ui_utils.hpp"
 
 RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {
@@ -55,7 +56,7 @@ const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& regist
     if (registry.has(entity, ecs::Glossy)) return &ecs::Glossy;
     if (registry.has(entity, ecs::Dielectric)) return &ecs::Dielectric;
     if (registry.has(entity, ecs::Volume)) return &ecs::Volume;
-    if (registry.has(entity, ecs::ProgrammableMaterial)) return &ecs::ProgrammableMaterial;
+    if (registry.has(entity, ecs::MaterialPlugin)) return &ecs::MaterialPlugin;
     return nullptr;
 }
 
@@ -73,10 +74,10 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
         const ecs::Component& component = registry.get(entity, *fingerprint.type);
         for (const Field& field : component.getFields())
             fingerprint.fields.push_back(field);
-        if (fingerprint.type == &ecs::ProgrammableMaterial) {
-            const ProgrammableShader& shader = component.payload<ProgrammableShader>("shader");
-            fingerprint.programmableBody = shader.getMainBody();
-            fingerprint.programmableValues = shader.packValues();
+        if (fingerprint.type == &ecs::MaterialPlugin) {
+            const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
+            fingerprint.programmableBody = plugin.getBody();
+            fingerprint.programmableValues = plugin.packValues();
         }
     }
     return fingerprint;
@@ -112,13 +113,14 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
     for (const Field& field : source.getFields())
         preview.getField(field.getId()) = field;
 
-    if (type == ecs::ProgrammableMaterial) {
-        ProgrammableShader& previewShader = preview.payload<ProgrammableShader>("shader");
-        previewShader.parse(source.get<std::filesystem::path>("path"));
+    if (type == ecs::MaterialPlugin) {
+        ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
+        const std::filesystem::path path = source.get<std::filesystem::path>("path");
+        previewPlugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
 
-        const ProgrammableShader& sourceShader = source.payload<ProgrammableShader>("shader");
-        for (const Field& field : sourceShader.getParams())
-            previewShader.getField(field.getId()) = field;
+        const ShaderPlugin& sourcePlugin = source.payload<ShaderPlugin>("plugin");
+        for (const Field& field : sourcePlugin.getComponent().getFields())
+            previewPlugin.getComponent().getField(field.getId()) = field;
     }
 }
 

@@ -7,11 +7,13 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/material.hpp"
-#include "core/render/programmable_shader.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 #include "utils/string_utils.hpp"
 
 namespace {
@@ -24,7 +26,7 @@ struct Entry {
 std::string glslMacroName(const ecs::ComponentType& type, const Field& field) {
     std::string prefix = snakeCaseToPascalCase(type.getId());
     prefix[0] = static_cast<char>(std::tolower(prefix[0]));
-    return prefix + snakeCaseToPascalCase(field.getId());
+    return prefix + snakeCaseToPascalCase(field.getId().string());
 }
 
 bool isPackableField(const Field& field) {
@@ -48,6 +50,33 @@ void packFields(ecs::Component& c, std::vector<float>& params) {
     }
 }
 
+std::string generateGlobalDecls(const ShaderPlugin& plugin) {
+    std::string decls;
+    for (const ShaderPlugin::PluginParam& p : plugin.getParameters())
+        decls += std::format("{} {};\n", p.glslType, p.mangled);
+    return decls;
+}
+
+std::string generateParamAssignments(const ShaderPlugin& plugin) {
+    std::string assignments;
+    int offset = 0;
+    for (const ShaderPlugin::PluginParam& p : plugin.getParameters()) {
+        std::string args;
+        for (int i = 0; i < p.components; i++) {
+            if (i > 0) args += ", ";
+            std::string value = std::format("{}Params.values[base+{}]", MaterialTable::kType, offset + i);
+            if (p.isInt) args += std::format("int({})", value);
+            else if (p.isBool) args += std::format("bool({})", value);
+            else args += value;
+        }
+        assignments += p.components == 1
+            ? std::format("{} = {};\n", p.mangled, args)
+            : std::format("{} = {}({});\n", p.mangled, p.glslType, args);
+        offset += p.components;
+    }
+    return assignments;
+}
+
 const std::vector<Entry>& entries() {
     static const std::vector<Entry> table = {
         { &ecs::Principled },
@@ -57,11 +86,12 @@ const std::vector<Entry>& entries() {
         { &ecs::Glossy },
         { &ecs::Dielectric },
         { &ecs::Volume },
-        { &ecs::ProgrammableMaterial, [](ecs::Component& c) -> std::vector<float> {
-            ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
-            shader.parse(c.get<std::filesystem::path>("path"));
-            std::vector<float> values{ static_cast<float>(shader.getSlot()) };
-            const std::vector<float> packed = shader.packValues();
+        { &ecs::MaterialPlugin, [](ecs::Component& c) -> std::vector<float> {
+            ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
+            const std::filesystem::path path = c.get<std::filesystem::path>("path");
+            plugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
+            std::vector<float> values{ static_cast<float>(plugin.getSlot()) };
+            const std::vector<float> packed = plugin.packValues();
             values.insert(values.end(), packed.begin(), packed.end());
             return values;
         } },
@@ -70,6 +100,12 @@ const std::vector<Entry>& entries() {
 }
 
 } // namespace
+
+int MaterialTable::slotFor(const std::filesystem::path& path) {
+    static std::unordered_map<std::filesystem::path, int> slots;
+    const auto [it, inserted] = slots.try_emplace(path, static_cast<int>(slots.size()));
+    return it->second;
+}
 
 bool MaterialTable::pack(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu, std::vector<float>& params) {
     const std::vector<Entry>& table = entries();
@@ -123,6 +159,64 @@ void MaterialTable::generateGlsl() {
     }
 
     std::filesystem::path outputPath = "./src/shaders/core/materials/generated/material_types.glsl";
+    std::error_code ec;
+    std::filesystem::create_directories(outputPath.parent_path(), ec);
+
+    std::ifstream existing(outputPath);
+    std::stringstream existingBuffer;
+    existingBuffer << existing.rdbuf();
+    if (existingBuffer.str() == content) return;
+
+    std::ofstream(outputPath) << content;
+}
+
+void MaterialTable::generateDispatch() {
+    std::string functions;
+    std::string cases;
+    std::unordered_set<int> emittedSlots;
+
+    for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
+        if (plugin->getType() != MaterialTable::kType) continue;
+        if (!plugin->getError().empty() || plugin->getBody().empty()) continue;
+        if (!emittedSlots.insert(plugin->getSlot()).second) continue;
+
+        const std::string funcName = plugin->getPrefix() + "programmable";
+        functions += std::format(
+            "// ============================= {}{} =============================\n"
+            "{}"
+            "{}"
+            "ResolvedMaterial {} (int base, vec3 pos, vec2 uv, vec3 normal, vec3 wo, RngState rng, inout vec3 new_normal) {{\n"
+            "{}"
+            "ResolvedMaterial mat;\n"
+            "{}"
+            "return mat;\n"
+            "}}\n\n",
+            MaterialTable::kType, plugin->getSlot(), generateGlobalDecls(*plugin), plugin->getDeclarations(), funcName, generateParamAssignments(*plugin), plugin->getBody()
+        );
+        cases += std::format("        case {}: result = {} (base, pos, uv, normal, wo, rng, new_normal); break;\n", plugin->getSlot(), funcName);
+    }
+
+    std::string content = std::format(
+        "// WARN: AUTO-GENERATED by MaterialTable::generateDispatch, do not edit by hand.\n"
+        "// Source: the programmable material scripts loaded into the scene (see assets/materials/).\n"
+        "{}\n"
+        "ResolvedMaterial dispatchProgrammable(in Material mat, inout Hit hit, in vec3 wo, inout RngState rng) {{\n"
+        "    vec3 pos    = hit.p;\n"
+        "    vec3 normal = hit.normal;\n"
+        "    vec2 uv     = hit.uv;\n"
+        "    vec3 new_normal = normal;\n"
+        "    int base = int(mat.base) + 1;\n"
+        "    ResolvedMaterial result = DEFAULT_MATERIAL;\n"
+        "    switch (int({}Params.values[mat.base])) {{\n"
+        "{}"
+        "    }}\n"
+        "    hit.normal = new_normal;\n"
+        "    return result;\n"
+        "}}\n",
+        functions, MaterialTable::kType, cases
+    );
+
+    std::filesystem::path outputPath = "./src/shaders/core/materials/generated/programmable_dispatch.glsl";
     std::error_code ec;
     std::filesystem::create_directories(outputPath.parent_path(), ec);
 

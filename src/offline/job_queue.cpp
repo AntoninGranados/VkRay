@@ -3,6 +3,7 @@
 #include <fstream>
 #include <random>
 #include <stdexcept>
+#include <type_traits>
 
 #include "nlohmann/json.hpp"
 
@@ -60,7 +61,10 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                 std::optional<FieldValue> fv = inferFieldValueFromJson(val);
                 if (!fv) continue;
                 if (fv->getType() == FieldType::String) parameterOverrides.push_back({key, fv->get<std::string>()});
-                else fv->dispatch([&](auto v) { parameterOverrides.push_back({key, v}); });
+                else fv->dispatch([&](auto v) {
+                    if constexpr (std::is_constructible_v<ParameterValue, decltype(v)>)
+                        parameterOverrides.push_back({key, v});
+                });
             }
         }
 

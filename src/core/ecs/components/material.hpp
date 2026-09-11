@@ -8,7 +8,7 @@
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/render/programmable_shader.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 
 namespace ecs {
 
@@ -107,14 +107,14 @@ inline const ComponentType Principled = ComponentType::builder("principled")
     .field<float>("alpha", 1.0f, NumericMeta{ .min = 0.0f, .max = 1.0f, .step = 0.01f }, true)
     .build();
 
-inline const ComponentType ProgrammableMaterial = ComponentType::builder("programmable")
+inline const ComponentType MaterialPlugin = ComponentType::builder("programmable")
     .description("Programmable custom BSDF, defined by a GLSL shader-definition file.")
     .icon(ICON_FA_CODE)
     .group("material")
     .needs("material")
     .conflicts("diffuse", "emissive", "metal", "glossy", "dielectric", "volume", "principled")
     .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Material Shader" }} })
-    .payload<ProgrammableShader>("shader")
+    .payload<ShaderPlugin>("plugin")
     .build();
 
 }   // namespace ecs

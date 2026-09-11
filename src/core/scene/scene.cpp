@@ -15,11 +15,6 @@
 #include "core/ecs/systems/physics/physics_system.hpp"
 #include "utils/log.hpp"
 
-std::vector<ProgrammableShader*>& Scene::getProgrammableShaders() {
-    static std::vector<ProgrammableShader*> shaders;
-    return shaders;
-}
-
 void Scene::init() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();

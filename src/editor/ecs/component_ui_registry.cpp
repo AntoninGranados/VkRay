@@ -4,9 +4,10 @@
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
-#include "core/render/programmable_shader.hpp"
+#include "core/render/material_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 #include "editor/editor.hpp"
 #include "editor/fields/field_ui.hpp"
 #include "editor/ui_utils.hpp"
@@ -146,21 +147,21 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Dielectric);
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
-    ui_reg.addCustom(ecs::ProgrammableMaterial, [](Component& c, Registry&, Entity) {
+    ui_reg.addCustom(ecs::MaterialPlugin, [](Component& c, Registry&, Entity) {
         const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
         if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
         const bool pathChanged = ui::drawField(c.getField("path"), "##path");
 
-        ProgrammableShader& shader = c.payload<ProgrammableShader>("shader");
-        if (pathChanged) shader.reload(c.get<std::filesystem::path>("path"));
-        else shader.parse(c.get<std::filesystem::path>("path"));
+        ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
+        const std::filesystem::path path = c.get<std::filesystem::path>("path");
+        plugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
 
-        if (!shader.getError().empty())
-            ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", shader.getError().c_str());
+        if (!plugin.getError().empty())
+            ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
 
         bool update = pathChanged;
-        update |= ui::drawGroupedFields(shader.getParams(), std::format("##{}", header));
+        update |= ui::drawGroupedFields(plugin.getComponent().getFields(), std::format("##{}", header));
         return update;
     });
 }

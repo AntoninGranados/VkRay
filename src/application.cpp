@@ -17,7 +17,6 @@
 
 #include "core/core.hpp"
 #include "core/render/material_table.hpp"
-#include "core/render/programmable_shader.hpp"
 #include "core/scene/scene_serializer.hpp"
 
 #include "editor/ecs/component_ui_registry.hpp"
@@ -104,7 +103,7 @@ void Application::buildRenderGraph(bool offline) {
     }
 
     MaterialTable::generateGlsl();
-    ProgrammableShader::generateDispatch();
+    MaterialTable::generateDispatch();
 
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();

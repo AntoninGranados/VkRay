@@ -4,7 +4,7 @@
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/fields/parameter_serializer.hpp"
-#include "core/render/programmable_shader.hpp"
+#include "core/render/material_table.hpp"
 
 Core& Core::get() {
     static Core instance;
@@ -102,7 +102,7 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
 
 void Core::reloadShaders() {
     Core& c = get();
-    ProgrammableShader::generateDispatch();
+    MaterialTable::generateDispatch();
     c.coreRenderer.buildPipelines();
     markRenderDirty();
 }

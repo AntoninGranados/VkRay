@@ -44,12 +44,8 @@ struct SceneRoots {
     ecs::Entity internalsRoot;
 };
 
-class ProgrammableShader;
-
 class Scene {
 public:
-    static std::vector<ProgrammableShader*>& getProgrammableShaders();
-
     void init();
     void destroy();
     void clear();

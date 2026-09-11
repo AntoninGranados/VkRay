@@ -17,6 +17,7 @@
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
+#include "core/render/material_table.hpp"
 #include "scene.hpp"
 #include "utils/json_dsl.hpp"
 #include "utils/log.hpp"
@@ -270,11 +271,12 @@ void reloadMeshAssets(ecs::Registry& registry, const Scene& scene) {
     }
 }
 
-void reparseProgrammableMaterials(ecs::Registry& registry, const Scene& scene) {
+void reparseMaterialPlugins(ecs::Registry& registry, const Scene& scene) {
     for (const ecs::Entity entity : scene.getChildren(scene.getMaterialsRoot())) {
-        if (!registry.has(entity, ecs::ProgrammableMaterial)) continue;
-        ecs::Component& programmableComp = registry.get(entity, ecs::ProgrammableMaterial);
-        programmableComp.payload<ProgrammableShader>("shader").parse(programmableComp.get<std::filesystem::path>("path"));
+        if (!registry.has(entity, ecs::MaterialPlugin)) continue;
+        ecs::Component& pluginComp = registry.get(entity, ecs::MaterialPlugin);
+        const std::filesystem::path path = pluginComp.get<std::filesystem::path>("path");
+        pluginComp.payload<ShaderPlugin>("plugin").parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
     }
 }
 
@@ -316,7 +318,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
 
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
-    reparseProgrammableMaterials(spawn.registry, scene);
+    reparseMaterialPlugins(spawn.registry, scene);
     activateFirstNonDefaultCamera(spawn.registry, scene);
 
     spawn.animStore.evaluate(0.0f);
