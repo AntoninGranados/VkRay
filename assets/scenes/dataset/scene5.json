@@ -62,7 +62,7 @@
             }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "SphereMat_{row}_{col}" },
             "name": "Sphere_{row}_{col}",
             "transform": {
@@ -70,7 +70,8 @@
                     { "lerp": { "from": -3, "to": 3, "axis": "col" } },
                     0.65,
                     { "lerp": { "from": -3, "to": 3, "axis": "row" } }
-                ]
+                ],
+                "scale": [0.65, 0.65, 0.65]
             },
             "grid": { "rows": 4, "cols": 4 }
         }

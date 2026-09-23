@@ -205,10 +205,6 @@ Sphere primitive.
 
 **Needs:** `transform` — **Conflicts:** `plane` `box` `mesh_ref` `camera`
 
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `radius` | float | 1 | ≥ 0 | yes |
-
 ### Plane
 Infinite plane primitive.
 

@@ -64,40 +64,40 @@
             }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "Matte" },
             "name": "Matte",
-            "transform": { "position": [-5, 0.65, 0] }
+            "transform": { "position": [-5, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "Plastic" },
             "name": "Plastic",
-            "transform": { "position": [-3, 0.65, 0] }
+            "transform": { "position": [-3, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "Ceramic" },
             "name": "Ceramic",
-            "transform": { "position": [-1, 0.65, 0] }
+            "transform": { "position": [-1, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "Metal" },
             "name": "Metal",
-            "transform": { "position": [1, 0.65, 0] }
+            "transform": { "position": [1, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "RoughMetal" },
             "name": "RoughMetal",
-            "transform": { "position": [3, 0.65, 0] }
+            "transform": { "position": [3, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         },
         {
-            "sphere": { "radius": 0.65 },
+            "sphere": {},
             "material_ref": { "handle": "Glass" },
             "name": "Glass",
-            "transform": { "position": [5, 0.65, 0] }
+            "transform": { "position": [5, 0.65, 0], "scale": [0.65, 0.65, 0.65] }
         }
     ]
 }

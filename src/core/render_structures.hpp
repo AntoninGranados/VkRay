@@ -44,12 +44,11 @@ struct alignas(16) TiltShiftUBO {
 };
 
 struct alignas(16) CameraUBO {
-    alignas(16) glm::vec3 eye;
-    alignas(16) glm::vec3 U;
-    alignas(16) glm::vec3 V;
-    alignas(16) glm::vec3 W;
+    float U;
+    float V;
     ThinLensUBO thinLens;
     TiltShiftUBO tiltShift;
+    uint32_t motionOffset;
 };
 
 struct alignas(16) ScreenUBO {

@@ -127,16 +127,16 @@
             }
         },
         {
-            "sphere": { "radius": 1.0 },
+            "sphere": {},
             "material_ref": { "handle": "GlassLarge" },
             "name": "GlassBall",
-            "transform": { "position": [-0.5, 1.1, 0] }
+            "transform": { "position": [-0.5, 1.1, 0], "scale": [1, 1, 1] }
         },
         {
-            "sphere": { "radius": 0.5 },
+            "sphere": {},
             "material_ref": { "handle": "GlassSmall" },
             "name": "GlassSmall",
-            "transform": { "position": [1.4, 0.6, 0.8] }
+            "transform": { "position": [1.4, 0.6, 0.8], "scale": [0.5, 0.5, 0.5] }
         }
     ]
 }

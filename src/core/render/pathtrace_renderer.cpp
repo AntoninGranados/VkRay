@@ -43,10 +43,6 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     );
 
     // Scene buffers must be created before passes so binding slots can be declared
-    resources.sceneHandles.sphere = { builder.createBuffer(tag + "SceneSphereBuffer", 16 * sizeof(GpuSphere), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.plane = { builder.createBuffer(tag + "ScenePlaneBuffer", 16 * sizeof(GpuPlane), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.box = { builder.createBuffer(tag + "SceneBoxBuffer", 16 * sizeof(GpuBox), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
-    resources.sceneHandles.quad = { builder.createBuffer(tag + "SceneQuadBuffer", 16 * sizeof(GpuQuad), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.vertex = { builder.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.index = { builder.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.bvh = { builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
@@ -55,6 +51,8 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     resources.sceneHandles.materialParams = { builder.createBuffer(tag + "SceneMaterialParamsBuffer", 16 * sizeof(float), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.object = { builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
     resources.sceneHandles.light = { builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.motion = { builder.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
+    resources.sceneHandles.liveMotion = { builder.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT), 16 };
 
     // Pathtracing pass
     ComputePassBuilder pathtrace = builder.addComputePass(tag + "PathtracingPass");
@@ -63,20 +61,17 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.readBuffer(0, pathtracingUBOHandle, BufferUsageType::Uniform);
     pathtrace.readImage(1, previousPathtracingImageHandle, ImageUsageType::Sampled);
     pathtrace.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    pathtrace.readBuffer(3, resources.sceneHandles.sphere.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(4, resources.sceneHandles.plane.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(5, resources.sceneHandles.box.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(6, resources.sceneHandles.quad.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(7, resources.sceneHandles.vertex.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(8, resources.sceneHandles.index.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(9, resources.sceneHandles.bvh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(10, resources.sceneHandles.mesh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(11, resources.sceneHandles.material.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(12, resources.sceneHandles.materialParams.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(13, resources.sceneHandles.object.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(14, resources.sceneHandles.light.handle, BufferUsageType::Storage);
-    pathtrace.writeImage(15, currentPathtracingImageHandle, ImageUsageType::Storage);
-    pathtrace.readImage(16, lensImageHandle, ImageUsageType::Sampled);
+    pathtrace.readBuffer(3, resources.sceneHandles.vertex.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(4, resources.sceneHandles.index.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(5, resources.sceneHandles.bvh.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(6, resources.sceneHandles.mesh.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(7, resources.sceneHandles.material.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(8, resources.sceneHandles.materialParams.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(9, resources.sceneHandles.object.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(10, resources.sceneHandles.light.handle, BufferUsageType::Storage);
+    pathtrace.writeImage(11, currentPathtracingImageHandle, ImageUsageType::Storage);
+    pathtrace.readImage(12, lensImageHandle, ImageUsageType::Sampled);
+    pathtrace.readBuffer(13, resources.sceneHandles.motion.handle, BufferUsageType::Storage);
     pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
     pathtracingTimestamp = pathtrace.setTimestamp();
 

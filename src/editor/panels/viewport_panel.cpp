@@ -172,35 +172,29 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
         const ecs::Component& transform = transformStorage.get(e);
         const glm::vec3 tPos = transform.get<glm::vec3>("position");
         const glm::quat tRot = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos)
+            * glm::mat4_cast(tRot)
+            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
         float t = -1.0f;
 
         if (scene.getRegistry().has(e, ecs::Sphere)) {
-            t = raySphereIntersection(ray, tPos, scene.getRegistry().get(e, ecs::Sphere).get<float>("radius"));
+            t = raySphereIntersection(ray, local);
         } else if (planeStorage.has(e)) {
-            t = rayPlaneIntersection(ray, tPos, glm::normalize(tRot * glm::vec3(0.0f, 1.0f, 0.0f)));
+            t = rayPlaneIntersection(ray, local);
         } else if (boxStorage.has(e)) {
-            const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos)
-                * glm::mat4_cast(tRot)
-                * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
             t = rayBoxIntersection(ray, local);
         } else if (quadStorage.has(e)) {
-            const glm::vec3 scale = transform.get<glm::vec3>("scale");
-            const glm::vec3 u = tRot * glm::vec3(1.0f, 0.0f, 0.0f) * scale.x;
-            const glm::vec3 v = tRot * glm::vec3(0.0f, 1.0f, 0.0f) * scale.y;
-            const glm::vec3 normal = tRot * glm::vec3(0.0f, 0.0f, 1.0f);
-            t = rayQuadIntersection(ray, tPos - 0.5f * (u + v), u, v, normal);
+            t = rayQuadIntersection(ray, local);
         } else if (meshRefs.has(e)) {
             const ecs::Entity meshEntity = meshRefs.get(e).get<ecs::Entity>("handle");
             if (const MeshAsset* asset = scene.getMeshAsset(meshEntity)) {
-                const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos)
-                    * glm::mat4_cast(tRot)
-                    * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
                 t = rayMeshIntersection(ray, local, asset->getVertices(), asset->getIndices());
             }
         } else if (includeCameras && cameraStorage.has(e)) {
             if (activeCamera == e) continue;
             constexpr float cameraSelectRadius = 0.6f;
-            t = raySphereIntersection(ray, tPos, cameraSelectRadius);
+            const glm::mat4 cameraLocal = glm::translate(glm::mat4(1.0f), tPos) * glm::scale(glm::mat4(1.0f), glm::vec3(cameraSelectRadius));
+            t = raySphereIntersection(ray, cameraLocal);
         }
 
         if (t >= 0.0f && t < tClosest) {

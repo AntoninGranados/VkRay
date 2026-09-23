@@ -23,10 +23,6 @@ struct SceneGpuBufferEntry {
 };
 
 struct SceneGpuBuffers {
-    SceneGpuBufferEntry sphere;
-    SceneGpuBufferEntry plane;
-    SceneGpuBufferEntry box;
-    SceneGpuBufferEntry quad;
     SceneGpuBufferEntry vertex;
     SceneGpuBufferEntry index;
     SceneGpuBufferEntry bvh;
@@ -35,6 +31,12 @@ struct SceneGpuBuffers {
     SceneGpuBufferEntry materialParams;
     SceneGpuBufferEntry object;
     SceneGpuBufferEntry light;
+    SceneGpuBufferEntry motion;
+    SceneGpuBufferEntry liveMotion;
+};
+
+struct CameraMotionInfo {
+    uint32_t motionOffset = 0;
 };
 
 struct SceneRoots {

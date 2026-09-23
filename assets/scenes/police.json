@@ -85,12 +85,12 @@
             "material_ref": { "handle": "VertexColor" }
         },
         {
-            "sphere": { "radius": 20.0 },
+            "sphere": {},
             "name": "Sun",
             "transform": {
                 "position": [200.0, 20.0, -100.0],
                 "rotation": [0.0, -0.0, 0.0],
-                "scale": [1.0, 1.0, 1.0]
+                "scale": [20.0, 20.0, 20.0]
             },
             "material_ref": { "handle": "Sun" }
         }

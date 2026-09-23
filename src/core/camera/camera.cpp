@@ -12,6 +12,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "core/core.hpp"
+#include "core/scene/scene.hpp"
 
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
     return glm::normalize(glm::quat(glm::radians(rotationEuler)) * glm::vec3(0.0f, 0.0f, -1.0f));
@@ -94,18 +95,11 @@ float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
 }
 
 CameraUBO buildCameraUBO(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
-    const ecs::Component& t = registry.get(camera, ecs::Transform);
-
-    const glm::vec3 dir = directionFromRotation(t.get<glm::vec3>("rotation"));
-    const glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f)));
-    const glm::vec3 camUp = glm::cross(right, dir);
     const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
 
     CameraUBO ubo{};
-    ubo.eye = t.get<glm::vec3>("position");
-    ubo.U = right * aspect * tanHFov;
-    ubo.V = camUp * tanHFov;
-    ubo.W = dir;
+    ubo.U = aspect * tanHFov;
+    ubo.V = tanHFov;
 
     ubo.thinLens.lensRadius = 0.0f;
     ubo.thinLens.focusDistance = 10.0f;
@@ -123,6 +117,8 @@ CameraUBO buildCameraUBO(const ecs::Registry& registry, ecs::Entity camera, floa
         ubo.tiltShift.focusB = ts->focusB;
         ubo.tiltShift.focusC = ts->focusC;
     }
+
+    ubo.motionOffset = registry.ctx().get<CameraMotionInfo>().motionOffset;
 
     return ubo;
 }

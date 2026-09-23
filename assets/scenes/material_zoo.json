@@ -27,7 +27,7 @@
             "transform": { "position": [0, 4, -7], "rotation": [-29.74, 180, 0] }
         },
         {
-            "sphere": { "radius": 0.4 },
+            "sphere": {},
             "material_ref": { "handle": "Mat_{row}_{col}" },
             "name": "Sphere_{row}_{col}",
             "transform": {
@@ -35,7 +35,8 @@
                     { "lerp": { "from": -2, "to": 2, "axis": "col" } },
                     0,
                     { "lerp": { "from": -2, "to": 2, "axis": "row" } }
-                ]
+                ],
+                "scale": [0.4, 0.4, 0.4]
             },
             "grid": { "rows": 5, "cols": 5 }
         },

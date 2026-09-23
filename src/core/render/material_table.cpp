@@ -79,13 +79,13 @@ std::string generateParamAssignments(const ShaderPlugin& plugin) {
 
 const std::vector<Entry>& entries() {
     static const std::vector<Entry> table = {
-        { &ecs::Principled },
-        { &ecs::Emissive },
-        { &ecs::Diffuse },
-        { &ecs::Metal },
-        { &ecs::Glossy },
-        { &ecs::Dielectric },
-        { &ecs::Volume },
+        { &ecs::Principled, {} },
+        { &ecs::Emissive, {} },
+        { &ecs::Diffuse, {} },
+        { &ecs::Metal, {} },
+        { &ecs::Glossy, {} },
+        { &ecs::Dielectric, {} },
+        { &ecs::Volume, {} },
         { &ecs::MaterialPlugin, [](ecs::Component& c) -> std::vector<float> {
             ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
             const std::filesystem::path path = c.get<std::filesystem::path>("path");

@@ -7,16 +7,16 @@ float fade(float t) {
     return 6 * pow(t, 5) - 15 * pow(t, 4) + 10 * pow(t, 3);
 }
 
-#define PERLIN_NOISE_2D_NORM 1.41421356237 // 1 / (2 / sqrt(2))
+#define PERLIN_NOISE_2D_NORM 1.41421356237 // sqrt(2)
 NoiseState2D perlinNoise(in vec2 p, inout RngState rng) {
     hashRngState(rng);
 
     vec2 f = fract(p);
     ivec2 p0 = ivec2(floor(p));
-    
+
     float u = fade(f.x);
     float v = fade(f.y);
-    
+
     float n[2], nx[2];
 
     RngState localRng;
@@ -33,7 +33,7 @@ NoiseState2D perlinNoise(in vec2 p, inout RngState rng) {
     }
 
     float r = mix(nx[0], nx[1], v);
-    r *= PERLIN_NOISE_2D_NORM;
+    r /= PERLIN_NOISE_2D_NORM;
     return NoiseState2D(r * 0.5 + 0.5, vec2(0));
 }
 
@@ -44,7 +44,7 @@ NoiseState3D perlinNoise(in vec3 p, inout RngState rng) {
 
     vec3 f = fract(p);
     ivec3 p0 = ivec3(floor(p));
-    
+
     float u = fade(f.x);
     float v = fade(f.y);
     float w = fade(f.z);

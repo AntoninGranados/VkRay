@@ -59,34 +59,34 @@
             "name": "Floor"
         },
         {
-            "sphere": { "radius": 0.25 },
+            "sphere": {},
             "material_ref": { "handle": "RedLight" },
             "name": "RedLight",
-            "transform": { "position": [-3.5, 2.5, -2] }
+            "transform": { "position": [-3.5, 2.5, -2], "scale": [0.25, 0.25, 0.25] }
         },
         {
-            "sphere": { "radius": 0.25 },
+            "sphere": {},
             "material_ref": { "handle": "BlueLight" },
             "name": "BlueLight",
-            "transform": { "position": [3.5, 2, -2] }
+            "transform": { "position": [3.5, 2, -2], "scale": [0.25, 0.25, 0.25] }
         },
         {
-            "sphere": { "radius": 0.3 },
+            "sphere": {},
             "material_ref": { "handle": "GreenLight" },
             "name": "GreenLight",
-            "transform": { "position": [0, 4.5, 2.5] }
+            "transform": { "position": [0, 4.5, 2.5], "scale": [0.3, 0.3, 0.3] }
         },
         {
-            "sphere": { "radius": 0.2 },
+            "sphere": {},
             "material_ref": { "handle": "YellowLight" },
             "name": "YellowLight",
-            "transform": { "position": [-2, 1.8, 3] }
+            "transform": { "position": [-2, 1.8, 3], "scale": [0.2, 0.2, 0.2] }
         },
         {
-            "sphere": { "radius": 1 },
+            "sphere": {},
             "material_ref": { "handle": "Glass" },
             "name": "GlassSphere",
-            "transform": { "position": [0, 1, 0] }
+            "transform": { "position": [0, 1, 0], "scale": [1, 1, 1] }
         },
         {
             "box": {  },

@@ -53,10 +53,10 @@
             "transform": { "position": [0, 0.5, -2], "scale": [1.5, 1.5, 1.5] }
         },
         {
-            "sphere": { "radius": 1.5 },
+            "sphere": {},
             "material_ref": { "handle": "Glass" },
             "name": "GlassSphere",
-            "transform": { "position": [0, 0.5, 2] }
+            "transform": { "position": [0, 0.5, 2], "scale": [1.5, 1.5, 1.5] }
         }
     ]
 }

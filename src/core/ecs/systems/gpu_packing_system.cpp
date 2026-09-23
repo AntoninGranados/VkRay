@@ -12,6 +12,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "core/ecs/components/geometry.hpp"
+#include "core/ecs/systems/motion_sampling.hpp"
 #include "core/render/material_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
@@ -92,97 +93,6 @@ inline void fillBufferWithHeader(const FrameContext& frame, SceneGpuBufferEntry&
     Core::getEngine().fillBuffer(Core::getEngine().getBuffer(entry.handle, frame.currentFrame), buffer.data());
 }
 
-void spherePackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& spheres = registry.storage(Sphere);
-    auto& transforms = registry.storage(Transform);
-
-    std::vector<GpuSphere> gpuSpheres;
-
-    for (const auto& entity : spheres.entities()) {
-        if (!transforms.has(entity)) continue;
-        const Component& sphere = spheres.get(entity);
-        const Component& transform = transforms.get(entity);
-
-        gpuSpheres.push_back(GpuSphere{
-            .center = transform.get<glm::vec3>("position"),
-            .radius = sphere.get<float>("radius"),
-        });
-    }
-
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().sphere, gpuSpheres);
-}
-
-void planePackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& planes = registry.storage(Plane);
-    auto& transforms = registry.storage(Transform);
-
-    std::vector<GpuPlane> gpuPlanes;
-
-    for (const auto& entity : planes.entities()) {
-        if (!transforms.has(entity)) continue;
-        const Component& transform = transforms.get(entity);
-        const glm::quat rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
-
-        gpuPlanes.push_back(GpuPlane{
-            .point = transform.get<glm::vec3>("position"),
-            .normal = glm::normalize(rotation * glm::vec3(0.0f, 1.0f, 0.0f)),
-        });
-    }
-
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().plane, gpuPlanes);
-}
-
-void boxPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& boxes = registry.storage(Box);
-    auto& transforms = registry.storage(Transform);
-
-    std::vector<GpuBox> gpuBoxes;
-
-    for (const auto& entity : boxes.entities()) {
-        if (!transforms.has(entity)) continue;
-        const Component& transform = transforms.get(entity);
-        const glm::mat4 local = composeTransform(transform);
-
-        gpuBoxes.push_back(GpuBox{
-            .transform = local,
-            .invTransform = glm::inverse(local),
-        });
-    }
-
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().box, gpuBoxes);
-}
-
-void quadPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& quads = registry.storage(Quad);
-    auto& transforms = registry.storage(Transform);
-
-    std::vector<GpuQuad> gpuQuads;
-
-    for (const auto& entity : quads.entities()) {
-        if (!transforms.has(entity)) continue;
-        const Component& transform = transforms.get(entity);
-
-        const glm::quat rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
-        const glm::vec3 scale = transform.get<glm::vec3>("scale");
-        const glm::vec3 center = transform.get<glm::vec3>("position");
-        const glm::vec3 u = rotation * glm::vec3(1.0f, 0.0f, 0.0f) * scale.x;
-        const glm::vec3 v = rotation * glm::vec3(0.0f, 1.0f, 0.0f) * scale.y;
-        const glm::vec3 normal = rotation * glm::vec3(0.0f, 0.0f, 1.0f);
-        gpuQuads.push_back(GpuQuad{
-            .point = center - 0.5f * (u + v),
-            .u = u,
-            .v = v,
-            .normal = glm::normalize(normal),
-        });
-    }
-
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().quad, gpuQuads);
-}
-
 void meshPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& meshRefs = registry.storage(MeshRef);
@@ -249,22 +159,7 @@ void meshPackingSystem(Registry& registry) {
         if (!transforms.has(entity)) continue;
         const uint32_t meshSlot = resolveMeshSlot(registry, meshRefs, entity);
         if (meshSlot >= static_cast<uint32_t>(meshTemplates.size())) continue;
-        const GpuMesh& meshTemplate = meshTemplates[meshSlot];
-        const Component& transform = transforms.get(entity);
-        const glm::mat4 local = composeTransform(transform);
-
-        meshes.push_back(GpuMesh{
-            .transform = local,
-            .invTransform = glm::inverse(local),
-            .indexOffset = meshTemplate.indexOffset,
-            .triangleCount = meshTemplate.triangleCount,
-            .bvhOffset = meshTemplate.bvhOffset,
-            .bvhNodeCount = meshTemplate.bvhNodeCount,
-            .aabbMinX = meshTemplate.aabbMinX, .aabbMinY = meshTemplate.aabbMinY, .aabbMinZ = meshTemplate.aabbMinZ,
-            .aabbMaxX = meshTemplate.aabbMaxX, .aabbMaxY = meshTemplate.aabbMaxY, .aabbMaxZ = meshTemplate.aabbMaxZ,
-            .smoothShading = meshTemplate.smoothShading,
-            .hasVertexColor = meshTemplate.hasVertexColor,
-        });
+        meshes.push_back(meshTemplates[meshSlot]);
     }
 
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
@@ -293,10 +188,12 @@ void materialPackingSystem(Registry& registry) {
 
 void objectPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
-    const auto& transforms = registry.storage(Transform);
+    auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuObject> gpuObjects;
+    std::vector<GpuMotionSample> motion;
+    std::vector<GpuMotionSample> liveMotion;
 
     const std::vector<const ComponentType*>& order = objectTypeOrder();
     for (size_t i = 0; i < order.size(); i++) {
@@ -304,22 +201,36 @@ void objectPackingSystem(Registry& registry) {
         uint32_t idx = 0;
         for (const auto& entity : registry.storage(*order[i]).entities()) {
             if (!transforms.has(entity)) continue;
+            const uint32_t motionOffset = bakeMotionSamples(registry, entity, transforms.get(entity), motion);
+            bakeLiveTransform(transforms.get(entity), liveMotion);
             gpuObjects.push_back(GpuObject{
                 .type = objectType,
                 .id = idx,
-                .materialSlot = resolveMaterialSlot(registry, materialRefs, entity)
+                .materialSlot = resolveMaterialSlot(registry, materialRefs, entity),
+                .motionOffset = motionOffset,
             });
             idx++;
         }
     }
 
+    const Entity cameraEntity = *registry.ctx().get<Entity*>();
+    CameraMotionInfo& cameraMotion = registry.ctx().get<CameraMotionInfo>();
+    if (transforms.has(cameraEntity)) {
+        const uint32_t motionOffset = bakeMotionSamples(registry, cameraEntity, transforms.get(cameraEntity), motion);
+        bakeLiveTransform(transforms.get(cameraEntity), liveMotion);
+        cameraMotion = CameraMotionInfo{ motionOffset };
+    } else {
+        cameraMotion = CameraMotionInfo{};
+    }
+
     const GpuObjectHeader header{ .objectCount = static_cast<uint32_t>(gpuObjects.size()) };
     fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().object, header, gpuObjects);
+    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().motion, motion);
+    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().liveMotion, liveMotion);
 }
 
 void lightPackingSystem(Registry& registry) {
     const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& spheres = registry.storage(Sphere);
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
@@ -345,7 +256,13 @@ void lightPackingSystem(Registry& registry) {
 
             float area;
             if (*type == Sphere) {
-                area = 4.0f * glm::pi<float>() * std::pow(spheres.get(entity).get<float>("radius"), 2.0f);
+                const Component& sphereTransform = transforms.get(entity);
+                const glm::mat4 local = composeTransform(sphereTransform);
+                const glm::vec3 axisX = glm::vec3(local[0]);
+                const glm::vec3 axisY = glm::vec3(local[1]);
+                const glm::vec3 axisZ = glm::vec3(local[2]);
+                const float radius = (glm::length(axisX) + glm::length(axisY) + glm::length(axisZ)) / 3.0f;
+                area = 4.0f * glm::pi<float>() * radius * radius;
             } else if (*type == Box) {
                 const Component& boxTransform = transforms.get(entity);
                 const glm::mat4 local = composeTransform(boxTransform);

@@ -33,28 +33,40 @@ Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::En
     return Ray{ t.get<glm::vec3>("position"), dir };
 }
 
-float raySphereIntersection(const Ray& ray, const glm::vec3& center, const float& radius) {
-    const glm::vec3 p = center - ray.origin;
-    const float dp = glm::dot(ray.dir, p);
-    const float c = glm::dot(p, p) - radius * radius;
-    const float delta = dp * dp - c;
+float raySphereIntersection(const Ray& ray, const glm::mat4& transform) {
+    const glm::mat4 invTransform = glm::inverse(transform);
+    const glm::vec3 localOrigin = glm::vec3(invTransform * glm::vec4(ray.origin, 1.0f));
+    const glm::vec3 localDir = glm::vec3(invTransform * glm::vec4(ray.dir, 0.0f));
+
+    const glm::vec3 p = -localOrigin;
+    const float a = glm::dot(localDir, localDir);
+    const float b = glm::dot(localDir, p);
+    const float c = glm::dot(p, p) - 1.0f;
+    const float delta = b * b - a * c;
     if (delta < 0.0f) return -1.0f;
 
-    const float sqrt_delta = std::sqrt(delta);
+    const float sqrtDelta = std::sqrt(delta);
+    float tLocal = (b - sqrtDelta) / a;
+    if (tLocal < 0.0f) tLocal = (b + sqrtDelta) / a;
+    if (tLocal < 0.0f) return -1.0f;
 
-    float hitT = dp - sqrt_delta;
-    if (hitT >= 0.0f) return hitT;
-
-    hitT = dp + sqrt_delta;
-    return hitT >= 0.0f ? hitT : -1.0f;
+    const glm::vec3 hitLocal = localOrigin + localDir * tLocal;
+    const glm::vec3 hitWorld = glm::vec3(transform * glm::vec4(hitLocal, 1.0f));
+    return glm::dot(hitWorld - ray.origin, ray.dir);
 }
 
-float rayPlaneIntersection(const Ray& ray, const glm::vec3& point, const glm::vec3& normal) {
-    const float denom = glm::dot(normal, ray.dir);
-    if (std::abs(denom) <= 1e-12f) return -1.0f;
+float rayPlaneIntersection(const Ray& ray, const glm::mat4& transform) {
+    const glm::mat4 invTransform = glm::inverse(transform);
+    const glm::vec3 localOrigin = glm::vec3(invTransform * glm::vec4(ray.origin, 1.0f));
+    const glm::vec3 localDir = glm::vec3(invTransform * glm::vec4(ray.dir, 0.0f));
 
-    const float hitT = glm::dot(point - ray.origin, normal) / denom;
-    return hitT >= 0.0f ? hitT : -1.0f;
+    if (std::abs(localDir.y) <= 1e-12f) return -1.0f;
+    const float tLocal = -localOrigin.y / localDir.y;
+    if (tLocal < 0.0f) return -1.0f;
+
+    const glm::vec3 hitLocal = localOrigin + localDir * tLocal;
+    const glm::vec3 hitWorld = glm::vec3(transform * glm::vec4(hitLocal, 1.0f));
+    return glm::dot(hitWorld - ray.origin, ray.dir);
 }
 
 float rayBoxIntersection(const Ray& ray, const glm::mat4& transform) {
@@ -87,21 +99,20 @@ float rayBoxIntersection(const Ray& ray, const glm::mat4& transform) {
     return tmin >= 0.0f ? tmin : tmax;
 }
 
-float rayQuadIntersection(const Ray& ray, const glm::vec3& origin, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal) {
-    const float denom = glm::dot(normal, ray.dir);
-    if (denom >= -1e-12f) return -1.0f; // back-face or parallel
+float rayQuadIntersection(const Ray& ray, const glm::mat4& transform) {
+    const glm::mat4 invTransform = glm::inverse(transform);
+    const glm::vec3 localOrigin = glm::vec3(invTransform * glm::vec4(ray.origin, 1.0f));
+    const glm::vec3 localDir = glm::vec3(invTransform * glm::vec4(ray.dir, 0.0f));
 
-    const float hitT = glm::dot(origin - ray.origin, normal) / denom;
-    if (hitT < 0.0f) return -1.0f;
+    if (localDir.z >= -1e-12f) return -1.0f; // back-face or parallel
+    const float tLocal = -localOrigin.z / localDir.z;
+    if (tLocal < 0.0f) return -1.0f;
 
-    const glm::vec3 p = ray.origin + ray.dir * hitT - origin;
-    const float uu = glm::dot(u, u);
-    const float vv = glm::dot(v, v);
-    const float pu = glm::dot(p, u) / uu;
-    const float pv = glm::dot(p, v) / vv;
+    const glm::vec3 hitLocal = localOrigin + localDir * tLocal;
+    if (std::abs(hitLocal.x) > 0.5f || std::abs(hitLocal.y) > 0.5f) return -1.0f;
 
-    if (pu < 0.0f || pu > 1.0f || pv < 0.0f || pv > 1.0f) return -1.0f;
-    return hitT;
+    const glm::vec3 hitWorld = glm::vec3(transform * glm::vec4(hitLocal, 1.0f));
+    return glm::dot(hitWorld - ray.origin, ray.dir);
 }
 
 static bool rayTriangleIntersection(const glm::vec3& origin, const glm::vec3& dir,

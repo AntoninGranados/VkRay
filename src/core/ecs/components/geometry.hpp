@@ -18,7 +18,6 @@ inline const ComponentType Sphere = ComponentType::builder("sphere")
     .group("object")
     .needs("transform")
     .conflicts("plane", "box", "mesh_ref", "camera")
-    .field<float>("radius", 1.0f, NumericMeta{ .min = 0.0f, .step = 0.01f }, true)
     .build();
 
 inline const ComponentType Plane = ComponentType::builder("plane")

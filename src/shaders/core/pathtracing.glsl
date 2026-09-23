@@ -26,7 +26,7 @@ Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     return bestHit;
 }
 
-void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo, inout RngState rng) {
+void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
     Statistics dummy = Statistics(0u, 0u);
     Hit firstHit = intersection(ray, false, INFINITY, dummy);
 
@@ -39,16 +39,17 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo, ino
     setAlbedo(mat, albedo(mat) * firstHit.vertexColor);
     float guideMix = 1.0 / float(pixelInfo.count);
 
-    vec3 right = normalize(camera.U);
-    vec3 up    = normalize(camera.V);
+    CameraPose pose = sampleCameraPose(ubo.camera.motionOffset);
+    vec3 right = pose.right;
+    vec3 up    = pose.up;
 
     vec3 normalW = normalize(firstHit.normal);
     vec3 positionW = firstHit.p;
     vec3 albedo = albedo(mat);
     float roughness = (mat.type == mat_Metal || mat.type == mat_Glossy || mat.type == mat_Dielectric || mat.type == mat_Principled)
                       ? mat.payload[3] : 1.0;
-    vec3 hitOff = positionW - camera.eye;
-    vec3 camDir = camera.W;
+    vec3 hitOff = positionW - pose.eye;
+    vec3 camDir = pose.dir;
     vec2 normal = vec2(dot(normalW, right), dot(normalW, up));
     vec3 position = vec3(dot(hitOff, right), dot(hitOff, up), dot(hitOff, camDir));
 
@@ -71,7 +72,7 @@ void collectGBuffer(in Ray ray, in Camera camera, inout PixelInfo pixelInfo, ino
     }
 }
 
-vec3 traceRay(in Camera camera, in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
+vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
 
@@ -212,15 +213,15 @@ vec3 traceRay(in Camera camera, in Ray ray, inout RngState rng, inout PixelInfo 
     return radiance;
 }
 
-vec3 computeFragmentColor(in Camera camera, in vec2 fragPos, inout RngState rng, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
+vec3 computeFragmentColor(in vec2 fragPos, inout RngState rng, float sampleProb, inout PixelInfo pixelInfo, out float takenSamples) {
     vec3 colorSum = vec3(0);
     takenSamples = 0.0;
     if (sampleProb >= 1.0 || rand(rng) <= sampleProb) {
         pixelInfo.count++;
         vec2 offset = vec2(rand(rng), rand(rng)) / ubo.screen.size;
-        Ray ray = getRay(camera, fragPos + offset, rng);
-        collectGBuffer(ray, camera, pixelInfo, rng);
-        vec3 rayColor = traceRay(camera, ray, rng, pixelInfo);
+        Ray ray = getRay(fragPos + offset, rng);
+        collectGBuffer(ray, pixelInfo, rng);
+        vec3 rayColor = traceRay(ray, rng, pixelInfo);
         if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
             pixelInfo.count--;
         } else {
@@ -264,7 +265,6 @@ void main() {
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
-    Camera camera = Camera(ubo.camera.eye, ubo.camera.U, ubo.camera.V, ubo.camera.W);
     RngState rng = initRngState(uvec2(pixelCoord), uint(ubo.sampleCount));
 
     uint blockVarianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
@@ -276,7 +276,7 @@ void main() {
         sampleProb = computeSampleProbability(pixelInfo, pixelCoord, texSize);
 
     float takenSamples = 0.0;
-    vec3 colorSum = computeFragmentColor(camera, fragPos, rng, sampleProb, pixelInfo, takenSamples);
+    vec3 colorSum = computeFragmentColor(fragPos, rng, sampleProb, pixelInfo, takenSamples);
     PixelInfo updatedInfo = pixelInfoBuffer.pixels[blockVarianceIndex];
     updatedInfo.aov             = pixelInfo.aov;
     updatedInfo.mean            = pixelInfo.mean;

@@ -26,16 +26,16 @@
             "transform": { "position": [0, -2, 50] }
         },
         {
-            "sphere": { "radius": 0.2 },
+            "sphere": {},
             "material_ref": { "handle": "Light" },
             "name": "Light",
-            "transform": { "position": [0, 9, 0] }
+            "transform": { "position": [0, 9, 0], "scale": [0.2, 0.2, 0.2] }
         },
         {
-            "sphere": { "radius": 2.0 },
+            "sphere": {},
             "material_ref": { "handle": "Glass" },
             "name": "Ball",
-            "transform": { "position": [0, 2.8, 0] }
+            "transform": { "position": [0, 2.8, 0], "scale": [2.0, 2.0, 2.0] }
         },
         {
             "box": {  },

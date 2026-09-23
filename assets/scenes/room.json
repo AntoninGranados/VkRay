@@ -34,10 +34,10 @@
             "transform": { "position": [-5.5, 2, -5], "rotation": [-15, -130, 0] }
         },
         {
-            "sphere": { "radius": 10 },
+            "sphere": {},
             "material_ref": { "handle": "Sun" },
             "name": "Sun",
-            "transform": { "position": [-1000, 500, 1000] }
+            "transform": { "position": [-1000, 500, 1000], "scale": [10, 10, 10] }
         },
         {
             "mesh_ref": { "handle": "dragon" },

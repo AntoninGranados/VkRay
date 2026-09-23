@@ -39,16 +39,8 @@ void AnimationClock::stepFixed() {
     }
 }
 
-bool AnimationClock::sample(float jitterRange) {
+bool AnimationClock::sample() {
     frameChanged = frame != sampledFrame;
     sampledFrame = frame;
-
-    if (frameChanged || jitterRange <= 0.0f) {
-        sampleFrame = static_cast<float>(frame);
-    } else {
-        std::uniform_real_distribution<float> dist(-jitterRange * 0.5f, jitterRange * 0.5f);
-        sampleFrame = static_cast<float>(frame) + dist(rng);
-    }
-
     return frameChanged;
 }

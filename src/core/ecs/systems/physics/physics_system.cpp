@@ -129,7 +129,7 @@ void physicsSolverSystem(Registry& registry) {
                 localHalfExtents = glm::vec3(1.0f);
             } else {
                 localCenter = glm::vec3(0.0f);
-                localHalfExtents = glm::vec3(registry.get(e, Sphere).get<float>("radius"));
+                localHalfExtents = glm::vec3(1.0f);
             }
 
             const auto safeExtent = [](float v) { return std::max(std::abs(v), 1e-3f); };
@@ -147,7 +147,7 @@ void physicsSolverSystem(Registry& registry) {
 
             if (hasSphere) {
                 const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
-                const float radius = std::max(1e-4f, registry.get(e, Sphere).get<float>("radius") * maxScale);
+                const float radius = std::max(1e-4f, maxScale);
                 state.body = std::make_unique<RigidSphere>(radius, density, linVel, angVel);
             } else {
                 state.body = std::make_unique<RigidBox>(
@@ -304,7 +304,7 @@ void physicsSystem(Registry& registry) {
     auto& meshes = registry.storage(MeshRef);
     auto& boxes = registry.storage(Box);
 
-    const float sampleFrame = Core::getAnimation().getSampleFrame();
+    const int frame = Core::getAnimation().getFrame();
 
     // Apply the physics transform
     for (const ecs::Entity& e : rigidBodies.entities()) {
@@ -314,29 +314,12 @@ void physicsSystem(Registry& registry) {
         BodyState& state = rigidBodies.get(e).payload<BodyState>("state");
         if (state.snapshots.empty()) continue;
 
-        int minFrame = state.snapshots.begin()->first;
-        int maxFrame = minFrame;
-        for (const auto& [f, snap] : state.snapshots) {
-            minFrame = std::min(minFrame, f);
-            maxFrame = std::max(maxFrame, f);
-        }
+        const auto [minFrame, maxFrame] = state.snapshotFrameRange();
+        const auto snap = state.snapshots.find(std::clamp(frame, minFrame, maxFrame));
+        if (snap == state.snapshots.end()) continue;
 
-        const float clampedSample = std::clamp(sampleFrame, static_cast<float>(minFrame), static_cast<float>(maxFrame));
-        const int frameLo = static_cast<int>(std::floor(clampedSample));
-        const float alpha = clampedSample - static_cast<float>(frameLo);
-
-        auto snapLo = state.snapshots.find(frameLo);
-        if (snapLo == state.snapshots.end()) continue;
-
-        auto snapHi = alpha > 0.0f ? state.snapshots.find(frameLo + 1) : state.snapshots.end();
-        if (snapHi == state.snapshots.end()) {
-            t.set<glm::vec3>("position", snapLo->second.position);
-            t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snapLo->second.rotation))));
-        } else {
-            t.set<glm::vec3>("position", glm::mix(snapLo->second.position, snapHi->second.position, alpha));
-            t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(
-                glm::slerp(snapLo->second.rotation, snapHi->second.rotation, alpha))));
-        }
+        t.set<glm::vec3>("position", snap->second.position);
+        t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snap->second.rotation))));
     }
 
     Core::markRenderDirty();

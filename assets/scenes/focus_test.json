@@ -122,12 +122,12 @@
             "material_ref": { "handle": "Wall" }
         },
         {
-            "sphere": { "radius": 0.4 },
+            "sphere": {},
             "name": "Red_Sphere",
             "transform": {
                 "position": [0.3436, -2.4976, -2.1295],
                 "rotation": [0.0, 0.0, 0.0],
-                "scale": [1.0, 1.0, 1.0]
+                "scale": [0.4, 0.4, 0.4]
             },
             "material_ref": { "handle": "Red" }
         },
@@ -162,12 +162,12 @@
             "material_ref": { "handle": "Red" }
         },
         {
-            "sphere": { "radius": 0.4 },
+            "sphere": {},
             "name": "Green_Sphere",
             "transform": {
                 "position": [2.1388, 0.3529, 2.4882],
                 "rotation": [0.0, 0.0, 0.0],
-                "scale": [1.0, 1.0, 1.0]
+                "scale": [0.4, 0.4, 0.4]
             },
             "material_ref": { "handle": "Green" }
         },
@@ -202,12 +202,12 @@
             "material_ref": { "handle": "Green" }
         },
         {
-            "sphere": { "radius": 0.4 },
+            "sphere": {},
             "name": "Blue_Sphere",
             "transform": {
                 "position": [-2.4824, 2.1447, -0.3587],
                 "rotation": [0.0, 0.0, 0.0],
-                "scale": [1.0, 1.0, 1.0]
+                "scale": [0.4, 0.4, 0.4]
             },
             "material_ref": { "handle": "Blue" }
         },

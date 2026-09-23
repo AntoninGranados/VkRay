@@ -57,10 +57,10 @@
             "transform": { "position": [0, 5, -10], "rotation": [-19.29, 180, 0] }
         },
         {
-            "sphere": { "radius": 50 },
+            "sphere": {},
             "material_ref": { "handle": "Sun" },
             "name": "Sun",
-            "transform": { "position": [-200, 100, -400] }
+            "transform": { "position": [-200, 100, -400], "scale": [50, 50, 50] }
         },
         {
             "plane": {  },

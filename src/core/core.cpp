@@ -1,7 +1,5 @@
 #include "core.hpp"
 
-#include "core/camera/camera.hpp"
-#include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/fields/parameter_serializer.hpp"
 #include "core/render/material_table.hpp"
@@ -61,13 +59,8 @@ bool Core::consumeResize() {
     return true;
 }
 
-void Core::updateAnimationDirty(Core& c, Scene& scene) {
-    float jitterRange = 0.0f;
-    if (c.renderMode != RenderMode::Preview) {
-        const float shutterSpeed = scene.getRegistry().get(scene.getCamera(), ecs::Camera).get<float>("shutter_speed");
-        jitterRange = blurFractionFromShutter(shutterSpeed, static_cast<float>(c.animation.getFps()));
-    }
-    if (c.animation.sample(jitterRange)) markRenderDirty();
+void Core::updateAnimationDirty(Core& c) {
+    if (c.animation.sample()) markRenderDirty();
     if (!c.animation.isPaused()) markRenderDirty();
     consumeRenderDirty();
 }
@@ -83,7 +76,7 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Scene& scene = c.coreRenderer.getScene();
     c.fileWatcher.poll();
 
-    updateAnimationDirty(c, scene);
+    updateAnimationDirty(c);
     scene.runPreRender();
 
     auto frameContext = c.engine.beginFrame();

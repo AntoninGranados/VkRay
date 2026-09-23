@@ -18,6 +18,7 @@
 void Scene::init() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
+    registry.ctx().emplace<CameraMotionInfo>();
     registry.ctx().emplace<FrameContext>();
     registry.ctx().emplace<ecs::ApertureState>();
     registry.ctx().emplace<ecs::PhysicsBakeState>();
@@ -35,10 +36,6 @@ void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
 
 void Scene::clear() {
     SceneGpuBuffers& gpuBuffers = registry.ctx().get<SceneGpuBuffers>();
-    gpuBuffers.sphere.capacity   = 0;
-    gpuBuffers.plane.capacity    = 0;
-    gpuBuffers.box.capacity      = 0;
-    gpuBuffers.quad.capacity     = 0;
     gpuBuffers.vertex.capacity   = 0;
     gpuBuffers.index.capacity    = 0;
     gpuBuffers.bvh.capacity      = 0;
@@ -47,6 +44,8 @@ void Scene::clear() {
     gpuBuffers.materialParams.capacity = 0;
     gpuBuffers.object.capacity   = 0;
     gpuBuffers.light.capacity    = 0;
+    gpuBuffers.motion.capacity   = 0;
+    gpuBuffers.liveMotion.capacity = 0;
     resetSceneState();
     addDefaultAssets();
 }
@@ -116,10 +115,6 @@ void Scene::initSystems() {
 
     onRenderScheduler.clear();
     onRenderScheduler.add(ecs::materialPackingSystem);
-    onRenderScheduler.add(ecs::spherePackingSystem);
-    onRenderScheduler.add(ecs::planePackingSystem);
-    onRenderScheduler.add(ecs::boxPackingSystem);
-    onRenderScheduler.add(ecs::quadPackingSystem);
     onRenderScheduler.add(ecs::meshPackingSystem);
     onRenderScheduler.add(ecs::objectPackingSystem);
     onRenderScheduler.add(ecs::lightPackingSystem);

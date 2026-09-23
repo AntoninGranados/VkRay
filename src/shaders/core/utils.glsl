@@ -27,31 +27,16 @@ struct Object {
     Enum type;
     uint id;
     MaterialSlot materialSlot;
+    uint motionOffset;
 };
 
-#define OBJECT_NONE Object(obj_None, -1, 0)
-#define OBJECT_AABB Object(obj_Aabb, -1, 0)
+#define OBJECT_NONE Object(obj_None, -1, 0, 0)
+#define OBJECT_AABB Object(obj_Aabb, -1, 0, 0)
 
-struct Sphere {
-    vec3 center;
-    float radius;
-};
-
-struct Plane {
-    vec3 point;
-    vec3 normal;
-};
-
-struct Box {
-    mat4 modelMatrix;
-    mat4 invModelMatrix;
-};
-
-struct Quad {
-    vec3 point;
-    vec3 u;
-    vec3 v;
-    vec3 normal;
+struct MotionSample {
+    vec4 rotation;
+    vec3 translation;
+    vec3 scale;
 };
 
 struct Vertex {
@@ -74,8 +59,6 @@ struct BvhNode {
 #define BVH_STACK_SIZE 64
 
 struct Mesh {
-    mat4 modelMatrix;
-    mat4 invModelMatrix;
     uint indexOffset;
     uint triangleCount;
     uint bvhOffset;
@@ -87,11 +70,31 @@ struct Mesh {
 };
 
 // ============== PATH-TRACING  ==============
-struct Camera {
+struct ThinLensUBO {
+    float lensRadius;
+    float focusDistance;
+};
+
+struct TiltShiftUBO {
+    vec3 focusA;
+    vec3 focusB;
+    vec3 focusC;
+    int enabled;
+};
+
+struct CameraUBO {
+    float U;
+    float V;
+    ThinLensUBO thinLens;
+    TiltShiftUBO tiltShift;
+    uint motionOffset;
+};
+
+struct CameraPose {
     vec3 eye;
-    vec3 U;
-    vec3 V;
-    vec3 W;
+    vec3 dir;
+    vec3 right;
+    vec3 up;
 };
 
 struct Ray {

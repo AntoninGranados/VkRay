@@ -15,6 +15,16 @@ BodyAttributes::BodyAttributes() :
     X(0, 0, 0), R(1.0f), q(1, 0, 0, 0), P(0, 0, 0), L(0, 0, 0),
     V(0, 0, 0), omega(0, 0, 0), F(0, 0, 0), tau(0, 0, 0) {}
 
+std::pair<int, int> BodyState::snapshotFrameRange() const {
+    int minFrame = snapshots.begin()->first;
+    int maxFrame = minFrame;
+    for (const auto& [frame, snapshot] : snapshots) {
+        minFrame = std::min(minFrame, frame);
+        maxFrame = std::max(maxFrame, frame);
+    }
+    return { minFrame, maxFrame };
+}
+
 RigidBox::RigidBox(
     const float w, const float h, const float d, const float dens,
     const glm::vec3 v0, const glm::vec3 omega0) : width(w), height(h), depth(d)
@@ -354,12 +364,11 @@ void RigidSolver::resolveSphereCollision(const Entity& e, Registry& registry, co
     auto& transforms = registry.storage(Transform);
     if (!registry.has(e, Sphere) || !transforms.has(e)) return;
 
-    const Component& sphere = registry.get(e, Sphere);
     const Component& t = transforms.get(e);
     const glm::vec3 center = t.get<glm::vec3>("position");
     const glm::vec3 tScale = t.get<glm::vec3>("scale");
     const float maxScale = std::max(std::max(std::abs(tScale.x), std::abs(tScale.y)), std::abs(tScale.z));
-    const float radius = std::max(1e-4f, sphere.get<float>("radius") * maxScale);
+    const float radius = std::max(1e-4f, maxScale);
     const SdfSampler sdfSampler = [center, radius](const glm::vec3& p, SdfContactSample& sample) -> bool {
         const glm::vec3 delta = p - center;
         const float deltaLen = glm::length(delta);

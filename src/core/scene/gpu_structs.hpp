@@ -12,26 +12,10 @@ struct GpuMaterial {
     uint32_t base;
 };
 
-struct GpuSphere {
-    alignas(16) glm::vec3 center;
-    float radius;
-};
-
-struct GpuPlane {
-    alignas(16) glm::vec3 point;
-    alignas(16) glm::vec3 normal;
-};
-
-struct GpuBox {
-    alignas(16) glm::mat4 transform;
-    alignas(16) glm::mat4 invTransform;
-};
-
-struct GpuQuad {
-    alignas(16) glm::vec3 point;
-    alignas(16) glm::vec3 u;
-    alignas(16) glm::vec3 v;
-    alignas(16) glm::vec3 normal;
+struct GpuMotionSample {
+    alignas(16) glm::vec4 rotation;
+    alignas(16) glm::vec3 translation;
+    alignas(16) glm::vec3 scale;
 };
 
 struct GpuBvhChild {
@@ -47,8 +31,6 @@ struct GpuBvhNode {
 };
 
 struct GpuMesh {
-    alignas(16) glm::mat4 transform;
-    alignas(16) glm::mat4 invTransform;
     uint32_t indexOffset;
     uint32_t triangleCount;
     uint32_t bvhOffset;
@@ -75,6 +57,7 @@ struct GpuObject {
     ObjectType type;
     uint32_t id;
     uint32_t materialSlot;
+    uint32_t motionOffset;
 };
 
 struct GpuObjectHeader {

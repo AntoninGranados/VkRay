@@ -16,21 +16,15 @@ layout(set = 0, binding = 3) uniform DisplayUBO {
     int  selectedObjectId;
     int  previewBorderEnabled;
     vec4 focusPlane;
-    vec3 cameraEye;
-    vec3 cameraU;
-    vec3 cameraV;
-    vec3 cameraW;
+    CameraUBO camera;
 } displayUBO;
-layout(set = 0, binding = 4)  buffer readonly SphereBuffer { Sphere   spheres[];  } sphereBuffer;
-layout(set = 0, binding = 5)  buffer readonly PlaneBuffer  { Plane    planes[];   } planeBuffer;
-layout(set = 0, binding = 6)  buffer readonly BoxBuffer    { Box      boxes[];    } boxBuffer;
-layout(set = 0, binding = 7)  buffer readonly QuadBuffer   { Quad     quads[];    } quadBuffer;
-layout(set = 0, binding = 8)  buffer readonly VertexBuffer { Vertex   vertices[]; } vertexBuffer;
-layout(set = 0, binding = 9)  buffer readonly IndexBuffer  { uint     indices[];  } indexBuffer;
-layout(set = 0, binding = 10) buffer readonly BvhBuffer    { BvhNode  bvhNodes[]; } bvhBuffer;
-layout(set = 0, binding = 11) buffer readonly MeshBuffer   { Mesh     meshes[];   } meshBuffer;
-layout(set = 0, binding = 12) buffer readonly ObjectBuffer { uint objectCount; Object objects[]; } objectBuffer;
-layout(set = 0, binding = 13) buffer readonly MaterialBuffer { Material materials[]; } materialBuffer;
+layout(set = 0, binding = 4) buffer readonly VertexBuffer { Vertex   vertices[]; } vertexBuffer;
+layout(set = 0, binding = 5) buffer readonly IndexBuffer  { uint     indices[];  } indexBuffer;
+layout(set = 0, binding = 6) buffer readonly BvhBuffer    { BvhNode  bvhNodes[]; } bvhBuffer;
+layout(set = 0, binding = 7) buffer readonly MeshBuffer   { Mesh     meshes[];   } meshBuffer;
+layout(set = 0, binding = 8) buffer readonly ObjectBuffer { uint objectCount; Object objects[]; } objectBuffer;
+layout(set = 0, binding = 9) buffer readonly MaterialBuffer { Material materials[]; } materialBuffer;
+layout(set = 0, binding = 10) buffer readonly MotionBuffer  { MotionSample samples[]; } motionBuffer;
 
 #include "../core/global.glsl"
 
@@ -49,8 +43,9 @@ PixelInfo samplePixelInfo(ivec2 vpCoord, ivec2 vpSize, ivec2 renderSize) {
 
 Ray viewportRay(ivec2 coord, ivec2 viewportSize) {
     vec2 ndc = (vec2(coord) + 0.5) / vec2(viewportSize) * 2.0 - 1.0;
-    vec3 dir = normalize(ndc.x * displayUBO.cameraU - ndc.y * displayUBO.cameraV + displayUBO.cameraW);
-    return Ray(displayUBO.cameraEye, dir);
+    CameraPose pose = sampleCameraPose(displayUBO.camera.motionOffset);
+    vec3 dir = normalize(ndc.x * pose.right * displayUBO.camera.U - ndc.y * pose.up * displayUBO.camera.V + pose.dir);
+    return Ray(pose.eye, dir);
 }
 
 void main() {

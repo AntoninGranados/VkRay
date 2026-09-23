@@ -32,7 +32,7 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
 
     const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
     registry.add(lightObject, ecs::Sphere);
-    registry.get(lightObject, ecs::Sphere).set<float>("radius", 1.5f);
+    registry.get(lightObject, ecs::Transform).set<glm::vec3>("scale", glm::vec3(1.5f));
     registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
     registry.add(lightObject, ecs::MaterialRef);
     registry.get(lightObject, ecs::MaterialRef).set<ecs::Entity>("handle", lightMaterialEntity);

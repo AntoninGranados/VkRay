@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -114,6 +115,8 @@ struct BodyState {
     RigidSolver solver;
     int initializedFrame = 0;
     std::unordered_map<int, FrameSnapshot> snapshots;
+
+    std::pair<int, int> snapshotFrameRange() const;
 };
 
 struct ColliderState {
