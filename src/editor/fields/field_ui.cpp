@@ -1,6 +1,7 @@
 #include "field_ui.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -75,6 +76,21 @@ Vec linkedRatio(const Vec& oldV, const Vec& newV) {
     }
     return newV;
 }
+
+std::string adaptiveFormat(float magnitude, const std::string& unit) {
+    int decimals = 3;
+    if (magnitude > 1e-12f) {
+        const int exponent = (int)std::floor(std::log10(magnitude));
+        decimals = std::clamp(2 - exponent, 0, 6);
+    }
+    std::string format = "%." + std::to_string(decimals) + "f";
+    if (!unit.empty()) format += " " + unit;
+    return format;
+}
+
+std::string intFormat(const std::string& unit) {
+    return unit.empty() ? "%d" : "%d " + unit;
+}
 } // namespace
 
 bool drawField(Field& field, const std::string& widgetId) {
@@ -143,35 +159,40 @@ bool drawField(Field& field, const std::string& widgetId) {
         case FieldType::Int: {
             setup();
             int v = field.get<int>();
-            bool c = ImGui::DragInt(widgetId.c_str(), &v, step, toInt(fmin), toInt(fmax));
+            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragInt(widgetId.c_str(), &v, step, toInt(fmin), toInt(fmax), format.c_str());
             if (c) { field.set<int>(v); changed = true; }
             return changed;
         }
         case FieldType::IVec2: {
             setup();
             glm::ivec2 v = field.get<glm::ivec2>();
-            bool c = ImGui::DragInt2(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax));
+            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragInt2(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
             if (c) { field.set<glm::ivec2>(v); changed = true; }
             return changed;
         }
         case FieldType::IVec3: {
             setup();
             glm::ivec3 v = field.get<glm::ivec3>();
-            bool c = ImGui::DragInt3(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax));
+            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragInt3(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
             if (c) { field.set<glm::ivec3>(v); changed = true; }
             return changed;
         }
         case FieldType::IVec4: {
             setup();
             glm::ivec4 v = field.get<glm::ivec4>();
-            bool c = ImGui::DragInt4(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax));
+            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragInt4(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
             if (c) { field.set<glm::ivec4>(v); changed = true; }
             return changed;
         }
         case FieldType::Float: {
             setup();
             float v = field.get<float>();
-            bool c = ImGui::DragFloat(widgetId.c_str(), &v, step, fmin, fmax);
+            const std::string format = adaptiveFormat(std::fabs(v), numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragFloat(widgetId.c_str(), &v, step, fmin, fmax, format.c_str());
             if (c) { field.set<float>(v); changed = true; }
             return changed;
         }
@@ -181,7 +202,8 @@ bool drawField(Field& field, const std::string& widgetId) {
             glm::vec2 v = oldV;
             if (numMeta && numMeta->linkable) drawLinkButton(field);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            bool c = ImGui::DragFloat2(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
+            const std::string format = adaptiveFormat(std::max(std::fabs(v.x), std::fabs(v.y)), numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragFloat2(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
             if (c) {
                 if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
                 field.set<glm::vec2>(v);
@@ -201,7 +223,8 @@ bool drawField(Field& field, const std::string& widgetId) {
                 linkable = numMeta && numMeta->linkable;
                 if (linkable) drawLinkButton(field);
                 ImGui::SetNextItemWidth(-FLT_MIN);
-                c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
+                const std::string format = adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z)}), numMeta ? numMeta->unit : std::string());
+                c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
             }
             if (c) {
                 if (linkable && field.isLinked()) v = linkedRatio(oldV, v);
@@ -216,7 +239,8 @@ bool drawField(Field& field, const std::string& widgetId) {
             glm::vec4 v = oldV;
             if (numMeta && numMeta->linkable) drawLinkButton(field);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            bool c = ImGui::DragFloat4(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax);
+            const std::string format = adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z), std::fabs(v.w)}), numMeta ? numMeta->unit : std::string());
+            bool c = ImGui::DragFloat4(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
             if (c) {
                 if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
                 field.set<glm::vec4>(v);
@@ -245,7 +269,8 @@ bool drawField(Field& field, const std::string& widgetId) {
             setup();
             glm::quat q = field.get<glm::quat>();
             glm::vec3 euler = glm::degrees(glm::eulerAngles(q));
-            if (ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(euler), step)) {
+            const std::string format = adaptiveFormat(std::max({std::fabs(euler.x), std::fabs(euler.y), std::fabs(euler.z)}), numMeta ? numMeta->unit : std::string());
+            if (ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(euler), step, 0.0f, 0.0f, format.c_str())) {
                 field.set<glm::quat>(glm::quat(glm::radians(euler)));
                 changed = true;
             }

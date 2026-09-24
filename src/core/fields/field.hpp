@@ -41,6 +41,7 @@ struct NumericMeta {
     float step = 0.0f;
     bool color = false;
     bool linkable = false;
+    std::string unit;
     std::vector<FieldPreset> presets;
 };
 

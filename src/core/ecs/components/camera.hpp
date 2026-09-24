@@ -24,9 +24,9 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     .needs("transform")
     .conflicts("sphere", "plane", "box", "quad", "mesh_ref")
     .field<int>("projection", std::to_underlying(CameraProjection::Perspective), EnumMeta{ .items = {"Perspective", "Orthographic"} })
-    .field<float>("focal_length", 21.45f, NumericMeta{ .min = 1.0f, .max = 300.0f, .step = 0.5f }, true)
+    .field<float>("focal_length", 21.45f, NumericMeta{ .min = 1.0f, .max = 300.0f, .step = 0.5f, .unit = "mm" }, true)
     .condition("projection", std::to_underlying(CameraProjection::Perspective))
-    .field<float>("sensor_width", 36.0f, NumericMeta{ .min = 1.0f, .step = 0.5f, .presets = {
+    .field<float>("sensor_width", 36.0f, NumericMeta{ .min = 1.0f, .step = 0.5f, .unit = "mm", .presets = {
         {"Full Frame", 36.0f},
         {"Super 35",   24.89f},
         {"APS-C",      23.6f},
@@ -49,7 +49,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
         {"f/32",  32.0f}
     } }, true)
     .field<bool>("show_focus_plane", false)
-    .field<float>("shutter_speed", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.001f, .presets = {
+    .field<float>("shutter_speed", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.001f, .unit = "s", .presets = {
         {"Off",    0.0f},
         {"1/8000", 1.0f/8000.0f},
         {"1/4000", 1.0f/4000.0f},
