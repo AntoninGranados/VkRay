@@ -12,7 +12,7 @@
 #include "glossy.glsl"
 #include "dielectric.glsl"
 #include "volume.glsl"
-#include "generated/programmable_dispatch.glsl"
+#include "../../generated/programmable_dispatch.glsl"
 
 ResolvedMaterial resolveMaterial(in Material mat, inout Hit hit, in vec3 wo, inout RngState rng) {
     if (mat.type == mat_Programmable) return dispatchProgrammable(mat, hit, wo, rng);

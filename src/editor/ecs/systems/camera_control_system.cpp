@@ -131,7 +131,8 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
     }
 
     const float sensitivity = Core::getParameters().get<float>("editor/camera/sensitivity");
-    float zoomSensitivityFactor = glm::min(c.get<float>("fov") / 80.0f, 1.0f);
+    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+    float zoomSensitivityFactor = glm::min(fovFromFocalLength(c.get<float>("focal_length") / sensorWidth) / 80.0f, 1.0f);
     xoffset *= sensitivity * zoomSensitivityFactor;
     yoffset *= sensitivity * zoomSensitivityFactor;
 
@@ -157,9 +158,15 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
     if (Core::getRenderMode() != RenderMode::Preview) return;
 
     auto& c = registry.get(camera, ecs::Camera);
-    Field& fovField = c.getField("fov");
-    const NumericMeta& meta = std::get<NumericMeta>(fovField.getMetadata());
-    fovField.set<float>(glm::clamp(fovField.get<float>() - static_cast<float>(yoffset), meta.min, meta.max));
+    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+    const float fov = fovFromFocalLength(c.get<float>("focal_length") / sensorWidth);
+
+    const NumericMeta& focalLengthMeta = std::get<NumericMeta>(ecs::Camera.getField("focal_length").getMetadata());
+    const float minFov = fovFromFocalLength(focalLengthMeta.max / sensorWidth);
+    const float maxFov = fovFromFocalLength(focalLengthMeta.min / sensorWidth);
+
+    const float newFov = glm::clamp(fov - static_cast<float>(yoffset), minFov, maxFov);
+    c.set<float>("focal_length", focalLengthFromFov(newFov) * sensorWidth);
     if (yoffset != 0) Core::markRenderDirty();
 }
 

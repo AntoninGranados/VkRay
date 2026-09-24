@@ -15,8 +15,10 @@
 #include "nlohmann/json.hpp"
 
 #include "core/core.hpp"
+#include "core/ecs/components/camera.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
+#include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
 #include "scene.hpp"
 #include "utils/json_dsl.hpp"
@@ -280,6 +282,14 @@ void reparseMaterialPlugins(ecs::Registry& registry, const Scene& scene) {
     }
 }
 
+void reparseCameraLensPlugins(ecs::Registry& registry) {
+    for (const ecs::Entity entity : registry.storage(ecs::CameraLensPlugin).entities()) {
+        ecs::Component& pluginComp = registry.get(entity, ecs::CameraLensPlugin);
+        const std::filesystem::path path = pluginComp.get<std::filesystem::path>("path");
+        pluginComp.payload<ShaderPlugin>("plugin").parse(path, CameraLensTable::kType, CameraLensTable::kVersion, CameraLensTable::slotFor(path));
+    }
+}
+
 void activateFirstNonDefaultCamera(ecs::Registry& registry, Scene& scene) {
     for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
         if (entity == scene.getDefaultCamera()) continue;
@@ -319,6 +329,7 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
     reparseMaterialPlugins(spawn.registry, scene);
+    reparseCameraLensPlugins(spawn.registry);
     activateFirstNonDefaultCamera(spawn.registry, scene);
 
     spawn.animStore.evaluate(0.0f);

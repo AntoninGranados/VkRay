@@ -32,7 +32,8 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
     if (glm::length(dir) < 1e-6f) dir = glm::vec3(0.0f, 0.0f, -1.0f);
 
     const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
-    const float fov = glm::radians(c.get<float>("fov"));
+    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+    const float fov = glm::radians(fovFromFocalLength(c.get<float>("focal_length") / sensorWidth));
 
     const glm::mat4 view = getView(registry, activeCamera);
     const glm::mat4 proj = getProjection(registry, activeCamera, aspect);
@@ -125,12 +126,7 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
         drawClipped(clipNear[i], clipFar[i]);
     }
 
-    float apertureRadius = 0.0f;
-    if (registry.has(e, ThinLens)) {
-        const auto& tl = registry.get(e, ThinLens);
-        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-        apertureRadius = lensRadiusFromFStop(tl.get<float>("focal_length") / sensorWidth, tl.get<float>("f_stop"));
-    }
+    const float apertureRadius = lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
     if (apertureRadius > 1e-4f) {
         const int ringSegments = 32;
         glm::vec3 prevPoint = camPos + camRight * apertureRadius;

@@ -28,8 +28,7 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": 35 },
-            "thin_lens": { "f_stop": 0.5, "focal_distance": 11 },
+            "camera": { "focal_distance": 11, "f_stop": 0.5 },
             "name": "Camera",
             "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
         },

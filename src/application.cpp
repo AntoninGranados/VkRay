@@ -16,6 +16,7 @@
 #include "version.hpp"
 
 #include "core/core.hpp"
+#include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
 #include "core/scene/scene_serializer.hpp"
 
@@ -104,6 +105,7 @@ void Application::buildRenderGraph(bool offline) {
 
     MaterialTable::generateGlsl();
     MaterialTable::generateDispatch();
+    CameraLensTable::generateDispatch();
 
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();

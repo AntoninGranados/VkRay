@@ -60,7 +60,7 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": { "rand": { "min": 35, "max": 45 } } },
+            "camera": { "focal_length": { "rand": { "min": 43.4558, "max": 57.0887 } } },
             "name": "Camera",
             "spherical": {
                 "radius": { "rand": { "min": 10, "max": 20 } },

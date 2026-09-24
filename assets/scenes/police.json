@@ -30,8 +30,7 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": 50.0, "shutter_speed": 0.016667 },
-            "thin_lens": { "f_stop": 10.0, "focal_distance": 6.13 },
+            "camera": { "shutter_speed": 0.016667, "focal_distance": 6.13, "f_stop": 10.0 },
             "name": "Camera",
             "transform": {
                 "position": {

@@ -108,7 +108,7 @@ void PathtraceRenderer::setDefaultUBOs() {
 void PathtraceRenderer::render(const FrameContext& frameContext) {
     VkSmol& engine = Core::getEngine();
 
-    const ecs::Registry& registry = scene.getRegistry();
+    ecs::Registry& registry = scene.getRegistry();
     const ecs::Entity camera = scene.getCamera();
 
     const bool converged = isRenderFinished();

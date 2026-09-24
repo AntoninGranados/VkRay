@@ -12,7 +12,6 @@
 
 #include "core/animation/animation_clock.hpp"
 #include "core/core.hpp"
-#include "core/ecs/systems/camera_system.hpp"
 #include "core/ecs/components/component.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"

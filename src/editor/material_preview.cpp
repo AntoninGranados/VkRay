@@ -16,7 +16,7 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
     scene.init();
 
     ecs::Registry& registry = scene.getRegistry();
-    registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("fov", 15.0f);
+    registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("focal_length", 136.72f);
 
     previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
     registry.add(previewMaterialEntity, ecs::Diffuse);

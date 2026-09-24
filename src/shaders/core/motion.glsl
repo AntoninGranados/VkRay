@@ -17,6 +17,17 @@ mat3 quatToMat3(in vec4 q) {
     return mat3(c0, c1, c2);
 }
 
+vec4 eulerToQuat(in vec3 e) {
+    vec3 c = cos(e * 0.5);
+    vec3 s = sin(e * 0.5);
+    return vec4(
+        s.x * c.y * c.z - c.x * s.y * s.z,
+        c.x * s.y * c.z + s.x * c.y * s.z,
+        c.x * c.y * s.z - s.x * s.y * c.z,
+        c.x * c.y * c.z + s.x * s.y * s.z
+    );
+}
+
 mat4 composeFromSample(in MotionSample s) {
     mat3 rot = quatToMat3(s.rotation);
     mat4 m = mat4(mat3(rot[0] * s.scale.x, rot[1] * s.scale.y, rot[2] * s.scale.z));

@@ -24,19 +24,9 @@ Simplifies the mesh asset to a target ratio.
 ## Camera
 
 ### Camera
-Perspective camera.
+Perspective camera with native depth of field.
 
 **Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `mesh_ref`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `fov` | float | 80 | 1 ... 160 | yes |
-| `shutter_speed` | float | 0 | ≥ 0 | no |
-
-### Thin Lens
-Depth-of-field via thin lens approximation.
-
-**Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -44,21 +34,24 @@ Depth-of-field via thin lens approximation.
 | `focal_distance` | float | 10 | ≥ 0.1 | yes |
 | `f_stop` | float | 0 | 0 ... 64 | yes |
 | `show_focus_plane` | bool | false |  | no |
+| `shutter_speed` | float | 0 | ≥ 0 | no |
 
 ### Tilt Shift Lens
 Tilted focal plane and lens shift (Scheimpflug principle).
 
-**Needs:** `thin_lens`
+**Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `plane_position` | vec3 | [0, 0, 0] |  | yes |
 | `plane_rotation` | vec3 | [0, 0, 0] |  | yes |
+| `shift_x` | float | 0 |  | yes |
+| `shift_y` | float | 0 |  | yes |
 
 ### Geometric Aperture
 Polygon aperture blade shape.
 
-**Needs:** `thin_lens` — **Conflicts:** `image_aperture`
+**Needs:** `camera` — **Conflicts:** `image_aperture`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -68,7 +61,16 @@ Polygon aperture blade shape.
 ### Image Aperture
 Custom image mask as aperture shape.
 
-**Needs:** `thin_lens` — **Conflicts:** `geometric_aperture`
+**Needs:** `camera` — **Conflicts:** `geometric_aperture`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+
+### Programmable Lens
+Programmable custom lens, defined by a GLSL shader-definition file.
+
+**Needs:** `camera` — **Conflicts:** `tilt_shift_lens`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|

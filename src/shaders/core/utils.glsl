@@ -75,19 +75,13 @@ struct ThinLensUBO {
     float focusDistance;
 };
 
-struct TiltShiftUBO {
-    vec3 focusA;
-    vec3 focusB;
-    vec3 focusC;
-    int enabled;
-};
-
 struct CameraUBO {
     float U;
     float V;
     ThinLensUBO thinLens;
-    TiltShiftUBO tiltShift;
     uint motionOffset;
+    int lensSlot;
+    vec4 lensParams[4];
 };
 
 struct CameraPose {
@@ -100,6 +94,11 @@ struct CameraPose {
 struct Ray {
     vec3 origin;
     vec3 dir;
+};
+
+struct LensSample {
+    vec3 origin;
+    vec3 direction;
 };
 
 struct Statistics {

@@ -22,7 +22,7 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": 60 },
+            "camera": { "focal_length": 31.1769 },
             "name": "Camera",
             "transform": { "position": [0, 4, -7], "rotation": [-29.74, 180, 0] }
         },

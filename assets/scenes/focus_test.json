@@ -44,12 +44,7 @@
     ],
     "Objects": [
         {
-            "camera": { "shutter_speed": 0.0333333333 },
-            "thin_lens": {
-                "focal_length": 40,
-                "focal_distance": 15.0,
-                "f_stop": 1.4
-            },
+            "camera": { "shutter_speed": 0.0333333333, "focal_length": 40, "focal_distance": 15.0, "f_stop": 1.4 },
             "tilt_shift_lens": {
                 "plane_position": [0.0, 0.0, 0.0],
                 "plane_rotation": [35.0, -45.0, 0.0]

@@ -10,7 +10,6 @@
 #include "core/ecs/entity.hpp"
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
-#include "core/ecs/systems/camera_system.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 #include "utils/log.hpp"
@@ -111,7 +110,6 @@ void Scene::initSystems() {
     preUpdateScheduler.add(ecs::animationSystem);
     preUpdateScheduler.add(ecs::physicsSystem);
     preUpdateScheduler.add(ecs::apertureSystem);
-    preUpdateScheduler.add(ecs::cameraPreUpdateSystem);
 
     onRenderScheduler.clear();
     onRenderScheduler.add(ecs::materialPackingSystem);
@@ -149,7 +147,6 @@ void Scene::addDefaultAssets() {
 
     defaultCamera = createNamedEntity("Default Camera", sceneRoots.internalsRoot);
     registry.add(defaultCamera, ecs::Camera);
-    registry.get(defaultCamera, ecs::Camera).set<float>("fov", 80.0f);
     registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
     registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
 

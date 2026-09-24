@@ -1,6 +1,7 @@
 #include "aperture.hpp"
 
 #include <cmath>
+#include <cstdint>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>

@@ -36,19 +36,13 @@ struct alignas(16) ThinLensUBO {
     float focusDistance;
 };
 
-struct alignas(16) TiltShiftUBO {
-    alignas(16) glm::vec3 focusA;
-    alignas(16) glm::vec3 focusB;
-    alignas(16) glm::vec3 focusC;
-    int enabled;
-};
-
 struct alignas(16) CameraUBO {
     float U;
     float V;
     ThinLensUBO thinLens;
-    TiltShiftUBO tiltShift;
     uint32_t motionOffset;
+    int32_t lensSlot = -1;
+    alignas(16) glm::vec4 lensParams[4]{};
 };
 
 struct alignas(16) ScreenUBO {

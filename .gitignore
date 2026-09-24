@@ -15,4 +15,4 @@ logs/
 
 imgui.ini
 outputs/
-src/shaders/core/materials/generated/
+src/shaders/generated/

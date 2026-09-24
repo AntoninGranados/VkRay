@@ -4,6 +4,7 @@
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
+#include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
@@ -13,6 +14,24 @@
 #include "editor/ui_utils.hpp"
 
 namespace ecs {
+
+static bool drawShaderPluginField(Component& c, const std::string& type, int version, int (*slotFor)(const std::filesystem::path&)) {
+    const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
+    if (!ImGui::CollapsingHeader(header.c_str())) return false;
+
+    const bool pathChanged = ui::drawField(c.getField("path"), "##path");
+
+    ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
+    const std::filesystem::path path = c.get<std::filesystem::path>("path");
+    plugin.parse(path, type, version, slotFor(path));
+
+    if (!plugin.getError().empty())
+        ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
+
+    bool update = pathChanged;
+    update |= ui::drawGroupedFields(plugin.getComponent().getFields(), std::format("##{}", header));
+    return update;
+}
 
 ComponentUiRegistry& ComponentUiRegistry::get() {
     static ComponentUiRegistry r;
@@ -123,10 +142,12 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::RigidBody);
 
     ui_reg.add(ecs::Camera);
-    ui_reg.add(ecs::ThinLens);
     ui_reg.add(ecs::TiltShiftLens);
     ui_reg.add(ecs::GeometricAperture);
     ui_reg.add(ecs::ImageAperture);
+    ui_reg.addCustom(ecs::CameraLensPlugin, [](Component& c, Registry&, Entity) {
+        return drawShaderPluginField(c, CameraLensTable::kType, CameraLensTable::kVersion, CameraLensTable::slotFor);
+    });
 
     ui_reg.add(ecs::Material, [](Component&, Registry&, Entity e) {
         Editor::getMaterialPreview().drawPreview(e);
@@ -148,21 +169,7 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
     ui_reg.addCustom(ecs::MaterialPlugin, [](Component& c, Registry&, Entity) {
-        const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
-        if (!ImGui::CollapsingHeader(header.c_str())) return false;
-
-        const bool pathChanged = ui::drawField(c.getField("path"), "##path");
-
-        ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
-        const std::filesystem::path path = c.get<std::filesystem::path>("path");
-        plugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
-
-        if (!plugin.getError().empty())
-            ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
-
-        bool update = pathChanged;
-        update |= ui::drawGroupedFields(plugin.getComponent().getFields(), std::format("##{}", header));
-        return update;
+        return drawShaderPluginField(c, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor);
     });
 }
 

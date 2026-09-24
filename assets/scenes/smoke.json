@@ -21,7 +21,7 @@
     ],
     "Objects": [
         {
-            "camera": { "fov": 28 },
+            "camera": { "focal_length": 72.1941 },
             "name": "Camera",
             "transform": { "position": [0, -2, 50] }
         },

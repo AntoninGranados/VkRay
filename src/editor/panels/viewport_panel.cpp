@@ -51,12 +51,12 @@ void ViewportPanel::draw() {
                     auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
                     if (onEntitySelection) onEntitySelection(entityId);
                 }
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && scene.getRegistry().has(scene.getCamera(), ecs::ThinLens)) {
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
                     ImVec2 mp = ImGui::GetMousePos();
                     float dist;
                     auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
                     if (hit.has_value()) {
-                        scene.getRegistry().get(scene.getCamera(), ecs::ThinLens).set<float>("focal_distance", dist);
+                        scene.getRegistry().get(scene.getCamera(), ecs::Camera).set<float>("focal_distance", dist);
                         Core::markRenderDirty();
                     }
                 }

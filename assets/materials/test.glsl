@@ -109,10 +109,6 @@
 
 #define OVERLAY_COLORS vec3[OVERLAY_COLOR_COUNT](COLORS[0], COLORS[3], COLORS[5])
 
-void test() {
-    // this is a test
-}
-
 void main() {
     uv  /= scale;
     uv.x = uv.x - 1;
@@ -124,7 +120,7 @@ void main() {
     ivec2 px;
     px.x = int(floor(local.x * (NUMBER_W + padding * 2)));
     px.y = int(floor(local.y * (NUMBER_H + padding * 2)));
-        
+
     int colorIndex = int(mod(mod(float(idx.x - idx.y + 1), float(COLOR_COUNT)) + float(COLOR_COUNT), float(COLOR_COUNT)));
     vec3 albedo = COLORS[colorIndex];
 

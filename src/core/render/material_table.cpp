@@ -13,6 +13,7 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/material.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 #include "utils/string_utils.hpp"
 
@@ -48,33 +49,6 @@ void packFields(ecs::Component& c, std::vector<float>& params) {
         if (!isPackableField(field)) continue;
         params.push_back(c.get<float>(field.getId()));
     }
-}
-
-std::string generateGlobalDecls(const ShaderPlugin& plugin) {
-    std::string decls;
-    for (const ShaderPlugin::PluginParam& p : plugin.getParameters())
-        decls += std::format("{} {};\n", p.glslType, p.mangled);
-    return decls;
-}
-
-std::string generateParamAssignments(const ShaderPlugin& plugin) {
-    std::string assignments;
-    int offset = 0;
-    for (const ShaderPlugin::PluginParam& p : plugin.getParameters()) {
-        std::string args;
-        for (int i = 0; i < p.components; i++) {
-            if (i > 0) args += ", ";
-            std::string value = std::format("{}Params.values[base+{}]", MaterialTable::kType, offset + i);
-            if (p.isInt) args += std::format("int({})", value);
-            else if (p.isBool) args += std::format("bool({})", value);
-            else args += value;
-        }
-        assignments += p.components == 1
-            ? std::format("{} = {};\n", p.mangled, args)
-            : std::format("{} = {}({});\n", p.mangled, p.glslType, args);
-        offset += p.components;
-    }
-    return assignments;
 }
 
 const std::vector<Entry>& entries() {
@@ -158,7 +132,7 @@ void MaterialTable::generateGlsl() {
         }
     }
 
-    std::filesystem::path outputPath = "./src/shaders/core/materials/generated/material_types.glsl";
+    std::filesystem::path outputPath = "./src/shaders/generated/material_types.glsl";
     std::error_code ec;
     std::filesystem::create_directories(outputPath.parent_path(), ec);
 
@@ -191,7 +165,9 @@ void MaterialTable::generateDispatch() {
             "{}"
             "return mat;\n"
             "}}\n\n",
-            MaterialTable::kType, plugin->getSlot(), generateGlobalDecls(*plugin), plugin->getDeclarations(), funcName, generateParamAssignments(*plugin), plugin->getBody()
+            MaterialTable::kType, plugin->getSlot(), GlslCodegen::declareGlobals(*plugin), plugin->getDeclarations(), funcName,
+            GlslCodegen::assignParams(*plugin, [](int i) { return std::format("{}Params.values[base+{}]", MaterialTable::kType, i); }),
+            plugin->getBody()
         );
         cases += std::format("        case {}: result = {} (base, pos, uv, normal, wo, rng, new_normal); break;\n", plugin->getSlot(), funcName);
     }
@@ -216,7 +192,7 @@ void MaterialTable::generateDispatch() {
         functions, MaterialTable::kType, cases
     );
 
-    std::filesystem::path outputPath = "./src/shaders/core/materials/generated/programmable_dispatch.glsl";
+    std::filesystem::path outputPath = "./src/shaders/generated/programmable_dispatch.glsl";
     std::error_code ec;
     std::filesystem::create_directories(outputPath.parent_path(), ec);
 

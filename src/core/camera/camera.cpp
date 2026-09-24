@@ -12,6 +12,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "core/core.hpp"
+#include "core/render/camera_lens_table.hpp"
 #include "core/scene/scene.hpp"
 
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
@@ -20,49 +21,11 @@ glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
 
 float effectiveFov(const ecs::Registry& registry, ecs::Entity camera) {
     const ecs::Component& c = registry.get(camera, ecs::Camera);
-    const float fov = c.get<float>("fov");
+    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+    const float fov = fovFromFocalLength(c.get<float>("focal_length") / sensorWidth);
     if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isUsingSceneCamera() || camera != Core::getScene().getCamera())
         return fov;
     return glm::degrees(2.0f * glm::atan(glm::tan(glm::radians(fov) * 0.5f) / 0.8f));
-}
-
-std::optional<TiltShiftState> getTiltShiftState(const ecs::Registry& registry, ecs::Entity camera) {
-    if (!registry.has(camera, ecs::TiltShiftLens)) return std::nullopt;
-
-    const ecs::Component& t = registry.get(camera, ecs::Transform);
-    const ecs::Component& tl = registry.get(camera, ecs::TiltShiftLens);
-
-    const glm::vec3 worldNormal = glm::normalize(
-        glm::quat(glm::radians(tl.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-
-    const glm::vec3 camDir = directionFromRotation(t.get<glm::vec3>("rotation"));
-    const glm::vec3 camRight = glm::normalize(glm::cross(camDir, glm::vec3(0.0f, 1.0f, 0.0f)));
-    const glm::vec3 camUp = glm::cross(camRight, camDir);
-    const glm::vec3 diff = tl.get<glm::vec3>("plane_position") - t.get<glm::vec3>("position");
-
-    const glm::vec3 center = glm::vec3(
-        glm::dot(diff, camRight),
-        glm::dot(diff, camUp),
-        glm::dot(diff, camDir)
-    );
-    const glm::vec3 normal = glm::normalize(glm::vec3(
-        glm::dot(worldNormal, camRight),
-        glm::dot(worldNormal, camUp),
-        glm::dot(worldNormal, camDir))
-    );
-
-    const glm::vec3 arbUp = std::abs(glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f))) < 0.99f
-        ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
-    const glm::vec3 right = glm::normalize(glm::cross(normal, arbUp));
-    const glm::vec3 upOnPlane = glm::cross(normal, right);
-
-    TiltShiftState state;
-    state.focusA = center + right;
-    state.focusB = center - right;
-    state.focusC = center + upOnPlane;
-
-    return state;
 }
 
 glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
@@ -94,31 +57,22 @@ float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
     return fStop > 0.0f ? normalizedFocalLength / (2.0f * fStop) : 0.0f;
 }
 
-CameraUBO buildCameraUBO(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
+CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspect) {
     const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
 
     CameraUBO ubo{};
     ubo.U = aspect * tanHFov;
     ubo.V = tanHFov;
-
-    ubo.thinLens.lensRadius = 0.0f;
-    ubo.thinLens.focusDistance = 10.0f;
-    if (registry.has(camera, ecs::ThinLens)) {
-        const ecs::Component& tl = registry.get(camera, ecs::ThinLens);
-        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-        ubo.thinLens.lensRadius = lensRadiusFromFStop(tl.get<float>("focal_length") / sensorWidth, tl.get<float>("f_stop"));
-        ubo.thinLens.focusDistance = tl.get<float>("focal_distance");
-    }
-
-    const auto ts = getTiltShiftState(registry, camera);
-    ubo.tiltShift.enabled = ts.has_value();
-    if (ts.has_value()) {
-        ubo.tiltShift.focusA = ts->focusA;
-        ubo.tiltShift.focusB = ts->focusB;
-        ubo.tiltShift.focusC = ts->focusC;
-    }
-
     ubo.motionOffset = registry.ctx().get<CameraMotionInfo>().motionOffset;
+
+    {
+        const ecs::Component& c = registry.get(camera, ecs::Camera);
+        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+        ubo.thinLens.lensRadius = lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
+        ubo.thinLens.focusDistance = c.get<float>("focal_distance");
+    }
+
+    CameraLensTable::pack(registry, camera, ubo);
 
     return ubo;
 }

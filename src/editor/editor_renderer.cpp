@@ -42,7 +42,7 @@ struct FocusPlane {
 };
 
 FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, const ecs::Entity& camera) {
-    if (!reg.has(selected, ecs::ThinLens) || !reg.get(selected, ecs::ThinLens).get<bool>("show_focus_plane"))
+    if (!reg.has(selected, ecs::Camera) || !reg.get(selected, ecs::Camera).get<bool>("show_focus_plane"))
         return {};
 
     const ecs::Component& t = reg.get(camera, ecs::Transform);
@@ -55,7 +55,7 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
         point = ts.get<glm::vec3>("plane_position");
     } else {
         normal = directionFromRotation(t.get<glm::vec3>("rotation"));
-        point  = t.get<glm::vec3>("position") + normal * reg.get(selected, ecs::ThinLens).get<float>("focal_distance");
+        point  = t.get<glm::vec3>("position") + normal * reg.get(selected, ecs::Camera).get<float>("focal_distance");
     }
     float d = -glm::dot(normal, point);
     if (glm::dot(t.get<glm::vec3>("position"), normal) + d > 0.0f) { normal = -normal; d = -d; }
@@ -186,7 +186,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     Scene& scene = Core::getScene();
     const ecs::Entity& camera = scene.getCamera();
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
-    const ecs::Registry& reg = scene.getRegistry();
+    ecs::Registry& reg = scene.getRegistry();
     const float aspect = viewportE.height > 0
         ? static_cast<float>(viewportE.width) / static_cast<float>(viewportE.height) : 1.0f;
     displayUBO.camera = buildCameraUBO(reg, camera, aspect);
