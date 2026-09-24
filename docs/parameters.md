@@ -57,9 +57,10 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ```json
 "condition": { "param": "renderer/sampling/clamp" }
 "condition": { "param": "renderer/sampling/clamp", "when": false }
+"condition": { "param": "renderer/sky/light_mode", "when": 2 }
 ```
 
-`"param"` is the full path to a boolean parameter and `"when "` is `true` by default.
+`"param"` is the full path to a boolean, integer, or enumeration parameter. `"when"` is the value it must equal for this parameter to stay enabled (a bool for boolean parameters, an integer index for enumeration parameters), and defaults to `true`/`1`.
 
 ---
 
@@ -122,8 +123,3 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 | `editor/camera/sensitivity` | Sensitivity | - | Float | 0.2 | 0.01 ... | no |
 | `editor/camera/pan_sensitivity` | Pan Sensitivity | - | Float | 0.003 | 1e-04 ... | no |
 | `editor/camera/dolly_sensitivity` | Dolly Sensitivity | - | Float | 0.01 | 1e-04 ... | no |
-
-## internal
-| Path | Label | Description | Type | Default | Constraints | Restart |
-|------|-------|-------------|------|---------|-------------|---------|
-| `internal/sensor_width` | Sensor Width | Reference sensor width (mm). | Float | 36 | 1 ... | no |

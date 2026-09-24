@@ -130,9 +130,11 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
         return;
     }
 
+    const bool orthographic = static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic;
     const float sensitivity = Core::getParameters().get<float>("editor/camera/sensitivity");
-    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-    float zoomSensitivityFactor = glm::min(fovFromFocalLength(c.get<float>("focal_length") / sensorWidth) / 80.0f, 1.0f);
+    float zoomSensitivityFactor = orthographic
+        ? 1.0f
+        : glm::min(fovFromFocalLength(c.get<float>("focal_length") / c.get<float>("sensor_width")) / 80.0f, 1.0f);
     xoffset *= sensitivity * zoomSensitivityFactor;
     yoffset *= sensitivity * zoomSensitivityFactor;
 
@@ -158,7 +160,17 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
     if (Core::getRenderMode() != RenderMode::Preview) return;
 
     auto& c = registry.get(camera, ecs::Camera);
-    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+
+    if (static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic) {
+        const NumericMeta& sensorWidthMeta = std::get<NumericMeta>(ecs::Camera.getField("sensor_width").getMetadata());
+        const float sensorWidth = c.get<float>("sensor_width");
+        const float newSensorWidth = glm::clamp(sensorWidth * glm::pow(0.9f, static_cast<float>(yoffset)), sensorWidthMeta.min, sensorWidthMeta.max);
+        c.set<float>("sensor_width", newSensorWidth);
+        if (yoffset != 0) Core::markRenderDirty();
+        return;
+    }
+
+    const float sensorWidth = c.get<float>("sensor_width");
     const float fov = fovFromFocalLength(c.get<float>("focal_length") / sensorWidth);
 
     const NumericMeta& focalLengthMeta = std::get<NumericMeta>(ecs::Camera.getField("focal_length").getMetadata());

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,8 +21,11 @@ std::vector<FieldGroup> buildFieldGroups(const std::vector<Field*>& fields, cons
 
 using DrawFieldLeaf = std::function<bool(Field&, const std::string&)>;
 using FieldGroupLabel = std::function<std::string(const FieldPath&)>;
+using ConditionResolver = std::function<std::optional<int>(const FieldPath&)>;
 
 bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetId, const DrawFieldLeaf& drawLeaf, const FieldGroupLabel& label = {});
+
+void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve);
 
 bool drawField(Field& field, const std::string& widgetId);
 bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId);

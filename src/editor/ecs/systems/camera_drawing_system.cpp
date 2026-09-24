@@ -14,7 +14,6 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/editor.hpp"
 
@@ -32,7 +31,8 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
     if (glm::length(dir) < 1e-6f) dir = glm::vec3(0.0f, 0.0f, -1.0f);
 
     const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
-    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
+    const float sensorWidth = c.get<float>("sensor_width");
+    const bool orthographic = static_cast<CameraProjection>(c.get<int>("projection")) == CameraProjection::Orthographic;
     const float fov = glm::radians(fovFromFocalLength(c.get<float>("focal_length") / sensorWidth));
 
     const glm::mat4 view = getView(registry, activeCamera);
@@ -46,10 +46,10 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
 
     const float nearDist = 0.5f;
     const float farDist = 1.5f;
-    const float nearHalfH = tanf(fov * 0.5f) * nearDist;
-    const float nearHalfW = nearHalfH * aspect;
-    const float farHalfH = tanf(fov * 0.5f) * farDist;
-    const float farHalfW = farHalfH * aspect;
+    const float nearHalfW = orthographic ? sensorWidth / 1000.0f * 0.5f : tanf(fov * 0.5f) * nearDist;
+    const float nearHalfH = nearHalfW / aspect;
+    const float farHalfW = orthographic ? sensorWidth / 1000.0f * 0.5f : tanf(fov * 0.5f) * farDist;
+    const float farHalfH = farHalfW / aspect;
 
     const glm::vec3 nearCenter = camPos + camDir * nearDist;
     const glm::vec3 farCenter = camPos + camDir * farDist;
@@ -126,7 +126,7 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
         drawClipped(clipNear[i], clipFar[i]);
     }
 
-    const float apertureRadius = lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
+    const float apertureRadius = orthographic ? 0.0f : lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
     if (apertureRadius > 1e-4f) {
         const int ringSegments = 32;
         glm::vec3 prevPoint = camPos + camRight * apertureRadius;

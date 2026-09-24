@@ -15,7 +15,8 @@ void main() {
 
     ivec2 idx = state.cellIndex;
     offsetRngState(rng, initRngState(idx, 0));
-    vec3 albedo = hsv2rgb(vec3(rand(rng)*360, mix(0.5, 0.85, rand(rng)), mix(0.8, 1.0, rand(rng))));
+    // vec3 albedo = hsv2rgb(vec3(rand(rng)*360, mix(0.5, 0.85, rand(rng)), mix(0.8, 1.0, rand(rng))));
+    vec3 albedo = vec3(rand(rng));
 
     if (state.distToBorder < borderSize) albedo = borderColor;
     mat = Diffuse(albedo);

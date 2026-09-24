@@ -13,19 +13,12 @@
 
 #include "field.hpp"
 
-struct ParameterCondition {
-    FieldPath param;
-    bool when = true;
-};
-
 class Parameter : public Field {
 public:
     const std::optional<std::string>& getDescription() const { return description; }
     bool isRestartingAnimation() const { return restartAccumulation; }
-    const std::optional<ParameterCondition>& getCondition() const { return condition; }
 
     Parameter& setDescription(std::string d) { description = std::move(d); return *this; }
-    Parameter& setCondition(ParameterCondition c) { condition = std::move(c); return *this; }
 
     template<typename T>
     Parameter& bind(T* ptr) requires (!std::is_enum_v<T>) {
@@ -71,7 +64,6 @@ public:
 private:
     std::optional<std::string> description;
     bool restartAccumulation = false;
-    std::optional<ParameterCondition> condition;
     std::function<void()> onSync;
 };
 

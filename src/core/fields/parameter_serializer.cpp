@@ -121,7 +121,12 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
                 parameter->setDescription(obj.at("description").get<std::string>());
             if (obj.contains("condition")) {
                 const auto& cond = obj.at("condition");
-                parameter->setCondition({ cond.at("param").get<std::string>(), cond.value("when", true) });
+                int when = 1;
+                if (cond.contains("when")) {
+                    const auto& w = cond.at("when");
+                    when = w.is_boolean() ? (w.get<bool>() ? 1 : 0) : w.get<int>();
+                }
+                parameter->setCondition({ cond.at("param").get<std::string>(), when });
             }
         }
     } else {
@@ -198,9 +203,10 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ```json
 "condition": { "param": "renderer/sampling/clamp" }
 "condition": { "param": "renderer/sampling/clamp", "when": false }
+"condition": { "param": "renderer/sky/light_mode", "when": 2 }
 ```
 
-`"param"` is the full path to a boolean parameter and `"when "` is `true` by default.
+`"param"` is the full path to a boolean, integer, or enumeration parameter. `"when"` is the value it must equal for this parameter to stay enabled (a bool for boolean parameters, an integer index for enumeration parameters), and defaults to `true`/`1`.
 
 ---
 )";

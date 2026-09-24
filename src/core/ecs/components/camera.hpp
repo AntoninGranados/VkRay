@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <utility>
 
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -11,13 +12,27 @@
 
 namespace ecs {
 
+enum class CameraProjection {
+    Perspective,
+    Orthographic
+};
+
 inline const ComponentType Camera = ComponentType::builder("camera")
-    .description("Perspective camera with native depth of field.")
+    .description("Perspective or orthographic camera with native depth of field.")
     .icon(ICON_FA_VIDEO)
     .group("camera")
     .needs("transform")
     .conflicts("sphere", "plane", "box", "quad", "mesh_ref")
+    .field<int>("projection", std::to_underlying(CameraProjection::Perspective), EnumMeta{ .items = {"Perspective", "Orthographic"} })
     .field<float>("focal_length", 21.45f, NumericMeta{ .min = 1.0f, .max = 300.0f, .step = 0.5f }, true)
+    .condition("projection", std::to_underlying(CameraProjection::Perspective))
+    .field<float>("sensor_width", 36.0f, NumericMeta{ .min = 1.0f, .step = 0.5f, .presets = {
+        {"Full Frame", 36.0f},
+        {"Super 35",   24.89f},
+        {"APS-C",      23.6f},
+        {"MFT",        17.3f},
+        {"Medium Format", 53.7f}
+    } }, true)
     .field<float>("focal_distance", 10.0f, NumericMeta{ .min = 0.1f, .step = 0.01f }, true)
     .field<float>("f_stop", 0.0f, NumericMeta{ .min = 0.0f, .max = 64.0f, .step = 0.1f, .presets = {
         {"Off",   0.0f},

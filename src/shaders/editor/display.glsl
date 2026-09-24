@@ -44,8 +44,7 @@ PixelInfo samplePixelInfo(ivec2 vpCoord, ivec2 vpSize, ivec2 renderSize) {
 Ray viewportRay(ivec2 coord, ivec2 viewportSize) {
     vec2 ndc = (vec2(coord) + 0.5) / vec2(viewportSize) * 2.0 - 1.0;
     CameraPose pose = sampleCameraPose(displayUBO.camera.motionOffset);
-    vec3 dir = normalize(ndc.x * pose.right * displayUBO.camera.U - ndc.y * pose.up * displayUBO.camera.V + pose.dir);
-    return Ray(pose.eye, dir);
+    return cameraRay(ndc, pose, displayUBO.camera.projection, displayUBO.camera.U, displayUBO.camera.V);
 }
 
 void main() {

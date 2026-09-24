@@ -26,7 +26,8 @@
 void ViewportPanel::draw() {
     Scene& scene = Core::getScene();
 
-    ImGuizmo::SetOrthographic(false);
+    const ecs::Component& activeCamera = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
+    ImGuizmo::SetOrthographic(static_cast<ecs::CameraProjection>(activeCamera.get<int>("projection")) == ecs::CameraProjection::Orthographic);
     ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::BeginFrame();
 

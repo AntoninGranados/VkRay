@@ -70,6 +70,9 @@ struct Mesh {
 };
 
 // ============== PATH-TRACING  ==============
+#define projection_Perspective  Enum(0)
+#define projection_Orthographic Enum(1)
+
 struct ThinLensUBO {
     float lensRadius;
     float focusDistance;
@@ -81,6 +84,7 @@ struct CameraUBO {
     ThinLensUBO thinLens;
     uint motionOffset;
     int lensSlot;
+    Enum projection;
     vec4 lensParams[4];
 };
 
@@ -95,6 +99,15 @@ struct Ray {
     vec3 origin;
     vec3 dir;
 };
+
+Ray cameraRay(vec2 ndc_pos, CameraPose pose, Enum projection, float U, float V) {
+    if (projection == projection_Orthographic) {
+        vec3 origin = pose.eye + ndc_pos.x * U * pose.right - ndc_pos.y * V * pose.up;
+        return Ray(origin, pose.dir);
+    }
+    vec3 dir = normalize(ndc_pos.x * pose.right * U - ndc_pos.y * pose.up * V + pose.dir);
+    return Ray(pose.eye, dir);
+}
 
 struct LensSample {
     vec3 origin;

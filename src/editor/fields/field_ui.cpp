@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -374,12 +375,47 @@ bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetI
     return changed;
 }
 
+void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve) {
+    std::vector<FieldGroup> result;
+    std::unordered_map<std::string, size_t> conditionGroups;
+
+    for (auto& item : groups) {
+        if (!item.field || !item.field->getCondition()) {
+            result.push_back(std::move(item));
+            continue;
+        }
+
+        const FieldCondition& cond = *item.field->getCondition();
+        const std::string key = cond.param.string();
+        if (!conditionGroups.contains(key)) {
+            conditionGroups[key] = result.size();
+            FieldGroup group;
+            group.showHeader = false;
+            group.disabledWhen = [cond, resolve] {
+                const std::optional<int> value = resolve(cond.param);
+                return value.has_value() && *value != cond.when;
+            };
+            result.push_back(std::move(group));
+        }
+        result[conditionGroups.at(key)].children.push_back(std::move(item));
+    }
+
+    groups = std::move(result);
+    for (auto& item : groups)
+        if (item.showHeader) clusterByCondition(item.children, resolve);
+}
+
 bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId) {
     std::vector<Field*> ptrs;
     ptrs.reserve(fields.size());
     for (Field& field : fields) ptrs.push_back(&field);
 
     auto groups = buildFieldGroups(ptrs);
+    clusterByCondition(groups, [&fields](const FieldPath& id) -> std::optional<int> {
+        for (const Field& field : fields)
+            if (field.getId() == id) return field.conditionValue();
+        return std::nullopt;
+    });
     return drawFieldGroups(groups, widgetId, [](Field& field, const std::string& id) {
         return drawField(field, std::format("{}##{}", id, field.getId().string()));
     });

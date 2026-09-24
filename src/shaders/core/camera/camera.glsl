@@ -15,6 +15,9 @@ Ray getRay(vec2 ndc_pos, inout RngState rng) {
         return Ray(lensSample.origin, normalize(lensSample.direction));
     }
 
+    if (ubo.camera.projection == projection_Orthographic)
+        return cameraRay(ndc_pos, pose, ubo.camera.projection, ubo.camera.U, ubo.camera.V);
+
     vec3 U = pose.right * ubo.camera.U;
     vec3 V = pose.up * ubo.camera.V;
     vec3 focalPoint = pose.eye + (ndc_pos.x * U - ndc_pos.y * V + pose.dir) * ubo.camera.thinLens.focusDistance;

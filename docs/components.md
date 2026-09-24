@@ -24,13 +24,15 @@ Simplifies the mesh asset to a target ratio.
 ## Camera
 
 ### Camera
-Perspective camera with native depth of field.
+Perspective or orthographic camera with native depth of field.
 
 **Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `mesh_ref`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
+| `projection` | enum | 0 |  | no |
 | `focal_length` | float | 21.45 | 1 ... 300 | yes |
+| `sensor_width` | float | 36 | ≥ 1 | yes |
 | `focal_distance` | float | 10 | ≥ 0.1 | yes |
 | `f_stop` | float | 0 | 0 ... 64 | yes |
 | `show_focus_plane` | bool | false |  | no |

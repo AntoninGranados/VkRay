@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <utility>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
@@ -21,8 +22,7 @@ glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
 
 float effectiveFov(const ecs::Registry& registry, ecs::Entity camera) {
     const ecs::Component& c = registry.get(camera, ecs::Camera);
-    const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-    const float fov = fovFromFocalLength(c.get<float>("focal_length") / sensorWidth);
+    const float fov = fovFromFocalLength(c.get<float>("focal_length") / c.get<float>("sensor_width"));
     if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview || !Core::getScene().isUsingSceneCamera() || camera != Core::getScene().getCamera())
         return fov;
     return glm::degrees(2.0f * glm::atan(glm::tan(glm::radians(fov) * 0.5f) / 0.8f));
@@ -39,10 +39,15 @@ glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
 }
 
 glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
-    return glm::perspective(
-        glm::radians(effectiveFov(registry, camera)),
-        aspect, 1e-4f, 1e4f
-    );
+    const ecs::Component& c = registry.get(camera, ecs::Camera);
+    if (static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic) {
+        const float halfWidth = c.get<float>("sensor_width") / 1000.0f * 0.5f;
+        const float halfHeight = halfWidth / aspect;
+        return glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1e-4f, 1e4f);
+    }
+    const float tanHalfFovH = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
+    const float fovY = 2.0f * glm::atan(tanHalfFovH / aspect);
+    return glm::perspective(fovY, aspect, 1e-4f, 1e4f);
 }
 
 float fovFromFocalLength(float normalizedFocalLength) {
@@ -58,18 +63,24 @@ float lensRadiusFromFStop(float normalizedFocalLength, float fStop) {
 }
 
 CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspect) {
-    const float tanHFov = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
+    const ecs::Component& c = registry.get(camera, ecs::Camera);
+    const ecs::CameraProjection projection = static_cast<ecs::CameraProjection>(c.get<int>("projection"));
 
     CameraUBO ubo{};
-    ubo.U = aspect * tanHFov;
-    ubo.V = tanHFov;
+    ubo.projection = std::to_underlying(projection);
     ubo.motionOffset = registry.ctx().get<CameraMotionInfo>().motionOffset;
+    ubo.thinLens.focusDistance = c.get<float>("focal_distance");
 
-    {
-        const ecs::Component& c = registry.get(camera, ecs::Camera);
-        const float sensorWidth = Core::getParameters().get<float>("internal/sensor_width");
-        ubo.thinLens.lensRadius = lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
-        ubo.thinLens.focusDistance = c.get<float>("focal_distance");
+    if (projection == ecs::CameraProjection::Orthographic) {
+        const float halfWidth = c.get<float>("sensor_width") / 1000.0f * 0.5f;
+        ubo.U = halfWidth;
+        ubo.V = halfWidth / aspect;
+        ubo.thinLens.lensRadius = 0.0f;
+    } else {
+        const float tanHalfFovH = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
+        ubo.U = tanHalfFovH;
+        ubo.V = tanHalfFovH / aspect;
+        ubo.thinLens.lensRadius = lensRadiusFromFStop(c.get<float>("focal_length") / c.get<float>("sensor_width"), c.get<float>("f_stop"));
     }
 
     CameraLensTable::pack(registry, camera, ubo);

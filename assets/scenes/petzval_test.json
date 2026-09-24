@@ -1,0 +1,58 @@
+{
+    "version": 1,
+    "light": "sunset",
+    "Materials": [
+        {
+            "name": "Ground",
+            "programmable": { "path": "assets/materials/voronoi.glsl" }
+        },
+        {
+            "name": "Subject",
+            "dielectric": { "albedo": [1, 1, 1], "roughness": 0.08, "ior": 1.5 }
+        },
+        {
+            "name": "Light_{n}",
+            "emissive": {
+                "albedo": { "rand": { "min": [0.6, 0.3, 0.1], "max": [1.0, 0.9, 0.6] } },
+                "emission_strength": { "rand": { "min": 20, "max": 60 } }
+            },
+            "repeat": { "count": 150 }
+        }
+    ],
+    "Assets": [
+        {
+            "name": "bunny",
+            "mesh": { "path": "./assets/models/bunny.obj", "smooth": true }
+        }
+    ],
+    "Objects": [
+        {
+            "camera": { "focal_length": 25, "focal_distance": 10.0, "f_stop": 2 },
+            "programmable_lens": { "path": "assets/camera/petzval.glsl" },
+            "name": "Camera",
+            "transform": { "position": [0, 1.5, -10], "rotation": [5, 180, 0] }
+        },
+        {
+            "plane": {},
+            "material_ref": { "handle": "Ground" },
+            "name": "Floor",
+            "transform": { "position": [0, 0, 0] }
+        },
+        {
+            "mesh_ref": { "handle": "bunny" },
+            "material_ref": { "handle": "Subject" },
+            "name": "Subject",
+            "transform": { "position": [0, 1.391, 0], "rotation": [0, 140, 0], "scale": [3.2, 3.2, 3.2] }
+        },
+        {
+            "sphere": {},
+            "material_ref": { "handle": "Light_{n}" },
+            "name": "Light_{n}",
+            "transform": {
+                "position": { "rand": { "min": [-25, 0.0, 15], "max": [25, 26, 45] } },
+                "scale": { "rand": { "min": 0.06, "max": 0.15 } }
+            },
+            "repeat": { "count": 150 }
+        }
+    ]
+}

@@ -42,6 +42,7 @@ struct alignas(16) CameraUBO {
     ThinLensUBO thinLens;
     uint32_t motionOffset;
     int32_t lensSlot = -1;
+    int32_t projection = 0;
     alignas(16) glm::vec4 lensParams[4]{};
 };
 

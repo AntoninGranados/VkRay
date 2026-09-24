@@ -98,6 +98,11 @@ public:
         return *this;
     }
 
+    Builder& condition(std::string param, int when = 1) {
+        type.fields.back().setCondition({ std::move(param), when });
+        return *this;
+    }
+
     template <typename T>
     Builder& payload(std::string id) {
         if (type.payloadIndex.contains(id))
