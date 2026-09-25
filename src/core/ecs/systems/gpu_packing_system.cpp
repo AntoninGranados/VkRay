@@ -11,9 +11,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
+#include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
+#include "core/render/sky_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/core.hpp"
@@ -45,6 +48,12 @@ uint32_t resolveMeshSlot(Registry& registry, const ComponentStorage& meshRefs, c
 
 const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
     return registry.has(e, Mesh) ? &registry.get(e, Mesh).payload<MeshAsset>("geometry") : nullptr;
+}
+
+Entity resolveEnvironmentEntity(Registry& registry) {
+    for (const Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
+        if (registry.has(e, Environment)) return e;
+    return {};
 }
 
 glm::mat4 composeTransform(const Component& transform) {
@@ -170,20 +179,29 @@ void materialPackingSystem(Registry& registry) {
     const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
 
     std::vector<GpuMaterial> gpuMaterials;
-    std::vector<float> materialParams;
+    std::vector<float> pluginParams;
     gpuMaterials.reserve(materialEntities.size());
 
     for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
-        MaterialTable::pack(registry, entity, gpu, materialParams);
+        MaterialTable::pack(registry, entity, gpu, pluginParams);
         gpuMaterials.push_back(gpu);
     }
 
     // Slack so unpackMaterial's fixed-size read past the last material's base never goes out of bounds.
-    materialParams.resize(materialParams.size() + kMaterialPayloadSize, 0.0f);
+    pluginParams.resize(pluginParams.size() + kMaterialPayloadSize, 0.0f);
+
+    LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
+    lensInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
+    lensInfo.slot = CameraLensTable::pack(registry, *registry.ctx().get<Entity*>(), pluginParams);
+
+    SkyPluginInfo& skyInfo = registry.ctx().get<SkyPluginInfo>();
+    const size_t skyBase = pluginParams.size();
+    SkyTable::pack(registry, resolveEnvironmentEntity(registry), pluginParams);
+    skyInfo.paramsBase = pluginParams.size() > skyBase ? static_cast<int32_t>(skyBase) : -1;
 
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().material, gpuMaterials);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().materialParams, materialParams);
+    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().pluginParams, pluginParams);
 }
 
 void objectPackingSystem(Registry& registry) {

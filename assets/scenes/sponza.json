@@ -1,6 +1,11 @@
 {
     "version": 1,
-    "light": "day",
+    "Scene": [
+        {
+            "name": "Environment",
+            "programmable_sky": { "path": "assets/environment/day_sky.glsl" }
+        }
+    ],
     "Materials": [
         { "name": "Sponza", "diffuse": { "albedo": [1, 1, 1] } }
     ],

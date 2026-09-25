@@ -110,6 +110,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     display.readBuffer( 8, renderResources.sceneHandles.object.handle,     BufferUsageType::Storage);
     display.readBuffer( 9, renderResources.sceneHandles.material.handle,   BufferUsageType::Storage);
     display.readBuffer(10, renderResources.sceneHandles.liveMotion.handle, BufferUsageType::Storage);
+    display.readBuffer(11, renderResources.sceneHandles.pluginParams.handle, BufferUsageType::Storage);
     display.setPipeline("./src/shaders/editor/display.glsl");
     displayTimestamp = display.setTimestamp();
 

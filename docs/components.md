@@ -80,6 +80,22 @@ Programmable custom lens, defined by a GLSL shader-definition file.
 |-------|------|---------|-------------|------------|
 | `path` | path |  |  | no |
 
+## Environment
+
+### Environment
+Environment marker.
+
+ **Conflicts:** `transform`
+
+### Programmable Sky
+Programmable custom sky, defined by a GLSL shader-definition file.
+
+**Needs:** `environment`
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+
 ## Internal
 
 ### Camera Navigation

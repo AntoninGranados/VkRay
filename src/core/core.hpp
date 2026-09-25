@@ -37,6 +37,9 @@ public:
 
     static void markPipelinesDirty() { get().pipelinesDirty = true; }
 
+    static void setGraphBuilder(std::function<void()> fn) { get().graphBuilder = std::move(fn); }
+    static void requestGraphRebuild() { get().graphRebuildRequested = true; }
+
     static void resize(int width, int height);
     static void requestResize(int width, int height) { get().targetExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
     static bool consumeResize();
@@ -56,6 +59,7 @@ private:
     static void reloadShaders();
     static void updateAnimationDirty(Core& c);
     static void reloadPipelinesIfDirty(Core& c);
+    static void rebuildGraphIfRequested(Core& c);
 
     Platform*         platform = nullptr;
     VkSmol            engine;
@@ -66,6 +70,8 @@ private:
     RenderMode        renderMode = RenderMode::Preview;
     bool              renderDirty = false;
     bool              pipelinesDirty = false;
+    bool              graphRebuildRequested = false;
+    std::function<void()> graphBuilder;
     VkExtent2D        targetExtent = {};
     std::filesystem::path outputPath;
 };

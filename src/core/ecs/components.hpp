@@ -5,3 +5,4 @@
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/physics.hpp"
 #include "core/ecs/components/material.hpp"
+#include "core/ecs/components/environment.hpp"

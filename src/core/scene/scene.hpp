@@ -28,7 +28,7 @@ struct SceneGpuBuffers {
     SceneGpuBufferEntry bvh;
     SceneGpuBufferEntry mesh;
     SceneGpuBufferEntry material;
-    SceneGpuBufferEntry materialParams;
+    SceneGpuBufferEntry pluginParams;
     SceneGpuBufferEntry object;
     SceneGpuBufferEntry light;
     SceneGpuBufferEntry motion;
@@ -39,10 +39,20 @@ struct CameraMotionInfo {
     uint32_t motionOffset = 0;
 };
 
+struct LensPluginInfo {
+    int32_t slot = -1;
+    int32_t paramsBase = 0;
+};
+
+struct SkyPluginInfo {
+    int32_t paramsBase = -1;
+};
+
 struct SceneRoots {
     ecs::Entity materialsRoot;
     ecs::Entity assetsRoot;
     ecs::Entity objectsRoot;
+    ecs::Entity sceneRoot;
     ecs::Entity internalsRoot;
 };
 
@@ -60,9 +70,11 @@ public:
     ecs::Entity getMaterialsRoot() const { return registry.ctx().get<SceneRoots>().materialsRoot; }
     ecs::Entity getAssetsRoot() const { return registry.ctx().get<SceneRoots>().assetsRoot; }
     ecs::Entity getObjectsRoot() const { return registry.ctx().get<SceneRoots>().objectsRoot; }
+    ecs::Entity getSceneRoot() const { return registry.ctx().get<SceneRoots>().sceneRoot; }
     ecs::Entity getDefaultMaterial() const { return defaultMaterial; }
     ecs::Entity getDefaultMesh() const { return defaultMesh; }
     ecs::Entity getDefaultCamera() const { return defaultCamera; }
+    ecs::Entity getEnvironment() const;
 
     ecs::Entity& getCamera() { return activeCamera; }
     bool isUsingSceneCamera() { return activeCamera != defaultCamera; }

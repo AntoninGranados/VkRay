@@ -85,7 +85,7 @@ struct CameraUBO {
     uint motionOffset;
     int lensSlot;
     Enum projection;
-    vec4 lensParams[4];
+    int lensParamsBase;
 };
 
 struct CameraPose {
@@ -132,12 +132,6 @@ struct Hit {
 #define foundIntersection(h) ((h).object.type != obj_None)
 
 // ============== LIGHTS ==============
-#define lightMode_Day    Enum(0)
-#define lightMode_Sunset Enum(1)
-#define lightMode_Night  Enum(2)
-#define lightMode_Empty  Enum(3)
-#define lightMode_Studio Enum(4)
-
 struct Light {
     int objectId;
     float area;

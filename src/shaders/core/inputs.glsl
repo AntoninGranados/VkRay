@@ -10,7 +10,7 @@ struct ScreenUBO {
 };
 
 struct RenderUBO {
-    Enum lightMode;
+    int skyParamsBase;
     int maxBounces;
     int importanceSampling;
     int clipAccumulation;
@@ -46,9 +46,9 @@ layout(set = 0, binding = 6) buffer readonly MeshBuffer {
 layout(set = 0, binding = 7) buffer readonly MaterialBuffer {
     Material materials[];
 } materialBuffer;
-layout(set = 0, binding = 8) buffer readonly MaterialParamsBuffer {
+layout(set = 0, binding = 8) buffer readonly PluginParamsBuffer {
     float values[];
-} materialParams;
+} pluginParams;
 layout(set = 0, binding = 9) buffer readonly ObjectBuffer {
     uint objectCount;
     Object objects[];
@@ -69,7 +69,7 @@ layout(set = 0, binding = 13) buffer readonly MotionBuffer {
 ResolvedMaterial unpackMaterial(in Material mat) {
     ResolvedMaterial resolved;
     resolved.type = mat.type;
-    for (int i = 0; i < MATERIAL_PAYLOAD_SIZE; i++) resolved.payload[i] = materialParams.values[mat.base + i];
+    for (int i = 0; i < MATERIAL_PAYLOAD_SIZE; i++) resolved.payload[i] = pluginParams.values[mat.base + i];
     return resolved;
 }
 

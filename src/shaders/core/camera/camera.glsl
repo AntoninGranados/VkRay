@@ -11,7 +11,7 @@ Ray getRay(vec2 ndc_pos, inout RngState rng) {
     CameraPose pose = sampleCameraPose(ubo.camera.motionOffset);
 
     if (ubo.camera.lensSlot >= 0) {
-        LensSample lensSample = dispatchCameraLens(ubo.camera.lensSlot, ndc_pos, pose, ubo.camera.U, ubo.camera.V, rng);
+        LensSample lensSample = dispatchCameraLens(ubo.camera.lensSlot, ubo.camera.lensParamsBase, ndc_pos, pose, ubo.camera.U, ubo.camera.V, rng);
         return Ray(lensSample.origin, normalize(lensSample.direction));
     }
 

@@ -23,14 +23,6 @@ enum class DebugView : int {
     SkyMask,
 };
 
-enum LightMode : int {
-    Day,
-    Sunset,
-    Night,
-    Empty,
-    Studio,
-};
-
 struct alignas(16) ThinLensUBO {
     float lensRadius;
     float focusDistance;
@@ -43,7 +35,7 @@ struct alignas(16) CameraUBO {
     uint32_t motionOffset;
     int32_t lensSlot = -1;
     int32_t projection = 0;
-    alignas(16) glm::vec4 lensParams[4]{};
+    int32_t lensParamsBase = 0;
 };
 
 struct alignas(16) ScreenUBO {
@@ -52,7 +44,7 @@ struct alignas(16) ScreenUBO {
 };
 
 struct alignas(16) RenderUBO {
-    LightMode lightMode;
+    int32_t skyParamsBase = -1;
     int maxBounces;
     int importanceSampling;
     int clipAccumulation;

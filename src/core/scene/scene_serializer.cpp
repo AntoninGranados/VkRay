@@ -16,10 +16,12 @@
 
 #include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/environment.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
 #include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
+#include "core/render/sky_table.hpp"
 #include "scene.hpp"
 #include "utils/json_dsl.hpp"
 #include "utils/log.hpp"
@@ -30,13 +32,6 @@ static constexpr int kSceneVersion = 1;
 
 namespace {
 
-constexpr std::pair<const char*, LightMode> kLightModes[] = {
-    {"day", LightMode::Day},
-    {"sunset", LightMode::Sunset},
-    {"night", LightMode::Night},
-    {"empty", LightMode::Empty},
-    {"studio", LightMode::Studio},
-};
 constexpr std::pair<const char*, Interpolation> kInterpolations[] = {
     {"linear", Interpolation::Linear},
     {"step", Interpolation::Step},
@@ -290,6 +285,22 @@ void reparseCameraLensPlugins(ecs::Registry& registry) {
     }
 }
 
+void reparseSkyPlugins(ecs::Registry& registry) {
+    for (const ecs::Entity entity : registry.storage(ecs::SkyPlugin).entities()) {
+        ecs::Component& pluginComp = registry.get(entity, ecs::SkyPlugin);
+        const std::filesystem::path path = pluginComp.get<std::filesystem::path>("path");
+        pluginComp.payload<ShaderPlugin>("plugin").parse(path, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor(path));
+    }
+}
+
+void replaceSceneRootIfProvided(const json& j, Scene& scene) {
+    if (!j.contains("Scene") || !j["Scene"].is_array() || j["Scene"].empty()) return;
+    ecs::Registry& registry = scene.getRegistry();
+    const std::vector<ecs::Entity> children = scene.getChildren(scene.getSceneRoot());
+    for (const ecs::Entity& child : children)
+        registry.destroyEntity(child);
+}
+
 void activateFirstNonDefaultCamera(ecs::Registry& registry, Scene& scene) {
     for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
         if (entity == scene.getDefaultCamera()) continue;
@@ -300,7 +311,7 @@ void activateFirstNonDefaultCamera(ecs::Registry& registry, Scene& scene) {
 
 } // namespace
 
-bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string& path, std::optional<uint32_t> forceSeed) {
+bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<uint32_t> forceSeed) {
     std::optional<json> parsed = parseSceneFile(path);
     if (!parsed) return false;
     const json& j = *parsed;
@@ -317,11 +328,11 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     std::mt19937 rng(resolveSeed(j, forceSeed));
     ResolveCtx ctx{ rng, {} };
 
-    if (j.contains("light"))
-        lightMode = fromStr(kLightModes, j["light"].get<std::string>(), LightMode::Day);
+    replaceSceneRootIfProvided(j, scene);
 
     SpawnContext spawn{ scene.getRegistry(), scene.getAnimationStore(), {} };
 
+    loadSection(j, "Scene", scene.getSceneRoot(), ctx, spawn);
     loadSection(j, "Materials", scene.getMaterialsRoot(), ctx, spawn);
     loadSection(j, "Assets", scene.getAssetsRoot(), ctx, spawn);
     loadSection(j, "Objects", scene.getObjectsRoot(), ctx, spawn);
@@ -330,16 +341,16 @@ bool SceneSerializer::load(Scene& scene, LightMode& lightMode, const std::string
     reloadMeshAssets(spawn.registry, scene);
     reparseMaterialPlugins(spawn.registry, scene);
     reparseCameraLensPlugins(spawn.registry);
+    reparseSkyPlugins(spawn.registry);
     activateFirstNonDefaultCamera(spawn.registry, scene);
 
     spawn.animStore.evaluate(0.0f);
     return true;
 }
 
-bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string& path) {
+bool SceneSerializer::save(Scene& scene, const std::string& path) {
     json j;
     j["version"] = kSceneVersion;
-    j["light"] = toStr(kLightModes, lightMode);
 
     ecs::Registry& reg = scene.getRegistry();
     const AnimationStore& animStore = scene.getAnimationStore();
@@ -379,6 +390,7 @@ bool SceneSerializer::save(Scene& scene, LightMode lightMode, const std::string&
         return arr;
     };
 
+    j["Scene"] = saveSection(scene.getSceneRoot());
     j["Materials"] = saveSection(scene.getMaterialsRoot(), scene.getDefaultMaterial());
     j["Assets"] = saveSection(scene.getAssetsRoot(), scene.getDefaultMesh());
     j["Objects"] = saveSection(scene.getObjectsRoot());

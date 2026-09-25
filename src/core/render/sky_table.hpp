@@ -8,11 +8,11 @@
 
 namespace ecs { class Registry; }
 
-namespace CameraLensTable {
-    inline const std::string kType = "camera_lens";
+namespace SkyTable {
+    inline const std::string kType = "sky";
     inline constexpr int kVersion = 1;
 
     int slotFor(const std::filesystem::path& path);
     void generateDispatch();
-    int pack(ecs::Registry& registry, ecs::Entity camera, std::vector<float>& params);
+    void pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
 }

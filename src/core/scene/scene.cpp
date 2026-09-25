@@ -19,6 +19,8 @@ void Scene::init() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
     registry.ctx().emplace<CameraMotionInfo>();
+    registry.ctx().emplace<LensPluginInfo>();
+    registry.ctx().emplace<SkyPluginInfo>();
     registry.ctx().emplace<FrameContext>();
     registry.ctx().emplace<ecs::ApertureState>();
     registry.ctx().emplace<ecs::PhysicsBakeState>();
@@ -41,7 +43,7 @@ void Scene::clear() {
     gpuBuffers.bvh.capacity      = 0;
     gpuBuffers.mesh.capacity     = 0;
     gpuBuffers.material.capacity = 0;
-    gpuBuffers.materialParams.capacity = 0;
+    gpuBuffers.pluginParams.capacity = 0;
     gpuBuffers.object.capacity   = 0;
     gpuBuffers.light.capacity    = 0;
     gpuBuffers.motion.capacity   = 0;
@@ -52,6 +54,12 @@ void Scene::clear() {
 
 const std::vector<ecs::Entity>& Scene::getChildren(ecs::Entity parent) const {
     return registry.getChildren(parent);
+}
+
+ecs::Entity Scene::getEnvironment() const {
+    for (const ecs::Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
+        if (registry.has(e, ecs::Environment)) return e;
+    return {};
 }
 
 ecs::Entity Scene::loadMeshAsset(std::string name, const std::string& path, bool smooth) {
@@ -134,6 +142,7 @@ void Scene::resetSceneState() {
 
 void Scene::addDefaultAssets() {
     SceneRoots& sceneRoots = roots();
+    sceneRoots.sceneRoot     = createNamedEntity("Scene");
     sceneRoots.materialsRoot = createNamedEntity("Materials");
     sceneRoots.assetsRoot    = createNamedEntity("Assets");
     sceneRoots.objectsRoot   = createNamedEntity("Objects");
@@ -146,6 +155,9 @@ void Scene::addDefaultAssets() {
     defaultMesh = createNamedEntity("Default Cube", sceneRoots.assetsRoot);
     registry.add(defaultMesh, ecs::Mesh);
     registry.get(defaultMesh, ecs::Mesh).payload<MeshAsset>("geometry") = makeDefaultMeshAsset();
+
+    const ecs::Entity environment = createNamedEntity("Environment", sceneRoots.sceneRoot);
+    registry.add(environment, ecs::Environment);
 
     defaultCamera = createNamedEntity("Default Camera", sceneRoots.internalsRoot);
     registry.add(defaultCamera, ecs::Camera);

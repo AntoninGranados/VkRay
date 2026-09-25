@@ -10,7 +10,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "global.glsl"
 #include "random/utils.glsl"
 #include "colors/utils.glsl"
-#include "sky.glsl"
+#include "environment.glsl"
 #include "adaptive_sampling.glsl"
 
 #define CAMERA_LENS_APERTURE

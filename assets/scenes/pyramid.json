@@ -1,6 +1,11 @@
 {
     "version": 1,
-    "light": "sunset",
+    "Scene": [
+        {
+            "name": "Environment",
+            "programmable_sky": { "path": "assets/environment/sunset_sky.glsl" }
+        }
+    ],
     "Materials": [
         {
             "name": "Floor",

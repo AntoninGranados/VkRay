@@ -166,7 +166,7 @@ void MaterialTable::generateDispatch() {
             "return mat;\n"
             "}}\n\n",
             MaterialTable::kType, plugin->getSlot(), GlslCodegen::declareGlobals(*plugin), plugin->getDeclarations(), funcName,
-            GlslCodegen::assignParams(*plugin, [](int i) { return std::format("{}Params.values[base+{}]", MaterialTable::kType, i); }),
+            GlslCodegen::assignParams(*plugin, [](int i) { return std::format("pluginParams.values[base+{}]", i); }),
             plugin->getBody()
         );
         cases += std::format("        case {}: result = {} (base, pos, uv, normal, wo, rng, new_normal); break;\n", plugin->getSlot(), funcName);
@@ -183,13 +183,13 @@ void MaterialTable::generateDispatch() {
         "    vec3 new_normal = normal;\n"
         "    int base = int(mat.base) + 1;\n"
         "    ResolvedMaterial result = DEFAULT_MATERIAL;\n"
-        "    switch (int({}Params.values[mat.base])) {{\n"
+        "    switch (int(pluginParams.values[mat.base])) {{\n"
         "{}"
         "    }}\n"
         "    hit.normal = new_normal;\n"
         "    return result;\n"
         "}}\n",
-        functions, MaterialTable::kType, cases
+        functions, cases
     );
 
     std::filesystem::path outputPath = "./src/shaders/generated/programmable_dispatch.glsl";

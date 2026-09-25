@@ -18,6 +18,7 @@
 #include "core/core.hpp"
 #include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
+#include "core/render/sky_table.hpp"
 #include "core/scene/scene_serializer.hpp"
 
 #include "editor/ecs/component_ui_registry.hpp"
@@ -71,6 +72,7 @@ void Application::initEditorMode() {
     io.FontGlobalScale = 1.0f / xscale;
 
     initScene();
+    Core::setGraphBuilder([this] { buildRenderGraph(false); });
     buildRenderGraph(false);
     runFn = Editor::run;
 }
@@ -106,6 +108,7 @@ void Application::buildRenderGraph(bool offline) {
     MaterialTable::generateGlsl();
     MaterialTable::generateDispatch();
     CameraLensTable::generateDispatch();
+    SkyTable::generateDispatch();
 
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();
@@ -114,10 +117,12 @@ void Application::buildRenderGraph(bool offline) {
         Editor::getEditorRenderer().registerImGuiTextures();
         Editor::getMaterialPreview().onGraphCompiled(previewResources);
 
+        for (size_t id : shaderWatchIds) Core::getFileWatcher().unwatch(id);
+        shaderWatchIds.clear();
         for (const std::string& entry : Core::getEngine().getShaderPaths())
             for (const std::string& file : Shader::getSourceFiles(entry))
                 if (file.find("/generated/") == std::string::npos)
-                    Core::getFileWatcher().watch(file, Core::markPipelinesDirty);
+                    shaderWatchIds.push_back(Core::getFileWatcher().watch(file, Core::markPipelinesDirty));
     }
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
@@ -127,8 +132,5 @@ void Application::initScene(const std::string& sceneFile) {
 
     ecs::ComponentUiRegistry::init();
 
-    LightMode mode = LightMode::Day;
-    SceneSerializer::load(Core::getScene(), mode, sceneFile);
-
-    Core::getParameters().set("scene/light_mode", mode);
+    SceneSerializer::load(Core::getScene(), sceneFile);
 }

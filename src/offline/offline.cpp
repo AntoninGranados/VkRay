@@ -17,15 +17,13 @@ void Offline::run(JobQueue& queue) {
         initParameters(job->parameterOverrides);
         Core::consumeResize();
 
-        LightMode lightMode = LightMode::Day;
-        if (!SceneSerializer::load(Core::getScene(), lightMode, job->scene.string(), job->seed)) {
+        if (!SceneSerializer::load(Core::getScene(), job->scene.string(), job->seed)) {
             Log::error("Offline", std::format("Failed to load the scene `{}` for the job {}", job->scene.string(), jobIndex));
             queue.fail();
             continue;
         }
         Log::success("Offline", std::format("[{}/{}] Loaded: `{}`", jobIndex, totalJobs, job->scene.string()));
         Core::setRenderMode(RenderMode::RenderSingle);
-        Core::getParameters().set("scene/light_mode", lightMode);
 
         Core::getEngine().waitIdle();
 

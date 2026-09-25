@@ -49,6 +49,8 @@ void StatsPanel::draw() {
     ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking, [&] {
         ImGui::Text("%.1f fps (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         ImGui::Text("%u samples", coreRenderer.getSampleCount());
+        if (ImGui::Button("Rebuild Render Graph"))
+            Core::requestGraphRebuild();
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
             showGraph = !showGraph;
     });

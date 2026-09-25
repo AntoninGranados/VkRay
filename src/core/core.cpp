@@ -72,10 +72,24 @@ void Core::reloadPipelinesIfDirty(Core& c) {
     reloadShaders();
 }
 
+void Core::rebuildGraphIfRequested(Core& c) {
+    if (!c.graphRebuildRequested) return;
+    c.graphRebuildRequested = false;
+    if (!c.graphBuilder) return;
+
+    c.engine.waitIdle();
+    c.coreRenderer.destroy();
+    c.engine.destroyGraph();
+    c.graphBuilder();
+    c.restartAccumulation();
+}
+
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     Core& c = get();
     Scene& scene = c.coreRenderer.getScene();
     c.fileWatcher.poll();
+
+    rebuildGraphIfRequested(c);
 
     updateAnimationDirty(c);
     scene.runPreRender();

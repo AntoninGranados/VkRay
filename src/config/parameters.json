@@ -78,16 +78,6 @@
         }
     },
 
-    "scene": {
-        "label": "Scene",
-        "light_mode": {
-            "label": "Light Mode",
-            "items": ["Day", "Sunset", "Night", "Empty", "Studio"],
-            "default": "Day",
-            "restart_accumulation": true
-        }
-    },
-
     "editor": {
         "label": "Editor",
         "camera": {

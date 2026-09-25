@@ -26,6 +26,7 @@ layout(set = 0, binding = 7) buffer readonly MeshBuffer   { Mesh     meshes[];  
 layout(set = 0, binding = 8) buffer readonly ObjectBuffer { uint objectCount; Object objects[]; } objectBuffer;
 layout(set = 0, binding = 9) buffer readonly MaterialBuffer { Material materials[]; } materialBuffer;
 layout(set = 0, binding = 10) buffer readonly MotionBuffer  { MotionSample samples[]; } motionBuffer;
+layout(set = 0, binding = 11) buffer readonly PluginParamsBuffer { float values[]; } pluginParams;
 
 #include "../core/global.glsl"
 #include "../core/camera/camera.glsl"

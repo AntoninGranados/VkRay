@@ -6,6 +6,7 @@
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/render/camera_lens_table.hpp"
 #include "core/render/material_table.hpp"
+#include "core/render/sky_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
@@ -170,6 +171,11 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Principled);
     ui_reg.addCustom(ecs::MaterialPlugin, [](Component& c, Registry&, Entity) {
         return drawShaderPluginField(c, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor);
+    });
+
+    ui_reg.add(ecs::Environment);
+    ui_reg.addCustom(ecs::SkyPlugin, [](Component& c, Registry&, Entity) {
+        return drawShaderPluginField(c, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor);
     });
 }
 

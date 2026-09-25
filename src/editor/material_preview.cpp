@@ -39,7 +39,6 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
 
     RenderResources resources = renderer.initGraph(builder, VkExtent2D{ kPreviewSize, kPreviewSize }, "MaterialPreview", lensImageHandle);
     renderer.setTargetSampleCount(0);
-    renderer.setLightMode(LightMode::Studio);
     return resources;
 }
 

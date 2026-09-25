@@ -11,7 +11,6 @@
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "editor/editor.hpp"
-#include "editor/fields/parameter_ui.hpp"
 #include "editor/ui_utils.hpp"
 
 
@@ -23,9 +22,7 @@ void ScenePanel::draw() {
     ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [&] {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", { -FLT_MIN, 0 })) {
             if (auto path = ui::openFileDialog({{"Scene", "json"}}, "assets/scenes/")) {
-                LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
-                if (SceneSerializer::load(scene, mode, path->string())) {
-                    Core::getParameters().set("scene/light_mode", mode);
+                if (SceneSerializer::load(scene, path->string())) {
                     const ecs::Entity camera = scene.getCamera();
                     Editor::selectEntity(camera == scene.getDefaultCamera() ? std::nullopt : std::optional{camera});
                     Core::markRenderDirty();
@@ -36,14 +33,11 @@ void ScenePanel::draw() {
 
         if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save Scene", { -FLT_MIN, 0 })) {
             if (auto path = ui::saveFileDialog({{"Scene", "json"}}, "assets/scenes/", "untitled.json", "json")) {
-                LightMode mode = Core::getParameters().get<LightMode>("scene/light_mode");
-                if (SceneSerializer::save(scene, mode, path->string())) {
+                if (SceneSerializer::save(scene, path->string())) {
                     Log::success("ScenePanel", std::format("Scene saved: {}", path->string()));
                 }
             }
         }
-
-        ParameterUI::drawGroup("scene");
 
         if (ImGui::BeginChild("##SceneTree", ImVec2(-FLT_MIN, 400.0f), ImGuiChildFlags_Borders)) {
             std::function<void(ecs::Entity, int)> drawNode;
@@ -73,6 +67,7 @@ void ScenePanel::draw() {
                 }
             };
 
+            drawNode(scene.getSceneRoot(), 0);
             drawNode(scene.getMaterialsRoot(), 0);
             drawNode(scene.getAssetsRoot(), 0);
             drawNode(scene.getObjectsRoot(), 0);
@@ -109,7 +104,9 @@ void ScenePanel::draw() {
             && *selectedEntity != scene.getDefaultMesh()
             && *selectedEntity != scene.getMaterialsRoot()
             && *selectedEntity != scene.getAssetsRoot()
-            && *selectedEntity != scene.getObjectsRoot();
+            && *selectedEntity != scene.getObjectsRoot()
+            && *selectedEntity != scene.getSceneRoot()
+            && *selectedEntity != scene.getEnvironment();
         if (!canDelete) ImGui::BeginDisabled();
         if (ImGui::Button("- Delete")) {
             ecs::Entity entityToDelete = *selectedEntity;

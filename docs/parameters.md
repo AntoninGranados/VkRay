@@ -107,11 +107,6 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 | `renderer/aov/mat_type` | Mat Type | Encoded material type per pixel. | Boolean | false | - | no |
 | `renderer/aov/sky_mask` | Sky Mask | White for background pixels, black for geometry. | Boolean | false | - | no |
 
-## Scene
-| Path | Label | Description | Type | Default | Constraints | Restart |
-|------|-------|-------------|------|---------|-------------|---------|
-| `scene/light_mode` | Light Mode | - | Enumeration | `Day` | `Day` • `Sunset` • `Night` • `Empty` • `Studio` | yes |
-
 ## Editor
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|

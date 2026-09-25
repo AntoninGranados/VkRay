@@ -104,8 +104,6 @@ void CoreRenderer::bindParameters() {
         Core::requestResize(size.x, size.y);
     });
 
-    parameters.bind("scene/light_mode", &pathtracerUBO.render.lightMode);
-
     for (const AOVChannel& channel : kAOVChannels)
         parameters.bind(std::string("renderer/aov/") + channel.name, &(aovFlags.*channel.flag));
 }

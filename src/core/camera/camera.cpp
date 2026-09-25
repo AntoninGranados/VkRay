@@ -10,7 +10,6 @@
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/registry.hpp"
-#include "core/render/camera_lens_table.hpp"
 #include "core/scene/scene.hpp"
 
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler) {
@@ -100,7 +99,9 @@ CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspe
         ? 0.0f
         : lensRadiusFromFStop(c.get<float>("focal_length") / c.get<float>("sensor_width"), c.get<float>("f_stop"));
 
-    CameraLensTable::pack(registry, camera, ubo);
+    const LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
+    ubo.lensSlot = lensInfo.slot;
+    ubo.lensParamsBase = lensInfo.paramsBase;
 
     return ubo;
 }

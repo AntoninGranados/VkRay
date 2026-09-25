@@ -1,6 +1,11 @@
 {
     "version": 1,
-    "light": "empty",
+    "Scene": [
+        {
+            "name": "Environment",
+            "programmable_sky": { "path": "assets/environment/empty_sky.glsl" }
+        }
+    ],
     "Materials": [
         {
             "name": "Floor",
