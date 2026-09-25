@@ -93,6 +93,8 @@ void CameraLensTable::generateDispatch() {
             "{}"
             "{}"
             "LensSample {} (vec2 ndcPos, CameraPose pose, float U, float V, inout RngState rng) {{\n"
+            "float lensRadius = ubo.camera.thinLens.lensRadius;\n"
+            "float focalDistance = ubo.camera.thinLens.focusDistance;\n"
             "{}"
             "LensSample result;\n"
             "{}"

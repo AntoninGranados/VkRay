@@ -3,6 +3,8 @@
 // CameraPose pose
 // float U
 // float V
+// float lensRadius
+// float focalDistance
 // RngState rng
 
 // --------------- OUTPUTS ---------------
@@ -16,9 +18,6 @@
 #param float shiftY = 0.0
 
 void main() {
-    float lensRadius = ubo.camera.thinLens.lensRadius;
-    float focalDistance = ubo.camera.thinLens.focusDistance;
-
     vec3 worldNormal = quatToMat3(eulerToQuat(radians(planeRotation))) * vec3(0.0, 0.0, 1.0);
 
     vec3 diff = planePosition - pose.eye;

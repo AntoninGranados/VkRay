@@ -9,12 +9,12 @@ void main() {
     float phi = atan(p.y, p.x);
 
     vec3 dir = pose.dir * cos(theta) + (pose.right * cos(phi) + pose.up * sin(phi)) * sin(theta);
-    vec3 focalPoint = pose.eye + dir * ubo.camera.thinLens.focusDistance;
+    vec3 focalPoint = pose.eye + dir * focalDistance;
 
     vec3 offset = vec3(0.0);
-    if (ubo.camera.thinLens.lensRadius > 0.0) {
+    if (lensRadius > 0.0) {
         vec2 lensP = sampleLens(rng);
-        offset = ubo.camera.thinLens.lensRadius * (pose.right * lensP.x + pose.up * lensP.y);
+        offset = lensRadius * (pose.right * lensP.x + pose.up * lensP.y);
     }
 
     result.origin = pose.eye + offset;

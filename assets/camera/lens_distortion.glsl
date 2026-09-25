@@ -7,9 +7,6 @@ void main() {
     float r2 = dot(ndcPos, ndcPos);
     vec2 distorted = ndcPos * (1.0 + k1 * r2 + k2 * r2 * r2);
 
-    float lensRadius = ubo.camera.thinLens.lensRadius;
-    float focalDistance = ubo.camera.thinLens.focusDistance;
-
     vec3 right = pose.right * U;
     vec3 up = pose.up * V;
     vec3 focalPoint = pose.eye + (distorted.x * right - distorted.y * up + pose.dir) * focalDistance;

@@ -3,9 +3,6 @@
 #param float astigmatism = 1.0: min(0.0), max(4.0)
 
 void main() {
-    float lensRadius = ubo.camera.thinLens.lensRadius;
-    float focalDistance = ubo.camera.thinLens.focusDistance;
-
     vec3 right = pose.right * U;
     vec3 up = pose.up * V;
     vec3 focalPoint = pose.eye + (ndcPos.x * right - ndcPos.y * up + pose.dir) * focalDistance;
