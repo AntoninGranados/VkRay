@@ -8,13 +8,17 @@
 
 #include "core/core.hpp"
 #include "core/export_service.hpp"
+#include "editor/camera_preview.hpp"
 
 Editor& Editor::get() {
     static Editor instance;
     return instance;
 }
 
-void Editor::init() { get().inputHandler.initCallbacks(); }
+void Editor::init() {
+    get().inputHandler.initCallbacks();
+    EditorCameraPreview::install();
+}
 
 void Editor::terminate() {
     get().editorRenderer.destroy();

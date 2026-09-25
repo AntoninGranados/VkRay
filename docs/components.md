@@ -33,8 +33,10 @@ Perspective or orthographic camera with native depth of field.
 | `projection` | enum | 0 |  | no |
 | `focal_length` | float | 21.45 | 1 ... 300 | yes |
 | `sensor_width` | float | 36 | ≥ 1 | yes |
-| `focal_distance` | float | 10 | ≥ 0.1 | yes |
+| `sensor_fit` | enum | 2 |  | no |
 | `f_stop` | float | 0 | 0 ... 64 | yes |
+| `focus_target` | entity |  |  | no |
+| `focal_distance` | float | 10 | ≥ 0.1 | yes |
 | `show_focus_plane` | bool | false |  | no |
 | `shutter_speed` | float | 0 | ≥ 0 | no |
 

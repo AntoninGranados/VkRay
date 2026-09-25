@@ -18,6 +18,16 @@ template<> FieldType FieldValue::typeOf<glm::quat>()   { return FieldType::Quat;
 template<> FieldType FieldValue::typeOf<ecs::Entity>() { return FieldType::Entity; }
 template<> FieldType FieldValue::typeOf<std::string>() { return FieldType::String; }
 
+int Field::conditionValue() const {
+    switch (type) {
+        case FieldType::Bool: return get<bool>() ? 1 : 0;
+        case FieldType::Int:
+        case FieldType::Enum: return get<int>();
+        case FieldType::Entity: return get<ecs::Entity>() == ecs::Entity{} ? 0 : 1;
+        default: return 0;
+    }
+}
+
 Field Field::makeNumeric(FieldType type, std::string id, std::string label, const std::vector<float>& n, NumericMeta metadata, bool animatable) {
     switch (type) {
         case FieldType::Float: return Field::make<float>(std::move(id), std::move(label), n[0], metadata, animatable);

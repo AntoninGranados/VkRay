@@ -57,7 +57,9 @@ void ViewportPanel::draw() {
                     float dist;
                     auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
                     if (hit.has_value()) {
-                        scene.getRegistry().get(scene.getCamera(), ecs::Camera).set<float>("focal_distance", dist);
+                        ecs::Component& cam = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
+                        cam.set<float>("focal_distance", dist);
+                        cam.set<ecs::Entity>("focus_target", ecs::Entity{});
                         Core::markRenderDirty();
                     }
                 }

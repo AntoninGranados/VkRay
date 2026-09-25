@@ -16,6 +16,7 @@
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ui_utils.hpp"
+#include "utils/string_utils.hpp"
 
 namespace ui {
 
@@ -325,6 +326,11 @@ bool drawField(Field& field, const std::string& widgetId) {
             setup();
             const std::string preview = (currentIdx >= 0) ? getName(current) : "(none)";
             if (ImGui::BeginCombo(widgetId.c_str(), preview.c_str())) {
+                if (ImGui::Selectable("(none)", currentIdx < 0)) {
+                    field.set<ecs::Entity>(ecs::Entity{});
+                    changed = true;
+                }
+                if (currentIdx < 0) ImGui::SetItemDefaultFocus();
                 for (int i = 0; i < (int)candidates.size(); i++) {
                     const bool selected = (i == currentIdx);
                     std::string label = getName(candidates[i]) + "##ent" + std::to_string(i);
@@ -400,18 +406,19 @@ bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetI
     return changed;
 }
 
-void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve) {
+void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve, size_t depth) {
     std::vector<FieldGroup> result;
     std::unordered_map<std::string, size_t> conditionGroups;
 
     for (auto& item : groups) {
-        if (!item.field || !item.field->getCondition()) {
+        if (!item.field || item.field->getConditions().size() <= depth) {
             result.push_back(std::move(item));
             continue;
         }
 
-        const FieldCondition& cond = *item.field->getCondition();
-        const std::string key = cond.param.string();
+        const FieldCondition& cond = item.field->getConditions()[depth];
+        const std::string key = cond.param.string() + "=" + std::to_string(cond.when);
+
         if (!conditionGroups.contains(key)) {
             conditionGroups[key] = result.size();
             FieldGroup group;
@@ -426,8 +433,10 @@ void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver
     }
 
     groups = std::move(result);
-    for (auto& item : groups)
-        if (item.showHeader) clusterByCondition(item.children, resolve);
+    for (auto& item : groups) {
+        if (item.showHeader) clusterByCondition(item.children, resolve, 0);
+        else if (!item.field) clusterByCondition(item.children, resolve, depth + 1);
+    }
 }
 
 bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId) {
@@ -443,7 +452,7 @@ bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId) 
     });
     return drawFieldGroups(groups, widgetId, [](Field& field, const std::string& id) {
         return drawField(field, std::format("{}##{}", id, field.getId().string()));
-    });
+    }, [](const FieldPath& id) { return snakeCaseToLabel(id.filename().string()); });
 }
 
 }

@@ -25,7 +25,7 @@ using ConditionResolver = std::function<std::optional<int>(const FieldPath&)>;
 
 bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetId, const DrawFieldLeaf& drawLeaf, const FieldGroupLabel& label = {});
 
-void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve);
+void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver& resolve, size_t depth = 0);
 
 bool drawField(Field& field, const std::string& widgetId);
 bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId);

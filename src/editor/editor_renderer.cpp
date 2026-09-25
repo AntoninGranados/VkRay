@@ -19,6 +19,7 @@
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/fields/parameters.hpp"
 #include "editor.hpp"
+#include "editor/camera_preview.hpp"
 #include "editor/ui_utils.hpp"
 
 namespace {
@@ -55,7 +56,7 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
         point = ts.get<glm::vec3>("plane_position");
     } else {
         normal = directionFromRotation(t.get<glm::vec3>("rotation"));
-        point  = t.get<glm::vec3>("position") + normal * reg.get(selected, ecs::Camera).get<float>("focal_distance");
+        point  = t.get<glm::vec3>("position") + normal * resolveFocusDistance(reg, selected);
     }
     float d = -glm::dot(normal, point);
     if (glm::dot(t.get<glm::vec3>("position"), normal) + d > 0.0f) { normal = -normal; d = -d; }
@@ -190,10 +191,16 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     const float aspect = viewportE.height > 0
         ? static_cast<float>(viewportE.width) / static_cast<float>(viewportE.height) : 1.0f;
     displayUBO.camera = buildCameraUBO(reg, camera, aspect);
+    displayUBO.camera.thinLens.lensRadius = 0.0f;
 
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane = 0;
     displayUBO.previewBorderEnabled = (Core::getRenderMode() == RenderMode::Preview && scene.isUsingSceneCamera()) ? 1 : 0;
+
+    const glm::ivec2 outputRenderSize = Core::getParameters().get<glm::ivec2>("renderer/output/render_size");
+    const float outputAspect = outputRenderSize.y > 0
+        ? static_cast<float>(outputRenderSize.x) / static_cast<float>(outputRenderSize.y) : aspect;
+    displayUBO.previewFrameExtent = EditorCameraPreview::frameExtent(reg, camera, aspect, outputAspect);
 
     if (selectedEntity.has_value()) {
         const ecs::Entity e = *selectedEntity;

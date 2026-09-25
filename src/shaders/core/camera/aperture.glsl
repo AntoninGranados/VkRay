@@ -1,8 +1,10 @@
 #ifndef APERTURE_GLSL
 #define APERTURE_GLSL
 
-#include "../inputs.glsl"
 #include "../random/utils.glsl"
+
+#ifdef CAMERA_LENS_APERTURE
+#include "../inputs.glsl"
 
 vec2 sampleLens(inout RngState rng) {
     for (int i = 0; i < 16; i++) {
@@ -12,5 +14,10 @@ vec2 sampleLens(inout RngState rng) {
     }
     return vec2(0.0);
 }
+#else
+vec2 sampleLens(inout RngState rng) {
+    return vec2(0.0);
+}
+#endif
 
 #endif

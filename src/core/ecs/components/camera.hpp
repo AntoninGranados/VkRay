@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include "core/ecs/components/component_type.hpp"
+#include "core/ecs/entity.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 
 namespace ecs {
@@ -15,6 +16,12 @@ namespace ecs {
 enum class CameraProjection {
     Perspective,
     Orthographic
+};
+
+enum class CameraSensorFit {
+    Horizontal,
+    Vertical,
+    Auto
 };
 
 inline const ComponentType Camera = ComponentType::builder("camera")
@@ -33,7 +40,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
         {"MFT",        17.3f},
         {"Medium Format", 53.7f}
     } }, true)
-    .field<float>("focal_distance", 10.0f, NumericMeta{ .min = 0.1f, .step = 0.01f }, true)
+    .field<int>("sensor_fit", std::to_underlying(CameraSensorFit::Auto), EnumMeta{ .items = {"Horizontal", "Vertical", "Auto"} })
     .field<float>("f_stop", 0.0f, NumericMeta{ .min = 0.0f, .max = 64.0f, .step = 0.1f, .presets = {
         {"Off",   0.0f},
         {"f/1",   1.0f},
@@ -48,7 +55,14 @@ inline const ComponentType Camera = ComponentType::builder("camera")
         {"f/22",  22.0f},
         {"f/32",  32.0f}
     } }, true)
+    .condition("projection", std::to_underlying(CameraProjection::Perspective))
+    .field<Entity>("focus_target", Entity{}, EntityMeta{ .needs = {"transform"} })
+    .condition("projection", std::to_underlying(CameraProjection::Perspective))
+    .field<float>("focal_distance", 10.0f, NumericMeta{ .min = 0.1f, .step = 0.01f }, true)
+    .condition("projection", std::to_underlying(CameraProjection::Perspective))
+    .condition("focus_target", 0)
     .field<bool>("show_focus_plane", false)
+    .condition("projection", std::to_underlying(CameraProjection::Perspective))
     .field<float>("shutter_speed", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.001f, .unit = "s", .presets = {
         {"Off",    0.0f},
         {"1/8000", 1.0f/8000.0f},

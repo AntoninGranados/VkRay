@@ -1,7 +1,6 @@
 #include "raycast.hpp"
 
 #include "core/core.hpp"
-#include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
@@ -12,7 +11,6 @@
 Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::Entity& camera) {
     const ecs::Registry& registry = Core::getScene().getRegistry();
     const ecs::Component& t = registry.get(camera, ecs::Transform);
-    const ecs::Component& c = registry.get(camera, ecs::Camera);
 
     const float invWidth = 1.0f / screenSize.x;
     const float invHeight = 1.0f / screenSize.y;
@@ -25,17 +23,15 @@ Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::En
     const float ndcY = 1.0f - mousePos.y * 2.0f * invHeight;
     const float aspect = screenSize.x * invHeight;
 
-    if (static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic) {
-        const float halfWidth = c.get<float>("sensor_width") / 1000.0f * 0.5f;
-        const float halfHeight = halfWidth / aspect;
-        const glm::vec3 origin = t.get<glm::vec3>("position") + ndcX * halfWidth * right + ndcY * halfHeight * up;
+    const CameraFrustum f = computeFrustum(registry, camera, aspect);
+
+    if (f.orthographic) {
+        const glm::vec3 origin = t.get<glm::vec3>("position") + ndcX * f.half.x * right + ndcY * f.half.y * up;
         return Ray{ origin, forward };
     }
 
-    const float tanHalfFovH = glm::tan(glm::radians(effectiveFov(registry, camera)) * 0.5f);
-
-    const float camX = ndcX * tanHalfFovH;
-    const float camY = ndcY * tanHalfFovH / aspect;
+    const float camX = ndcX * f.half.x;
+    const float camY = ndcY * f.half.y;
 
     glm::vec3 dir = glm::normalize(camX * right + camY * up + forward);
     return Ray{ t.get<glm::vec3>("position"), dir };

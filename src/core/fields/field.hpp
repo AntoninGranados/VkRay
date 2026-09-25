@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <filesystem>
 #include <limits>
-#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -152,18 +151,11 @@ public:
     const FieldPath& getId() const { return id; }
     const std::string& getLabel() const { return label; }
     const FieldMetadata& getMetadata() const { return metadata; }
-    const std::optional<FieldCondition>& getCondition() const { return condition; }
+    const std::vector<FieldCondition>& getConditions() const { return conditions; }
 
-    Field& setCondition(FieldCondition c) { condition = std::move(c); return *this; }
+    Field& addCondition(FieldCondition c) { conditions.push_back(std::move(c)); return *this; }
 
-    int conditionValue() const {
-        switch (type) {
-            case FieldType::Bool: return get<bool>() ? 1 : 0;
-            case FieldType::Int:
-            case FieldType::Enum: return get<int>();
-            default: return 0;
-        }
-    }
+    int conditionValue() const;
 
     template<typename T>
     static Field make(std::string id, std::string label, const T& def, FieldMetadata metadata = {}, bool animatable = false) {
@@ -250,5 +242,5 @@ protected:
     std::vector<std::byte> defaultValue;
     bool animatable;
     bool linked = true;
-    std::optional<FieldCondition> condition;
+    std::vector<FieldCondition> conditions;
 };

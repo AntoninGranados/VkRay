@@ -126,7 +126,7 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
                     const auto& w = cond.at("when");
                     when = w.is_boolean() ? (w.get<bool>() ? 1 : 0) : w.get<int>();
                 }
-                parameter->setCondition({ cond.at("param").get<std::string>(), when });
+                parameter->addCondition({ cond.at("param").get<std::string>(), when });
             }
         }
     } else {

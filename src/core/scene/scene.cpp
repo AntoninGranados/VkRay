@@ -10,6 +10,7 @@
 #include "core/ecs/entity.hpp"
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
+#include "core/ecs/systems/camera_focus_system.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 #include "utils/log.hpp"
@@ -110,6 +111,7 @@ void Scene::initSystems() {
     preUpdateScheduler.add(ecs::animationSystem);
     preUpdateScheduler.add(ecs::physicsSystem);
     preUpdateScheduler.add(ecs::apertureSystem);
+    preUpdateScheduler.add(ecs::cameraFocusSystem);
 
     onRenderScheduler.clear();
     onRenderScheduler.add(ecs::materialPackingSystem);

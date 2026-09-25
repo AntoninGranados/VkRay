@@ -32,8 +32,8 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
 
     const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
     const float sensorWidth = c.get<float>("sensor_width");
-    const bool orthographic = static_cast<CameraProjection>(c.get<int>("projection")) == CameraProjection::Orthographic;
-    const float fov = glm::radians(fovFromFocalLength(c.get<float>("focal_length") / sensorWidth));
+    const CameraFrustum frustum = computeFrustum(registry, e, aspect, false);
+    const bool orthographic = frustum.orthographic;
 
     const glm::mat4 view = getView(registry, activeCamera);
     const glm::mat4 proj = getProjection(registry, activeCamera, aspect);
@@ -46,10 +46,10 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
 
     const float nearDist = 0.5f;
     const float farDist = 1.5f;
-    const float nearHalfW = orthographic ? sensorWidth / 1000.0f * 0.5f : tanf(fov * 0.5f) * nearDist;
-    const float nearHalfH = nearHalfW / aspect;
-    const float farHalfW = orthographic ? sensorWidth / 1000.0f * 0.5f : tanf(fov * 0.5f) * farDist;
-    const float farHalfH = farHalfW / aspect;
+    const float nearHalfW = orthographic ? frustum.half.x : frustum.half.x * nearDist;
+    const float nearHalfH = orthographic ? frustum.half.y : frustum.half.y * nearDist;
+    const float farHalfW = orthographic ? frustum.half.x : frustum.half.x * farDist;
+    const float farHalfH = orthographic ? frustum.half.y : frustum.half.y * farDist;
 
     const glm::vec3 nearCenter = camPos + camDir * nearDist;
     const glm::vec3 farCenter = camPos + camDir * farDist;

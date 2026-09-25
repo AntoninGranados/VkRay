@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <stdexcept>
@@ -84,7 +85,8 @@ public:
     Builder& field(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
         if (type.fieldIndex.contains(id))
             throw std::invalid_argument(std::format("duplicate field id: {}", id));
-        Field f = Field::make<T>(id, snakeCaseToLabel(id), defaultValue, std::move(metadata), animatable);
+        const std::string label = snakeCaseToLabel(std::filesystem::path(id).filename().string());
+        Field f = Field::make<T>(id, label, defaultValue, std::move(metadata), animatable);
         type.fieldIndex[f.getId()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;
@@ -99,7 +101,7 @@ public:
     }
 
     Builder& condition(std::string param, int when = 1) {
-        type.fields.back().setCondition({ std::move(param), when });
+        type.fields.back().addCondition({ std::move(param), when });
         return *this;
     }
 
