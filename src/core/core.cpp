@@ -2,8 +2,7 @@
 
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/fields/parameter_serializer.hpp"
-#include "core/render/camera_lens_table.hpp"
-#include "core/render/material_table.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 
 Core& Core::get() {
     static Core instance;
@@ -110,8 +109,7 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
 
 void Core::reloadShaders() {
     Core& c = get();
-    MaterialTable::generateDispatch();
-    CameraLensTable::generateDispatch();
+    ShaderPlugin::regenerateAllDispatch();
     c.coreRenderer.buildPipelines();
     markRenderDirty();
 }

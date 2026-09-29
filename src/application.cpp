@@ -16,10 +16,8 @@
 #include "version.hpp"
 
 #include "core/core.hpp"
-#include "core/render/camera_lens_table.hpp"
-#include "core/render/material_table.hpp"
-#include "core/render/sky_table.hpp"
 #include "core/scene/scene_serializer.hpp"
+#include "core/shader_plugin/shader_plugin.hpp"
 
 #include "editor/ecs/component_ui_registry.hpp"
 #include "editor/editor.hpp"
@@ -105,10 +103,7 @@ void Application::buildRenderGraph(bool offline) {
         previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
     }
 
-    MaterialTable::generateGlsl();
-    MaterialTable::generateDispatch();
-    CameraLensTable::generateDispatch();
-    SkyTable::generateDispatch();
+    ShaderPlugin::regenerateAllDispatch();
 
     Core::getEngine().setGraph(builder);
     Core::getEngine().initGraph();

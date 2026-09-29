@@ -81,7 +81,7 @@ bool beginCenteredModal(const char* name) {
 
 void endCenteredModal() {
     PushCancelStyleColor();
-    if (ImGui::Button(ICON_FA_BAN " Cancel", kButtonSize))
+    if (ImGui::Button(ICON_FA_BAN " Cancel", { -FLT_MIN, 0 }))
         ImGui::CloseCurrentPopup();
     PopCancelStyleColor();
     ImGui::EndPopup();

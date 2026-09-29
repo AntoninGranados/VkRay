@@ -7,6 +7,7 @@
 
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
+#include "editor/ui_utils.hpp"
 
 namespace ecs {
 
@@ -41,7 +42,7 @@ private:
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
         ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 
-        bool remove = ImGui::Button("-##Remove", { 32, 0 });
+        bool remove = ui::minusButton("Remove");
         ImGui::SameLine();
         return remove;
     }

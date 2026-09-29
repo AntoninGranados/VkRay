@@ -18,4 +18,5 @@ namespace MaterialTable {
     bool pack(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu, std::vector<float>& params);
     void generateGlsl();
     void generateDispatch();
+    void setDispatchDisabled(bool disabled);
 }

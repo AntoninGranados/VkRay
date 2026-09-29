@@ -80,15 +80,18 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
         ImageAccessInfo{ .usage = ImageUsageType::Present,   .access = AccessType::Read }
     );
 
+    const VkExtent2D displayExtent = viewportExtent.width > 0 ? viewportExtent : engine.getExtent();
+    const VkExtent2D debugExtent   = renderExtent.width   > 0 ? renderExtent   : engine.getExtent();
+
     displayImageHandle = builder.createImage(
         "DisplayImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
-        engine.getExtent().width, engine.getExtent().height
+        displayExtent.width, displayExtent.height
     );
     debugImageHandle = builder.createImage(
         "DebugImage",
         VK_FORMAT_R32G32B32A32_SFLOAT,
-        engine.getExtent().width, engine.getExtent().height
+        debugExtent.width, debugExtent.height
     );
     outputImageHandle = renderResources.outputImageHandle;
 

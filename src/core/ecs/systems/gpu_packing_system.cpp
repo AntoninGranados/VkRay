@@ -15,6 +15,7 @@
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
 #include "core/render/camera_lens_table.hpp"
+#include "core/render/compositing_table.hpp"
 #include "core/render/material_table.hpp"
 #include "core/render/sky_table.hpp"
 #include "core/scene/asset/mesh.hpp"
@@ -197,8 +198,20 @@ void materialPackingSystem(Registry& registry) {
 
     SkyPluginInfo& skyInfo = registry.ctx().get<SkyPluginInfo>();
     const size_t skyBase = pluginParams.size();
-    SkyTable::pack(registry, resolveEnvironmentEntity(registry), pluginParams);
-    skyInfo.paramsBase = pluginParams.size() > skyBase ? static_cast<int32_t>(skyBase) : -1;
+    const bool skyActive = SkyTable::pack(registry, resolveEnvironmentEntity(registry), pluginParams);
+    skyInfo.paramsBase = skyActive ? static_cast<int32_t>(skyBase) : -1;
+
+    CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
+    compositingInfo.passes.clear();
+    for (CompositingPassEntry& pass : CompositingTable::passes(registry)) {
+        CompositingPassInfo info;
+        info.paramsBase = static_cast<int32_t>(pluginParams.size());
+        info.slot = CompositingTable::pack(pass, pluginParams);
+        for (int p = 0; p < std::max(1, pass.plugin->getPassCount()); p++) {
+            info.passId = p;
+            compositingInfo.passes.push_back(info);
+        }
+    }
 
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().material, gpuMaterials);
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().pluginParams, pluginParams);

@@ -3,10 +3,14 @@
 #include <format>
 #include <unordered_map>
 
+#include "VkSmol/render/shader.hpp"
+
 #include "core/core.hpp"
 #include "core/fields/field.hpp"
 #include "core/shader_plugin/glsl_mangler.hpp"
 #include "core/shader_plugin/shader_script.hpp"
+
+#include "utils/log.hpp"
 
 ShaderPlugin::ShaderPlugin() {
     registry().push_back(this);
@@ -22,15 +26,81 @@ std::vector<ShaderPlugin*>& ShaderPlugin::registry() {
     return plugins;
 }
 
+namespace {
+
+struct DispatchTarget {
+    std::function<void()> generate;
+    void (*setDisabled)(bool);
+    std::string consumerPath;
+};
+
+std::vector<DispatchTarget>& dispatchTargets() {
+    static std::vector<DispatchTarget> targets;
+    return targets;
+}
+
+void runGenerators() {
+    for (const DispatchTarget& target : dispatchTargets()) target.generate();
+}
+
+bool tryCompileConsumer(const std::string& path) {
+    try {
+        Shader::compile(path, VK_SHADER_STAGE_COMPUTE_BIT);
+        return true;
+    } catch (const std::exception& e) {
+        Log::error(e.what());
+        return false;
+    }
+}
+
+void validateConsumer(const std::string& path, const std::vector<void (*)(bool)>& disablers) {
+    if (tryCompileConsumer(path)) return;
+
+    for (void (*disable)(bool) : disablers) {
+        disable(true);
+        runGenerators();
+        if (tryCompileConsumer(path)) return;
+        disable(false);
+    }
+
+    for (void (*disable)(bool) : disablers) disable(true);
+    runGenerators();
+    tryCompileConsumer(path);
+}
+
+} // namespace
+
+void ShaderPlugin::registerDispatchGenerator(std::function<void()> generate, void (*setDisabled)(bool), std::string consumerPath) {
+    dispatchTargets().push_back({ std::move(generate), setDisabled, std::move(consumerPath) });
+}
+
+void ShaderPlugin::regenerateAllDispatch() {
+    for (const DispatchTarget& target : dispatchTargets())
+        if (target.setDisabled) target.setDisabled(false);
+
+    runGenerators();
+
+    std::vector<std::string> consumerOrder;
+    std::unordered_map<std::string, std::vector<void (*)(bool)>> disablersByConsumer;
+    for (const DispatchTarget& target : dispatchTargets()) {
+        if (target.consumerPath.empty() || !target.setDisabled) continue;
+        if (!disablersByConsumer.contains(target.consumerPath)) consumerOrder.push_back(target.consumerPath);
+        disablersByConsumer[target.consumerPath].push_back(target.setDisabled);
+    }
+
+    for (const std::string& path : consumerOrder) validateConsumer(path, disablersByConsumer[path]);
+}
+
 void ShaderPlugin::load(bool migrate) {
     manglePrefix = GlslMangler::makePrefix(type, slot);
 
     error.clear();
-    ShaderScript::ParseResult script = ShaderScript::parse(path, type, version);
+    ShaderScript::ParseResult script = ShaderScript::parse(*path, type, version);
     if (!script.ok) {
         error = script.error;
         return;
     }
+    passCount = script.passCount;
 
     std::unordered_map<std::string, std::string> seedGlobals;
     for (const Field& field : script.fields)
@@ -38,13 +108,13 @@ void ShaderPlugin::load(bool migrate) {
 
     GlslMangler::MangleResult mangled = GlslMangler::mangle(script.body, manglePrefix, seedGlobals);
     if (!mangled.ok) {
-        error = std::format("{}: {}", path.string(), mangled.error);
+        error = std::format("{}: {}", path->string(), mangled.error);
         return;
     }
     declarations = std::move(mangled.declarations);
     statements = std::move(mangled.body);
 
-    ecs::ComponentType::Builder builder = ecs::ComponentType::builder(path.string());
+    ecs::ComponentType::Builder builder = ecs::ComponentType::builder(path->string());
     for (Field& field : script.fields) builder.field(field);
     schema = builder.buildDetached();
 
@@ -62,7 +132,7 @@ void ShaderPlugin::load(bool migrate) {
 }
 
 bool ShaderPlugin::parse(const std::filesystem::path& newPath, const std::string& newType, int newVersion, int newSlot) {
-    if (newPath == path) return error.empty();
+    if (path && newPath == *path) return error.empty();
 
     path = newPath;
     type = newType;
@@ -71,7 +141,7 @@ bool ShaderPlugin::parse(const std::filesystem::path& newPath, const std::string
 
     load(false);
     if (watchId) Core::getFileWatcher().unwatch(*watchId);
-    watchId = Core::getFileWatcher().watch(path, [this] { load(true); });
+    watchId = path->empty() ? std::nullopt : std::optional(Core::getFileWatcher().watch(*path, [this] { load(true); }));
     return error.empty();
 }
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <array>
 #include <string>
+#include <vector>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
@@ -39,8 +41,7 @@ public:
     Scene& getScene() { return scene; }
 
 protected:
-    PathtracerUBO  pathtracerUBO;
-    CompositingUBO compositingUBO;
+    PathtracerUBO pathtracerUBO;
 
     SubmissionGroupHandle getGroupHandle() const { return groupHandle; }
 
@@ -55,12 +56,13 @@ private:
     RenderResources resources = {};
 
     ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
+    std::array<ImageHandle, 2> compositingPingHandles;
 
     BufferHandle pathtracingUBOHandle;
-    BufferHandle compositingUBOHandle;
 
     PassHandle pathtracePassHandle;
-    PassHandle compositePassHandle;
+    std::vector<PassHandle> compositingPassHandles;
+    std::vector<BufferHandle> compositingPassUBOHandles;
 
     TimestampHandle pathtracingTimestamp;
     TimestampHandle compositingTimestamp;

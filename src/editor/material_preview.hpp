@@ -66,6 +66,7 @@ private:
     void evict(ecs::Entity materialEntity);
 
     PathtraceRenderer renderer;
+    bool sceneInitialized = false;
     ecs::Entity previewMaterialEntity;
     ui::ImGuiTexture liveTexture;
 

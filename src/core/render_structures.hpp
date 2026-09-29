@@ -60,8 +60,10 @@ struct PathtracerUBO {
     RenderUBO render;
 };
 
-struct CompositingUBO {
-    int denoisingEnabled;
+struct alignas(16) CompositingPassUBO {
+    int32_t slot = -1;
+    int32_t paramsBase = 0;
+    int32_t passId = 0;
 };
 
 struct AOVFlags {

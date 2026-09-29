@@ -7,6 +7,7 @@
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "utils/log.hpp"
+#include "utils/string_utils.hpp"
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
@@ -52,7 +53,7 @@ void ScenePanel::draw() {
 
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
                 if (children.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
-                if (depth == 0) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+                if (depth <= 1) flags |= ImGuiTreeNodeFlags_DefaultOpen;
                 if (Editor::getSelectedEntity() == entity) flags |= ImGuiTreeNodeFlags_Selected;
 
                 const bool open = ImGui::TreeNodeEx((void*)(uintptr_t)entity.getId(), flags, "%s", name.c_str());
@@ -74,27 +75,37 @@ void ScenePanel::draw() {
         }
         ImGui::EndChild();
 
-        if (ImGui::Button("+ Object")) {
-            const ecs::Entity e = scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
-            reg.add(e, ecs::Transform);
-            Core::markRenderDirty();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("+ Material")) {
-            const ecs::Entity e = scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
-            scene.getRegistry().add(e, ecs::Diffuse);
-            Core::markRenderDirty();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("+ Mesh")) {
-            if (auto path = ui::openFileDialog({{"OBJ Mesh", "obj"}}, "assets/models/")) {
-                const ecs::Entity meshAssetEntity = scene.loadMeshAsset(path->stem().string(), path->string());
-                if (meshAssetEntity != ecs::Entity{}) {
-                    Core::markRenderDirty();
-                    Editor::selectEntity(meshAssetEntity);
-                    Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
+        if (ui::plusButton("AddEntity"))
+            ImGui::OpenPopup("AddEntityPopup");
+        if (ImGui::BeginPopup("AddEntityPopup")) {
+            if (ImGui::Selectable("Object")) {
+                const ecs::Entity e = scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
+                reg.add(e, ecs::Transform);
+                Core::markRenderDirty();
+                Editor::selectEntity(e);
+            }
+            if (ImGui::Selectable("Material")) {
+                const ecs::Entity e = scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
+                reg.add(e, ecs::Diffuse);
+                Core::markRenderDirty();
+                Editor::selectEntity(e);
+            }
+            if (ImGui::Selectable("Mesh Asset")) {
+                if (auto path = ui::openFileDialog({{"OBJ Mesh", "obj"}}, "assets/models/")) {
+                    const ecs::Entity meshAssetEntity = scene.loadMeshAsset(snakeCaseToLabel(path->stem().string()), path->string());
+                    if (meshAssetEntity != ecs::Entity{}) {
+                        Core::markRenderDirty();
+                        Editor::selectEntity(meshAssetEntity);
+                        Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
+                    }
                 }
             }
+            if (ImGui::Selectable("Empty")) {
+                const ecs::Entity e = scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
+                Core::markRenderDirty();
+                Editor::selectEntity(e);
+            }
+            ImGui::EndPopup();
         }
         ImGui::SameLine();
 
@@ -106,9 +117,10 @@ void ScenePanel::draw() {
             && *selectedEntity != scene.getAssetsRoot()
             && *selectedEntity != scene.getObjectsRoot()
             && *selectedEntity != scene.getSceneRoot()
-            && *selectedEntity != scene.getEnvironment();
+            && *selectedEntity != scene.getEnvironment()
+            && *selectedEntity != scene.getCompositing();
         if (!canDelete) ImGui::BeginDisabled();
-        if (ImGui::Button("- Delete")) {
+        if (ui::minusButton("DeleteEntity")) {
             ecs::Entity entityToDelete = *selectedEntity;
             scene.getAnimationStore().remove(reg, entityToDelete);
             const auto parent = reg.getParent(entityToDelete);

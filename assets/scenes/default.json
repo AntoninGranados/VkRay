@@ -15,14 +15,6 @@
             "name": "Cube",
             "programmable": { "path": "assets/materials/brick.glsl" }
         }
-        // {
-        //     "name": "Cube",
-        //     "principled": {
-        //         "albedo": [1.0, 0.05, 0.1],
-        //         "roughness": 0.02,
-        //         "ior": 1.5
-        //     }
-        // }
     ],
     "Objects": [
         {

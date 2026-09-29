@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -20,6 +21,9 @@ public:
     bool parse(const std::filesystem::path& path, const std::string& type, int version, int slot);
 
     static std::vector<ShaderPlugin*>& registry();
+
+    static void registerDispatchGenerator(std::function<void()> generate, void (*setDisabled)(bool), std::string consumerPath);
+    static void regenerateAllDispatch();
 
     const std::string& getError() const { return error; }
     ecs::Component& getComponent() { return params; }
@@ -43,6 +47,7 @@ public:
     const std::string& getType() const { return type; }
     const std::string& getPrefix() const { return manglePrefix; }
     int getSlot() const { return slot; }
+    int getPassCount() const { return passCount; }
 
 private:
     void load(bool migrate);
@@ -50,10 +55,11 @@ private:
     ecs::ComponentType schema;
     ecs::Component params { schema };
 
-    std::filesystem::path path;
+    std::optional<std::filesystem::path> path;
     std::string type;
     int version = 0;
     int slot = -1;
+    int passCount = 1;
     std::optional<size_t> watchId;
 
     std::string error;

@@ -13,29 +13,34 @@
 
 RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {
     Scene& scene = renderer.getScene();
-    scene.init();
 
-    ecs::Registry& registry = scene.getRegistry();
-    registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("focal_length", 136.72f);
+    if (!sceneInitialized) {
+        scene.init();
 
-    previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
-    registry.add(previewMaterialEntity, ecs::Diffuse);
+        ecs::Registry& registry = scene.getRegistry();
+        registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("focal_length", 136.72f);
 
-    const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
-    registry.add(previewObject, ecs::Sphere);
-    registry.add(previewObject, ecs::MaterialRef);
-    registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
+        previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
+        registry.add(previewMaterialEntity, ecs::Diffuse);
 
-    const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
-    registry.add(lightMaterialEntity, ecs::Emissive);
-    registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
+        const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
+        registry.add(previewObject, ecs::Sphere);
+        registry.add(previewObject, ecs::MaterialRef);
+        registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
-    const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
-    registry.add(lightObject, ecs::Sphere);
-    registry.get(lightObject, ecs::Transform).set<glm::vec3>("scale", glm::vec3(1.5f));
-    registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
-    registry.add(lightObject, ecs::MaterialRef);
-    registry.get(lightObject, ecs::MaterialRef).set<ecs::Entity>("handle", lightMaterialEntity);
+        const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
+        registry.add(lightMaterialEntity, ecs::Emissive);
+        registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
+
+        const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
+        registry.add(lightObject, ecs::Sphere);
+        registry.get(lightObject, ecs::Transform).set<glm::vec3>("scale", glm::vec3(1.5f));
+        registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
+        registry.add(lightObject, ecs::MaterialRef);
+        registry.get(lightObject, ecs::MaterialRef).set<ecs::Entity>("handle", lightMaterialEntity);
+
+        sceneInitialized = true;
+    }
 
     RenderResources resources = renderer.initGraph(builder, VkExtent2D{ kPreviewSize, kPreviewSize }, "MaterialPreview", lensImageHandle);
     renderer.setTargetSampleCount(0);
@@ -45,6 +50,14 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
 void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
     renderer.getScene().setGpuBufferHandles(resources.sceneHandles);
     liveTexture = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
+
+    for (auto& entry : previewImages)
+        entry.second.textureId = registerTexture(entry.second.view.get());
+
+    if (inFlight.has_value()) {
+        renderer.setTargetSampleCount(kPreviewSampleCount);
+        renderer.restartAccumulation();
+    }
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {

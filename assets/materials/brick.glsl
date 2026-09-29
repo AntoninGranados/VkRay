@@ -175,8 +175,8 @@ void main() {
     }
 
     RngState rngBrick = initRngState(idx, 0);
-    vec3 hsvBrick = rgb2hsv(brickColor);
-    hsvBrick.x = mod(hsvBrick.x + randomBrickColorVariation * (rand(rngBrick)*2 - 1) * 60 + 360, 360);
+    HSV hsvBrick = rgb2hsv(brickColor);
+    hsvBrick.h = mod(hsvBrick.h + randomBrickColorVariation * (rand(rngBrick)*2 - 1) * 60 + 360, 360);
     vec3 albedo = hsv2rgb(hsvBrick);
 
     local += mix(vec2(-randomWiggle*0.5), vec2(randomWiggle*0.5), vec2(rand(rngBrick), rand(rngBrick)));

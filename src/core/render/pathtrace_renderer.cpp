@@ -1,5 +1,7 @@
 #include "pathtrace_renderer.hpp"
 
+#include <algorithm>
+
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
 #include "VkSmol/graph/render_graph_builder.hpp"
 
@@ -7,6 +9,7 @@
 #include "core/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/fields/parameters.hpp"
+#include "core/render/compositing_table.hpp"
 #include "core/scene/gpu_structs.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle) {
@@ -34,7 +37,6 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     );
 
     pathtracingUBOHandle = builder.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    compositingUBOHandle = builder.createBuffer(tag + "CompositingUBO", sizeof(CompositingUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     resources.pixelInfoBufferHandle = builder.createBuffer(
         tag + "PixelInfoBuffer",
         static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo),
@@ -76,15 +78,44 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtracingTimestamp = pathtrace.setTimestamp();
 
     // Compositing pass
-    ComputePassBuilder composite = builder.addComputePass(tag + "CompositionPass");
-    compositePassHandle = composite.getHandle();
-    composite.setGroup(groupHandle);
-    composite.readImage(0, currentPathtracingImageHandle, ImageUsageType::Sampled);
-    composite.readBuffer(1, compositingUBOHandle, BufferUsageType::Uniform);
-    composite.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    composite.writeImage(3, resources.outputImageHandle, ImageUsageType::Storage);
-    composite.setPipeline("./src/shaders/core/compositing.glsl");
-    compositingTimestamp = composite.setTimestamp();
+    const size_t passCount = std::max<size_t>(1, CompositingTable::totalDispatchCount(scene.getRegistry()));
+
+    for (size_t i = 0; i < compositingPingHandles.size(); i++) {
+        compositingPingHandles[i] = builder.createImage(
+            tag + "CompositingPingImage" + std::to_string(i),
+            VK_FORMAT_R32G32B32A32_SFLOAT,
+            extent.width, extent.height, 1,
+            VKSMOL_IMAGE_OWNERSHIP_MANAGED,
+            VK_IMAGE_USAGE_STORAGE_BIT,
+            ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read },
+            ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read }
+        );
+    }
+
+    compositingPassHandles.clear();
+    compositingPassUBOHandles.clear();
+    for (size_t i = 0; i < passCount; i++) {
+        BufferHandle passUboHandle = builder.createBuffer(
+            tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO),
+            VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        );
+        compositingPassUBOHandles.push_back(passUboHandle);
+
+        const ImageHandle readHandle = i == 0 ? currentPathtracingImageHandle : compositingPingHandles[(i - 1) % 2];
+        const ImageHandle writeHandle = i == passCount - 1 ? resources.outputImageHandle : compositingPingHandles[i % 2];
+
+        ComputePassBuilder pass = builder.addComputePass(tag + "CompositingPass" + std::to_string(i));
+        compositingPassHandles.push_back(pass.getHandle());
+        pass.setGroup(groupHandle);
+        pass.readImage(0, readHandle, ImageUsageType::Sampled);
+        pass.readBuffer(1, passUboHandle, BufferUsageType::Uniform);
+        pass.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
+        pass.writeImage(3, writeHandle, ImageUsageType::Storage);
+        pass.readBuffer(4, resources.sceneHandles.pluginParams.handle, BufferUsageType::Storage);
+        pass.readImage(5, currentPathtracingImageHandle, ImageUsageType::Sampled);
+        pass.setPipeline("./src/shaders/core/compositing.glsl");
+        if (i == 0) compositingTimestamp = pass.setTimestamp();
+    }
 
     setDefaultUBOs();
 
@@ -100,8 +131,6 @@ void PathtraceRenderer::setDefaultUBOs() {
     pathtracerUBO.render.clipThreshold = parameters.get<float>("renderer/sampling/clamp_threshold");
     pathtracerUBO.render.varianceSampling = parameters.get<bool>("renderer/sampling/adaptive_sampling");
     pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
-
-    compositingUBO.denoisingEnabled = parameters.get<bool>("renderer/denoising");
 }
 
 void PathtraceRenderer::render(const FrameContext& frameContext) {
@@ -109,6 +138,10 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
 
     ecs::Registry& registry = scene.getRegistry();
     const ecs::Entity camera = scene.getCamera();
+
+    const CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
+    if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassHandles.size())
+        Core::requestGraphRebuild();
 
     const bool converged = isRenderFinished();
 
@@ -123,14 +156,24 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.render.skyParamsBase = registry.ctx().get<SkyPluginInfo>().paramsBase;
 
     engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
-    engine.fillBuffer(engine.getBuffer(compositingUBOHandle, frameContext.currentFrame), &compositingUBO);
+
+    for (size_t i = 0; i < compositingPassUBOHandles.size(); i++) {
+        CompositingPassUBO passUbo{};
+        if (i < compositingInfo.passes.size()) {
+            passUbo.slot = compositingInfo.passes[i].slot;
+            passUbo.paramsBase = compositingInfo.passes[i].paramsBase;
+            passUbo.passId = compositingInfo.passes[i].passId;
+        }
+        engine.fillBuffer(engine.getBuffer(compositingPassUBOHandles[i], frameContext.currentFrame), &passUbo);
+    }
 
     CommandBuffer& commandBuffer = engine.beginRecording(groupHandle);
 
     if (!converged)
         engine.dispatch(commandBuffer, pathtracePassHandle, (renderExtent.width + 7) / 8, (renderExtent.height + 7) / 8);
 
-    engine.dispatch(commandBuffer, compositePassHandle, (renderExtent.width + 7) / 8, (renderExtent.height + 7) / 8);
+    for (size_t i = 0; i < compositingPassHandles.size(); i++)
+        engine.dispatch(commandBuffer, compositingPassHandles[i], (renderExtent.width + 7) / 8, (renderExtent.height + 7) / 8);
 
     onAfterDispatch(commandBuffer);
 
@@ -145,6 +188,8 @@ void PathtraceRenderer::resize(uint32_t width, uint32_t height) {
     engine.resizeImage(previousPathtracingImageHandle, width, height);
     engine.resizeImage(currentPathtracingImageHandle, width, height);
     engine.resizeImage(resources.outputImageHandle, width, height);
+    for (const ImageHandle& pingHandle : compositingPingHandles)
+        engine.resizeImage(pingHandle, width, height);
     engine.resizeBuffer(resources.pixelInfoBufferHandle, static_cast<size_t>(width) * height * sizeof(PixelInfo));
 
     onResize(width, height);

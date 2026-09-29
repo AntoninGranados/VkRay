@@ -1,8 +1,6 @@
 #include "sky_table.hpp"
 
 #include <format>
-#include <fstream>
-#include <sstream>
 #include <unordered_map>
 
 #include "core/ecs/components/component.hpp"
@@ -11,32 +9,47 @@
 #include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 
-int SkyTable::slotFor(const std::filesystem::path& path) {
-    static std::unordered_map<std::filesystem::path, int> slots;
-    const auto [it, inserted] = slots.try_emplace(path, static_cast<int>(slots.size()));
-    return it->second;
+namespace {
+const bool registered = [] {
+    ShaderPlugin::registerDispatchGenerator(&SkyTable::generateDispatch, &SkyTable::setDispatchDisabled, "./src/shaders/core/pathtracing.glsl");
+    return true;
+}();
+
+bool dispatchDisabled = false;
+} // namespace
+
+void SkyTable::setDispatchDisabled(bool disabled) {
+    dispatchDisabled = disabled;
 }
 
-void SkyTable::pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params) {
-    if (environment == ecs::Entity{} || !registry.has(environment, ecs::SkyPlugin)) return;
+int SkyTable::slotFor(const std::filesystem::path& path) {
+    static std::unordered_map<std::filesystem::path, int> slots;
+    return GlslCodegen::slotFor(slots, path);
+}
+
+bool SkyTable::pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params) {
+    if (environment == ecs::Entity{} || !registry.has(environment, ecs::SkyPlugin)) return false;
 
     ecs::Component& c = registry.get(environment, ecs::SkyPlugin);
     ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
     const std::filesystem::path path = c.get<std::filesystem::path>("path");
     plugin.parse(path, kType, kVersion, slotFor(path));
-    if (plugin.getError().empty()) {
-        const std::vector<float> values = plugin.packValues();
-        params.insert(params.end(), values.begin(), values.end());
-    }
+    if (!plugin.getError().empty()) return false;
+
+    const std::vector<float> values = plugin.packValues();
+    params.insert(params.end(), values.begin(), values.end());
+    return true;
 }
 
 void SkyTable::generateDispatch() {
     ShaderPlugin* active = nullptr;
-    for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
-        if (plugin->getType() != SkyTable::kType) continue;
-        if (!plugin->getError().empty() || plugin->getBody().empty()) continue;
-        active = plugin;
-        break;
+    if (!dispatchDisabled) {
+        for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
+            if (plugin->getType() != SkyTable::kType) continue;
+            if (!plugin->getError().empty() || plugin->getBody().empty()) continue;
+            active = plugin;
+            break;
+        }
     }
 
     std::string body = active
@@ -63,14 +76,5 @@ void SkyTable::generateDispatch() {
         body
     );
 
-    std::filesystem::path outputPath = "./src/shaders/generated/sky_dispatch.glsl";
-    std::error_code ec;
-    std::filesystem::create_directories(outputPath.parent_path(), ec);
-
-    std::ifstream existing(outputPath);
-    std::stringstream existingBuffer;
-    existingBuffer << existing.rdbuf();
-    if (existingBuffer.str() == content) return;
-
-    std::ofstream(outputPath) << content;
+    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/sky_dispatch.glsl", content);
 }

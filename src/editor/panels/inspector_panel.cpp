@@ -8,6 +8,7 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
+#include "core/ecs/components/compositing.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/component_ui_registry.hpp"
 #include "editor/editor.hpp"
@@ -28,13 +29,13 @@ void InspectorPanel::draw() {
 
         ImGui::Text("Add Component");
         ImGui::SameLine();
-        if (ImGui::Button("+##AddComponent", {32, 0}))
+        if (ui::plusButton("AddComponent"))
             openNewComponentPopup = true;
 
         auto& reg = scene.getRegistry();
         auto& uiReg = ecs::ComponentUiRegistry::get();
         bool changed = uiReg.draw(reg, entity);
-        if (changed) Core::markRenderDirty();
+        if (changed && !reg.has(entity, ecs::Compositing)) Core::markRenderDirty();
     });
 
     if (!selectedEntity.has_value()) return;
@@ -88,7 +89,7 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
         if (disabled) ImGui::BeginDisabled();
 
         const std::string label = type->getIcon() + " " + type->getLabel();
-        if (ImGui::Button(label.c_str(), ui::kButtonSize)) {
+        if (ImGui::Button(label.c_str(), { -FLT_MIN, 0 })) {
             registry.add(entity, *type);
             Core::markRenderDirty();
             ImGui::CloseCurrentPopup();

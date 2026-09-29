@@ -67,7 +67,6 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ## Renderer
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/denoising` | Denoising | - | Boolean | false | - | no |
 | `renderer/debug_view` | Debug View | - | Enumeration | `None` | `None` • `Position W` • `Position` • `Normal W` • `Normal` • `Albedo` • `Roughness` • `Mat Type` • `Bounces` • `Hit Checks` • `Variance` • `Selection Mask` • `Sky Mask` | yes |
 
 ### Sampling

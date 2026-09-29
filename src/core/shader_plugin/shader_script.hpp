@@ -22,6 +22,7 @@ public:
         std::string error;
         std::vector<Field> fields;
         std::string body;
+        int passCount = 1;
     };
 
     static ParseResult parse(const std::filesystem::path& path, const std::string& type, int version);

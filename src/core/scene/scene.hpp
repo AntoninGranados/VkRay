@@ -48,6 +48,16 @@ struct SkyPluginInfo {
     int32_t paramsBase = -1;
 };
 
+struct CompositingPassInfo {
+    int32_t slot = -1;
+    int32_t paramsBase = 0;
+    int32_t passId = 0;
+};
+
+struct CompositingChainInfo {
+    std::vector<CompositingPassInfo> passes;
+};
+
 struct SceneRoots {
     ecs::Entity materialsRoot;
     ecs::Entity assetsRoot;
@@ -75,6 +85,9 @@ public:
     ecs::Entity getDefaultMesh() const { return defaultMesh; }
     ecs::Entity getDefaultCamera() const { return defaultCamera; }
     ecs::Entity getEnvironment() const;
+    ecs::Entity getCompositing() const;
+
+    static ecs::Entity findSceneRootChild(const ecs::Registry& registry, const ecs::ComponentType& type);
 
     ecs::Entity& getCamera() { return activeCamera; }
     bool isUsingSceneCamera() { return activeCamera != defaultCamera; }

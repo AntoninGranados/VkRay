@@ -14,5 +14,6 @@ namespace SkyTable {
 
     int slotFor(const std::filesystem::path& path);
     void generateDispatch();
-    void pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
+    void setDispatchDisabled(bool disabled);
+    bool pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
 }

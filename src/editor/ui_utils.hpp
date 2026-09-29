@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "FontAwesome/IconsFontAwesome7.h"
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
@@ -53,6 +54,20 @@ inline const float kWidgetRounding = 3.0f;
 
 // Button
 inline const ImVec2 kButtonSize = ImVec2(200.0f, 0.0f);
+
+inline bool iconButton(const char* labelAndId) {
+    const float size = ImGui::GetFrameHeight();
+    return ImGui::Button(labelAndId, ImVec2(size, size));
+}
+
+inline bool namedIconButton(const char* icon, const char* strId) {
+    return iconButton((std::string(icon) + "##" + strId).c_str());
+}
+
+inline bool plusButton(const char* strId)  { return namedIconButton("+", strId); }
+inline bool minusButton(const char* strId) { return namedIconButton("-", strId); }
+inline bool upButton(const char* strId)    { return namedIconButton(ICON_FA_CHEVRON_UP, strId); }
+inline bool downButton(const char* strId)  { return namedIconButton(ICON_FA_CHEVRON_DOWN, strId); }
 
 // Cancel Button
 inline const ImVec4 kCancelButtonColor        = kDraculaRed;

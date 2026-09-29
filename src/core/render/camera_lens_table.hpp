@@ -14,5 +14,6 @@ namespace CameraLensTable {
 
     int slotFor(const std::filesystem::path& path);
     void generateDispatch();
+    void setDispatchDisabled(bool disabled);
     int pack(ecs::Registry& registry, ecs::Entity camera, std::vector<float>& params);
 }

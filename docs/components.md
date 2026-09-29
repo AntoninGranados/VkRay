@@ -7,6 +7,8 @@ Components are defined in `src/core/ecs/components.hpp`.
 ### Mesh
 Mesh geometry asset loaded from file.
 
+ **Conflicts:** `transform`
+
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `path` | path |  |  | no |
@@ -79,6 +81,13 @@ Programmable custom lens, defined by a GLSL shader-definition file.
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `path` | path |  |  | no |
+
+## Compositing
+
+### Compositing
+Compositing chain, an ordered list of programmable passes.
+
+ **Conflicts:** `transform`
 
 ## Environment
 

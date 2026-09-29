@@ -51,6 +51,7 @@ inline const ComponentType Mesh = ComponentType::builder("mesh")
     .field<std::filesystem::path>("path", {})
     .field<bool>("smooth", false)
     .payload<MeshAsset>("geometry")
+    .conflicts("transform")
     .build();
 
 inline const ComponentType MeshSimplify = ComponentType::builder("mesh_simplify")

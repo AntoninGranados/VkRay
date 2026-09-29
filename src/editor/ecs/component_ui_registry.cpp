@@ -1,10 +1,15 @@
 #include "component_ui_registry.hpp"
 
+#include <cstdlib>
+#include <format>
+#include <utility>
+
 #include "FontAwesome/IconsFontAwesome7.h"
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/render/camera_lens_table.hpp"
+#include "core/render/compositing_table.hpp"
 #include "core/render/material_table.hpp"
 #include "core/render/sky_table.hpp"
 #include "core/scene/asset/mesh.hpp"
@@ -16,21 +21,24 @@
 
 namespace ecs {
 
+static bool drawPluginErrorAndFields(ShaderPlugin& plugin, const std::string& idSuffix) {
+    if (!plugin.getError().empty())
+        ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
+
+    return ui::drawGroupedFields(plugin.getComponent().getFields(), idSuffix);
+}
+
 static bool drawShaderPluginField(Component& c, const std::string& type, int version, int (*slotFor)(const std::filesystem::path&)) {
     const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
     if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
-    const bool pathChanged = ui::drawField(c.getField("path"), "##path");
+    bool update = ui::drawField(c.getField("path"), "##path");
 
     ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
     const std::filesystem::path path = c.get<std::filesystem::path>("path");
     plugin.parse(path, type, version, slotFor(path));
 
-    if (!plugin.getError().empty())
-        ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
-
-    bool update = pathChanged;
-    update |= ui::drawGroupedFields(plugin.getComponent().getFields(), std::format("##{}", header));
+    update |= drawPluginErrorAndFields(plugin, std::format("##{}", header));
     return update;
 }
 
@@ -176,6 +184,80 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Environment);
     ui_reg.addCustom(ecs::SkyPlugin, [](Component& c, Registry&, Entity) {
         return drawShaderPluginField(c, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor);
+    });
+
+    ui_reg.addCustom(ecs::Compositing, [](Component& c, Registry&, Entity) {
+        const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
+        if (!ImGui::CollapsingHeader(header.c_str())) return false;
+
+        bool update = false;
+        CompositingPasses& list = c.payload<CompositingPasses>("passes");
+
+        ImGui::BeginChild("##CompositingPassList", ImVec2(0, 120), ImGuiChildFlags_Borders);
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.35f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ui::kDraculaPurple);
+        for (size_t i = 0; i < list.passes.size(); i++)
+            if (ImGui::Selectable(std::format("{}##{}", list.passes[i].name, i).c_str(), list.selected == static_cast<int>(i)))
+                list.selected = static_cast<int>(i);
+        ImGui::PopStyleColor(3);
+        ImGui::EndChild();
+
+        if (ui::plusButton("AddCompositingPass")) {
+            CompositingPassEntry pass;
+            pass.name = std::format("Pass-uid[{:02d}]", rand());
+            list.passes.push_back(std::move(pass));
+            list.selected = static_cast<int>(list.passes.size()) - 1;
+            update = true;
+        }
+        ImGui::SameLine();
+
+        const bool hasSelection = list.selected >= 0 && list.selected < static_cast<int>(list.passes.size());
+        if (!hasSelection) ImGui::BeginDisabled();
+        if (ui::minusButton("RemoveCompositingPass")) {
+            list.passes.erase(list.passes.begin() + list.selected);
+            list.selected = -1;
+            update = true;
+        }
+        ImGui::SameLine();
+        if (ui::upButton("MoveCompositingPassUp") && list.selected > 0) {
+            std::swap(list.passes[list.selected], list.passes[list.selected - 1]);
+            list.selected--;
+            update = true;
+        }
+        ImGui::SameLine();
+        if (ui::downButton("MoveCompositingPassDown") && list.selected < static_cast<int>(list.passes.size()) - 1) {
+            std::swap(list.passes[list.selected], list.passes[list.selected + 1]);
+            list.selected++;
+            update = true;
+        }
+        if (!hasSelection) ImGui::EndDisabled();
+
+        if (list.selected >= 0 && list.selected < static_cast<int>(list.passes.size())) {
+            CompositingPassEntry& pass = list.passes[list.selected];
+            ImGui::Separator();
+
+            std::string name = pass.name;
+            name.resize(128, '\0');
+            if (ImGui::InputText("##CompositingPassName", name.data(), name.size())) {
+                pass.name = name.c_str();
+                update = true;
+            }
+
+            ImGui::TextUnformatted(pass.path.empty() ? "(no script)" : pass.path.filename().string().c_str());
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_FOLDER_OPEN "##BrowseCompositingPassScript")) {
+                if (auto path = ui::openFileDialog({{"Compositing Pass Shader", "glsl"}}, "assets/compositing/")) {
+                    pass.path = *path;
+                    pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion, CompositingTable::slotFor(pass.path));
+                    update = true;
+                }
+            }
+
+            update |= drawPluginErrorAndFields(*pass.plugin, std::format("##CompositingPass{}", list.selected));
+        }
+
+        return update;
     });
 }
 

@@ -33,7 +33,13 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
     Hit firstHit = intersection(ray, false, INFINITY, dummy);
 
     if (!foundIntersection(firstHit)) {
-        pixelInfo.aov.skyMask = 1u;
+        pixelInfo.aov.skyMask   = 1u;
+        pixelInfo.aov.positionW = vec3(0.0);
+        pixelInfo.aov.position  = vec3(0.0);
+        pixelInfo.aov.normalW   = vec3(0.0);
+        pixelInfo.aov.normal    = vec2(0.0);
+        pixelInfo.aov.albedo    = vec3(0.0);
+        pixelInfo.aov.roughness = 0.0;
         return;
     }
 

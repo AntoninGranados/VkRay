@@ -5,6 +5,7 @@
 #include <fstream>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -16,10 +17,12 @@
 
 #include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/compositing.hpp"
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
 #include "core/render/camera_lens_table.hpp"
+#include "core/render/compositing_table.hpp"
 #include "core/render/material_table.hpp"
 #include "core/render/sky_table.hpp"
 #include "scene.hpp"
@@ -85,7 +88,7 @@ void applyKeyframes(const json& anim, FieldType type, const std::string& fieldId
 
 json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, const ecs::Registry& registry) {
     json j = json::object();
-    for (Field& f : comp.getFields()) {
+    comp.forEachField([&](Field& f) {
         const std::string id = f.getId().generic_string();
         if (f.getType() == FieldType::Entity) {
             const ecs::Entity referenced = f.get<ecs::Entity>();
@@ -93,18 +96,18 @@ json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, c
                 const std::string name = registry.get(referenced, ecs::Name).get<std::string>("value");
                 if (!name.empty()) j[id] = name;
             }
-            continue;
+            return;
         }
         j[id] = serializeField(f, animStore.keyframes(f));
-    }
+    });
     return j;
 }
 
 void applyComponent(const json& obj, ecs::Component& comp, AnimationStore& animStore, const ResolveCtx& ctx) {
-    for (Field& f : comp.getFields()) {
+    comp.forEachField([&](Field& f) {
         const std::string id = f.getId().generic_string();
-        if (!obj.contains(id)) continue;
-        if (f.getType() == FieldType::Entity) continue;
+        if (!obj.contains(id)) return;
+        if (f.getType() == FieldType::Entity) return;
         const json& val = obj[id];
         if (val.is_object() && val.contains("anim") && val["anim"].is_array())
             applyKeyframes(val["anim"], f.getType(), id, [&](int frame, FieldValue value, Interpolation interp) {
@@ -112,6 +115,55 @@ void applyComponent(const json& obj, ecs::Component& comp, AnimationStore& animS
             });
         else
             applyField(val, f, ctx);
+    });
+}
+
+void warnUnknownFields(const json& obj, ecs::Component& comp) {
+    std::unordered_set<std::string> knownIds;
+    comp.forEachField([&](Field& f) { knownIds.insert(f.getId().generic_string()); });
+    for (const auto& [key, value] : obj.items())
+        if (!knownIds.contains(key))
+            Log::warn("SceneSerializer", std::format("Unknown field '{}' on component '{}'", key, comp.getType().getId()));
+}
+
+json serializeCompositingPasses(ecs::Component& comp) {
+    json arr = json::array();
+    for (ecs::CompositingPassEntry& pass : comp.payload<ecs::CompositingPasses>("passes").passes) {
+        json entry;
+        entry["name"] = pass.name;
+        entry["path"] = pass.path.string();
+        json params = json::object();
+        for (const Field& f : pass.plugin->getComponent().getFields())
+            params[f.getId().generic_string()] = fieldValueToJson(f);
+        entry["params"] = params;
+        arr.push_back(entry);
+    }
+    return json{{"passes", arr}};
+}
+
+void loadCompositingPasses(const json& value, ecs::Component& comp, const ResolveCtx& ctx) {
+    ecs::CompositingPasses& list = comp.payload<ecs::CompositingPasses>("passes");
+    if (!value.contains("passes") || !value["passes"].is_array()) return;
+
+    for (const json& entry : value["passes"]) {
+        ecs::CompositingPassEntry pass;
+        pass.name = entry.value("name", std::string("Pass"));
+        pass.path = entry.value("path", std::string());
+        pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion, CompositingTable::slotFor(pass.path));
+
+        if (entry.contains("params") && entry["params"].is_object()) {
+            std::unordered_set<std::string> knownIds;
+            for (Field& f : pass.plugin->getComponent().getFields()) {
+                const std::string id = f.getId().generic_string();
+                knownIds.insert(id);
+                if (entry["params"].contains(id)) applyField(entry["params"][id], f, ctx);
+            }
+            for (const auto& [key, value] : entry["params"].items())
+                if (!knownIds.contains(key))
+                    Log::warn("SceneSerializer", std::format("Unknown compositing pass param '{}' on '{}'", key, pass.name));
+        }
+
+        list.passes.push_back(std::move(pass));
     }
 }
 
@@ -160,11 +212,25 @@ struct DeferredEntityField {
     std::string entityName;
 };
 
+struct DeferredPluginParams {
+    ecs::Entity entity;
+    const ecs::ComponentType* componentType;
+    json value;
+    ResolveCtx ctx;
+};
+
 struct SpawnContext {
     ecs::Registry& registry;
     AnimationStore& animStore;
     std::vector<DeferredEntityField> deferredEntityFields;
+    std::vector<DeferredPluginParams> deferredPluginParams;
 };
+
+bool hasPluginPayload(const ecs::ComponentType& type) {
+    for (const ecs::ComponentPayload& p : type.getPayloads())
+        if (p.asComponent) return true;
+    return false;
+}
 
 void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveCtx, SpawnContext& spawn) {
     for (const auto& [key, value] : node.items()) {
@@ -172,6 +238,10 @@ void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveC
         auto type = ecs::ComponentType::find(key);
         if (!type) { Log::warn("SceneSerializer", std::format("Unknown component '{}'", key)); continue; }
         if (spawn.registry.add(e, type->get()) && value.is_object()) {
+            if (type->get() == ecs::Compositing) {
+                loadCompositingPasses(value, spawn.registry.get(e, type->get()), resolveCtx);
+                continue;
+            }
             for (const auto& field : spawn.registry.get(e, type->get()).getFields()) {
                 if (field.getType() != FieldType::Entity) continue;
                 const std::string id = field.getId().generic_string();
@@ -179,7 +249,19 @@ void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveC
                 spawn.deferredEntityFields.push_back({e, &type->get(), id, resolveTemplate(value[id].get<std::string>(), resolveCtx)});
             }
             applyComponent(value, spawn.registry.get(e, type->get()), spawn.animStore, resolveCtx);
+            if (hasPluginPayload(type->get()))
+                spawn.deferredPluginParams.push_back({e, &type->get(), value, resolveCtx});
+            else
+                warnUnknownFields(value, spawn.registry.get(e, type->get()));
         }
+    }
+}
+
+void applyDeferredPluginParams(ecs::Registry& registry, AnimationStore& animStore, const std::vector<DeferredPluginParams>& deferred) {
+    for (const DeferredPluginParams& d : deferred) {
+        ecs::Component& comp = registry.get(d.entity, *d.componentType);
+        applyComponent(d.value, comp, animStore, d.ctx);
+        warnUnknownFields(d.value, comp);
     }
 }
 
@@ -301,6 +383,18 @@ void replaceSceneRootIfProvided(const json& j, Scene& scene) {
         registry.destroyEntity(child);
 }
 
+void ensureSceneDefaults(Scene& scene) {
+    ecs::Registry& registry = scene.getRegistry();
+    if (scene.getEnvironment() == ecs::Entity{}) {
+        const ecs::Entity e = scene.createNamedEntity("Environment", scene.getSceneRoot());
+        registry.add(e, ecs::Environment);
+    }
+    if (scene.getCompositing() == ecs::Entity{}) {
+        const ecs::Entity e = scene.createNamedEntity("Compositing", scene.getSceneRoot());
+        registry.add(e, ecs::Compositing);
+    }
+}
+
 void activateFirstNonDefaultCamera(ecs::Registry& registry, Scene& scene) {
     for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
         if (entity == scene.getDefaultCamera()) continue;
@@ -330,9 +424,10 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
 
     replaceSceneRootIfProvided(j, scene);
 
-    SpawnContext spawn{ scene.getRegistry(), scene.getAnimationStore(), {} };
+    SpawnContext spawn{ scene.getRegistry(), scene.getAnimationStore(), {}, {} };
 
     loadSection(j, "Scene", scene.getSceneRoot(), ctx, spawn);
+    ensureSceneDefaults(scene);
     loadSection(j, "Materials", scene.getMaterialsRoot(), ctx, spawn);
     loadSection(j, "Assets", scene.getAssetsRoot(), ctx, spawn);
     loadSection(j, "Objects", scene.getObjectsRoot(), ctx, spawn);
@@ -342,6 +437,7 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     reparseMaterialPlugins(spawn.registry, scene);
     reparseCameraLensPlugins(spawn.registry);
     reparseSkyPlugins(spawn.registry);
+    applyDeferredPluginParams(spawn.registry, spawn.animStore, spawn.deferredPluginParams);
     activateFirstNonDefaultCamera(spawn.registry, scene);
 
     spawn.animStore.evaluate(0.0f);
@@ -366,6 +462,7 @@ bool SceneSerializer::save(Scene& scene, const std::string& path) {
             if (!reg.has(e, type)) continue;
             if (type.getId() == "name") continue;
             if (type.getId() == "material") continue;
+            if (type == ecs::Compositing) { node["compositing"] = serializeCompositingPasses(reg.get(e, type)); continue; }
             node[type.getId()] = serializeComponent(reg.get(e, type), animStore, reg);
         }
 

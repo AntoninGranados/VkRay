@@ -22,7 +22,9 @@ RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
         ImageAccessInfo{ .usage = ImageUsageType::Sampled, .access = AccessType::Read }
     );
 
-    RenderResources resources = PathtraceRenderer::initGraph(builder, engine.getExtent(), "", lensImageHandle);
+    const VkExtent2D renderExtent = getRenderExtent();
+    const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : engine.getExtent();
+    RenderResources resources = PathtraceRenderer::initGraph(builder, extent, "", lensImageHandle);
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
     exportPassHandle = exportPass.getHandle();
@@ -75,9 +77,6 @@ void CoreRenderer::onResize(uint32_t width, uint32_t height) {
 
 void CoreRenderer::bindParameters() {
     ParameterRegistry& parameters = Core::getParameters();
-    parameters.bind<bool>("renderer/denoising", [this](bool v) {
-        compositingUBO.denoisingEnabled = static_cast<int>(v);
-    });
 
     parameters.bind("renderer/sampling/max_bounces", &pathtracerUBO.render.maxBounces);
     parameters.bind("renderer/sampling/adaptive_warmup", &pathtracerUBO.render.varianceWarmupSamples);

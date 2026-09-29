@@ -3,9 +3,7 @@
 #include <cctype>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <functional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -73,12 +71,25 @@ const std::vector<Entry>& entries() {
     return table;
 }
 
+const bool registered = [] {
+    ShaderPlugin::registerDispatchGenerator([] {
+        MaterialTable::generateGlsl();
+        MaterialTable::generateDispatch();
+    }, &MaterialTable::setDispatchDisabled, "./src/shaders/core/pathtracing.glsl");
+    return true;
+}();
+
+bool dispatchDisabled = false;
+
 } // namespace
+
+void MaterialTable::setDispatchDisabled(bool disabled) {
+    dispatchDisabled = disabled;
+}
 
 int MaterialTable::slotFor(const std::filesystem::path& path) {
     static std::unordered_map<std::filesystem::path, int> slots;
-    const auto [it, inserted] = slots.try_emplace(path, static_cast<int>(slots.size()));
-    return it->second;
+    return GlslCodegen::slotFor(slots, path);
 }
 
 bool MaterialTable::pack(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu, std::vector<float>& params) {
@@ -132,16 +143,7 @@ void MaterialTable::generateGlsl() {
         }
     }
 
-    std::filesystem::path outputPath = "./src/shaders/generated/material_types.glsl";
-    std::error_code ec;
-    std::filesystem::create_directories(outputPath.parent_path(), ec);
-
-    std::ifstream existing(outputPath);
-    std::stringstream existingBuffer;
-    existingBuffer << existing.rdbuf();
-    if (existingBuffer.str() == content) return;
-
-    std::ofstream(outputPath) << content;
+    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/material_types.glsl", content);
 }
 
 void MaterialTable::generateDispatch() {
@@ -151,7 +153,7 @@ void MaterialTable::generateDispatch() {
 
     for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
         if (plugin->getType() != MaterialTable::kType) continue;
-        if (!plugin->getError().empty() || plugin->getBody().empty()) continue;
+        if (dispatchDisabled || !plugin->getError().empty() || plugin->getBody().empty()) continue;
         if (!emittedSlots.insert(plugin->getSlot()).second) continue;
 
         const std::string funcName = plugin->getPrefix() + "programmable";
@@ -192,14 +194,5 @@ void MaterialTable::generateDispatch() {
         functions, cases
     );
 
-    std::filesystem::path outputPath = "./src/shaders/generated/programmable_dispatch.glsl";
-    std::error_code ec;
-    std::filesystem::create_directories(outputPath.parent_path(), ec);
-
-    std::ifstream existing(outputPath);
-    std::stringstream existingBuffer;
-    existingBuffer << existing.rdbuf();
-    if (existingBuffer.str() == content) return;
-
-    std::ofstream(outputPath) << content;
+    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/programmable_dispatch.glsl", content);
 }

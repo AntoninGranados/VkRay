@@ -6,3 +6,4 @@
 #include "core/ecs/components/physics.hpp"
 #include "core/ecs/components/material.hpp"
 #include "core/ecs/components/environment.hpp"
+#include "core/ecs/components/compositing.hpp"

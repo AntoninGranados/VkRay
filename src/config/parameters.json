@@ -2,7 +2,6 @@
     "version": 1,
     "renderer": {
         "label": "Renderer",
-        "denoising": { "label": "Denoising", "default": false },
         "debug_view": {
             "label": "Debug View",
             "items": ["None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask"],

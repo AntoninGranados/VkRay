@@ -21,6 +21,7 @@ void Scene::init() {
     registry.ctx().emplace<CameraMotionInfo>();
     registry.ctx().emplace<LensPluginInfo>();
     registry.ctx().emplace<SkyPluginInfo>();
+    registry.ctx().emplace<CompositingChainInfo>();
     registry.ctx().emplace<FrameContext>();
     registry.ctx().emplace<ecs::ApertureState>();
     registry.ctx().emplace<ecs::PhysicsBakeState>();
@@ -57,8 +58,16 @@ const std::vector<ecs::Entity>& Scene::getChildren(ecs::Entity parent) const {
 }
 
 ecs::Entity Scene::getEnvironment() const {
+    return findSceneRootChild(registry, ecs::Environment);
+}
+
+ecs::Entity Scene::getCompositing() const {
+    return findSceneRootChild(registry, ecs::Compositing);
+}
+
+ecs::Entity Scene::findSceneRootChild(const ecs::Registry& registry, const ecs::ComponentType& type) {
     for (const ecs::Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
-        if (registry.has(e, ecs::Environment)) return e;
+        if (registry.has(e, type)) return e;
     return {};
 }
 
@@ -158,6 +167,9 @@ void Scene::addDefaultAssets() {
 
     const ecs::Entity environment = createNamedEntity("Environment", sceneRoots.sceneRoot);
     registry.add(environment, ecs::Environment);
+
+    const ecs::Entity compositing = createNamedEntity("Compositing", sceneRoots.sceneRoot);
+    registry.add(compositing, ecs::Compositing);
 
     defaultCamera = createNamedEntity("Default Camera", sceneRoots.internalsRoot);
     registry.add(defaultCamera, ecs::Camera);

@@ -1,8 +1,10 @@
 #include "shader_script.hpp"
 
+#include <algorithm>
 #include <format>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
 
 #include "utils/log.hpp"
 #include "utils/string_utils.hpp"
@@ -30,6 +32,15 @@ const GlslTypeInfo* ShaderScript::findGlslType(FieldType fieldType) {
         if (info.fieldType == fieldType) return &info;
     return nullptr;
 }
+
+namespace {
+int extractDirectiveInt(const std::string& line, const std::string& key, int fallback) {
+    const size_t pos = line.find(key + "(");
+    if (pos == std::string::npos) return fallback;
+    const std::vector<float> values = parseNumbers(line.substr(pos));
+    return values.empty() ? fallback : static_cast<int>(values[0]);
+}
+} // namespace
 
 std::optional<Field> ShaderScript::parseParam(const std::string& group, const std::string& line, const std::filesystem::path& path, int lineNumber) {
     std::string location = std::format("{}:{}", path.string(), lineNumber);
@@ -131,8 +142,8 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
             trimmed = trimmed.substr(trimmed.find("\"") + 1);
             group = trimmed.substr(0, trimmed.find("\""));
         } else if (trimmed.starts_with(versionDirective) && trimmed.find(':') != std::string::npos) {
-            const std::vector<float> parsedVersion = parseNumbers(trimmed);
-            hasVersion = !parsedVersion.empty() && static_cast<int>(parsedVersion[0]) == version;
+            hasVersion = extractDirectiveInt(trimmed, "version", -1) == version;
+            result.passCount = std::max(1, extractDirectiveInt(trimmed, "pass_count", 1));
         } else {
             result.body += trimmed + "\n";
         }
@@ -143,9 +154,17 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
         return result;
     }
 
-    for (size_t i = 0; i < paramLines.size(); i++)
-        if (std::optional<Field> field = parseParam(paramLines[i].first, paramLines[i].second, path, static_cast<int>(i) + 1))
-            result.fields.push_back(std::move(*field));
+    std::unordered_set<FieldPath> seenIds;
+    for (size_t i = 0; i < paramLines.size(); i++) {
+        std::optional<Field> field = parseParam(paramLines[i].first, paramLines[i].second, path, static_cast<int>(i) + 1);
+        if (!field) continue;
+
+        if (!seenIds.insert(field->getId()).second) {
+            Log::warn("ShaderScript", std::format("{}:{}: duplicate param '{}'", path.string(), i + 1, field->getId().string()));
+            continue;
+        }
+        result.fields.push_back(std::move(*field));
+    }
 
     result.ok = true;
     return result;

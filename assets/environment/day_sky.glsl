@@ -1,3 +1,9 @@
+// --------------- INPUTS ---------------
+// vec3 dir
+
+// --------------- OUTPUTS ---------------
+// vec3 result
+
 #sky: version(1)
 
 #param vec3 zenithColor = vec3(0.5, 0.7, 1.0): color
