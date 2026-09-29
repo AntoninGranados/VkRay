@@ -22,6 +22,7 @@ public:
         std::string error;
         std::vector<Field> fields;
         std::string body;
+        std::vector<std::string> bodyLineMarkers;
         int passCount = 1;
     };
 

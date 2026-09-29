@@ -14,7 +14,6 @@ namespace CompositingTable {
 
     int slotFor(const std::filesystem::path& path);
     void generateDispatch();
-    void setDispatchDisabled(bool disabled);
 
     std::vector<ecs::CompositingPassEntry>& passes(ecs::Registry& registry);
     int pack(ecs::CompositingPassEntry& pass, std::vector<float>& params);

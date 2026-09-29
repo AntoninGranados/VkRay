@@ -1,17 +1,37 @@
 #include "log.hpp"
 
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <print>
 
+namespace {
+std::string stripAnsiCodes(std::string_view s) {
+    std::string result;
+    result.reserve(s.size());
+    size_t i = 0;
+    while (i < s.size()) {
+        if (s[i] == '\033' && i + 1 < s.size() && s[i + 1] == '[') {
+            size_t j = i + 2;
+            while (j < s.size() && !std::isalpha(static_cast<unsigned char>(s[j]))) j++;
+            i = j < s.size() ? j + 1 : j;
+            continue;
+        }
+        result += s[i];
+        i++;
+    }
+    return result;
+}
+} // namespace
+
 static std::string_view prefix(LogLevel l) {
     switch (l) {
-        case LogLevel::Info:    return "[INFO]   ";
+        case LogLevel::Info:    return "[INFO]";
         case LogLevel::Success: return "[SUCCESS]";
-        case LogLevel::Warn:    return "[WARN]   ";
-        case LogLevel::Error:   return "[ERROR]  ";
-        case LogLevel::Debug:   return "[DEBUG]  ";
+        case LogLevel::Warn:    return "[WARN]";
+        case LogLevel::Error:   return "[ERROR]";
+        case LogLevel::Debug:   return "[DEBUG]";
     }
     std::unreachable();
 }
@@ -53,7 +73,8 @@ void Log::push(LogLevel level, std::string_view source, std::string_view msg) {
     if (level < minLevel) return;
     while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r'))
         msg.remove_suffix(1);
-    entries.push_back({ level, std::string(source), std::string(msg) });
+    const std::string plain = stripAnsiCodes(msg);
+    entries.push_back({ level, std::string(source), plain });
     const LogEntry& entry = entries.back();
 
     auto& out = (level == LogLevel::Error || level == LogLevel::Warn) ? std::cerr : std::cout;
@@ -61,8 +82,8 @@ void Log::push(LogLevel level, std::string_view source, std::string_view msg) {
     else                std::println(out, "{} [{}] {}", prefix(level), source, msg);
 
     ensureFile();
-    if (source.empty()) std::println(file, "{} {}", prefix(level), msg);
-    else                std::println(file, "{} [{}] {}", prefix(level), source, msg);
+    if (source.empty()) std::println(file, "{} {}", prefix(level), plain);
+    else                std::println(file, "{} [{}] {}", prefix(level), source, plain);
 
     if (consumer) consumer(entry);
 }

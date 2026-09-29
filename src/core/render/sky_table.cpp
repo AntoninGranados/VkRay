@@ -11,16 +11,10 @@
 
 namespace {
 const bool registered = [] {
-    ShaderPlugin::registerDispatchGenerator(&SkyTable::generateDispatch, &SkyTable::setDispatchDisabled, "./src/shaders/core/pathtracing.glsl");
+    ShaderPlugin::registerDispatchGenerator(&SkyTable::generateDispatch);
     return true;
 }();
-
-bool dispatchDisabled = false;
 } // namespace
-
-void SkyTable::setDispatchDisabled(bool disabled) {
-    dispatchDisabled = disabled;
-}
 
 int SkyTable::slotFor(const std::filesystem::path& path) {
     static std::unordered_map<std::filesystem::path, int> slots;
@@ -42,15 +36,7 @@ bool SkyTable::pack(ecs::Registry& registry, ecs::Entity environment, std::vecto
 }
 
 void SkyTable::generateDispatch() {
-    ShaderPlugin* active = nullptr;
-    if (!dispatchDisabled) {
-        for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
-            if (plugin->getType() != SkyTable::kType) continue;
-            if (!plugin->getError().empty() || plugin->getBody().empty()) continue;
-            active = plugin;
-            break;
-        }
-    }
+    ShaderPlugin* active = GlslCodegen::findActivePlugin(SkyTable::kType);
 
     std::string body = active
         ? std::format(

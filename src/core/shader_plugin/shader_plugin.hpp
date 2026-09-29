@@ -22,7 +22,7 @@ public:
 
     static std::vector<ShaderPlugin*>& registry();
 
-    static void registerDispatchGenerator(std::function<void()> generate, void (*setDisabled)(bool), std::string consumerPath);
+    static void registerDispatchGenerator(std::function<void()> generate);
     static void regenerateAllDispatch();
 
     const std::string& getError() const { return error; }

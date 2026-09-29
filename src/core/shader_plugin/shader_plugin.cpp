@@ -3,14 +3,10 @@
 #include <format>
 #include <unordered_map>
 
-#include "VkSmol/render/shader.hpp"
-
 #include "core/core.hpp"
 #include "core/fields/field.hpp"
 #include "core/shader_plugin/glsl_mangler.hpp"
 #include "core/shader_plugin/shader_script.hpp"
-
-#include "utils/log.hpp"
 
 ShaderPlugin::ShaderPlugin() {
     registry().push_back(this);
@@ -27,68 +23,18 @@ std::vector<ShaderPlugin*>& ShaderPlugin::registry() {
 }
 
 namespace {
-
-struct DispatchTarget {
-    std::function<void()> generate;
-    void (*setDisabled)(bool);
-    std::string consumerPath;
-};
-
-std::vector<DispatchTarget>& dispatchTargets() {
-    static std::vector<DispatchTarget> targets;
-    return targets;
+std::vector<std::function<void()>>& dispatchGenerators() {
+    static std::vector<std::function<void()>> generators;
+    return generators;
 }
-
-void runGenerators() {
-    for (const DispatchTarget& target : dispatchTargets()) target.generate();
-}
-
-bool tryCompileConsumer(const std::string& path) {
-    try {
-        Shader::compile(path, VK_SHADER_STAGE_COMPUTE_BIT);
-        return true;
-    } catch (const std::exception& e) {
-        Log::error(e.what());
-        return false;
-    }
-}
-
-void validateConsumer(const std::string& path, const std::vector<void (*)(bool)>& disablers) {
-    if (tryCompileConsumer(path)) return;
-
-    for (void (*disable)(bool) : disablers) {
-        disable(true);
-        runGenerators();
-        if (tryCompileConsumer(path)) return;
-        disable(false);
-    }
-
-    for (void (*disable)(bool) : disablers) disable(true);
-    runGenerators();
-    tryCompileConsumer(path);
-}
-
 } // namespace
 
-void ShaderPlugin::registerDispatchGenerator(std::function<void()> generate, void (*setDisabled)(bool), std::string consumerPath) {
-    dispatchTargets().push_back({ std::move(generate), setDisabled, std::move(consumerPath) });
+void ShaderPlugin::registerDispatchGenerator(std::function<void()> generate) {
+    dispatchGenerators().push_back(std::move(generate));
 }
 
 void ShaderPlugin::regenerateAllDispatch() {
-    for (const DispatchTarget& target : dispatchTargets())
-        if (target.setDisabled) target.setDisabled(false);
-
-    runGenerators();
-
-    std::vector<std::string> consumerOrder;
-    std::unordered_map<std::string, std::vector<void (*)(bool)>> disablersByConsumer;
-    for (const DispatchTarget& target : dispatchTargets()) {
-        if (target.consumerPath.empty() || !target.setDisabled) continue;
-        if (!disablersByConsumer.contains(target.consumerPath)) consumerOrder.push_back(target.consumerPath);
-        disablersByConsumer[target.consumerPath].push_back(target.setDisabled);
-    }
-
-    for (const std::string& path : consumerOrder) validateConsumer(path, disablersByConsumer[path]);
+    for (const std::function<void()>& generate : dispatchGenerators()) generate();
 }
 
 void ShaderPlugin::load(bool migrate) {
@@ -106,7 +52,7 @@ void ShaderPlugin::load(bool migrate) {
     for (const Field& field : script.fields)
         seedGlobals[field.getId().filename().string()] = GlslMangler::mangleName(manglePrefix, field.getId().parent_path().string(), field.getId().filename().string());
 
-    GlslMangler::MangleResult mangled = GlslMangler::mangle(script.body, manglePrefix, seedGlobals);
+    GlslMangler::MangleResult mangled = GlslMangler::mangle(script.body, manglePrefix, seedGlobals, script.bodyLineMarkers);
     if (!mangled.ok) {
         error = std::format("{}: {}", path->string(), mangled.error);
         return;

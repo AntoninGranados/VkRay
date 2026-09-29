@@ -8,6 +8,7 @@
 #include "utils/log.hpp"
 #include "core/core.hpp"
 #include "core/fields/parameters.hpp"
+#include "core/shader_plugin/shader_source_map.hpp"
 
 RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     VkSmol& engine = Core::getEngine();
@@ -52,7 +53,7 @@ void CoreRenderer::buildPipelines() {
     try {
         engine.reloadPipelines(true);
     } catch (const std::exception& e) {
-        Log::error(e.what());
+        Log::error(ShaderSourceMap::remapError(e.what()));
         return;
     }
 

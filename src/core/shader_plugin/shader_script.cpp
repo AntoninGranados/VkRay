@@ -6,6 +6,8 @@
 #include <sstream>
 #include <unordered_set>
 
+#include "core/shader_plugin/shader_source_map.hpp"
+
 #include "utils/log.hpp"
 #include "utils/string_utils.hpp"
 
@@ -130,8 +132,9 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
     std::vector<std::pair<std::string, std::string>> paramLines;
     const std::string versionDirective = "#" + type;
 
-    for (const std::string& line : split(buffer.str(), '\n')) {
-        std::string trimmed = trim(line);
+    const std::vector<std::string> lines = split(buffer.str(), '\n');
+    for (size_t lineIdx = 0; lineIdx < lines.size(); lineIdx++) {
+        std::string trimmed = trim(lines[lineIdx]);
         const size_t commentPos = trimmed.find("//");
         if (commentPos != trimmed.npos) trimmed = trim(trimmed.substr(0, commentPos));
         if (trimmed.empty()) continue;
@@ -146,6 +149,9 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
             result.passCount = std::max(1, extractDirectiveInt(trimmed, "pass_count", 1));
         } else {
             result.body += trimmed + "\n";
+            result.bodyLineMarkers.push_back(
+                trimmed.ends_with('\\') ? std::string() : ShaderSourceMap::marker(path, static_cast<int>(lineIdx) + 1)
+            );
         }
     }
 

@@ -1,5 +1,6 @@
 #include "glsl_mangler.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <format>
 #include <unordered_set>
@@ -11,6 +12,7 @@ struct Token {
     enum class Kind { Identifier, Number, Symbol } kind;
     std::string text;
     std::string trivia;
+    int line;
 };
 
 const std::unordered_set<std::string> kKeywords = {
@@ -27,27 +29,29 @@ std::vector<Token> tokenize(const std::string& source) {
     std::vector<Token> result;
     size_t i = 0;
     const size_t n = source.size();
+    int line = 0;
     while (i < n) {
         const size_t triviaStart = i;
         while (i < n && std::isspace(static_cast<unsigned char>(source[i]))) i++;
         const std::string trivia = source.substr(triviaStart, i - triviaStart);
+        line += static_cast<int>(std::count(trivia.begin(), trivia.end(), '\n'));
         if (i >= n) break;
 
         if (isIdentStart(source[i])) {
             const size_t start = i;
             while (i < n && isIdentChar(source[i])) i++;
-            result.push_back({ Token::Kind::Identifier, source.substr(start, i - start), trivia });
+            result.push_back({ Token::Kind::Identifier, source.substr(start, i - start), trivia, line });
             continue;
         }
 
         if (std::isdigit(static_cast<unsigned char>(source[i]))) {
             const size_t start = i;
             while (i < n && (std::isdigit(static_cast<unsigned char>(source[i])) || source[i] == '.')) i++;
-            result.push_back({ Token::Kind::Number, source.substr(start, i - start), trivia });
+            result.push_back({ Token::Kind::Number, source.substr(start, i - start), trivia, line });
             continue;
         }
 
-        result.push_back({ Token::Kind::Symbol, std::string(1, source[i]), trivia });
+        result.push_back({ Token::Kind::Symbol, std::string(1, source[i]), trivia, line });
         i++;
     }
     return result;
@@ -58,7 +62,7 @@ public:
     Mangler(const std::string& prefix, const std::unordered_map<std::string, std::string>& seedGlobals)
         : prefix(prefix), globalMangled(seedGlobals) {}
 
-    GlslMangler::MangleResult run(const std::string& source) {
+    GlslMangler::MangleResult run(const std::string& source, const std::vector<std::string>& lineMarkers) {
         tokens = tokenize(source);
         pos = 0;
         scopes.assign(1, {});
@@ -73,13 +77,25 @@ public:
             return result;
         }
 
+        int declLine = -1;
         for (size_t i = 0; i < tokens.size(); i++) {
             if (i >= mainFuncStart && i < mainFuncEnd) continue;
+            if (declLine != -1 && tokens[i].line != declLine && declLine < static_cast<int>(lineMarkers.size()))
+                result.declarations += lineMarkers[declLine];
             result.declarations += tokens[i].trivia + tokens[i].text;
+            declLine = tokens[i].line;
         }
+        if (declLine != -1 && declLine < static_cast<int>(lineMarkers.size())) result.declarations += lineMarkers[declLine];
         if (!result.declarations.empty() && result.declarations.back() != '\n') result.declarations += '\n';
 
-        for (size_t i = mainBodyStart; i < mainBodyEnd; i++) result.body += tokens[i].trivia + tokens[i].text;
+        int bodyLine = -1;
+        for (size_t i = mainBodyStart; i < mainBodyEnd; i++) {
+            if (bodyLine != -1 && tokens[i].line != bodyLine && bodyLine < static_cast<int>(lineMarkers.size()))
+                result.body += lineMarkers[bodyLine];
+            result.body += tokens[i].trivia + tokens[i].text;
+            bodyLine = tokens[i].line;
+        }
+        if (bodyLine != -1 && bodyLine < static_cast<int>(lineMarkers.size())) result.body += lineMarkers[bodyLine];
         if (!result.body.empty() && result.body.back() != '\n') result.body += '\n';
 
         result.ok = true;
@@ -224,7 +240,8 @@ std::string GlslMangler::mangleName(const std::string& prefix, const std::string
 }
 
 GlslMangler::MangleResult GlslMangler::mangle(const std::string& source, const std::string& prefix,
-                                               const std::unordered_map<std::string, std::string>& seedGlobals) {
+                                               const std::unordered_map<std::string, std::string>& seedGlobals,
+                                               const std::vector<std::string>& lineMarkers) {
     Mangler mangler(prefix, seedGlobals);
-    return mangler.run(source);
+    return mangler.run(source, lineMarkers);
 }

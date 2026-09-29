@@ -13,4 +13,7 @@ namespace GlslCodegen {
 
     int slotFor(std::unordered_map<std::filesystem::path, int>& slots, const std::filesystem::path& path);
     void writeGeneratedFileIfChanged(const std::filesystem::path& outputPath, const std::string& content);
+
+    ShaderPlugin* findActivePlugin(const std::string& type);
+    void forEachActivePlugin(const std::string& type, const std::function<void(ShaderPlugin&, const std::string& funcName)>& fn);
 }

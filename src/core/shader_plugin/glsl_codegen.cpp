@@ -3,6 +3,7 @@
 #include <format>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
 
 #include "core/shader_plugin/shader_plugin.hpp"
 
@@ -48,4 +49,25 @@ void GlslCodegen::writeGeneratedFileIfChanged(const std::filesystem::path& outpu
     if (existingBuffer.str() == content) return;
 
     std::ofstream(outputPath) << content;
+}
+
+namespace {
+bool isActive(const ShaderPlugin& plugin, const std::string& type) {
+    return plugin.getType() == type && plugin.getError().empty() && !plugin.getBody().empty();
+}
+} // namespace
+
+ShaderPlugin* GlslCodegen::findActivePlugin(const std::string& type) {
+    for (ShaderPlugin* plugin : ShaderPlugin::registry())
+        if (isActive(*plugin, type)) return plugin;
+    return nullptr;
+}
+
+void GlslCodegen::forEachActivePlugin(const std::string& type, const std::function<void(ShaderPlugin&, const std::string&)>& fn) {
+    std::unordered_set<int> emittedSlots;
+    for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
+        if (!isActive(*plugin, type)) continue;
+        if (!emittedSlots.insert(plugin->getSlot()).second) continue;
+        fn(*plugin, plugin->getPrefix() + "programmable");
+    }
 }
