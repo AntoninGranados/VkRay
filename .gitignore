@@ -4,6 +4,7 @@
 .cache/
 .clangd
 .nvim.lua
+__pycache__/
 
 bin/
 build/
@@ -12,6 +13,7 @@ logs/
 *.png
 !snapshots/*.png
 !snapshots/showcase/*.png
+!tests/golden/reference.png
 
 imgui.ini
 outputs/

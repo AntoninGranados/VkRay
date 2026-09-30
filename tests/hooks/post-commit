@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+CHANGED=$(git show --name-only --format="" HEAD -- VERSION)
+if [ -z "$CHANGED" ]; then
+    exit 0
+fi
+
+VERSION=$(cat VERSION | tr -d '[:space:]')
+TAG="v${VERSION}"
+
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+    exit 0
+fi
+
+git tag "$TAG"
+echo "Tagged $TAG"

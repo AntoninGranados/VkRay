@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "VkSmol/engine.hpp"
+#include "VkSmol/frame_context.hpp"
+#include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/animation/animation_store.hpp"
 #include "core/camera/camera.hpp"
@@ -69,6 +70,7 @@ struct SceneRoots {
 class Scene {
 public:
     void init();
+    void initContext();
     void destroy();
     void clear();
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.3]
+## [0.5.3-pre-alpha]
 
 ### Added
 - `TiltShiftLens` component: tilted focal plane via Scheimpflug principle; `plane_position` and `plane_rotation` fields; gizmo in the viewport for direct manipulation
@@ -13,7 +13,7 @@
 
 ---
 
-## [0.5.2]
+## [0.5.2-pre-alpha]
 
 ### Added
 - Aperture mask images: heart, cat eye, star, ring
@@ -29,7 +29,7 @@
 
 ---
 
-## [0.5.1]
+## [0.5.1-pre-alpha]
 
 ### Added
 - Motion blur: stochastic temporal sampling with centered shutter; `shutter_speed` on the `Camera` component
@@ -40,7 +40,7 @@
 
 ---
 
-## [0.4.2]
+## [0.4.2-pre-alpha]
 
 ### Added
 - Keyframe animation: typed `Track` with `map<int, Keyframe>` and six interpolation modes (linear, step, cubic, ease-in, ease-out, ease-in-out); `AnimationStore` maps `(entity, componentType, fieldId)` and `(materialHandle, fieldId)` to tracks; `evaluate()` applies all tracks in one pass
@@ -55,7 +55,7 @@
 
 ---
 
-## [0.4.1]
+## [0.4.1-pre-alpha]
 
 ### Added
 - Vec parameter types: `ivec2`, `ivec3`, `ivec4`, `vec2`, `vec3`, `vec4` — registered via `addVec<T>`, with generated drag widgets and full parser support
@@ -76,7 +76,7 @@
 
 ---
 
-## [0.4.0]
+## [0.4.0-pre-alpha]
 
 ### Added
 - Toast notifications; console log panel removed
@@ -97,7 +97,7 @@
 
 ---
 
-## [0.3.3]
+## [0.3.3-pre-alpha]
 
 ### Added
 - Job system for headless batch rendering: declarative JSON files drive multiple renders
@@ -120,7 +120,7 @@
 
 ---
 
-## [0.3.2]
+## [0.3.2-pre-alpha]
 
 ### Added
 - AOV (Arbitrary Output Variables) export: camera-space 2D normals, albedo, linear depth, sky mask; each with an opaque-hit variant
@@ -135,7 +135,7 @@
 
 ---
 
-## [0.3.1]
+## [0.3.1-pre-alpha]
 
 ### Added
 - EXR output; save dialog opens before the render, format determined by file extension
@@ -147,7 +147,7 @@
 
 ---
 
-## [0.3.0]
+## [0.3.0-pre-alpha]
 
 ### Added
 - JSON scene format: save/load scenes
@@ -160,7 +160,7 @@
 
 ---
 
-## [0.2.1]
+## [0.2.1-pre-alpha]
 
 ### Fixed
 - Volume free-flight sampling: removed double Beer-Lambert in the no-scatter case
@@ -169,7 +169,7 @@
 
 ---
 
-## [0.2.0]
+## [0.2.0-pre-alpha]
 
 ### Added
 - Homogeneous participating media (`mat_Volume`) with Beer-Lambert transmittance, Henyey-Greenstein phase function, and next event estimation at scatter points
@@ -179,7 +179,7 @@
 
 ---
 
-## [0.1.0]
+## [0.1.0-pre-alpha]
 
 ### Added
 - Quad primitive
@@ -192,7 +192,7 @@
 
 ---
 
-## [0.0.0] — Initial
+## [0.0.0-pre-alpha] — Initial
 
 ### Added
 - Vulkan path tracer with BVH (SAH), GGX/Lambertian/Principled/Dielectric BSDFs, importance sampling, Russian Roulette

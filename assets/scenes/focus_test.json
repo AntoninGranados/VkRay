@@ -3,7 +3,9 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/empty_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/empty_sky.glsl"
+            }
         }
     ],
     "Materials": [
@@ -17,7 +19,12 @@
         },
         {
             "name": "Wall",
-            "programmable": { "albedo": [1.0, 1.0, 1.0], "alpha": 1.0 }
+            "programmable": {
+                "path": "assets/materials/test_grid.glsl",
+                "scale": 0.1,
+                "feather": 0.005,
+                "darkening": 0.6
+            }
         },
         {
             "name": "Red",
@@ -49,7 +56,12 @@
     ],
     "Objects": [
         {
-            "camera": { "shutter_speed": 0.0333333333, "focal_length": 40, "focal_distance": 15.0, "f_stop": 1.4 },
+            "camera": {
+                "shutter_speed": 0.0333333333,
+                "focal_length": 40,
+                "focal_distance": 15.0,
+                "f_stop": 1.4
+            },
             "tilt_shift_lens": {
                 "plane_position": [0.0, 0.0, 0.0],
                 "plane_rotation": [35.0, -45.0, 0.0]
@@ -62,64 +74,76 @@
             }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Light",
             "transform": {
                 "position": [0.0, 3.99, 0.0],
                 "rotation": [90.0, 0.0, 0.0],
                 "scale": [0.4, 0.4, 0.0]
             },
-            "material_ref": { "handle": "Light" }
+            "material_ref": {
+                "handle": "Light"
+            }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Bottom",
             "transform": {
                 "position": [0.0, -4.0, 0.0],
                 "rotation": [-90.0, 0.0, 0.0],
                 "scale": [8.0, 8.0, 1.0]
             },
-            "material_ref": { "handle": "Wall" }
+            "material_ref": {
+                "handle": "Wall"
+            }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Top",
             "transform": {
                 "position": [0.0, 4.0, 0.0],
                 "rotation": [90.0, 0.0, 0.0],
                 "scale": [8.0, 8.0, 1.0]
             },
-            "material_ref": { "handle": "Wall" }
+            "material_ref": {
+                "handle": "Wall"
+            }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Back",
             "transform": {
                 "position": [0.0, 0.0, 4.0],
                 "rotation": [180.0, 0.0, 0.0],
                 "scale": [8.0, 8.0, 1.0]
             },
-            "material_ref": { "handle": "Wall" }
+            "material_ref": {
+                "handle": "Wall"
+            }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Left",
             "transform": {
                 "position": [-4.0, 0.0, 0.0],
                 "rotation": [0.0, 90.0, 0.0],
                 "scale": [8.0, 8.0, 1.0]
             },
-            "material_ref": { "handle": "Wall" }
+            "material_ref": {
+                "handle": "Wall"
+            }
         },
         {
-            "quad": {  },
+            "quad": {},
             "name": "Right",
             "transform": {
                 "position": [4.0, 0.0, 0.0],
                 "rotation": [0.0, -90.0, 0.0],
                 "scale": [8.0, 8.0, 1.0]
             },
-            "material_ref": { "handle": "Wall" }
+            "material_ref": {
+                "handle": "Wall"
+            }
         },
         {
             "sphere": {},
@@ -129,37 +153,45 @@
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [0.4, 0.4, 0.4]
             },
-            "material_ref": { "handle": "Red" }
+            "material_ref": {
+                "handle": "Red"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Red_X",
             "transform": {
                 "position": [0.0, -2.4976, -2.1295],
                 "rotation": [45.0, 0.0, 0.0],
                 "scale": [4.0, 0.04, 0.04]
             },
-            "material_ref": { "handle": "Red" }
+            "material_ref": {
+                "handle": "Red"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Red_Y",
             "transform": {
                 "position": [0.3436, 0.0, -2.1295],
                 "rotation": [0.0, 45.0, 0.0],
                 "scale": [0.04, 4.0, 0.04]
             },
-            "material_ref": { "handle": "Red" }
+            "material_ref": {
+                "handle": "Red"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Red_Z",
             "transform": {
                 "position": [0.3436, -2.4976, 0.0],
                 "rotation": [0.0, 0.0, 45.0],
                 "scale": [0.04, 0.04, 4.0]
             },
-            "material_ref": { "handle": "Red" }
+            "material_ref": {
+                "handle": "Red"
+            }
         },
         {
             "sphere": {},
@@ -169,37 +201,45 @@
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [0.4, 0.4, 0.4]
             },
-            "material_ref": { "handle": "Green" }
+            "material_ref": {
+                "handle": "Green"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Green_X",
             "transform": {
                 "position": [0.0, 0.3529, 2.4882],
                 "rotation": [45.0, 0.0, 0.0],
                 "scale": [4.0, 0.04, 0.04]
             },
-            "material_ref": { "handle": "Green" }
+            "material_ref": {
+                "handle": "Green"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Green_Y",
             "transform": {
                 "position": [2.1388, 0.0, 2.4882],
                 "rotation": [0.0, 45.0, 0.0],
                 "scale": [0.04, 4.0, 0.04]
             },
-            "material_ref": { "handle": "Green" }
+            "material_ref": {
+                "handle": "Green"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Green_Z",
             "transform": {
                 "position": [2.1388, 0.3529, 0.0],
                 "rotation": [0.0, 0.0, 45.0],
                 "scale": [0.04, 0.04, 4.0]
             },
-            "material_ref": { "handle": "Green" }
+            "material_ref": {
+                "handle": "Green"
+            }
         },
         {
             "sphere": {},
@@ -209,37 +249,45 @@
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [0.4, 0.4, 0.4]
             },
-            "material_ref": { "handle": "Blue" }
+            "material_ref": {
+                "handle": "Blue"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Blue_X",
             "transform": {
                 "position": [0.0, 2.1447, -0.3587],
                 "rotation": [45.0, 0.0, 0.0],
                 "scale": [4.0, 0.04, 0.04]
             },
-            "material_ref": { "handle": "Blue" }
+            "material_ref": {
+                "handle": "Blue"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Blue_Y",
             "transform": {
                 "position": [-2.4824, 0.0, -0.3587],
                 "rotation": [0.0, 45.0, 0.0],
                 "scale": [0.04, 4.0, 0.04]
             },
-            "material_ref": { "handle": "Blue" }
+            "material_ref": {
+                "handle": "Blue"
+            }
         },
         {
-            "box": {  },
+            "box": {},
             "name": "Blue_Z",
             "transform": {
                 "position": [-2.4824, 2.1447, 0.0],
                 "rotation": [0.0, 0.0, 45.0],
                 "scale": [0.04, 0.04, 4.0]
             },
-            "material_ref": { "handle": "Blue" }
+            "material_ref": {
+                "handle": "Blue"
+            }
         }
     ]
 }

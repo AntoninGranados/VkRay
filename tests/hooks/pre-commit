@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+set -o pipefail
+
+if [ ! -f build/CMakeCache.txt ]; then
+    echo "build/ is not configured. Run: cmake -S . -B build"
+    exit 1
+fi
+
+tests/check_format.sh
+
+cmake --build build --target VkRayTests VkRay
+python3 tests/run_tests.py --test-dir build

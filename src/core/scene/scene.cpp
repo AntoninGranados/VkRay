@@ -5,17 +5,13 @@
 #include <optional>
 #include <utility>
 
-#include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/ecs/systems/animation_system.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
-#include "core/ecs/systems/camera_focus_system.hpp"
-#include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 #include "utils/log.hpp"
 
-void Scene::init() {
+void Scene::initContext() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
     registry.ctx().emplace<CameraMotionInfo>();
@@ -27,11 +23,8 @@ void Scene::init() {
     registry.ctx().emplace<ecs::PhysicsBakeState>();
     registry.ctx().emplace<AnimationStore*>(&animationStore);
     registry.ctx().emplace<ecs::Entity*>(&activeCamera);
-    initSystems();
     addDefaultAssets();
 }
-
-void Scene::destroy() {}
 
 void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
     registry.ctx().get<SceneGpuBuffers>() = handles;
@@ -86,57 +79,6 @@ ecs::Entity Scene::loadMeshAsset(std::string name, const std::string& path, bool
     return e;
 }
 
-void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
-    if (newActiveCamera == activeCamera) return;
-    activeCamera = newActiveCamera;
-    Core::markRenderDirty();
-}
-
-bool Scene::resetActiveCamera() {
-    if (activeCamera == defaultCamera) return true;
-    setActiveCamera(defaultCamera);
-    return false;
-}
-
-void Scene::activateSceneCamera() {
-    for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
-        if (entity == defaultCamera) continue;
-        setActiveCamera(entity);
-        return;
-    }
-    setActiveCamera(defaultCamera);
-}
-
-void Scene::bakePhysics() {
-    ecs::bakePhysicsSimulation(registry);
-}
-
-bool Scene::isPhysicsBakeInProgress() const {
-    return ecs::isPhysicsBakeInProgress(registry);
-}
-
-int Scene::getPhysicsBakeCurrentFrame() const {
-    return ecs::getPhysicsBakeCurrentFrame(registry);
-}
-
-int Scene::getPhysicsBakeTotalFrames() const {
-    return ecs::getPhysicsBakeTotalFrames(registry);
-}
-
-void Scene::initSystems() {
-    preUpdateScheduler.clear();
-    preUpdateScheduler.add(ecs::animationSystem);
-    preUpdateScheduler.add(ecs::physicsSystem);
-    preUpdateScheduler.add(ecs::apertureSystem);
-    preUpdateScheduler.add(ecs::cameraFocusSystem);
-
-    onRenderScheduler.clear();
-    onRenderScheduler.add(ecs::materialPackingSystem);
-    onRenderScheduler.add(ecs::meshPackingSystem);
-    onRenderScheduler.add(ecs::objectPackingSystem);
-    onRenderScheduler.add(ecs::lightPackingSystem);
-}
-
 ecs::Entity Scene::createNamedEntity(std::string name, ecs::Entity parent) {
     ecs::Entity e = registry.createEntity(parent);
     registry.add(e, ecs::Name);
@@ -186,4 +128,3 @@ MeshAsset* Scene::getMeshAsset(ecs::Entity e) {
 const MeshAsset* Scene::getMeshAsset(ecs::Entity e) const {
     return registry.has(e, ecs::Mesh) ? &registry.get(e, ecs::Mesh).payload<MeshAsset>("geometry") : nullptr;
 }
-

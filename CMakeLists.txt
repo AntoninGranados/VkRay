@@ -33,6 +33,8 @@ configure_file(
 )
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
+find_package(Vulkan REQUIRED)
+
 add_library(tinyexr STATIC "${CMAKE_SOURCE_DIR}/external/tinyexr/miniz.c")
 target_include_directories(tinyexr PUBLIC
   "${CMAKE_SOURCE_DIR}/external/tinyexr"
@@ -87,11 +89,56 @@ if(VKRAY_COPY_RESOURCES)
   )
 endif()
 
-add_custom_command(
-  TARGET VkRay POST_BUILD
-  COMMAND "${CMAKE_SOURCE_DIR}/scripts/reference_render.sh"
-          "$<TARGET_FILE:VkRay>"
-          "${CMAKE_SOURCE_DIR}"
-  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-  COMMENT "Checking if a reference render is needed..."
-)
+# ── Tests ─────────────────────────────────────────────────────────────────────
+option(VKRAY_BUILD_TESTS "Build the unit test suite" ON)
+if(VKRAY_BUILD_TESTS)
+  enable_testing()
+
+  add_executable(VkRayTests
+    "${CMAKE_SOURCE_DIR}/src/core/animation/animation_clock.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/animation/animation_store.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/animation/keyframe.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/animation/track.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/ecs/components/component_type.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/ecs/systems/physics/physics_solver.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/fields/field.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/fields/field_serializer.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/scene/asset/mesh.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/scene/scene.cpp"
+    "${CMAKE_SOURCE_DIR}/src/core/scene/scene_serializer.cpp"
+    "${CMAKE_SOURCE_DIR}/src/utils/json_dsl.cpp"
+    "${CMAKE_SOURCE_DIR}/src/utils/log.cpp"
+    "${CMAKE_SOURCE_DIR}/src/utils/string_utils.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/support/gtest_style_reporter.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/support/shader_plugin_stub.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/main.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/core/render/sample_accumulator_test.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/core/animation/animation_clock_test.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/core/ecs/registry_test.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/core/scene/scene_serializer_test.cpp"
+  )
+
+  target_include_directories(VkRayTests PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/external"
+    "${CMAKE_BINARY_DIR}"
+  )
+
+  target_link_libraries(VkRayTests PRIVATE glm::glm Vulkan::Vulkan)
+
+  include("${CMAKE_SOURCE_DIR}/external/doctest/cmake/doctest.cmake")
+  doctest_discover_tests(VkRayTests)
+
+  add_test(
+    NAME golden_image_reference
+    COMMAND python3 "${CMAKE_SOURCE_DIR}/tests/golden/compare_render.py"
+            "$<TARGET_FILE:VkRay>"
+            "${CMAKE_SOURCE_DIR}"
+  )
+
+  add_test(
+    NAME clang_format
+    COMMAND "${CMAKE_SOURCE_DIR}/tests/check_format.sh"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  )
+endif()

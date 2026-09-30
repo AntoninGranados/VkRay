@@ -1,0 +1,178 @@
+{
+    "version": 1,
+    "Materials": [
+        {
+            "name": "Floor",
+            "diffuse": {
+                "albedo": [0.32, 0.32, 0.32]
+            }
+        },
+        {
+            "name": "Top",
+            "diffuse": {
+                "albedo": [0.9, 0.9, 0.9]
+            }
+        },
+        {
+            "name": "Back",
+            "glossy": {
+                "albedo": [0.1, 0.18, 0.72],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": "Left",
+            "glossy": {
+                "albedo": [0.06, 0.65, 0.08],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": "Right",
+            "glossy": {
+                "albedo": [0.82, 0.06, 0.04],
+                "roughness": 0.2,
+                "ior": 1.5
+            }
+        },
+        {
+            "name": "Front",
+            "diffuse": {
+                "albedo": [0.08, 0.08, 0.08]
+            }
+        },
+        {
+            "name": "Light",
+            "emissive": {
+                "albedo": [1.0, 0.72, 0.38],
+                "emission_strength": 400
+            }
+        },
+        {
+            "name": "BunnyMat",
+            "metal": {
+                "albedo": [1, 1, 1],
+                "roughness": 0.1
+            }
+        }
+    ],
+    "Assets": [
+        {
+            "name": "bunny",
+            "mesh": {
+                "path": "./assets/models/bunny.obj",
+                "smooth": true
+            }
+        }
+    ],
+    "Objects": [
+        {
+            "camera": {
+                "focal_length": 49.4546
+            },
+            "name": "Camera",
+            "transform": {
+                "position": [0, 0, -15],
+                "rotation": [0, 180, 0]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
+            "name": "Bottom",
+            "transform": {
+                "position": [0, -4, 0],
+                "rotation": [-90, 0, 0],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Top"
+            },
+            "name": "Top",
+            "transform": {
+                "position": [0, 4, 0],
+                "rotation": [90, 0, 0],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Back"
+            },
+            "name": "Back",
+            "transform": {
+                "position": [0, 0, 4],
+                "rotation": [180, 0, 0],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Left"
+            },
+            "name": "Left",
+            "transform": {
+                "position": [-4, 0, 0],
+                "rotation": [0, 90, 0],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Right"
+            },
+            "name": "Right",
+            "transform": {
+                "position": [4, 0, 0],
+                "rotation": [0, -90, 0],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "quad": {},
+            "material_ref": {
+                "handle": "Front"
+            },
+            "name": "Front",
+            "transform": {
+                "position": [0, 0, -4],
+                "scale": [8, 8, 1]
+            }
+        },
+        {
+            "box": {},
+            "material_ref": {
+                "handle": "Light"
+            },
+            "name": "Light",
+            "transform": {
+                "position": [0, 3.99, 0],
+                "scale": [0.3, 0.01, 0.3]
+            }
+        },
+        {
+            "mesh_ref": {
+                "handle": "bunny"
+            },
+            "material_ref": {
+                "handle": "BunnyMat"
+            },
+            "name": "Bunny",
+            "transform": {
+                "position": [0, -2.7, -1],
+                "rotation": [0, 160, 0],
+                "scale": [3, 3, 3]
+            }
+        }
+    ]
+}
