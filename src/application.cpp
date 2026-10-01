@@ -62,16 +62,15 @@ void Application::initEditorMode() {
 
     io.Fonts->AddFontFromFileTTF("assets/fonts/FiraCode-Regular.ttf", 14.0f * xscale);
     ImFontConfig iconConfig;
-    iconConfig.MergeMode  = true;
+    iconConfig.MergeMode = true;
     iconConfig.PixelSnapH = true;
     iconConfig.GlyphOffset = ImVec2(0.0f, 1.0f);
-    static const ImWchar iconRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+    static const ImWchar iconRanges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
     io.Fonts->AddFontFromFileTTF("assets/fonts/fa-solid-900.otf", 14.0f * xscale, &iconConfig, iconRanges);
     io.FontGlobalScale = 1.0f / xscale;
 
     initScene();
-    Core::setGraphBuilder([this] { buildRenderGraph(false); });
-    buildRenderGraph(false);
+    Core::installGraphBuilder([this] { buildRenderGraph(false); });
     runFn = Editor::run;
 }
 
@@ -85,11 +84,12 @@ void Application::initOfflineMode(const std::string& jobFile) {
     }
     if (queue.isEmpty()) return;
 
-    platform = std::make_unique<HeadlessPlatform>(1080, 1080);  // This size is arbitrary as the buffers will be resized with the first jobs parameters
+    platform = std::make_unique<HeadlessPlatform>(
+        1080, 1080); // This size is arbitrary as the buffers will be resized with the first jobs parameters
     Core::init(*platform, VK_RAY_VERSION);
 
     initScene();
-    buildRenderGraph(true);
+    Core::installGraphBuilder([this] { buildRenderGraph(true); });
     // TODO: move job queue into Core; that removes the lifetime issue and this capture
     runFn = [q = std::move(queue)]() mutable { Offline::run(q); };
 }
@@ -100,7 +100,8 @@ void Application::buildRenderGraph(bool offline) {
     RenderResources previewResources;
     if (!offline) {
         Editor::getEditorRenderer().initGraph(builder, resources);
-        previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
+        previewResources =
+            Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
     }
 
     ShaderPlugin::regenerateAllDispatch();

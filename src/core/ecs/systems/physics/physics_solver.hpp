@@ -59,24 +59,22 @@ struct FrameSnapshot {
 
 struct SdfContactSample {
     float distance = 0.0f;
-    glm::vec3 normal { 0.0f, 1.0f, 0.0f };
-    glm::vec3 center { 0.0f, 0.0f, 0.0f };
+    glm::vec3 normal{0.0f, 1.0f, 0.0f};
+    glm::vec3 center{0.0f, 0.0f, 0.0f};
 };
 
 class RigidBox : public BodyAttributes {
 public:
-    explicit RigidBox(
-        float w = 1.0f, float h = 1.0f, float d = 1.0f, float dens = 50.0f,
-        glm::vec3 v0 = glm::vec3(0, 0, 0), glm::vec3 omega0 = glm::vec3(0, 0, 0));
+    explicit RigidBox(float w = 1.0f, float h = 1.0f, float d = 1.0f, float dens = 50.0f,
+                      glm::vec3 v0 = glm::vec3(0, 0, 0), glm::vec3 omega0 = glm::vec3(0, 0, 0));
 
     float width, height, depth;
 };
 
 class RigidSphere : public BodyAttributes {
 public:
-    explicit RigidSphere(
-        float r = 1.0f, float dens = 50.0f,
-        glm::vec3 v0 = glm::vec3(0, 0, 0), glm::vec3 omega0 = glm::vec3(0, 0, 0));
+    explicit RigidSphere(float r = 1.0f, float dens = 50.0f, glm::vec3 v0 = glm::vec3(0, 0, 0),
+                         glm::vec3 omega0 = glm::vec3(0, 0, 0));
 
     float radius;
 };
@@ -96,7 +94,8 @@ private:
 
     void integrate(float dt);
     void computeForceAndTorque();
-    void resolveSdfCollision(const Entity& colliderEntity, Registry& registry, float colliderDt, const SdfSampler& sdfSampler);
+    void resolveSdfCollision(const Entity& colliderEntity, Registry& registry, float colliderDt,
+                             const SdfSampler& sdfSampler);
     void resolvePlaneCollision(const Entity& planeEntity, Registry& registry, float colliderDt);
     void resolveBoxCollision(const Entity& boxEntity, Registry& registry, float colliderDt);
     void resolveSphereCollision(const Entity& sphereEntity, Registry& registry, float colliderDt);
@@ -110,7 +109,7 @@ private:
 };
 
 struct BodyState {
-    glm::vec3 localCenterScaled { 0.0f, 0.0f, 0.0f };
+    glm::vec3 localCenterScaled{0.0f, 0.0f, 0.0f};
     std::unique_ptr<BodyAttributes> body;
     RigidSolver solver;
     int initializedFrame = 0;
@@ -120,8 +119,8 @@ struct BodyState {
 };
 
 struct ColliderState {
-    glm::vec3 position { 0.0f, 0.0f, 0.0f };
-    glm::vec3 rotation { 0.0f, 0.0f, 0.0f };
+    glm::vec3 position{0.0f, 0.0f, 0.0f};
+    glm::vec3 rotation{0.0f, 0.0f, 0.0f};
     bool valid = false;
 };
 

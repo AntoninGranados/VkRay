@@ -14,22 +14,22 @@
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
 
-template<> std::vector<float> AnimationPanel::decompose(bool v)        { return { v ? 1.0f : 0.0f }; }
-template<> std::vector<float> AnimationPanel::decompose(int v)         { return { float(v) }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::ivec2 v)  { return { float(v.x), float(v.y) }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::ivec3 v)  { return { float(v.x), float(v.y), float(v.z) }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::ivec4 v)  { return { float(v.x), float(v.y), float(v.z), float(v.w) }; }
-template<> std::vector<float> AnimationPanel::decompose(float v)       { return { v }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::vec2 v)   { return { v.x, v.y }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::vec3 v)   { return { v.x, v.y, v.z }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::vec4 v)   { return { v.x, v.y, v.z, v.w }; }
-template<> std::vector<float> AnimationPanel::decompose(glm::quat v)   { return { v.x, v.y, v.z, v.w }; }
+template <> std::vector<float> AnimationPanel::decompose(bool v) { return {v ? 1.0f : 0.0f}; }
+template <> std::vector<float> AnimationPanel::decompose(int v) { return {float(v)}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::ivec2 v) { return {float(v.x), float(v.y)}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::ivec3 v) { return {float(v.x), float(v.y), float(v.z)}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::ivec4 v) {
+    return {float(v.x), float(v.y), float(v.z), float(v.w)};
+}
+template <> std::vector<float> AnimationPanel::decompose(float v) { return {v}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::vec2 v) { return {v.x, v.y}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::vec3 v) { return {v.x, v.y, v.z}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::vec4 v) { return {v.x, v.y, v.z, v.w}; }
+template <> std::vector<float> AnimationPanel::decompose(glm::quat v) { return {v.x, v.y, v.z, v.w}; }
 
 std::vector<float> AnimationPanel::decomposeInterpolation(const Keyframe& from, const Keyframe& to, float t) {
     std::vector<float> result;
-    from.getValue().dispatch([&]<typename T>(T) {
-        result = decompose(Keyframe::interpolate<T>(from, to, t));
-    });
+    from.getValue().dispatch([&]<typename T>(T) { result = decompose(Keyframe::interpolate<T>(from, to, t)); });
     return result;
 }
 
@@ -38,7 +38,7 @@ void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& 
     constexpr float kPlotWidth = 320.0f;
     constexpr float kPlotHeight = 60.0f;
 
-    static const char* kComponentLabels[] = { "X", "Y", "Z", "W" };
+    static const char* kComponentLabels[] = {"X", "Y", "Z", "W"};
     const ImVec4 kComponentColors[] = {
         ui::kDraculaRed,
         ui::kDraculaGreen,
@@ -50,10 +50,8 @@ void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& 
     for (int i = 0; i < kSamples; i++) {
         const float t = float(i) / float(kSamples - 1);
         const std::vector<float> components = decomposeInterpolation(from, to, t);
-        if (componentSamples.empty())
-            componentSamples.resize(components.size());
-        for (size_t c = 0; c < components.size(); c++)
-            componentSamples[c].push_back(components[c]);
+        if (componentSamples.empty()) componentSamples.resize(components.size());
+        for (size_t c = 0; c < components.size(); c++) componentSamples[c].push_back(components[c]);
     }
 
     if (componentSamples.empty()) return;
@@ -61,9 +59,15 @@ void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& 
     float minValue = componentSamples[0][0];
     float maxValue = componentSamples[0][0];
     for (const auto& samples : componentSamples)
-        for (float v : samples) { minValue = std::min(minValue, v); maxValue = std::max(maxValue, v); }
+        for (float v : samples) {
+            minValue = std::min(minValue, v);
+            maxValue = std::max(maxValue, v);
+        }
 
-    if (maxValue - minValue < 1e-5f) { minValue -= 0.5f; maxValue += 0.5f; }
+    if (maxValue - minValue < 1e-5f) {
+        minValue -= 0.5f;
+        maxValue += 0.5f;
+    }
     const float pad = (maxValue - minValue) * 0.1f;
     minValue -= pad;
     maxValue += pad;
@@ -73,7 +77,8 @@ void AnimationPanel::drawSegmentGraph(const std::string& label, const Keyframe& 
     for (size_t c = 0; c < componentSamples.size(); c++) {
         const char* plotLabel = componentSamples.size() == 1 ? "##plot" : kComponentLabels[c % 4];
         ImGui::PushStyleColor(ImGuiCol_PlotLines, kComponentColors[c % 4]);
-        ImGui::PlotLines(plotLabel, componentSamples[c].data(), kSamples, 0, nullptr, minValue, maxValue, ImVec2(kPlotWidth, kPlotHeight));
+        ImGui::PlotLines(plotLabel, componentSamples[c].data(), kSamples, 0, nullptr, minValue, maxValue,
+                         ImVec2(kPlotWidth, kPlotHeight));
         ImGui::PopStyleColor();
     }
 }
@@ -94,7 +99,9 @@ struct RowContext {
     ImU32 tickSecond;
 };
 
-std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowContext& ctx, const char* label, const char* id, const std::map<int, Keyframe>& keyframes) {
+std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowContext& ctx, const char* label,
+                                                                     const char* id,
+                                                                     const std::map<int, Keyframe>& keyframes) {
     const ImVec2 rowStart = ImGui::GetCursorScreenPos();
     const float textY = rowStart.y + (ctx.rowHeight - ImGui::GetTextLineHeight()) * 0.5f;
     ctx.dl->AddText(ImVec2(rowStart.x, textY), ctx.labelColor, label);
@@ -103,8 +110,8 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
     ImGui::PushID(id);
     ImGui::InvisibleButton("##tl", ImVec2(ctx.timelineWidth, ctx.rowHeight));
     if (ImGui::IsItemActive() && ImGui::IsMouseDown(0)) {
-        const float t = std::clamp(
-            (ImGui::GetIO().MousePos.x - ImGui::GetItemRectMin().x) / ctx.timelineWidth, 0.0f, 1.0f);
+        const float t =
+            std::clamp((ImGui::GetIO().MousePos.x - ImGui::GetItemRectMin().x) / ctx.timelineWidth, 0.0f, 1.0f);
         AnimationClock& anim = Core::getAnimation();
         anim.reset(std::min(static_cast<int>(std::round(t * float(ctx.endFrame - 1))), ctx.endFrame - 1));
         anim.pause();
@@ -145,13 +152,11 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
             if (next == keyframes.end()) break;
             const float x0 = barMin.x + (float(it->first) / span) * ctx.timelineWidth;
             const float x1 = barMin.x + (float(next->first) / span) * ctx.timelineWidth;
-            if (mouseX >= x0 && mouseX <= x1)
-                return std::make_pair(it->second, next->second);
+            if (mouseX >= x0 && mouseX <= x1) return std::make_pair(it->second, next->second);
         }
     }
     return std::nullopt;
 }
-
 
 void AnimationPanel::draw() {
     Scene& scene = Core::getScene();
@@ -162,8 +167,7 @@ void AnimationPanel::draw() {
         // Controls
         {
             bool paused = animation.isPaused();
-            if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, { 24, 0 }))
-                animation.toggle();
+            if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, {24, 0})) animation.toggle();
             ImGui::SameLine();
 
             if (scene.isPhysicsBakeInProgress()) {
@@ -179,7 +183,7 @@ void AnimationPanel::draw() {
                 ImGui::GetWindowDrawList()->AddText(
                     ImVec2((barMin.x + barMax.x - textSize.x) * 0.5f, (barMin.y + barMax.y - textSize.y) * 0.5f),
                     ImGui::GetColorU32(ImGuiCol_Text), overlay);
-            } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", { 120, 0 })) {
+            } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", {120, 0})) {
                 scene.bakePhysics();
             }
             ImGui::SameLine();
@@ -196,8 +200,7 @@ void AnimationPanel::draw() {
             ImGui::TextDisabled("/");
             ImGui::SameLine();
             int endFrame = animation.getEndFrame();
-            if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1))
-                animation.setEndFrame(endFrame);
+            if (ImGui::DragInt("##EndFrame", &endFrame, 1, 1)) animation.setEndFrame(endFrame);
             ImGui::PopItemWidth();
         }
 
@@ -232,7 +235,7 @@ void AnimationPanel::draw() {
                 const ImU32 tickSecond = ImGui::ColorConvertFloat4ToU32(ImVec4(textCol.x, textCol.y, textCol.z, 0.35f));
                 const ImU32 labelColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
 
-                const RowContext ctx {
+                const RowContext ctx{
                     .dl = dl,
                     .labelWidth = labelWidth,
                     .rowHeight = rowHeight,
@@ -265,17 +268,19 @@ void AnimationPanel::draw() {
 
                     for (Field* f : animatable) {
                         if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(*f))) {
-                            pendingSegment = { f->getLabel(), seg->first, seg->second, f };
+                            pendingSegment = {f->getLabel(), seg->first, seg->second, f};
                             ImGui::OpenPopup("##segment_interp");
                         }
                     }
                 }
 
-                static const char* kInterpolationNames[] = { "Step", "Linear", "Cubic", "Ease In", "Ease Out", "Ease In-Out" };
+                static const char* kInterpolationNames[] = {"Step",    "Linear",   "Cubic",
+                                                            "Ease In", "Ease Out", "Ease In-Out"};
                 ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Always);
                 if (pendingSegment && ImGui::BeginPopup("##segment_interp")) {
                     int current = static_cast<int>(pendingSegment->from.getInterpolation());
-                    if (ImGui::Combo("##interp_mode", &current, kInterpolationNames, IM_ARRAYSIZE(kInterpolationNames))) {
+                    if (ImGui::Combo("##interp_mode", &current, kInterpolationNames,
+                                     IM_ARRAYSIZE(kInterpolationNames))) {
                         const Interpolation interpolation = static_cast<Interpolation>(current);
                         pendingSegment->from.setInterpolation(interpolation);
                         store.setInterpolation(*pendingSegment->field, pendingSegment->from.getFrame(), interpolation);

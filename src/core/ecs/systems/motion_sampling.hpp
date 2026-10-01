@@ -7,12 +7,14 @@
 #include "core/ecs/registry.hpp"
 
 struct GpuMotionSample;
-namespace ecs { class Component; }
+namespace ecs {
+class Component;
+}
 
 namespace ecs {
 
 uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform,
-                            std::vector<GpuMotionSample>& outMotion);
+                           std::vector<GpuMotionSample>& outMotion);
 
 void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMotion);
 

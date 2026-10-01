@@ -41,8 +41,8 @@ std::string Parameter::print() const {
         bool hasMn = mn > sentinel_lo;
         bool hasMx = mx < sentinel_hi;
         if (hasMn && hasMx) return std::format("{} ... {}", mn, mx);
-        if (hasMn)          return std::format("{} ...", mn);
-        if (hasMx)          return std::format("... {}", mx);
+        if (hasMn) return std::format("{} ...", mn);
+        if (hasMx) return std::format("... {}", mx);
         return "-";
     };
 
@@ -56,54 +56,60 @@ std::string Parameter::print() const {
     const char* r = restartAccumulation ? "yes" : "no";
 
     switch (type) {
-        case FieldType::Bool:
-            return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |",
-                p, l, desc, getDefault<bool>() ? "true" : "false", r);
-        case FieldType::Int: {
-            const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
-            const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
-            int mn = std::isinf(fmin) ? std::numeric_limits<int>::lowest() : (int)fmin;
-            int mx = std::isinf(fmax) ? std::numeric_limits<int>::max() : (int)fmax;
-            return std::format("| `{}` | {} | {} | Integer | {} | {} | {} |",
-                p, l, desc, getDefault<int>(), constraints(mn, mx, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max()), r);
+    case FieldType::Bool:
+        return std::format("| `{}` | {} | {} | Boolean | {} | - | {} |", p, l, desc,
+                           getDefault<bool>() ? "true" : "false", r);
+    case FieldType::Int: {
+        const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
+        const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
+        int mn = std::isinf(fmin) ? std::numeric_limits<int>::lowest() : (int)fmin;
+        int mx = std::isinf(fmax) ? std::numeric_limits<int>::max() : (int)fmax;
+        return std::format("| `{}` | {} | {} | Integer | {} | {} | {} |", p, l, desc, getDefault<int>(),
+                           constraints(mn, mx, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max()), r);
+    }
+    case FieldType::Float: {
+        const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
+        const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
+        return std::format(
+            "| `{}` | {} | {} | Float | {:g} | {} | {} |", p, l, desc, getDefault<float>(),
+            constraints(fmin, fmax, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()),
+            r);
+    }
+    case FieldType::Enum: {
+        int def = getDefault<int>();
+        std::string list;
+        if (enumMeta) {
+            for (const auto& item : enumMeta->items)
+                list = list.empty() ? std::format("`{}`", item) : std::format("{} • `{}`", list, item);
         }
-        case FieldType::Float: {
-            const float fmin = numMeta ? numMeta->min : -std::numeric_limits<float>::infinity();
-            const float fmax = numMeta ? numMeta->max : std::numeric_limits<float>::infinity();
-            return std::format("| `{}` | {} | {} | Float | {:g} | {} | {} |",
-                p, l, desc, getDefault<float>(), constraints(fmin, fmax, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()), r);
-        }
-        case FieldType::Enum: {
-            int def = getDefault<int>();
-            std::string list;
-            if (enumMeta) {
-                for (const auto& item : enumMeta->items)
-                    list = list.empty() ? std::format("`{}`", item) : std::format("{} • `{}`", list, item);
+        std::string defLabel = (enumMeta && def < (int)enumMeta->items.size()) ? enumMeta->items[def] : "";
+        return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |", p, l, desc, defLabel, list, r);
+    }
+    case FieldType::Path: {
+        std::string defPath = getDefault<std::string>();
+        std::string exts;
+        if (pathMeta) {
+            for (const auto& e : pathMeta->extensions) {
+                if (!exts.empty()) exts += ", ";
+                exts += e.displayName() + " (." + e.ext + ")";
             }
-            std::string defLabel = (enumMeta && def < (int)enumMeta->items.size()) ? enumMeta->items[def] : "";
-            return std::format("| `{}` | {} | {} | Enumeration | `{}` | {} | {} |",
-                p, l, desc, defLabel, list, r);
         }
-        case FieldType::Path: {
-            std::string defPath = getDefault<std::string>();
-            std::string exts;
-            if (pathMeta) {
-                for (const auto& e : pathMeta->extensions) {
-                    if (!exts.empty()) exts += ", ";
-                    exts += e.displayName() + " (." + e.ext + ")";
-                }
-            }
-            return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |",
-                p, l, desc, defPath, exts.empty() ? "-" : exts, r);
-        }
-        case FieldType::IVec2: case FieldType::IVec3: case FieldType::IVec4: {
-            int n = type == FieldType::IVec2 ? 2 : type == FieldType::IVec3 ? 3 : 4;
-            return std::format("| `{}` | {} | {} | IVec{} | - | - | {} |", p, l, desc, n, r);
-        }
-        case FieldType::Vec2: case FieldType::Vec3: case FieldType::Vec4: {
-            int n = type == FieldType::Vec2 ? 2 : type == FieldType::Vec3 ? 3 : 4;
-            return std::format("| `{}` | {} | {} | Vec{} | - | - | {} |", p, l, desc, n, r);
-        }
-        default: return "";
+        return std::format("| `{}` | {} | {} | Path | `{}` | {} | {} |", p, l, desc, defPath, exts.empty() ? "-" : exts,
+                           r);
+    }
+    case FieldType::IVec2:
+    case FieldType::IVec3:
+    case FieldType::IVec4: {
+        int n = type == FieldType::IVec2 ? 2 : type == FieldType::IVec3 ? 3 : 4;
+        return std::format("| `{}` | {} | {} | IVec{} | - | - | {} |", p, l, desc, n, r);
+    }
+    case FieldType::Vec2:
+    case FieldType::Vec3:
+    case FieldType::Vec4: {
+        int n = type == FieldType::Vec2 ? 2 : type == FieldType::Vec3 ? 3 : 4;
+        return std::format("| `{}` | {} | {} | Vec{} | - | - | {} |", p, l, desc, n, r);
+    }
+    default:
+        return "";
     }
 }

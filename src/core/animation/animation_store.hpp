@@ -22,8 +22,7 @@ public:
     void clear();
     bool isEmpty() const;
 
-    template<typename T>
-    T sampleAt(Field& field, float frame) const {
+    template <typename T> T sampleAt(Field& field, float frame) const {
         const auto it = tracks.find(&field);
         if (it == tracks.end() || it->second.isEmpty()) return field.get<T>();
         return it->second.sample<T>(frame);

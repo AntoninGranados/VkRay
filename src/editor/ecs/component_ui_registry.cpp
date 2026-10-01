@@ -22,13 +22,13 @@
 namespace ecs {
 
 static bool drawPluginErrorAndFields(ShaderPlugin& plugin, const std::string& idSuffix) {
-    if (!plugin.getError().empty())
-        ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
+    if (!plugin.getError().empty()) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s", plugin.getError().c_str());
 
     return ui::drawGroupedFields(plugin.getComponent().getFields(), idSuffix);
 }
 
-static bool drawShaderPluginField(Component& c, const std::string& type, int version, int (*slotFor)(const std::filesystem::path&)) {
+static bool drawShaderPluginField(Component& c, const std::string& type, int version,
+                                  int (*slotFor)(const std::filesystem::path&)) {
     const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
     if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
@@ -51,11 +51,13 @@ void ComponentUiRegistry::add(const ecs::ComponentType& componentType) {
     addWithFields(componentType, [](Component&, Registry&, Entity) { return false; }, true);
 }
 
-void ComponentUiRegistry::add(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra) {
+void ComponentUiRegistry::add(const ecs::ComponentType& type,
+                              std::function<bool(Component&, Registry&, Entity)> extra) {
     addWithFields(type, std::move(extra), false);
 }
 
-void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty) {
+void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type,
+                                        std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty) {
     drawers.emplace_back([extra, type, bulletIfEmpty](Registry& registry, Entity e) {
         if (!registry.has(e, type)) return false;
 
@@ -67,7 +69,8 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::fun
         if (remove) registry.remove(e, type);
         bool update = false;
         const bool useBullet = bulletIfEmpty && fields.empty();
-        if (!remove && ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
+        if (!remove &&
+            ImGui::CollapsingHeader(header.c_str(), useBullet ? ImGuiTreeNodeFlags_Bullet : ImGuiTreeNodeFlags_None)) {
             update |= ui::drawGroupedFields(fields, std::format("##{}", header));
             update |= extra(component, registry, e);
         }
@@ -76,7 +79,8 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type, std::fun
     });
 }
 
-void ComponentUiRegistry::addCustom(const ecs::ComponentType& type, std::function<bool(Component&, Registry&, Entity)> custom) {
+void ComponentUiRegistry::addCustom(const ecs::ComponentType& type,
+                                    std::function<bool(Component&, Registry&, Entity)> custom) {
     drawers.emplace_back([custom, type](Registry& registry, Entity e) {
         if (!registry.has(e, type)) return false;
 
@@ -106,7 +110,8 @@ void ComponentUiRegistry::init() {
 
     ui_reg.add(ecs::Mesh, [](Component&, Registry&, Entity e) {
         if (const MeshAsset* mesh = Core::getScene().getMeshAsset(e)) {
-            ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+            ImGui::BeginChild("MeshData", ImVec2{0, 0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY,
+                              ImGuiWindowFlags_None);
             ImGui::Text("Vertices: %zu", mesh->getVertices().size());
             ImGui::Text("Faces:    %zu", mesh->getIndices().size() / 3);
             ImGui::EndChild();
@@ -165,8 +170,7 @@ void ComponentUiRegistry::init() {
 
     ui_reg.add(ecs::MaterialRef, [](Component& c, Registry&, Entity) {
         const ecs::Entity handle = c.get<ecs::Entity>("handle");
-        if (handle != ecs::Entity{})
-            Editor::getMaterialPreview().drawPreview(handle);
+        if (handle != ecs::Entity{}) Editor::getMaterialPreview().drawPreview(handle);
         return false;
     });
 
@@ -194,11 +198,14 @@ void ComponentUiRegistry::init() {
         CompositingPasses& list = c.payload<CompositingPasses>("passes");
 
         ImGui::BeginChild("##CompositingPassList", ImVec2(0, 120), ImGuiChildFlags_Borders);
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.35f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f));
+        ImGui::PushStyleColor(ImGuiCol_Header,
+                              ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.35f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered,
+                              ImVec4(ui::kDraculaPurple.x, ui::kDraculaPurple.y, ui::kDraculaPurple.z, 0.7f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ui::kDraculaPurple);
         for (size_t i = 0; i < list.passes.size(); i++)
-            if (ImGui::Selectable(std::format("{}##{}", list.passes[i].name, i).c_str(), list.selected == static_cast<int>(i)))
+            if (ImGui::Selectable(std::format("{}##{}", list.passes[i].name, i).c_str(),
+                                  list.selected == static_cast<int>(i)))
                 list.selected = static_cast<int>(i);
         ImGui::PopStyleColor(3);
         ImGui::EndChild();
@@ -249,7 +256,8 @@ void ComponentUiRegistry::init() {
             if (ImGui::Button(ICON_FA_FOLDER_OPEN "##BrowseCompositingPassScript")) {
                 if (auto path = ui::openFileDialog({{"Compositing Pass Shader", "glsl"}}, "assets/compositing/")) {
                     pass.path = *path;
-                    pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion, CompositingTable::slotFor(pass.path));
+                    pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion,
+                                       CompositingTable::slotFor(pass.path));
                     update = true;
                 }
             }

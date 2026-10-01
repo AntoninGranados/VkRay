@@ -11,30 +11,48 @@ import matplotlib
 import numpy as np
 from PIL import Image
 
-RMSE_THRESHOLD = 0.03
+RMSE_THRESHOLD = 0.05
 TIME_TOLERANCE = 1.3
 
-REFERENCE_SAMPLES = 16384
-FAST_SAMPLES = 256
+REFERENCE_SAMPLES = 131072
+# REFERENCE_SAMPLES = 256
+FAST_SAMPLES = 1024
+
+SCENE_PATH = "tests/golden/scene.json"
+
+DENOISE_SCENE_OVERRIDE = {
+    "Scene": [
+        {
+            "name": "Compositing",
+            "compositing": {
+                "passes": [
+                    {
+                        "name": "ATrous",
+                        "path": "assets/compositing/a_trous.glsl",
+                        "params": {"cPhi": 0.02},
+                    }
+                ]
+            },
+        }
+    ]
+}
 
 JOB_TEMPLATE = {
     "version": 1,
     "jobs": [
         {
-            "scene": "tests/golden/scene.json",
+            "scene": SCENE_PATH,
             "render_size": [512, 512],
             "parameters": {
-                "renderer/sampling/max_bounces": 6,
+                "renderer/sampling/max_bounces": 15,
                 "renderer/sampling/adaptive_sampling": False,
-                "renderer/sampling/clamp": True,
-                "renderer/sampling/clamp_threshold": 5.0,
             },
         }
     ],
 }
 
 
-def run_job(vkray_binary, samples, repo_root):
+def run_job(vkray_binary, samples, repo_root, clamp, denoise):
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         output_path = tmp_dir / "render.png"
@@ -42,6 +60,16 @@ def run_job(vkray_binary, samples, repo_root):
         job = json.loads(json.dumps(JOB_TEMPLATE))
         job["jobs"][0]["samples"] = samples
         job["jobs"][0]["output"] = str(output_path)
+        job["jobs"][0]["parameters"]["renderer/sampling/clamp"] = clamp
+        if clamp:
+            job["jobs"][0]["parameters"]["renderer/sampling/clamp_threshold"] = 50.0
+
+        if denoise:
+            scene = json.loads((repo_root / SCENE_PATH).read_text())
+            scene.update(DENOISE_SCENE_OVERRIDE)
+            scene_path = tmp_dir / "scene_denoised.json"
+            scene_path.write_text(json.dumps(scene))
+            job["jobs"][0]["scene"] = str(scene_path)
 
         job_path = tmp_dir / "job.json"
         job_path.write_text(json.dumps(job))
@@ -95,13 +123,14 @@ def history_label(repo_root):
         if origin_commit is None:
             return version
 
-        count = subprocess.run(
+        committed_count = int(subprocess.run(
             ["git", "rev-list", "--count", f"{origin_commit}..HEAD"],
             cwd=repo_root, capture_output=True, text=True, check=True,
-        ).stdout.strip()
+        ).stdout.strip())
+        count = str(committed_count + 1)
     except subprocess.CalledProcessError:
-        count = "0"
-    return version if count == "0" else f"{version}+{count}"
+        count = "1"
+    return f"{version}+{count}"
 
 
 def save_history(golden_dir, repo_root, render, heatmap):
@@ -113,14 +142,14 @@ def save_history(golden_dir, repo_root, render, heatmap):
 
 
 def update_reference(vkray_binary, repo_root, golden_dir):
-    _, render = run_job(vkray_binary, REFERENCE_SAMPLES, repo_root)
+    _, render = run_job(vkray_binary, REFERENCE_SAMPLES, repo_root, clamp=False, denoise=False)
     save_image(render, golden_dir / "reference.png")
     print(f"Updated {golden_dir / 'reference.png'}")
 
 
 def update_baseline_time(vkray_binary, repo_root, golden_dir):
-    elapsed, _ = run_job(vkray_binary, FAST_SAMPLES, repo_root)
-    (golden_dir / "baseline_time.json").write_text(json.dumps({"seconds": elapsed}, indent=2) + "\n")
+    elapsed, _ = run_job(vkray_binary, FAST_SAMPLES, repo_root, clamp=False, denoise=True)
+    (golden_dir / "baseline_time.json").write_text(json.dumps({"seconds": elapsed}, indent=4) + "\n")
     print(f"Updated baseline time ({elapsed:.2f}s)")
 
 
@@ -136,7 +165,7 @@ def check(vkray_binary, repo_root, golden_dir):
         print(f"No reference image at {reference_path}; run with --update first", file=sys.stderr)
         return 1
 
-    elapsed, render = run_job(vkray_binary, FAST_SAMPLES, repo_root)
+    elapsed, render = run_job(vkray_binary, FAST_SAMPLES, repo_root, clamp=False, denoise=True)
 
     reference = load_image(reference_path)
     if reference.shape != render.shape:

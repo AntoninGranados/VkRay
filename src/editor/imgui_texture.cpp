@@ -7,9 +7,7 @@ namespace ui {
 ImGuiTexture::ImGuiTexture(VkSampler sampler, VkImageView view, VkImageLayout layout)
     : id((ImTextureID)ImGui_ImplVulkan_AddTexture(sampler, view, layout)) {}
 
-ImGuiTexture::ImGuiTexture(ImGuiTexture&& other) noexcept : id(other.id) {
-    other.id = 0;
-}
+ImGuiTexture::ImGuiTexture(ImGuiTexture&& other) noexcept : id(other.id) { other.id = 0; }
 
 ImGuiTexture& ImGuiTexture::operator=(ImGuiTexture&& other) noexcept {
     if (this != &other) {
@@ -20,13 +18,11 @@ ImGuiTexture& ImGuiTexture::operator=(ImGuiTexture&& other) noexcept {
     return *this;
 }
 
-ImGuiTexture::~ImGuiTexture() {
-    reset();
-}
+ImGuiTexture::~ImGuiTexture() { reset(); }
 
 void ImGuiTexture::reset() {
     if (id) ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)id);
     id = 0;
 }
 
-}
+} // namespace ui

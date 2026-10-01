@@ -16,11 +16,11 @@ struct Token {
 };
 
 const std::unordered_set<std::string> kKeywords = {
-    "return", "if", "else", "for", "while", "do", "break", "continue",
-    "true", "false", "discard", "switch", "case", "default",
+    "return",   "if",   "else",  "for",     "while",  "do",   "break",
+    "continue", "true", "false", "discard", "switch", "case", "default",
 };
 
-const std::unordered_set<std::string> kQualifiers = { "in", "out", "inout", "const" };
+const std::unordered_set<std::string> kQualifiers = {"in", "out", "inout", "const"};
 
 bool isIdentStart(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_'; }
 bool isIdentChar(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
@@ -40,18 +40,18 @@ std::vector<Token> tokenize(const std::string& source) {
         if (isIdentStart(source[i])) {
             const size_t start = i;
             while (i < n && isIdentChar(source[i])) i++;
-            result.push_back({ Token::Kind::Identifier, source.substr(start, i - start), trivia, line });
+            result.push_back({Token::Kind::Identifier, source.substr(start, i - start), trivia, line});
             continue;
         }
 
         if (std::isdigit(static_cast<unsigned char>(source[i]))) {
             const size_t start = i;
             while (i < n && (std::isdigit(static_cast<unsigned char>(source[i])) || source[i] == '.')) i++;
-            result.push_back({ Token::Kind::Number, source.substr(start, i - start), trivia, line });
+            result.push_back({Token::Kind::Number, source.substr(start, i - start), trivia, line});
             continue;
         }
 
-        result.push_back({ Token::Kind::Symbol, std::string(1, source[i]), trivia, line });
+        result.push_back({Token::Kind::Symbol, std::string(1, source[i]), trivia, line});
         i++;
     }
     return result;
@@ -85,7 +85,8 @@ public:
             result.declarations += tokens[i].trivia + tokens[i].text;
             declLine = tokens[i].line;
         }
-        if (declLine != -1 && declLine < static_cast<int>(lineMarkers.size())) result.declarations += lineMarkers[declLine];
+        if (declLine != -1 && declLine < static_cast<int>(lineMarkers.size()))
+            result.declarations += lineMarkers[declLine];
         if (!result.declarations.empty() && result.declarations.back() != '\n') result.declarations += '\n';
 
         int bodyLine = -1;
@@ -109,7 +110,9 @@ private:
 
     bool isIdentTok(size_t i) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Identifier; }
     bool isIdent(size_t i, const std::string& text) const { return isIdentTok(i) && tokens[i].text == text; }
-    bool isSymbol(size_t i, char c) const { return i < tokens.size() && tokens[i].kind == Token::Kind::Symbol && tokens[i].text[0] == c; }
+    bool isSymbol(size_t i, char c) const {
+        return i < tokens.size() && tokens[i].kind == Token::Kind::Symbol && tokens[i].text[0] == c;
+    }
 
     void resolveIdentifier(size_t i) {
         if (tokens[i].kind != Token::Kind::Identifier) return;
@@ -162,15 +165,17 @@ private:
             pos += 3;
             int depth = 1;
             while (pos < tokens.size() && depth > 0) {
-                if (isSymbol(pos, '{')) depth++;
-                else if (isSymbol(pos, '}')) depth--;
+                if (isSymbol(pos, '{'))
+                    depth++;
+                else if (isSymbol(pos, '}'))
+                    depth--;
                 pos++;
             }
             return;
         }
 
-        if (isIdentTok(pos) && isIdentTok(pos + 1) && isSymbol(pos + 2, '(')
-            && !kKeywords.contains(tokens[pos].text) && !kQualifiers.contains(tokens[pos].text)) {
+        if (isIdentTok(pos) && isIdentTok(pos + 1) && isSymbol(pos + 2, '(') && !kKeywords.contains(tokens[pos].text) &&
+            !kQualifiers.contains(tokens[pos].text)) {
             const size_t funcStart = pos;
             const bool isMain = tokens[pos].text == "void" && tokens[pos + 1].text == "main" && isSymbol(pos + 3, ')');
 
@@ -182,7 +187,10 @@ private:
 
             scopes.push_back({});
             while (pos < tokens.size() && !isSymbol(pos, ')'))
-                if (!tryDeclaration()) { resolveIdentifier(pos); pos++; }
+                if (!tryDeclaration()) {
+                    resolveIdentifier(pos);
+                    pos++;
+                }
             if (isSymbol(pos, ')')) pos++;
 
             const size_t bodyStart = pos;
@@ -190,14 +198,22 @@ private:
                 pos++;
                 int depth = 1;
                 while (pos < tokens.size() && depth > 0) {
-                    if (isSymbol(pos, '{')) { depth++; scopes.push_back({}); pos++; continue; }
+                    if (isSymbol(pos, '{')) {
+                        depth++;
+                        scopes.push_back({});
+                        pos++;
+                        continue;
+                    }
                     if (isSymbol(pos, '}')) {
                         depth--;
                         pos++;
                         if (depth > 0) scopes.pop_back();
                         continue;
                     }
-                    if (!tryDeclaration()) { resolveIdentifier(pos); pos++; }
+                    if (!tryDeclaration()) {
+                        resolveIdentifier(pos);
+                        pos++;
+                    }
                 }
             }
             if (isMain) {
@@ -231,17 +247,15 @@ private:
 
 } // namespace
 
-std::string GlslMangler::makePrefix(const std::string& type, int slot) {
-    return std::format("_{}{}_", type, slot);
-}
+std::string GlslMangler::makePrefix(const std::string& type, int slot) { return std::format("_{}{}_", type, slot); }
 
 std::string GlslMangler::mangleName(const std::string& prefix, const std::string& group, const std::string& name) {
     return prefix + (group.empty() ? "" : group + "_") + name;
 }
 
 GlslMangler::MangleResult GlslMangler::mangle(const std::string& source, const std::string& prefix,
-                                               const std::unordered_map<std::string, std::string>& seedGlobals,
-                                               const std::vector<std::string>& lineMarkers) {
+                                              const std::unordered_map<std::string, std::string>& seedGlobals,
+                                              const std::vector<std::string>& lineMarkers) {
     Mangler mangler(prefix, seedGlobals);
     return mangler.run(source, lineMarkers);
 }

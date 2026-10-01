@@ -9,7 +9,9 @@
 #include "core/ecs/entity.hpp"
 #include "core/render_structures.hpp"
 
-namespace ecs { class Registry; }
+namespace ecs {
+class Registry;
+}
 
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler);
 

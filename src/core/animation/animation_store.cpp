@@ -38,15 +38,11 @@ void AnimationStore::remove(ecs::Registry& registry, ecs::Entity& e) {
     for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
         if (!registry.has(e, type)) continue;
 
-        for (Field& field : registry.get(e, type).getFields()) {
-            tracks.erase(&field);
-        }
+        for (Field& field : registry.get(e, type).getFields()) { tracks.erase(&field); }
     }
 }
 
-void AnimationStore::clear() {
-    tracks.clear();
-}
+void AnimationStore::clear() { tracks.clear(); }
 
 bool AnimationStore::isEmpty() const {
     for (const auto& [field, track] : tracks)

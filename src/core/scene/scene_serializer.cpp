@@ -28,12 +28,8 @@ using json = nlohmann::ordered_json;
 namespace {
 
 constexpr std::pair<const char*, Interpolation> kInterpolations[] = {
-    {"linear", Interpolation::Linear},
-    {"step", Interpolation::Step},
-    {"cubic", Interpolation::Cubic},
-    {"ease_in", Interpolation::EaseIn},
-    {"ease_out", Interpolation::EaseOut},
-    {"ease_in_out", Interpolation::EaseInOut},
+    {"linear", Interpolation::Linear},  {"step", Interpolation::Step},        {"cubic", Interpolation::Cubic},
+    {"ease_in", Interpolation::EaseIn}, {"ease_out", Interpolation::EaseOut}, {"ease_in_out", Interpolation::EaseInOut},
 };
 
 template <typename T, size_t N>

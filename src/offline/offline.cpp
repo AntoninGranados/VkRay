@@ -18,7 +18,8 @@ void Offline::run(JobQueue& queue) {
         Core::consumeResize();
 
         if (!SceneSerializer::load(Core::getScene(), job->scene.string(), job->seed)) {
-            Log::error("Offline", std::format("Failed to load the scene `{}` for the job {}", job->scene.string(), jobIndex));
+            Log::error("Offline",
+                       std::format("Failed to load the scene `{}` for the job {}", job->scene.string(), jobIndex));
             queue.fail();
             continue;
         }
@@ -31,11 +32,7 @@ void Offline::run(JobQueue& queue) {
         Core::getCoreRenderer().setTargetSampleCount(static_cast<int>(totalSamples));
         Core::getCoreRenderer().restartAccumulation();
 
-        ProgressBar bar(
-            std::format("[{}/{}]", jobIndex, totalJobs),
-            totalSamples,
-            "spp"
-        );
+        ProgressBar bar(std::format("[{}/{}]", jobIndex, totalJobs), totalSamples, "spp");
         while (!Core::getCoreRenderer().isRenderFinished()) {
             Core::renderFrame();
             const uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
@@ -44,7 +41,11 @@ void Offline::run(JobQueue& queue) {
         }
         bar.close();
 
-        Core::getCoreRenderer().saveCapture(Core::getParameters().get<std::filesystem::path>("renderer/output/output_image"));
+        const std::filesystem::path outputPath =
+            !Core::getOutputPath().empty()
+                ? Core::getOutputPath()
+                : Core::getParameters().get<std::filesystem::path>("renderer/output/output_image");
+        Core::getCoreRenderer().saveCapture(outputPath);
 
         queue.complete();
     }
@@ -53,12 +54,14 @@ void Offline::run(JobQueue& queue) {
 void Offline::initParameters(const std::vector<ParameterOverride>& overrides) {
     Core::getParameters().resetAll();
     for (const auto& parameterOverride : overrides) {
-        std::visit([&](auto&& v) {
-            using T = std::decay_t<decltype(v)>;
-            if constexpr (std::is_same_v<T, std::string>)
-                Core::getParameters().setEnumByName(parameterOverride.key, v);
-            else
-                Core::getParameters().set(parameterOverride.key, v);
-        }, parameterOverride.value);
+        std::visit(
+            [&](auto&& v) {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, std::string>)
+                    Core::getParameters().setEnumByName(parameterOverride.key, v);
+                else
+                    Core::getParameters().set(parameterOverride.key, v);
+            },
+            parameterOverride.value);
     }
 }

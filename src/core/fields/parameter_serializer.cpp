@@ -15,10 +15,8 @@ static constexpr int kParameterVersion = 1;
 namespace {
 
 template <typename T>
-Parameter& parseVecNode(
-    const json& obj, ParameterRegistry& parameters, const std::string& path,
-    const std::string& label, bool restart, FieldType type, T defMin, T defMax, float step
-) {
+Parameter& parseVecNode(const json& obj, ParameterRegistry& parameters, const std::string& path,
+                        const std::string& label, bool restart, FieldType type, T defMin, T defMax, float step) {
     T val = fieldValueFromJson(obj.at("default"), type).get<T>();
     T mn = obj.contains("min") ? fieldValueFromJson(obj.at("min"), type).get<T>() : defMin;
     T mx = obj.contains("max") ? fieldValueFromJson(obj.at("max"), type).get<T>() : defMax;
@@ -48,7 +46,8 @@ void serializeParameterPath(std::ofstream& file, const FieldPath& prefix, int de
         seen.push_back(seg);
 
         auto labelIt = Core::getParameters().getNodeLabels().find((prefix / seg).generic_string());
-        const std::string& displayLabel = labelIt != Core::getParameters().getNodeLabels().end() ? labelIt->second : seg;
+        const std::string& displayLabel =
+            labelIt != Core::getParameters().getNodeLabels().end() ? labelIt->second : seg;
         file << std::endl << std::string(depth + 2, '#') << ' ' << displayLabel << std::endl;
         file << "| Path | Label | Description | Type | Default | Constraints | Restart |" << std::endl;
         file << "|------|-------|-------------|------|---------|-------------|---------|" << std::endl;
@@ -85,19 +84,23 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
             PathMeta meta;
             for (const auto& e : obj.at("extensions")) {
                 PathExtension ext;
-                ext.ext  = e.at("ext").get<std::string>();
+                ext.ext = e.at("ext").get<std::string>();
                 ext.name = e.value("name", "");
                 meta.extensions.push_back(std::move(ext));
             }
             meta.save = obj.value("save", false);
-            parameter = &parameters.add<std::filesystem::path>(path, label, def.get<std::string>(), std::move(meta), restart);
+            parameter =
+                &parameters.add<std::filesystem::path>(path, label, def.get<std::string>(), std::move(meta), restart);
         } else if (def.is_string() && obj.contains("items")) {
             std::string defName = def.get<std::string>();
             EnumMeta meta;
             meta.items = obj.at("items").get<std::vector<std::string>>();
             int defIdx = 0;
             for (size_t i = 0; i < meta.items.size(); i++)
-                if (meta.items[i] == defName) { defIdx = static_cast<int>(i); break; }
+                if (meta.items[i] == defName) {
+                    defIdx = static_cast<int>(i);
+                    break;
+                }
             parameter = &parameters.add<int>(path, label, defIdx, std::move(meta), restart);
         } else if (def.is_array() && (def.size() == 2 || def.size() == 3 || def.size() == 4)) {
             bool isFloat = def[0].is_number_float();
@@ -105,20 +108,31 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
             int n = static_cast<int>(def.size());
             if (!isFloat) {
                 const int lo = std::numeric_limits<int>::lowest(), hi = std::numeric_limits<int>::max();
-                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec2, glm::ivec2(lo), glm::ivec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec3, glm::ivec3(lo), glm::ivec3(hi), step);
-                else             parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec4, glm::ivec4(lo), glm::ivec4(hi), step);
+                if (n == 2)
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec2, glm::ivec2(lo),
+                                              glm::ivec2(hi), step);
+                else if (n == 3)
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec3, glm::ivec3(lo),
+                                              glm::ivec3(hi), step);
+                else
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::IVec4, glm::ivec4(lo),
+                                              glm::ivec4(hi), step);
             } else {
                 const float lo = std::numeric_limits<float>::lowest(), hi = std::numeric_limits<float>::max();
-                if (n == 2) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec2, glm::vec2(lo), glm::vec2(hi), step);
-                else if (n == 3) parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec3, glm::vec3(lo), glm::vec3(hi), step);
-                else             parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec4, glm::vec4(lo), glm::vec4(hi), step);
+                if (n == 2)
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec2, glm::vec2(lo),
+                                              glm::vec2(hi), step);
+                else if (n == 3)
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec3, glm::vec3(lo),
+                                              glm::vec3(hi), step);
+                else
+                    parameter = &parseVecNode(obj, parameters, path, label, restart, FieldType::Vec4, glm::vec4(lo),
+                                              glm::vec4(hi), step);
             }
         }
 
         if (parameter) {
-            if (obj.contains("description"))
-                parameter->setDescription(obj.at("description").get<std::string>());
+            if (obj.contains("description")) parameter->setDescription(obj.at("description").get<std::string>());
             if (obj.contains("condition")) {
                 const auto& cond = obj.at("condition");
                 int when = 1;
@@ -126,12 +140,11 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
                     const auto& w = cond.at("when");
                     when = w.is_boolean() ? (w.get<bool>() ? 1 : 0) : w.get<int>();
                 }
-                parameter->addCondition({ cond.at("param").get<std::string>(), when });
+                parameter->addCondition({cond.at("param").get<std::string>(), when});
             }
         }
     } else {
-        if (obj.contains("label"))
-            parameters.setNodeLabel(path, obj.at("label").get<std::string>());
+        if (obj.contains("label")) parameters.setNodeLabel(path, obj.at("label").get<std::string>());
         for (const auto& [key, val] : obj.items()) {
             if (key == "label") continue;
             parseNode(val, parameters, path + "/" + key);
@@ -216,17 +229,15 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 
 ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
     std::ifstream f(path);
-    if (!f.is_open())
-        throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
+    if (!f.is_open()) throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
 
     ParameterRegistry parameters;
     json root = json::parse(f, nullptr, true, true);
 
     const int version = root.value("version", -1);
     if (version != kParameterVersion)
-        throw std::runtime_error(std::format(
-            "Parameter version mismatch in `{}`: expected {}, got {}", path.string(), kParameterVersion, version
-        ));
+        throw std::runtime_error(std::format("Parameter version mismatch in `{}`: expected {}, got {}", path.string(),
+                                             kParameterVersion, version));
 
     for (const auto& [key, val] : root.items()) {
         if (!val.is_object()) continue;

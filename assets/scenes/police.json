@@ -3,13 +3,17 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/sunset_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/sunset_sky.glsl"
+            }
         }
     ],
     "Materials": [
         {
             "name": "VertexColor",
-            "diffuse": { "albedo": [1.0, 1.0, 1.0] }
+            "diffuse": {
+                "albedo": [1.0, 1.0, 1.0]
+            }
         },
         {
             "name": "Sun",
@@ -22,26 +26,42 @@
     "Assets": [
         {
             "name": "car1",
-            "mesh": { "path": "./assets/models/police/car1.obj" }
+            "mesh": {
+                "path": "./assets/models/police/car1.obj"
+            }
         },
         {
             "name": "car2",
-            "mesh": { "path": "./assets/models/police/car2.obj" }
+            "mesh": {
+                "path": "./assets/models/police/car2.obj"
+            }
         },
         {
             "name": "road",
-            "mesh": { "path": "./assets/models/police/road.obj" }
+            "mesh": {
+                "path": "./assets/models/police/road.obj"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "shutter_speed": 0.016667, "focal_distance": 6.13, "f_stop": 10.0 },
+            "camera": {
+                "shutter_speed": 0.016667,
+                "focal_distance": 6.13,
+                "f_stop": 10.0
+            },
             "name": "Camera",
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [3.0, 3.0, 5.0] },
-                        { "frame": 1, "value": [11.4, 3.0, 5.0] }
+                        {
+                            "frame": 0,
+                            "value": [3.0, 3.0, 5.0]
+                        },
+                        {
+                            "frame": 1,
+                            "value": [11.4, 3.0, 5.0]
+                        }
                     ]
                 },
                 "rotation": [-15.0, 35.0, 0.0],
@@ -49,44 +69,68 @@
             }
         },
         {
-            "mesh_ref": { "handle": "car1" },
+            "mesh_ref": {
+                "handle": "car1"
+            },
             "name": "Car 1",
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [0.0, 0.0, 0.0] },
-                        { "frame": 1, "value": [9.0, 0.0, 0.0] }
+                        {
+                            "frame": 0,
+                            "value": [0.0, 0.0, 0.0]
+                        },
+                        {
+                            "frame": 1,
+                            "value": [9.0, 0.0, 0.0]
+                        }
                     ]
                 },
                 "rotation": [-5.8, -7.5, 2.8],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material_ref": { "handle": "VertexColor" }
+            "material_ref": {
+                "handle": "VertexColor"
+            }
         },
         {
-            "mesh_ref": { "handle": "car2" },
+            "mesh_ref": {
+                "handle": "car2"
+            },
             "name": "Car 2",
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [-5.0, 0.0, 0.0] },
-                        { "frame": 1, "value": [4.0, 0.0, 0.0] }
+                        {
+                            "frame": 0,
+                            "value": [-5.0, 0.0, 0.0]
+                        },
+                        {
+                            "frame": 1,
+                            "value": [4.0, 0.0, 0.0]
+                        }
                     ]
                 },
                 "rotation": [6.5, 5.0, 1.0],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material_ref": { "handle": "VertexColor" }
+            "material_ref": {
+                "handle": "VertexColor"
+            }
         },
         {
-            "mesh_ref": { "handle": "road" },
+            "mesh_ref": {
+                "handle": "road"
+            },
             "name": "Road",
             "transform": {
                 "position": [-15.0, 0.0, 0.0],
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [1.0, 1.0, 1.0]
             },
-            "material_ref": { "handle": "VertexColor" }
+            "material_ref": {
+                "handle": "VertexColor"
+            }
         },
         {
             "sphere": {},
@@ -96,7 +140,9 @@
                 "rotation": [0.0, -0.0, 0.0],
                 "scale": [20.0, 20.0, 20.0]
             },
-            "material_ref": { "handle": "Sun" }
+            "material_ref": {
+                "handle": "Sun"
+            }
         }
     ]
 }

@@ -50,7 +50,8 @@ private:
     static constexpr int kLeafSize = 16;
     static constexpr int kSahK = 12;
 
-    size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start, uint32_t count, glm::vec3& outAabbMin, glm::vec3& outAabbMax);
+    size_t buildBvhNode(std::vector<TriBounds>& triBounds, std::vector<uint32_t>& triIndices, uint32_t start,
+                        uint32_t count, glm::vec3& outAabbMin, glm::vec3& outAabbMax);
 };
 
 MeshAsset makeDefaultMeshAsset();

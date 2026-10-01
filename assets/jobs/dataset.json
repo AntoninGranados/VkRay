@@ -6,128 +6,200 @@
             // "output": "outputs/dataset/out_0_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_0_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene1.json",
             // "output": "outputs/dataset/out_1_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_1_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene2.json",
             // "output": "outputs/dataset/out_2_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_2_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene3.json",
             // "output": "outputs/dataset/out_3_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_3_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene4.json",
             // "output": "outputs/dataset/out_4_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_4_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene5.json",
             // "output": "outputs/dataset/out_5_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_5_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene6.json",
             // "output": "outputs/dataset/out_6_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_6_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } },
+            "repeat": {
+                "count": 16
+            }
+        },
         {
             "scene": "assets/scenes/dataset/scene7.json",
             // "output": "outputs/dataset/out_7_{n}_{spp:raw02,raw08,clean}.exr",
             "output": "outputs/dataset/out_7_{n}_{spp:raw02,raw08}.exr",
             "samples": [
-                { "spp": 2, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] },
-                { "spp": 8, "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"] } //,
+                {
+                    "spp": 2,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                },
+                {
+                    "spp": 8,
+                    "aovs": ["albedo", "normal", "position", "roughness", "mat_type", "sky_mask"]
+                } //,
                 // 2048
             ],
             "render_size": [1024, 1024],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   512,
+                "renderer/sampling/adaptive_warmup": 512,
                 "renderer/sampling/clamp": true
             },
-            "repeat": { "count": 16 } }
+            "repeat": {
+                "count": 16
+            }
+        }
     ]
 }

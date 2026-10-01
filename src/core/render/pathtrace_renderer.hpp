@@ -9,8 +9,8 @@
 
 #include "core/ecs/entity.hpp"
 #include "core/render/sample_accumulator.hpp"
-#include "core/scene/scene.hpp"
 #include "core/render_structures.hpp"
+#include "core/scene/scene.hpp"
 
 struct FrameContext;
 
@@ -24,11 +24,12 @@ class PathtraceRenderer {
 public:
     virtual ~PathtraceRenderer() = default;
 
-    RenderResources initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag, ImageHandle lensImageHandle);
+    RenderResources initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
+                              ImageHandle lensImageHandle);
 
-    uint32_t getSampleCount()            { return accumulator.getSampleCount(); }
-    void     setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }
-    void     restartAccumulation()       { accumulator.restart(); }
+    uint32_t getSampleCount() { return accumulator.getSampleCount(); }
+    void setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }
+    void restartAccumulation() { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
     void render(const FrameContext& frameContext);
     void resize(uint32_t width, uint32_t height);

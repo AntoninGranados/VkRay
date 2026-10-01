@@ -9,7 +9,7 @@
 enum class LogLevel { Debug, Info, Success, Warn, Error };
 
 struct LogEntry {
-    LogLevel    level;
+    LogLevel level;
     std::string source;
     std::string message;
 };
@@ -31,17 +31,16 @@ public:
     static void error(std::string_view source, std::string_view msg);
     static void debug(std::string_view source, std::string_view msg);
 
-
 private:
-    Log()  = default;
+    Log() = default;
     ~Log() = default;
 
     static Log& get();
-    void        push(LogLevel level, std::string_view source, std::string_view msg);
-    void        ensureFile();
+    void push(LogLevel level, std::string_view source, std::string_view msg);
+    void ensureFile();
 
-    std::vector<LogEntry>                entries;
+    std::vector<LogEntry> entries;
     std::function<void(const LogEntry&)> consumer;
-    std::ofstream                        file;
-    LogLevel                             minLevel = LogLevel::Debug;
+    std::ofstream file;
+    LogLevel minLevel = LogLevel::Debug;
 };

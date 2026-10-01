@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include "core/fields/field.hpp"
 #include "imgui/imgui.h"
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "core/core.hpp"
 #include "core/scene/scene.hpp"
@@ -29,7 +29,10 @@ std::vector<ecs::Entity> findEntityCandidates(Scene& scene, ecs::Registry& regis
                 bool passes = true;
                 for (const std::string& needed : entityMeta->needs) {
                     const auto found = ecs::ComponentType::find(needed);
-                    if (!found || !registry.has(child, found->get())) { passes = false; break; }
+                    if (!found || !registry.has(child, found->get())) {
+                        passes = false;
+                        break;
+                    }
                 }
                 if (!passes) continue;
             }
@@ -37,7 +40,10 @@ std::vector<ecs::Entity> findEntityCandidates(Scene& scene, ecs::Registry& regis
                 bool blocked = false;
                 for (const std::string& conflicted : entityMeta->conflicts) {
                     const auto found = ecs::ComponentType::find(conflicted);
-                    if (found && registry.has(child, found->get())) { blocked = true; break; }
+                    if (found && registry.has(child, found->get())) {
+                        blocked = true;
+                        break;
+                    }
                 }
                 if (blocked) continue;
             }
@@ -56,9 +62,9 @@ void drawLinkButton(Field& field) {
     const bool clicked = ImGui::InvisibleButton("##link", ImVec2(size, size));
     const bool hovered = ImGui::IsItemHovered();
     const ImVec2 rectMax(pos.x + size, pos.y + size);
-    ImGui::GetWindowDrawList()->AddRectFilled(
-        pos, rectMax,
-        ImGui::GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), ImGui::GetStyle().FrameRounding);
+    ImGui::GetWindowDrawList()->AddRectFilled(pos, rectMax,
+                                              ImGui::GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button),
+                                              ImGui::GetStyle().FrameRounding);
 
     ui::drawCenteredIcon(icon, pos, rectMax, ImGui::GetColorU32(ImGuiCol_Text));
 
@@ -67,8 +73,7 @@ void drawLinkButton(Field& field) {
     ImGui::SameLine();
 }
 
-template<typename Vec>
-Vec linkedRatio(const Vec& oldV, const Vec& newV) {
+template <typename Vec> Vec linkedRatio(const Vec& oldV, const Vec& newV) {
     for (int i = 0; i < oldV.length(); i++) {
         if (newV[i] != oldV[i]) {
             const float ratio = (oldV[i] != 0.0f) ? newV[i] / oldV[i] : 1.0f;
@@ -89,9 +94,7 @@ std::string adaptiveFormat(float magnitude, const std::string& unit) {
     return format;
 }
 
-std::string intFormat(const std::string& unit) {
-    return unit.empty() ? "%d" : "%d " + unit;
-}
+std::string intFormat(const std::string& unit) { return unit.empty() ? "%d" : "%d " + unit; }
 } // namespace
 
 bool drawField(Field& field, const std::string& widgetId) {
@@ -122,8 +125,7 @@ bool drawField(Field& field, const std::string& widgetId) {
 
         const int presetIdx = field.findPreset();
         float maxLabelW = 0.0f;
-        for (const auto& p : *presets)
-            maxLabelW = std::max(maxLabelW, ImGui::CalcTextSize(p.label.c_str()).x);
+        for (const auto& p : *presets) maxLabelW = std::max(maxLabelW, ImGui::CalcTextSize(p.label.c_str()).x);
 
         const char* preview = presetIdx >= 0 ? (*presets)[presetIdx].label.c_str() : "\xe2\x80\x94";
         float comboW = maxLabelW + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetFrameHeight();
@@ -151,199 +153,229 @@ bool drawField(Field& field, const std::string& widgetId) {
     };
 
     switch (field.getType()) {
-        case FieldType::Bool: {
-            bool v = field.get<bool>();
-            bool c = ImGui::Checkbox(field.getLabel().c_str(), &v);
-            if (c) { field.set<bool>(v); changed = true; }
-            return changed;
+    case FieldType::Bool: {
+        bool v = field.get<bool>();
+        bool c = ImGui::Checkbox(field.getLabel().c_str(), &v);
+        if (c) {
+            field.set<bool>(v);
+            changed = true;
         }
-        case FieldType::Int: {
-            setup();
-            int v = field.get<int>();
-            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragInt(widgetId.c_str(), &v, step, toInt(fmin), toInt(fmax), format.c_str());
-            if (c) { field.set<int>(v); changed = true; }
-            return changed;
+        return changed;
+    }
+    case FieldType::Int: {
+        setup();
+        int v = field.get<int>();
+        const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragInt(widgetId.c_str(), &v, step, toInt(fmin), toInt(fmax), format.c_str());
+        if (c) {
+            field.set<int>(v);
+            changed = true;
         }
-        case FieldType::IVec2: {
-            setup();
-            glm::ivec2 v = field.get<glm::ivec2>();
-            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragInt2(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
-            if (c) { field.set<glm::ivec2>(v); changed = true; }
-            return changed;
+        return changed;
+    }
+    case FieldType::IVec2: {
+        setup();
+        glm::ivec2 v = field.get<glm::ivec2>();
+        const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragInt2(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
+        if (c) {
+            field.set<glm::ivec2>(v);
+            changed = true;
         }
-        case FieldType::IVec3: {
-            setup();
-            glm::ivec3 v = field.get<glm::ivec3>();
-            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragInt3(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
-            if (c) { field.set<glm::ivec3>(v); changed = true; }
-            return changed;
+        return changed;
+    }
+    case FieldType::IVec3: {
+        setup();
+        glm::ivec3 v = field.get<glm::ivec3>();
+        const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragInt3(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
+        if (c) {
+            field.set<glm::ivec3>(v);
+            changed = true;
         }
-        case FieldType::IVec4: {
-            setup();
-            glm::ivec4 v = field.get<glm::ivec4>();
-            const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragInt4(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
-            if (c) { field.set<glm::ivec4>(v); changed = true; }
-            return changed;
+        return changed;
+    }
+    case FieldType::IVec4: {
+        setup();
+        glm::ivec4 v = field.get<glm::ivec4>();
+        const std::string format = intFormat(numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragInt4(widgetId.c_str(), glm::value_ptr(v), step, toInt(fmin), toInt(fmax), format.c_str());
+        if (c) {
+            field.set<glm::ivec4>(v);
+            changed = true;
         }
-        case FieldType::Float: {
-            setup();
-            float v = field.get<float>();
-            const std::string format = adaptiveFormat(std::fabs(v), numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragFloat(widgetId.c_str(), &v, step, fmin, fmax, format.c_str());
-            if (c) { field.set<float>(v); changed = true; }
-            return changed;
+        return changed;
+    }
+    case FieldType::Float: {
+        setup();
+        float v = field.get<float>();
+        const std::string format = adaptiveFormat(std::fabs(v), numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragFloat(widgetId.c_str(), &v, step, fmin, fmax, format.c_str());
+        if (c) {
+            field.set<float>(v);
+            changed = true;
         }
-        case FieldType::Vec2: {
-            setup();
-            const glm::vec2 oldV = field.get<glm::vec2>();
-            glm::vec2 v = oldV;
-            if (numMeta && numMeta->linkable) drawLinkButton(field);
+        return changed;
+    }
+    case FieldType::Vec2: {
+        setup();
+        const glm::vec2 oldV = field.get<glm::vec2>();
+        glm::vec2 v = oldV;
+        if (numMeta && numMeta->linkable) drawLinkButton(field);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        const std::string format =
+            adaptiveFormat(std::max(std::fabs(v.x), std::fabs(v.y)), numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragFloat2(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
+        if (c) {
+            if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
+            field.set<glm::vec2>(v);
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::Vec3: {
+        setup();
+        const glm::vec3 oldV = field.get<glm::vec3>();
+        glm::vec3 v = oldV;
+        bool c;
+        bool linkable = false;
+        if (numMeta && numMeta->color) {
+            c = ImGui::ColorEdit3(widgetId.c_str(), glm::value_ptr(v));
+        } else {
+            linkable = numMeta && numMeta->linkable;
+            if (linkable) drawLinkButton(field);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            const std::string format = adaptiveFormat(std::max(std::fabs(v.x), std::fabs(v.y)), numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragFloat2(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
-            if (c) {
-                if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
-                field.set<glm::vec2>(v);
-                changed = true;
-            }
-            return changed;
+            const std::string format = adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z)}),
+                                                      numMeta ? numMeta->unit : std::string());
+            c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
         }
-        case FieldType::Vec3: {
-            setup();
-            const glm::vec3 oldV = field.get<glm::vec3>();
-            glm::vec3 v = oldV;
-            bool c;
-            bool linkable = false;
-            if (numMeta && numMeta->color) {
-                c = ImGui::ColorEdit3(widgetId.c_str(), glm::value_ptr(v));
+        if (c) {
+            if (linkable && field.isLinked()) v = linkedRatio(oldV, v);
+            field.set<glm::vec3>(v);
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::Vec4: {
+        setup();
+        const glm::vec4 oldV = field.get<glm::vec4>();
+        glm::vec4 v = oldV;
+        if (numMeta && numMeta->linkable) drawLinkButton(field);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        const std::string format =
+            adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z), std::fabs(v.w)}),
+                           numMeta ? numMeta->unit : std::string());
+        bool c = ImGui::DragFloat4(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
+        if (c) {
+            if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
+            field.set<glm::vec4>(v);
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::String: {
+        setup();
+        std::string v = field.get<std::string>();
+        v.resize(Field::maxStringSize, '\0');
+        bool c = ImGui::InputText(widgetId.c_str(), v.data(), Field::maxStringSize);
+        if (c) {
+            field.set<std::string>(v.c_str());
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::Enum: {
+        setup();
+        int v = field.get<int>();
+        std::vector<const char*> names;
+        if (enumMeta)
+            for (const auto& item : enumMeta->items) names.push_back(item.c_str());
+        bool c = ImGui::Combo(widgetId.c_str(), &v, names.data(), (int)names.size());
+        if (c) {
+            field.set<int>(v);
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::Quat: {
+        setup();
+        glm::quat q = field.get<glm::quat>();
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(q));
+        const std::string format =
+            adaptiveFormat(std::max({std::fabs(euler.x), std::fabs(euler.y), std::fabs(euler.z)}),
+                           numMeta ? numMeta->unit : std::string());
+        if (ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(euler), step, 0.0f, 0.0f, format.c_str())) {
+            field.set<glm::quat>(glm::quat(glm::radians(euler)));
+            changed = true;
+        }
+        return changed;
+    }
+    case FieldType::Path: {
+        setup();
+        std::string current = field.get<std::filesystem::path>().string();
+        float browseWidth = ImGui::CalcTextSize(ICON_FA_FOLDER_OPEN).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        ImGui::SetNextItemWidth(-browseWidth - ImGui::GetStyle().ItemSpacing.x);
+        ImGui::BeginDisabled();
+        std::string display = current.empty() ? "(not set)" : current;
+        ImGui::InputText("##path", display.data(), display.size() + 1, ImGuiInputTextFlags_ReadOnly);
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (!ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browseWidth, 0))) return changed;
+
+        std::optional<std::filesystem::path> result;
+        if (!pathMeta || pathMeta->extensions.empty()) {
+            result = pickFolderDialog(current);
+        } else {
+            std::vector<FileFilter> filters;
+            for (const auto& e : pathMeta->extensions) filters.push_back({e.displayName(), e.ext});
+            if (pathMeta->save) {
+                std::string defaultName = std::filesystem::path(current).filename().string();
+                result = saveFileDialog(filters, {}, defaultName);
             } else {
-                linkable = numMeta && numMeta->linkable;
-                if (linkable) drawLinkButton(field);
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                const std::string format = adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z)}), numMeta ? numMeta->unit : std::string());
-                c = ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
+                std::filesystem::path defaultDir =
+                    current.empty() ? std::filesystem::path{} : std::filesystem::path(current).parent_path();
+                result = openFileDialog(filters, defaultDir);
             }
-            if (c) {
-                if (linkable && field.isLinked()) v = linkedRatio(oldV, v);
-                field.set<glm::vec3>(v);
+        }
+        if (!result) return changed;
+        field.set<std::filesystem::path>(*result);
+        return true;
+    }
+    case FieldType::Entity: {
+        Scene& scene = Core::getScene();
+        ecs::Registry& registry = scene.getRegistry();
+        const std::vector<ecs::Entity> candidates = findEntityCandidates(scene, registry, entityMeta);
+
+        const ecs::Entity current = field.get<ecs::Entity>();
+        const auto found = std::find(candidates.begin(), candidates.end(), current);
+        int currentIdx = (found != candidates.end()) ? static_cast<int>(found - candidates.begin()) : -1;
+
+        auto getName = [&](ecs::Entity e) -> std::string {
+            if (registry.has(e, ecs::Name)) return registry.get(e, ecs::Name).get<std::string>("value");
+            return "Entity";
+        };
+
+        setup();
+        const std::string preview = (currentIdx >= 0) ? getName(current) : "(none)";
+        if (ImGui::BeginCombo(widgetId.c_str(), preview.c_str())) {
+            if (ImGui::Selectable("(none)", currentIdx < 0)) {
+                field.set<ecs::Entity>(ecs::Entity{});
                 changed = true;
             }
-            return changed;
-        }
-        case FieldType::Vec4: {
-            setup();
-            const glm::vec4 oldV = field.get<glm::vec4>();
-            glm::vec4 v = oldV;
-            if (numMeta && numMeta->linkable) drawLinkButton(field);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            const std::string format = adaptiveFormat(std::max({std::fabs(v.x), std::fabs(v.y), std::fabs(v.z), std::fabs(v.w)}), numMeta ? numMeta->unit : std::string());
-            bool c = ImGui::DragFloat4(widgetId.c_str(), glm::value_ptr(v), step, fmin, fmax, format.c_str());
-            if (c) {
-                if (numMeta && numMeta->linkable && field.isLinked()) v = linkedRatio(oldV, v);
-                field.set<glm::vec4>(v);
-                changed = true;
-            }
-            return changed;
-        }
-        case FieldType::String: {
-            setup();
-            std::string v = field.get<std::string>();
-            v.resize(Field::maxStringSize, '\0');
-            bool c = ImGui::InputText(widgetId.c_str(), v.data(), Field::maxStringSize);
-            if (c) { field.set<std::string>(v.c_str()); changed = true; }
-            return changed;
-        }
-        case FieldType::Enum: {
-            setup();
-            int v = field.get<int>();
-            std::vector<const char*> names;
-            if (enumMeta) for (const auto& item : enumMeta->items) names.push_back(item.c_str());
-            bool c = ImGui::Combo(widgetId.c_str(), &v, names.data(), (int)names.size());
-            if (c) { field.set<int>(v); changed = true; }
-            return changed;
-        }
-        case FieldType::Quat: {
-            setup();
-            glm::quat q = field.get<glm::quat>();
-            glm::vec3 euler = glm::degrees(glm::eulerAngles(q));
-            const std::string format = adaptiveFormat(std::max({std::fabs(euler.x), std::fabs(euler.y), std::fabs(euler.z)}), numMeta ? numMeta->unit : std::string());
-            if (ImGui::DragFloat3(widgetId.c_str(), glm::value_ptr(euler), step, 0.0f, 0.0f, format.c_str())) {
-                field.set<glm::quat>(glm::quat(glm::radians(euler)));
-                changed = true;
-            }
-            return changed;
-        }
-        case FieldType::Path: {
-            setup();
-            std::string current = field.get<std::filesystem::path>().string();
-            float browseWidth = ImGui::CalcTextSize(ICON_FA_FOLDER_OPEN).x + ImGui::GetStyle().FramePadding.x * 2.0f;
-            ImGui::SetNextItemWidth(-browseWidth - ImGui::GetStyle().ItemSpacing.x);
-            ImGui::BeginDisabled();
-            std::string display = current.empty() ? "(not set)" : current;
-            ImGui::InputText("##path", display.data(), display.size() + 1, ImGuiInputTextFlags_ReadOnly);
-            ImGui::EndDisabled();
-            ImGui::SameLine();
-            if (!ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browseWidth, 0))) return changed;
-
-            std::optional<std::filesystem::path> result;
-            if (!pathMeta || pathMeta->extensions.empty()) {
-                result = pickFolderDialog(current);
-            } else {
-                std::vector<FileFilter> filters;
-                for (const auto& e : pathMeta->extensions)
-                    filters.push_back({ e.displayName(), e.ext });
-                if (pathMeta->save) {
-                    std::string defaultName = std::filesystem::path(current).filename().string();
-                    result = saveFileDialog(filters, {}, defaultName);
-                } else {
-                    std::filesystem::path defaultDir = current.empty() ? std::filesystem::path{} : std::filesystem::path(current).parent_path();
-                    result = openFileDialog(filters, defaultDir);
-                }
-            }
-            if (!result) return changed;
-            field.set<std::filesystem::path>(*result);
-            return true;
-        }
-        case FieldType::Entity: {
-            Scene& scene = Core::getScene();
-            ecs::Registry& registry = scene.getRegistry();
-            const std::vector<ecs::Entity> candidates = findEntityCandidates(scene, registry, entityMeta);
-
-            const ecs::Entity current = field.get<ecs::Entity>();
-            const auto found = std::find(candidates.begin(), candidates.end(), current);
-            int currentIdx = (found != candidates.end()) ? static_cast<int>(found - candidates.begin()) : -1;
-
-            auto getName = [&](ecs::Entity e) -> std::string {
-                if (registry.has(e, ecs::Name))
-                    return registry.get(e, ecs::Name).get<std::string>("value");
-                return "Entity";
-            };
-
-            setup();
-            const std::string preview = (currentIdx >= 0) ? getName(current) : "(none)";
-            if (ImGui::BeginCombo(widgetId.c_str(), preview.c_str())) {
-                if (ImGui::Selectable("(none)", currentIdx < 0)) {
-                    field.set<ecs::Entity>(ecs::Entity{});
+            if (currentIdx < 0) ImGui::SetItemDefaultFocus();
+            for (int i = 0; i < (int)candidates.size(); i++) {
+                const bool selected = (i == currentIdx);
+                std::string label = getName(candidates[i]) + "##ent" + std::to_string(i);
+                if (ImGui::Selectable(label.c_str(), selected)) {
+                    field.set<ecs::Entity>(candidates[i]);
                     changed = true;
                 }
-                if (currentIdx < 0) ImGui::SetItemDefaultFocus();
-                for (int i = 0; i < (int)candidates.size(); i++) {
-                    const bool selected = (i == currentIdx);
-                    std::string label = getName(candidates[i]) + "##ent" + std::to_string(i);
-                    if (ImGui::Selectable(label.c_str(), selected)) {
-                        field.set<ecs::Entity>(candidates[i]);
-                        changed = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
+                if (selected) ImGui::SetItemDefaultFocus();
             }
-            return changed;
+            ImGui::EndCombo();
         }
+        return changed;
+    }
     }
     return changed;
 }
@@ -353,7 +385,7 @@ std::vector<FieldGroup> buildFieldGroups(const std::vector<Field*>& fields, cons
 
     for (Field* field : fields) {
         if (field->getId().parent_path() != prefix) continue;
-        groups.push_back({ .field = field });
+        groups.push_back({.field = field});
     }
 
     std::vector<std::string> seen;
@@ -365,17 +397,14 @@ std::vector<FieldGroup> buildFieldGroups(const std::vector<Field*>& fields, cons
         if (std::next(rel.begin()) == rel.end()) continue;
         if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
         seen.push_back(seg);
-        groups.push_back({
-            .id = prefix / seg,
-            .children = buildFieldGroups(fields, prefix / seg)
-        });
+        groups.push_back({.id = prefix / seg, .children = buildFieldGroups(fields, prefix / seg)});
     }
 
     return groups;
 }
 
-bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetId,
-                      const DrawFieldLeaf& drawLeaf, const FieldGroupLabel& label) {
+bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetId, const DrawFieldLeaf& drawLeaf,
+                     const FieldGroupLabel& label) {
     bool changed = false;
 
     for (auto& item : groups) {
@@ -434,8 +463,10 @@ void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver
 
     groups = std::move(result);
     for (auto& item : groups) {
-        if (item.showHeader) clusterByCondition(item.children, resolve, 0);
-        else if (!item.field) clusterByCondition(item.children, resolve, depth + 1);
+        if (item.showHeader)
+            clusterByCondition(item.children, resolve, 0);
+        else if (!item.field)
+            clusterByCondition(item.children, resolve, depth + 1);
     }
 }
 
@@ -450,9 +481,12 @@ bool drawGroupedFields(std::vector<Field>& fields, const std::string& widgetId) 
             if (field.getId() == id) return field.conditionValue();
         return std::nullopt;
     });
-    return drawFieldGroups(groups, widgetId, [](Field& field, const std::string& id) {
-        return drawField(field, std::format("{}##{}", id, field.getId().string()));
-    }, [](const FieldPath& id) { return snakeCaseToLabel(id.filename().string()); });
+    return drawFieldGroups(
+        groups, widgetId,
+        [](Field& field, const std::string& id) {
+            return drawField(field, std::format("{}##{}", id, field.getId().string()));
+        },
+        [](const FieldPath& id) { return snakeCaseToLabel(id.filename().string()); });
 }
 
-}
+} // namespace ui

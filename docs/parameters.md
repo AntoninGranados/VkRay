@@ -89,7 +89,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ### Output
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
-| `renderer/output/render_size` | Render Size | - | IVec2 | - | - | no |
+| `renderer/output/render_size` | Render Size | - | IVec2 | - | - | yes |
 | `renderer/output/output_image` | Image | - | Path | `outputs/render.png` | PNG Image (.png), OpenEXR Image (.exr) | no |
 | `renderer/output/output_video` | Video | - | Path | `outputs/render.mp4` | MP4 Video (.mp4) | no |
 | `renderer/output/frame_cache` | Frame Cache | Directory where animation frames are stored before video conversion. | Path | `outputs/cache` | - | no |

@@ -3,50 +3,78 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/empty_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/empty_sky.glsl"
+            }
         }
     ],
     "Materials": [
         {
             "name": "Object",
-            "dielectric": { "albedo": [1, 0.5, 0.5], "roughness": 0.1, "ior": 1.3 }
+            "dielectric": {
+                "albedo": [1, 0.5, 0.5],
+                "roughness": 0.1,
+                "ior": 1.3
+            }
         },
         {
             "name": "Left",
-            "programmable": { "albedo": [1.0, 0.1, 0.1] }
+            "programmable": {
+                "albedo": [1.0, 0.1, 0.1]
+            }
         },
         {
             "name": "Right",
-            "programmable": { "albedo": [0.1, 1.0, 0.1] }
+            "programmable": {
+                "albedo": [0.1, 1.0, 0.1]
+            }
         },
         {
             "name": "Wall",
-            "programmable": { "albedo": [1.0, 1.0, 1.0] }
+            "programmable": {
+                "albedo": [1.0, 1.0, 1.0]
+            }
         },
         {
             "name": "Back",
-            "programmable": { "albedo": [0.2, 0.2, 0.6] }
+            "programmable": {
+                "albedo": [0.2, 0.2, 0.6]
+            }
         },
         {
             "name": "Light",
-            "emissive": { "albedo": [1.0, 0.7, 0.5], "emission_strength": 30 }
+            "emissive": {
+                "albedo": [1.0, 0.7, 0.5],
+                "emission_strength": 30
+            }
         }
     ],
     "Assets": [
         {
             "name": "dragon",
-            "mesh": { "path": "./assets/models/dragon.obj" }
+            "mesh": {
+                "path": "./assets/models/dragon.obj"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": 49.4546 },
+            "camera": {
+                "focal_length": 49.4546
+            },
             "name": "Camera",
-            "transform": { "position": [0, 0, -15], "rotation": [0, 180, 0] }
+            "transform": {
+                "position": [0, 0, -15],
+                "rotation": [0, 180, 0]
+            }
         },
         {
-            "mesh_ref": { "handle": "dragon" },
-            "material_ref": { "handle": "Object" },
+            "mesh_ref": {
+                "handle": "dragon"
+            },
+            "material_ref": {
+                "handle": "Object"
+            },
             "name": "Object",
             "transform": {
                 "position": [0, -2.2, 0],
@@ -55,8 +83,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Left" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Left"
+            },
             "name": "Left",
             "transform": {
                 "position": [-4, 0, 0],
@@ -65,8 +95,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Right" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Right"
+            },
             "name": "Right",
             "transform": {
                 "position": [4, 0, 0],
@@ -75,8 +107,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Wall" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Wall"
+            },
             "name": "Top",
             "transform": {
                 "position": [0, 4, 0],
@@ -85,8 +119,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Wall" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Wall"
+            },
             "name": "Bottom",
             "transform": {
                 "position": [0, -4, 0],
@@ -95,8 +131,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Back" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Back"
+            },
             "name": "Back",
             "transform": {
                 "position": [0, 0, 4],
@@ -105,16 +143,26 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Wall" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Wall"
+            },
             "name": "Front",
-            "transform": { "position": [0, 0, -4], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, 0, -4],
+                "scale": [8, 8, 1]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Light" },
+            "box": {},
+            "material_ref": {
+                "handle": "Light"
+            },
             "name": "Light",
-            "transform": { "position": [0, 3.95, 0], "scale": [1, 0.05, 1] }
+            "transform": {
+                "position": [0, 3.95, 0],
+                "scale": [1, 0.05, 1]
+            }
         }
     ]
 }

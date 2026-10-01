@@ -7,7 +7,24 @@ if [ ! -f build/CMakeCache.txt ]; then
     exit 1
 fi
 
-tests/check_format.sh
+GREEN='\033[32m'
+RED='\033[31m'
+RESET='\033[0m'
 
-cmake --build build --target VkRayTests VkRay
+run_step() {
+    local name="$1"
+    shift
+    printf "[RUN] %s ..." "$name"
+    local log
+    if log=$("$@" 2>&1); then
+        printf "\r\033[K${GREEN}[OK]${RESET} %s\n" "$name"
+    else
+        printf "\r\033[K${RED}[FAIL]${RESET} %s\n" "$name"
+        echo "$log"
+        exit 1
+    fi
+}
+
+run_step "Test Build" cmake --build build --target VkRayTests
+run_step "Main Build" cmake --build build --target VkRay
 python3 tests/run_tests.py --test-dir build

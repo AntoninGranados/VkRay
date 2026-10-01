@@ -29,7 +29,7 @@ void cameraActivationSystem(Registry& registry) {
 }
 
 void cameraControlSystem(Registry& registry) {
-    if (Core::getRenderMode() != RenderMode::Preview) return;    // don't move the cameras when rendering
+    if (Core::getRenderMode() != RenderMode::Preview) return; // don't move the cameras when rendering
 
     const ecs::Entity camera = Core::getScene().getCamera();
 
@@ -38,18 +38,21 @@ void cameraControlSystem(Registry& registry) {
     CameraNavigationState& state = navigation.payload<CameraNavigationState>("state");
     ecs::Component& t = registry.get(camera, ecs::Transform);
 
-    const bool rmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
-    const bool mmb   = platform.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
+    const bool rmb = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
+    const bool mmb = platform.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
     const bool shift = platform.getKey(GLFW_KEY_LEFT_SHIFT) || platform.getKey(GLFW_KEY_RIGHT_SHIFT);
-    const bool ctrl  = platform.getKey(GLFW_KEY_LEFT_CONTROL) || platform.getKey(GLFW_KEY_RIGHT_CONTROL);
+    const bool ctrl = platform.getKey(GLFW_KEY_LEFT_CONTROL) || platform.getKey(GLFW_KEY_RIGHT_CONTROL);
 
     DragMode newDragMode = DragMode::None;
     if (rmb) {
         newDragMode = DragMode::Look;
     } else if (mmb) {
-        if (shift) newDragMode = DragMode::Pan;
-        else if (ctrl) newDragMode = DragMode::Dolly;
-        else newDragMode = DragMode::Orbit;
+        if (shift)
+            newDragMode = DragMode::Pan;
+        else if (ctrl)
+            newDragMode = DragMode::Dolly;
+        else
+            newDragMode = DragMode::Orbit;
     }
 
     if (newDragMode != state.dragMode) {
@@ -73,12 +76,30 @@ void cameraControlSystem(Registry& registry) {
         glm::vec3 position = t.get<glm::vec3>("position");
         bool moved = false;
 
-        if (platform.getKey(GLFW_KEY_W))          { position += dir * velocity;              moved = true; }
-        if (platform.getKey(GLFW_KEY_S))          { position -= dir * velocity;              moved = true; }
-        if (platform.getKey(GLFW_KEY_A))          { position -= right * velocity;            moved = true; }
-        if (platform.getKey(GLFW_KEY_D))          { position += right * velocity;            moved = true; }
-        if (platform.getKey(GLFW_KEY_SPACE))      { position += glm::vec3(0, 1, 0) * velocity; moved = true; }
-        if (platform.getKey(GLFW_KEY_LEFT_SHIFT)) { position -= glm::vec3(0, 1, 0) * velocity; moved = true; }
+        if (platform.getKey(GLFW_KEY_W)) {
+            position += dir * velocity;
+            moved = true;
+        }
+        if (platform.getKey(GLFW_KEY_S)) {
+            position -= dir * velocity;
+            moved = true;
+        }
+        if (platform.getKey(GLFW_KEY_A)) {
+            position -= right * velocity;
+            moved = true;
+        }
+        if (platform.getKey(GLFW_KEY_D)) {
+            position += right * velocity;
+            moved = true;
+        }
+        if (platform.getKey(GLFW_KEY_SPACE)) {
+            position += glm::vec3(0, 1, 0) * velocity;
+            moved = true;
+        }
+        if (platform.getKey(GLFW_KEY_LEFT_SHIFT)) {
+            position -= glm::vec3(0, 1, 0) * velocity;
+            moved = true;
+        }
 
         if (moved) {
             state.anchor += position - t.get<glm::vec3>("position");
@@ -130,11 +151,13 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
         return;
     }
 
-    const bool orthographic = static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic;
+    const bool orthographic =
+        static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic;
     const float sensitivity = Core::getParameters().get<float>("editor/camera/sensitivity");
-    float zoomSensitivityFactor = orthographic
-        ? 1.0f
-        : glm::min(fovFromFocalLength(c.get<float>("focal_length") / c.get<float>("sensor_width")) / 80.0f, 1.0f);
+    float zoomSensitivityFactor =
+        orthographic
+            ? 1.0f
+            : glm::min(fovFromFocalLength(c.get<float>("focal_length") / c.get<float>("sensor_width")) / 80.0f, 1.0f);
     xoffset *= sensitivity * zoomSensitivityFactor;
     yoffset *= sensitivity * zoomSensitivityFactor;
 
@@ -164,7 +187,8 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
     if (static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic) {
         const NumericMeta& sensorWidthMeta = std::get<NumericMeta>(ecs::Camera.getField("sensor_width").getMetadata());
         const float sensorWidth = c.get<float>("sensor_width");
-        const float newSensorWidth = glm::clamp(sensorWidth * glm::pow(0.9f, static_cast<float>(yoffset)), sensorWidthMeta.min, sensorWidthMeta.max);
+        const float newSensorWidth = glm::clamp(sensorWidth * glm::pow(0.9f, static_cast<float>(yoffset)),
+                                                sensorWidthMeta.min, sensorWidthMeta.max);
         c.set<float>("sensor_width", newSensorWidth);
         if (yoffset != 0) Core::markRenderDirty();
         return;

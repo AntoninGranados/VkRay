@@ -2,11 +2,7 @@
 
 #include <glm/glm.hpp>
 
-enum class RenderMode {
-    Preview,
-    RenderSingle,
-    RenderAnimation
-};
+enum class RenderMode { Preview, RenderSingle, RenderAnimation };
 
 enum class DebugView : int {
     None = 0,
@@ -54,7 +50,7 @@ struct alignas(16) RenderUBO {
 };
 
 struct PathtracerUBO {
-    uint32_t  sampleCount;
+    uint32_t sampleCount;
     CameraUBO camera;
     ScreenUBO screen;
     RenderUBO render;
@@ -68,13 +64,13 @@ struct alignas(16) CompositingPassUBO {
 
 struct AOVFlags {
     bool positionW = false;
-    bool position  = false;
-    bool normalW   = false;
-    bool normal    = false;
-    bool albedo    = false;
+    bool position = false;
+    bool normalW = false;
+    bool normal = false;
+    bool albedo = false;
     bool roughness = false;
-    bool matType   = false;
-    bool skyMask   = false;
+    bool matType = false;
+    bool skyMask = false;
 };
 
 struct AOVChannel {
@@ -83,36 +79,30 @@ struct AOVChannel {
 };
 
 inline constexpr AOVChannel kAOVChannels[] = {
-    { "position_w", &AOVFlags::positionW },
-    { "position",   &AOVFlags::position  },
-    { "normal_w",   &AOVFlags::normalW   },
-    { "normal",     &AOVFlags::normal    },
-    { "albedo",     &AOVFlags::albedo    },
-    { "roughness",  &AOVFlags::roughness },
-    { "mat_type",   &AOVFlags::matType   },
-    { "sky_mask",   &AOVFlags::skyMask   },
+    {"position_w", &AOVFlags::positionW}, {"position", &AOVFlags::position}, {"normal_w", &AOVFlags::normalW},
+    {"normal", &AOVFlags::normal},        {"albedo", &AOVFlags::albedo},     {"roughness", &AOVFlags::roughness},
+    {"mat_type", &AOVFlags::matType},     {"sky_mask", &AOVFlags::skyMask},
 };
 
 struct alignas(16) AOVBuffer {
-    alignas(16) uint32_t  hitValid;
+    alignas(16) uint32_t hitValid;
     alignas(16) glm::vec3 positionW;
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normalW;
-    alignas(8)  glm::vec2 normal;
+    alignas(8) glm::vec2 normal;
     alignas(16) glm::vec3 albedo;
-    float                 roughness;
-    uint32_t              matType;
-    uint32_t              skyMask;
+    float roughness;
+    uint32_t matType;
+    uint32_t skyMask;
 };
 
 struct PixelInfo {
     AOVBuffer aov;
-    float    mean;
-    float    m2;
-    int      count;
+    float mean;
+    float m2;
+    int count;
     uint32_t bounces;
     uint32_t bvhChecks;
     uint32_t triangleChecks;
-    float    varianceProba;
+    float varianceProba;
 };
-

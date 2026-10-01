@@ -66,11 +66,12 @@ void CompositingTable::generateDispatch() {
             "{}"
             "return result;\n"
             "}}\n\n",
-            CompositingTable::kType, plugin.getSlot(), GlslCodegen::declareGlobals(plugin), plugin.getDeclarations(), funcName,
+            CompositingTable::kType, plugin.getSlot(), GlslCodegen::declareGlobals(plugin), plugin.getDeclarations(),
+            funcName,
             GlslCodegen::assignParams(plugin, [](int i) { return std::format("pluginParams.values[base+{}]", i); }),
-            plugin.getBody()
-        );
-        cases += std::format("        case {}: return {} (base, pixelCoord, texSize, passId);\n", plugin.getSlot(), funcName);
+            plugin.getBody());
+        cases += std::format("        case {}: return {} (base, pixelCoord, texSize, passId);\n", plugin.getSlot(),
+                             funcName);
     });
 
     std::string content = std::format(
@@ -83,8 +84,7 @@ void CompositingTable::generateDispatch() {
         "    }}\n"
         "    return sampleSource(pixelCoord, texSize);\n"
         "}}\n",
-        functions, cases
-    );
+        functions, cases);
 
     GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/compositing_dispatch.glsl", content);
 }

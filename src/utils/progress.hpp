@@ -5,7 +5,7 @@
 #include <string_view>
 
 struct ProgressStats {
-    float  progress;
+    float progress;
     double elapsed;
     double eta;
     double rate;
@@ -13,7 +13,7 @@ struct ProgressStats {
 
 class ProgressTimer {
 public:
-    void   start();
+    void start();
     double elapsed() const;
     double eta(float progress) const;
     ProgressStats stats(uint32_t current, uint32_t total) const;
@@ -37,10 +37,10 @@ private:
     void redraw();
 
     ProgressTimer timer;
-    std::string   prefix;
-    std::string   postfix;
-    uint32_t      total;
-    uint32_t      current = 0;
-    std::string   unit;
-    int           width;
+    std::string prefix;
+    std::string postfix;
+    uint32_t total;
+    uint32_t current = 0;
+    std::string unit;
+    int width;
 };

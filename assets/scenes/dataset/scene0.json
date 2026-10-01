@@ -4,9 +4,16 @@
     "Materials": [
         {
             "name": "Floor",
-            "programmable": { "albedo": [0.32, 0.32, 0.32] }
+            "programmable": {
+                "albedo": [0.32, 0.32, 0.32]
+            }
         },
-        { "name": "Top", "diffuse": { "albedo": [0.9, 0.9, 0.9] } },
+        {
+            "name": "Top",
+            "diffuse": {
+                "albedo": [0.9, 0.9, 0.9]
+            }
+        },
         {
             "name": "Back",
             "glossy": {
@@ -33,11 +40,16 @@
         },
         {
             "name": "Front",
-            "diffuse": { "albedo": [0.08, 0.08, 0.08] }
+            "diffuse": {
+                "albedo": [0.08, 0.08, 0.08]
+            }
         },
         {
             "name": "Light",
-            "emissive": { "albedo": [1.0, 0.72, 0.38], "emission_strength": 400 }
+            "emissive": {
+                "albedo": [1.0, 0.72, 0.38],
+                "emission_strength": 400
+            }
         },
         {
             "name": "DragonGlass",
@@ -49,29 +61,59 @@
         },
         {
             "name": "Pedestal",
-            "glossy": { "albedo": [1, 1, 1], "roughness": 0.0, "ior": 12.0 }
+            "glossy": {
+                "albedo": [1, 1, 1],
+                "roughness": 0.0,
+                "ior": 12.0
+            }
         }
     ],
     "Assets": [
         {
             "name": "dragon",
-            "mesh": { "path": "./assets/models/dragon.obj" }
+            "mesh": {
+                "path": "./assets/models/dragon.obj"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": { "rand": { "min": 43.4558, "max": 57.0887 } } },
+            "camera": {
+                "focal_length": {
+                    "rand": {
+                        "min": 43.4558,
+                        "max": 57.0887
+                    }
+                }
+            },
             "name": "Camera",
             "spherical": {
-                "radius": { "rand": { "min": 10, "max": 20 } },
-                "azimuth": { "rand": { "min": 0, "max": 360 } },
-                "elevation": { "rand": { "min": -10, "max": 45 } },
+                "radius": {
+                    "rand": {
+                        "min": 10,
+                        "max": 20
+                    }
+                },
+                "azimuth": {
+                    "rand": {
+                        "min": 0,
+                        "max": 360
+                    }
+                },
+                "elevation": {
+                    "rand": {
+                        "min": -10,
+                        "max": 45
+                    }
+                },
                 "target": [0, 0, 0]
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Floor" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "Bottom",
             "transform": {
                 "position": [0, -4, 0],
@@ -80,8 +122,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Top" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Top"
+            },
             "name": "Top",
             "transform": {
                 "position": [0, 4, 0],
@@ -90,8 +134,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Back" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Back"
+            },
             "name": "Back",
             "transform": {
                 "position": [0, 0, 4],
@@ -100,8 +146,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Left" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Left"
+            },
             "name": "Left",
             "transform": {
                 "position": [-4, 0, 0],
@@ -110,8 +158,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Right" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Right"
+            },
             "name": "Right",
             "transform": {
                 "position": [4, 0, 0],
@@ -120,20 +170,34 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "Front" },
+            "quad": {},
+            "material_ref": {
+                "handle": "Front"
+            },
             "name": "Front",
-            "transform": { "position": [0, 0, -4], "scale": [8, 8, 1] }
+            "transform": {
+                "position": [0, 0, -4],
+                "scale": [8, 8, 1]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Light" },
+            "box": {},
+            "material_ref": {
+                "handle": "Light"
+            },
             "name": "Light",
-            "transform": { "position": [0, 3.99, 0], "scale": [0.3, 0.01, 0.3] }
+            "transform": {
+                "position": [0, 3.99, 0],
+                "scale": [0.3, 0.01, 0.3]
+            }
         },
         {
-            "mesh_ref": { "handle": "dragon" },
-            "material_ref": { "handle": "DragonGlass" },
+            "mesh_ref": {
+                "handle": "dragon"
+            },
+            "material_ref": {
+                "handle": "DragonGlass"
+            },
             "name": "Dragon",
             "transform": {
                 "position": [0, -1.4, 0.2],
@@ -142,16 +206,26 @@
             }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Pedestal" },
+            "box": {},
+            "material_ref": {
+                "handle": "Pedestal"
+            },
             "name": "Pedestal",
-            "transform": { "position": [0, -3.55, 0], "scale": [3.25, 0.45, 2.4] }
+            "transform": {
+                "position": [0, -3.55, 0],
+                "scale": [3.25, 0.45, 2.4]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Floor" },
+            "box": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "PedestalBorder",
-            "transform": { "position": [0, -3.56, 0], "scale": [3.29, 0.44, 2.44] }
+            "transform": {
+                "position": [0, -3.56, 0],
+                "scale": [3.29, 0.44, 2.44]
+            }
         }
     ]
 }

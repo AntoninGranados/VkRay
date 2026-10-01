@@ -29,8 +29,7 @@ void InspectorPanel::draw() {
 
         ImGui::Text("Add Component");
         ImGui::SameLine();
-        if (ui::plusButton("AddComponent"))
-            openNewComponentPopup = true;
+        if (ui::plusButton("AddComponent")) openNewComponentPopup = true;
 
         auto& reg = scene.getRegistry();
         auto& uiReg = ecs::ComponentUiRegistry::get();
@@ -49,11 +48,9 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
     std::vector<const ecs::ComponentType*> sortedTypes;
     for (const ecs::ComponentType& ct : ecs::ComponentType::all()) sortedTypes.push_back(&ct);
-    std::stable_sort(sortedTypes.begin(), sortedTypes.end(),
-        [](const ecs::ComponentType* a, const ecs::ComponentType* b) {
-            return a->getGroup() < b->getGroup();
-        }
-    );
+    std::stable_sort(
+        sortedTypes.begin(), sortedTypes.end(),
+        [](const ecs::ComponentType* a, const ecs::ComponentType* b) { return a->getGroup() < b->getGroup(); });
 
     std::unordered_map<std::string, const ecs::ComponentType*> typeById;
     for (const ecs::ComponentType* ct : sortedTypes) typeById[ct->getId()] = ct;
@@ -89,7 +86,7 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
         if (disabled) ImGui::BeginDisabled();
 
         const std::string label = type->getIcon() + " " + type->getLabel();
-        if (ImGui::Button(label.c_str(), { -FLT_MIN, 0 })) {
+        if (ImGui::Button(label.c_str(), {-FLT_MIN, 0})) {
             registry.add(entity, *type);
             Core::markRenderDirty();
             ImGui::CloseCurrentPopup();
@@ -97,17 +94,13 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
         if (disabled) ImGui::EndDisabled();
 
-        const bool hasTooltip = alreadyPresent
-            || !type->getDescription().empty()
-            || !type->getConflicts().empty()
-            || !type->getNeeds().empty();
+        const bool hasTooltip = alreadyPresent || !type->getDescription().empty() || !type->getConflicts().empty() ||
+                                !type->getNeeds().empty();
 
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && hasTooltip) {
             ImGui::BeginTooltip();
-            if (alreadyPresent)
-                ImGui::TextDisabled("Already added");
-            if (!type->getDescription().empty())
-                ImGui::TextUnformatted(type->getDescription().c_str());
+            if (alreadyPresent) ImGui::TextDisabled("Already added");
+            if (!type->getDescription().empty()) ImGui::TextUnformatted(type->getDescription().c_str());
             if (!type->getConflicts().empty()) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Conflicts:");
                 for (const auto& cid : type->getConflicts()) {

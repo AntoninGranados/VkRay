@@ -12,7 +12,8 @@
 static void startRender(const char* paramPath, auto startFn) {
     auto path = Core::getParameters().get<std::filesystem::path>(paramPath);
     if (path.empty()) {
-        Log::error("Renderer", std::format("No output path set for '{}', configure it in the parameters panel.", paramPath));
+        Log::error("Renderer",
+                   std::format("No output path set for '{}', configure it in the parameters panel.", paramPath));
         return;
     }
     Core::setOutputPath(path);
@@ -24,9 +25,9 @@ static void startRender(const char* paramPath, auto startFn) {
 void RendererPanel::draw() {
     ui::setNextWindowFixed();
     ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [] {
-        if (ImGui::Button(ICON_FA_PLAY " Render", { -FLT_MIN, 0 }))
+        if (ImGui::Button(ICON_FA_PLAY " Render", {-FLT_MIN, 0}))
             startRender("renderer/output/output_image", Core::startRender);
-        if (ImGui::Button(ICON_FA_FILM " Render Animation", { -FLT_MIN, 0 }))
+        if (ImGui::Button(ICON_FA_FILM " Render Animation", {-FLT_MIN, 0}))
             startRender("renderer/output/output_video", Core::startRenderAnim);
 
         ImGui::Separator();

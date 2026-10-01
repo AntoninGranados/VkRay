@@ -9,6 +9,8 @@
 
 namespace ecs {
 
+// clang-format off
+
 inline const ComponentType Collider = ComponentType::builder("collider")
     .description("Physics collider shape.")
     .icon(ICON_FA_SQUARE)
@@ -27,4 +29,6 @@ inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
     .payload<physics_detail::BodyState>("state")
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

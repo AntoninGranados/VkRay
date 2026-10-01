@@ -3,36 +3,51 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/day_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/day_sky.glsl"
+            }
         }
     ],
     "Materials": [
         {
             "name": "Floor",
-            "programmable": { "path": "assets/materials/voronoi.glsl" }
+            "programmable": {
+                "path": "assets/materials/voronoi.glsl"
+            }
         },
         {
             "name": "Cube",
-            "programmable": { "path": "assets/materials/brick.glsl" }
+            "programmable": {
+                "path": "assets/materials/brick.glsl"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": {  },
+            "camera": {},
             "name": "Camera",
-            "transform": { "position": [0, 0, -10], "rotation": [0, 180, 0] }
+            "transform": {
+                "position": [0, 0, -10],
+                "rotation": [0, 180, 0]
+            }
         },
         {
-            "plane": {  },
-            "material_ref": { "handle": "Floor" },
+            "plane": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "Floor",
-            "transform": { "position": [0, -1, 0] }
+            "transform": {
+                "position": [0, -1, 0]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Cube" },
+            "box": {},
+            "material_ref": {
+                "handle": "Cube"
+            },
             "name": "Cube",
-            "transform": {  }
+            "transform": {}
         }
     ]
 }

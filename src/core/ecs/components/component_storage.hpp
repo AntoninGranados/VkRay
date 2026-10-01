@@ -3,8 +3,8 @@
 #include <cassert>
 #include <vector>
 
-#include "core/ecs/entity.hpp"
 #include "component.hpp"
+#include "core/ecs/entity.hpp"
 
 namespace ecs {
 
@@ -29,8 +29,7 @@ public:
     Component& add(const Entity& e, const ComponentType& prototype) {
         ensureSparseSize(e.getId());
         int index = sparse[e.getId()];
-        if (index >= 0 && denseEntities[index].getGen() == e.getGen())
-            return dense[index];
+        if (index >= 0 && denseEntities[index].getGen() == e.getGen()) return dense[index];
         sparse[e.getId()] = static_cast<int>(dense.size());
         dense.emplace_back(prototype);
         denseEntities.push_back(e);
@@ -57,8 +56,7 @@ public:
 
 private:
     void ensureSparseSize(uint32_t id) {
-        if (sparse.size() <= id)
-            sparse.resize(id + 1, -1);
+        if (sparse.size() <= id) sparse.resize(id + 1, -1);
     }
 
     std::vector<Component> dense;

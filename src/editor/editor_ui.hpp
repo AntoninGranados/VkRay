@@ -21,26 +21,26 @@ public:
     EditorUi();
     void draw(const CommandBuffer& commandBuffer);
 
-    bool isMouseCaptured()    { return capturesMouse; }
+    bool isMouseCaptured() { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }
 
-    ImVec2      getViewportSize()            const { return viewportPanel.getSize(); }
-    ImVec2      getViewportPos()             const { return viewportPanel.getPos(); }
-    ImDrawList* getViewportDrawList()        const { return viewportPanel.getDrawList(); }
+    ImVec2 getViewportSize() const { return viewportPanel.getSize(); }
+    ImVec2 getViewportPos() const { return viewportPanel.getPos(); }
+    ImDrawList* getViewportDrawList() const { return viewportPanel.getDrawList(); }
 
 private:
-    StatsPanel          statsPanel;
-    AnimationPanel      animationPanel;
+    StatsPanel statsPanel;
+    AnimationPanel animationPanel;
     RenderProgressPanel renderPanel;
-    RendererPanel       renderParameterPanel;
-    ScenePanel          scenePanel;
-    InspectorPanel      inspectorPanel;
-    DebugPanel          debugPanel;
-    ViewportPanel       viewportPanel;
+    RendererPanel renderParameterPanel;
+    ScenePanel scenePanel;
+    InspectorPanel inspectorPanel;
+    DebugPanel debugPanel;
+    ViewportPanel viewportPanel;
     RenderViewportPanel renderViewportPanel;
-    ToastNotifications  toastNotifications;
+    ToastNotifications toastNotifications;
 
-    bool capturesMouse    = false;
+    bool capturesMouse = false;
     bool capturesKeyboard = false;
 
     static void initStyle();

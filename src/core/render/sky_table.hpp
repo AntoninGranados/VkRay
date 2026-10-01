@@ -6,13 +6,15 @@
 
 #include "core/ecs/entity.hpp"
 
-namespace ecs { class Registry; }
+namespace ecs {
+class Registry;
+}
 
 namespace SkyTable {
-    inline const std::string kType = "sky";
-    inline constexpr int kVersion = 1;
+inline const std::string kType = "sky";
+inline constexpr int kVersion = 1;
 
-    int slotFor(const std::filesystem::path& path);
-    void generateDispatch();
-    bool pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
-}
+int slotFor(const std::filesystem::path& path);
+void generateDispatch();
+bool pack(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
+} // namespace SkyTable

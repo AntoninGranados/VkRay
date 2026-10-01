@@ -35,8 +35,10 @@ void Editor::clearSelectedEntity() { get().selectedEntity.reset(); }
 
 void Editor::selectEntity(std::optional<ecs::Entity> entity) {
     const bool changed = get().selectedEntity != entity;
-    if (entity.has_value()) setSelectedEntity(*entity);
-    else clearSelectedEntity();
+    if (entity.has_value())
+        setSelectedEntity(*entity);
+    else
+        clearSelectedEntity();
 
     if (changed) Core::markRenderDirty();
 }
@@ -49,11 +51,8 @@ void Editor::stepAnimation(float deltaTime) {
 void Editor::handleViewportResize() {
     ImVec2 vpSize = get().ui.getViewportSize();
     float xscale = 1.0f, yscale = 1.0f;
-    glfwGetWindowContentScale(static_cast<GLFWwindow *>(Core::getPlatform().getNativeWindowHandle()), &xscale, &yscale);
-    VkExtent2D vpExtent = {
-        static_cast<uint32_t>(vpSize.x * xscale),
-        static_cast<uint32_t>(vpSize.y * yscale)
-    };
+    glfwGetWindowContentScale(static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), &xscale, &yscale);
+    VkExtent2D vpExtent = {static_cast<uint32_t>(vpSize.x * xscale), static_cast<uint32_t>(vpSize.y * yscale)};
     if (Core::getRenderMode() == RenderMode::Preview && vpExtent.width > 0 && vpExtent.height > 0) {
         const int pixelScale = std::max(1, Core::getParameters().get<int>("renderer/viewport/pixel_scale"));
         Core::requestResize(vpExtent.width / pixelScale, vpExtent.height / pixelScale);
@@ -75,7 +74,8 @@ void Editor::handleRenderModeCompletion() {
 
     if (Core::getRenderMode() == RenderMode::RenderAnimation) {
         const auto cacheDir = Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache");
-        Core::getCoreRenderer().saveCapture(ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
+        Core::getCoreRenderer().saveCapture(
+            ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
         Core::getAnimation().stepFixed();
         if (Core::getAnimation().getFrame() == 0) {
             ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir);
@@ -94,7 +94,8 @@ void Editor::run() {
 
     while (!Core::getEngine().shouldTerminate()) {
         auto currentTime = std::chrono::high_resolution_clock::now();
-        const float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        const float deltaTime =
+            std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         startTime = currentTime;
 
         stepAnimation(deltaTime);
@@ -105,7 +106,7 @@ void Editor::run() {
         handleViewportResize();
         handleRenderModeCompletion();
 
-        Core::renderFrame([&](FrameContext &frameContext) {
+        Core::renderFrame([&](FrameContext& frameContext) {
             get().editorRenderer.render(frameContext);
             get().materialPreview.tick(frameContext);
             Core::getEngine().present();

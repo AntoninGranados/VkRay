@@ -2,23 +2,23 @@
 
 #include <array>
 
-#include "imgui/imgui.h"
 #include "VkSmol/graph/builder_resource.hpp"
+#include "imgui/imgui.h"
 
 #include "panel.hpp"
 
-class StatsPanel: public Panel {
+class StatsPanel : public Panel {
 public:
     std::string getTitle() const override { return "FPS"; }
     void draw() override;
 
 private:
     static constexpr int kHistorySize = 128;
-    static constexpr int kNumPasses   = 5;
+    static constexpr int kNumPasses = 5;
 
     struct PassInfo {
-        const char*     name;
-        ImU32           color;
+        const char* name;
+        ImU32 color;
         TimestampHandle timestamp;
     };
 
@@ -27,7 +27,7 @@ private:
     };
 
     std::array<FrameSample, kHistorySize> history = {};
-    int  historyHead  = 0;
-    int  historyCount = 0;
-    bool showGraph    = false;
+    int historyHead = 0;
+    int historyCount = 0;
+    bool showGraph = false;
 };

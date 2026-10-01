@@ -1,9 +1,9 @@
 #include "mesh_simplify.hpp"
 
+#include <cmath>
+#include <queue>
 #include <unordered_set>
 #include <vector>
-#include <queue>
-#include <cmath>
 
 namespace {
 
@@ -22,9 +22,8 @@ struct Edge {
 };
 
 struct EdgeCompare {
-    bool operator()(const Edge& a, const Edge& b) const {  return a.cost > b.cost; }
+    bool operator()(const Edge& a, const Edge& b) const { return a.cost > b.cost; }
 };
-
 
 // Plane equation from triangle
 glm::mat4 planeQuadric(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2) {
@@ -42,11 +41,7 @@ float quadricError(const glm::mat4& q, const glm::vec3& v) {
 }
 
 bool solveOptimalPosition(const glm::mat4& q, glm::vec3& out) {
-    glm::mat3 a(
-        q[0][0], q[0][1], q[0][2],
-        q[1][0], q[1][1], q[1][2],
-        q[2][0], q[2][1], q[2][2]
-    );
+    glm::mat3 a(q[0][0], q[0][1], q[0][2], q[1][0], q[1][1], q[1][2], q[2][0], q[2][1], q[2][2]);
     glm::vec3 b(-q[0][3], -q[1][3], -q[2][3]);
     float det = glm::determinant(a);
     if (std::abs(det) < 1e-8f) { return false; }
@@ -83,21 +78,14 @@ void remapIndices(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
     vertices.swap(newVertices);
 }
 
-Edge computeEdge(
-    uint32_t v0,
-    uint32_t v1,
-    const std::vector<glm::mat4>& quadric,
-    const std::vector<Vertex>& vertices,
-    const std::vector<uint32_t>& version
-) {
+Edge computeEdge(uint32_t v0, uint32_t v1, const std::vector<glm::mat4>& quadric, const std::vector<Vertex>& vertices,
+                 const std::vector<uint32_t>& version) {
     if (v1 < v0) std::swap(v0, v1);
     glm::mat4 q = quadric[v0] + quadric[v1];
     glm::vec3 pos;
-    if (!solveOptimalPosition(q, pos)) {
-        pos = 0.5f * (vertices[v0].position + vertices[v1].position);
-    }
+    if (!solveOptimalPosition(q, pos)) { pos = 0.5f * (vertices[v0].position + vertices[v1].position); }
     float cost = quadricError(q, pos);
-    return Edge{ v0, v1, pos, cost, version[v0], version[v1] };
+    return Edge{v0, v1, pos, cost, version[v0], version[v1]};
 }
 
 } // namespace
@@ -123,8 +111,8 @@ MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
     std::vector<bool> active(vertices.size(), true);
     std::vector<glm::mat4> quadric(vertices.size(), glm::mat4(0.0f));
     std::vector<uint32_t> version(vertices.size(), 0);
-    std::vector<std::vector<uint32_t> > vertFaces(vertices.size());
-    std::vector<std::unordered_set<uint32_t> > neighbors(vertices.size());
+    std::vector<std::vector<uint32_t>> vertFaces(vertices.size());
+    std::vector<std::unordered_set<uint32_t>> neighbors(vertices.size());
 
     for (uint32_t fi = 0; fi < faces.size(); fi++) {
         Face& face = faces[fi];
@@ -154,8 +142,7 @@ MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
 
     size_t liveTris = 0;
     for (const Face& f : faces) {
-        if (f.alive)
-            liveTris++;
+        if (f.alive) liveTris++;
     }
 
     std::priority_queue<Edge, std::vector<Edge>, EdgeCompare> heap;
@@ -210,9 +197,7 @@ MeshAsset simplifyMesh(const MeshAsset& input, float targetRatio) {
         neighbors[v0].erase(v0);
 
         // Recompute edge costs for v0 neighborhood.
-        for (uint32_t n : neighbors[v0]) {
-            heap.push(computeEdge(v0, n, quadric, vertices, version));
-        }
+        for (uint32_t n : neighbors[v0]) { heap.push(computeEdge(v0, n, quadric, vertices, version)); }
     }
 
     indices.clear();

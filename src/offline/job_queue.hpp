@@ -13,12 +13,12 @@ public:
     void cancel(size_t index);
     void clearPending();
 
-    bool isEmpty()   const;
+    bool isEmpty() const;
     bool isRunning() const;
 
     const std::vector<Job>& entries() const;
 
-    Job*       nextPending();
+    Job* nextPending();
     const Job* running() const;
 
     void setProgress(float progress);
@@ -27,5 +27,5 @@ public:
 
 private:
     std::vector<Job> jobs;
-    int              runningIndex = -1;
+    int runningIndex = -1;
 };

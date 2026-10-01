@@ -8,7 +8,7 @@
 static constexpr int kMaterialPayloadSize = 12;
 
 struct GpuMaterial {
-    int      type;
+    int type;
     uint32_t base;
 };
 
@@ -41,15 +41,14 @@ struct GpuMesh {
     uint32_t hasVertexColor;
 };
 
-
 // Objects
 enum class ObjectType : int {
-    None   = 0,
+    None = 0,
     Sphere = 1,
-    Plane  = 2,
-    Box    = 3,
-    Quad   = 4,
-    Mesh   = 5,
+    Plane = 2,
+    Box = 3,
+    Quad = 4,
+    Mesh = 5,
     Camera = 6,
 };
 

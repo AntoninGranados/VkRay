@@ -19,4 +19,5 @@ float raySphereIntersection(const Ray& ray, const glm::mat4& transform);
 float rayPlaneIntersection(const Ray& ray, const glm::mat4& transform);
 float rayBoxIntersection(const Ray& ray, const glm::mat4& transform);
 float rayQuadIntersection(const Ray& ray, const glm::mat4& transform);
-float rayMeshIntersection(const Ray& ray, const glm::mat4& transform, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+float rayMeshIntersection(const Ray& ray, const glm::mat4& transform, const std::vector<Vertex>& vertices,
+                          const std::vector<uint32_t>& indices);

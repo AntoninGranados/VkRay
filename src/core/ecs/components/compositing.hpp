@@ -24,6 +24,8 @@ public:
     int selected = -1;
 };
 
+// clang-format off
+
 inline const ComponentType Compositing = ComponentType::builder("compositing")
     .description("Compositing chain, an ordered list of programmable passes.")
     .icon(ICON_FA_LAYER_GROUP)
@@ -32,4 +34,6 @@ inline const ComponentType Compositing = ComponentType::builder("compositing")
     .payload<CompositingPasses>("passes")
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

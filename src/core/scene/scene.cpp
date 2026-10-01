@@ -26,37 +26,29 @@ void Scene::initContext() {
     addDefaultAssets();
 }
 
-void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
-    registry.ctx().get<SceneGpuBuffers>() = handles;
-}
+void Scene::setGpuBufferHandles(SceneGpuBuffers handles) { registry.ctx().get<SceneGpuBuffers>() = handles; }
 
 void Scene::clear() {
     SceneGpuBuffers& gpuBuffers = registry.ctx().get<SceneGpuBuffers>();
-    gpuBuffers.vertex.capacity   = 0;
-    gpuBuffers.index.capacity    = 0;
-    gpuBuffers.bvh.capacity      = 0;
-    gpuBuffers.mesh.capacity     = 0;
+    gpuBuffers.vertex.capacity = 0;
+    gpuBuffers.index.capacity = 0;
+    gpuBuffers.bvh.capacity = 0;
+    gpuBuffers.mesh.capacity = 0;
     gpuBuffers.material.capacity = 0;
     gpuBuffers.pluginParams.capacity = 0;
-    gpuBuffers.object.capacity   = 0;
-    gpuBuffers.light.capacity    = 0;
-    gpuBuffers.motion.capacity   = 0;
+    gpuBuffers.object.capacity = 0;
+    gpuBuffers.light.capacity = 0;
+    gpuBuffers.motion.capacity = 0;
     gpuBuffers.liveMotion.capacity = 0;
     resetSceneState();
     addDefaultAssets();
 }
 
-const std::vector<ecs::Entity>& Scene::getChildren(ecs::Entity parent) const {
-    return registry.getChildren(parent);
-}
+const std::vector<ecs::Entity>& Scene::getChildren(ecs::Entity parent) const { return registry.getChildren(parent); }
 
-ecs::Entity Scene::getEnvironment() const {
-    return findSceneRootChild(registry, ecs::Environment);
-}
+ecs::Entity Scene::getEnvironment() const { return findSceneRootChild(registry, ecs::Environment); }
 
-ecs::Entity Scene::getCompositing() const {
-    return findSceneRootChild(registry, ecs::Compositing);
-}
+ecs::Entity Scene::getCompositing() const { return findSceneRootChild(registry, ecs::Compositing); }
 
 ecs::Entity Scene::findSceneRootChild(const ecs::Registry& registry, const ecs::ComponentType& type) {
     for (const ecs::Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
@@ -93,10 +85,10 @@ void Scene::resetSceneState() {
 
 void Scene::addDefaultAssets() {
     SceneRoots& sceneRoots = roots();
-    sceneRoots.sceneRoot     = createNamedEntity("Scene");
+    sceneRoots.sceneRoot = createNamedEntity("Scene");
     sceneRoots.materialsRoot = createNamedEntity("Materials");
-    sceneRoots.assetsRoot    = createNamedEntity("Assets");
-    sceneRoots.objectsRoot   = createNamedEntity("Objects");
+    sceneRoots.assetsRoot = createNamedEntity("Assets");
+    sceneRoots.objectsRoot = createNamedEntity("Objects");
     sceneRoots.internalsRoot = createNamedEntity("Internals");
 
     defaultMaterial = createNamedEntity("Default Material", sceneRoots.materialsRoot);

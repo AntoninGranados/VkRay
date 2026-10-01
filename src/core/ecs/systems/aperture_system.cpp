@@ -19,14 +19,14 @@ void apertureSystem(Registry& registry) {
     auto& geometrics = registry.storage(GeometricAperture);
     for (const auto& e : geometrics.entities()) {
         const Component& c = geometrics.get(e);
-        int   blades   = c.get<int>("blades");
+        int blades = c.get<int>("blades");
         float rotation = c.get<float>("rotation");
         if (blades != state.lastBlades || rotation != state.lastRotation) {
             std::vector<uint8_t> data;
             aperture::makePolygon(data, blades, rotation);
             upload(std::move(data));
-            state.lastBlades      = blades;
-            state.lastRotation    = rotation;
+            state.lastBlades = blades;
+            state.lastRotation = rotation;
             state.defaultUploaded = false;
         }
         return;
@@ -40,7 +40,7 @@ void apertureSystem(Registry& registry) {
             std::vector<uint8_t> data;
             if (aperture::loadFromFile(data, path)) {
                 upload(std::move(data));
-                state.lastPath        = path;
+                state.lastPath = path;
                 state.defaultUploaded = false;
             }
         }
@@ -52,8 +52,8 @@ void apertureSystem(Registry& registry) {
         aperture::makeCircle(data);
         upload(std::move(data));
         state.defaultUploaded = true;
-        state.lastBlades      = -1;
-        state.lastRotation    = -1.0f;
+        state.lastBlades = -1;
+        state.lastRotation = -1.0f;
         state.lastPath.clear();
     }
 }

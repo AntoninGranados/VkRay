@@ -22,13 +22,15 @@ std::string GlslCodegen::assignParams(const ShaderPlugin& plugin, const std::fun
         for (int i = 0; i < p.components; i++) {
             if (i > 0) args += ", ";
             const std::string value = valueAt(offset + i);
-            if (p.isInt) args += std::format("int({})", value);
-            else if (p.isBool) args += std::format("bool({})", value);
-            else args += value;
+            if (p.isInt)
+                args += std::format("int({})", value);
+            else if (p.isBool)
+                args += std::format("bool({})", value);
+            else
+                args += value;
         }
-        assignments += p.components == 1
-            ? std::format("{} = {};\n", p.mangled, args)
-            : std::format("{} = {}({});\n", p.mangled, p.glslType, args);
+        assignments += p.components == 1 ? std::format("{} = {};\n", p.mangled, args)
+                                         : std::format("{} = {}({});\n", p.mangled, p.glslType, args);
         offset += p.components;
     }
     return assignments;
@@ -63,7 +65,8 @@ ShaderPlugin* GlslCodegen::findActivePlugin(const std::string& type) {
     return nullptr;
 }
 
-void GlslCodegen::forEachActivePlugin(const std::string& type, const std::function<void(ShaderPlugin&, const std::string&)>& fn) {
+void GlslCodegen::forEachActivePlugin(const std::string& type,
+                                      const std::function<void(ShaderPlugin&, const std::string&)>& fn) {
     std::unordered_set<int> emittedSlots;
     for (ShaderPlugin* plugin : ShaderPlugin::registry()) {
         if (!isActive(*plugin, type)) continue;

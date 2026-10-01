@@ -4,7 +4,9 @@
 
 #include "core/ecs/entity.hpp"
 
-namespace ecs { class Registry; }
+namespace ecs {
+class Registry;
+}
 
 namespace EditorCameraPreview {
 
@@ -12,4 +14,4 @@ void install();
 
 glm::vec2 frameExtent(const ecs::Registry& registry, ecs::Entity camera, float viewportAspect, float renderAspect);
 
-}
+} // namespace EditorCameraPreview

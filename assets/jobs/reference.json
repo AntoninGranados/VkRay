@@ -2,8 +2,8 @@
     "version": 1,
     "jobs": [
         {
-            "scene":   "assets/scenes/reference.json",
-            "output":  "snapshots/reference.png",
+            "scene": "assets/scenes/reference.json",
+            "output": "snapshots/reference.png",
             "samples": 16384,
             "render_size": [1080, 1080],
 

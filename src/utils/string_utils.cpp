@@ -29,8 +29,7 @@ std::vector<float> parseNumbers(const std::string& expr) {
         if (token.empty()) continue;
         try {
             values.push_back(std::stof(token));
-        } catch (...) {
-        }
+        } catch (...) {}
     }
     return values;
 }

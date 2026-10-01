@@ -17,8 +17,8 @@ public:
 
 private:
     std::unique_ptr<Platform> platform;
-    std::function<void()>     runFn;
-    std::vector<size_t>       shaderWatchIds;
+    std::function<void()> runFn;
+    std::vector<size_t> shaderWatchIds;
 
     void initEditorMode();
     void initOfflineMode(const std::string& jobFile);

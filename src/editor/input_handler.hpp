@@ -9,7 +9,7 @@ public:
     void handle(float dt);
 
 private:
-    static constexpr float kFrameStepRepeatDelay    = 0.4f;
+    static constexpr float kFrameStepRepeatDelay = 0.4f;
     static constexpr float kFrameStepRepeatInterval = 0.05f;
 
     std::unordered_map<int, bool> prevKeys;

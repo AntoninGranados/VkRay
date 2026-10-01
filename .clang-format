@@ -5,6 +5,7 @@ Standard: Latest
 IndentWidth: 4
 UseTab: Never
 ColumnLimit: 120
+AccessModifierOffset: -4
 
 BreakBeforeBraces: Attach
 NamespaceIndentation: None

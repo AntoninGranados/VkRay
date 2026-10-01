@@ -16,14 +16,12 @@ namespace {
 
 constexpr float kFeather = 2.0f / kSize;
 
-float circleCoverage(float x, float y) {
-    return glm::clamp((1.0f - std::sqrt(x * x + y * y)) / kFeather, 0.0f, 1.0f);
-}
+float circleCoverage(float x, float y) { return glm::clamp((1.0f - std::sqrt(x * x + y * y)) / kFeather, 0.0f, 1.0f); }
 
 float polygonCoverage(float x, float y, int blades, float rotationRad) {
-    const float r         = std::sqrt(x * x + y * y);
+    const float r = std::sqrt(x * x + y * y);
     const float invBlades = 1.0f / static_cast<float>(blades);
-    const float sector    = glm::two_pi<float>() * invBlades;
+    const float sector = glm::two_pi<float>() * invBlades;
     float theta = std::atan2(y, x) - rotationRad;
     theta = std::fmod(theta, sector);
     if (theta <= 0) theta += sector;
@@ -45,7 +43,10 @@ void makeCircle(std::vector<uint8_t>& out) {
 }
 
 void makePolygon(std::vector<uint8_t>& out, int blades, float rotationDeg) {
-    if (blades < 3) { makeCircle(out); return; }
+    if (blades < 3) {
+        makeCircle(out);
+        return;
+    }
     const float rotRad = glm::radians(rotationDeg);
     out.resize(kSize * kSize);
     for (int y = 0; y < kSize; ++y) {

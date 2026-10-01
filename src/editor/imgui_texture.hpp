@@ -25,4 +25,4 @@ private:
     ImTextureID id = 0;
 };
 
-}
+} // namespace ui

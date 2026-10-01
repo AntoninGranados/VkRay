@@ -4,9 +4,7 @@
 
 namespace ecs {
 
-ComponentType::Builder ComponentType::builder(std::string id) {
-    return ComponentType::Builder(std::move(id));
-}
+ComponentType::Builder ComponentType::builder(std::string id) { return ComponentType::Builder(std::move(id)); }
 
 ComponentType::Builder::Builder(std::string id) {
     type.label = snakeCaseToLabel(id);
@@ -30,9 +28,7 @@ ComponentType::Builder& ComponentType::Builder::group(std::string group) {
 
 std::vector<ComponentType> ComponentType::storage;
 
-const std::vector<ComponentType>& ComponentType::all() {
-    return storage;
-}
+const std::vector<ComponentType>& ComponentType::all() { return storage; }
 
 std::optional<std::reference_wrapper<const ComponentType>> ComponentType::find(const std::string& id) {
     for (const auto& t : storage)
@@ -45,8 +41,6 @@ ComponentType& ComponentType::Builder::build() {
     return ComponentType::storage.back();
 }
 
-ComponentType ComponentType::Builder::buildDetached() {
-    return std::move(type);
-}
+ComponentType ComponentType::Builder::buildDetached() { return std::move(type); }
 
 } // namespace ecs

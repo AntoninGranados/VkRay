@@ -6,7 +6,7 @@
 
 #include "utils/progress.hpp"
 
-class RenderProgressPanel: public Panel {
+class RenderProgressPanel : public Panel {
 public:
     std::string getTitle() const override { return ICON_FA_STOPWATCH " Loading"; }
     void draw() override;

@@ -6,7 +6,7 @@
 namespace {
 
 class GTestStyleReporter : public doctest::IReporter {
-  public:
+public:
     explicit GTestStyleReporter(const doctest::ContextOptions& in) : stream(*in.cout) {}
 
     void report_query(const doctest::QueryData& in) override {
@@ -52,7 +52,7 @@ class GTestStyleReporter : public doctest::IReporter {
     void log_message(const doctest::MessageData&) override {}
     void test_case_skipped(const doctest::TestCaseData&) override {}
 
-  private:
+private:
     std::ostream& stream;
     std::string currentName;
 };

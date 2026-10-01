@@ -27,9 +27,7 @@ std::string glslMacroName(const ecs::ComponentType& type, const Field& field) {
     return prefix + snakeCaseToPascalCase(field.getId().string());
 }
 
-bool isPackableField(const Field& field) {
-    return field.getId() != "albedo" && field.getType() == FieldType::Float;
-}
+bool isPackableField(const Field& field) { return field.getId() != "albedo" && field.getType() == FieldType::Float; }
 
 bool hasAlbedoField(const ecs::ComponentType& type) {
     for (const Field& field : type.getFields())
@@ -40,7 +38,9 @@ bool hasAlbedoField(const ecs::ComponentType& type) {
 void packFields(ecs::Component& c, std::vector<float>& params) {
     if (hasAlbedoField(c.getType())) {
         const glm::vec3 a = c.get<glm::vec3>("albedo");
-        params.push_back(a.r); params.push_back(a.g); params.push_back(a.b);
+        params.push_back(a.r);
+        params.push_back(a.g);
+        params.push_back(a.b);
     }
     for (const Field& field : c.getType().getFields()) {
         if (!isPackableField(field)) continue;
@@ -50,22 +50,23 @@ void packFields(ecs::Component& c, std::vector<float>& params) {
 
 const std::vector<Entry>& entries() {
     static const std::vector<Entry> table = {
-        { &ecs::Principled, {} },
-        { &ecs::Emissive, {} },
-        { &ecs::Diffuse, {} },
-        { &ecs::Metal, {} },
-        { &ecs::Glossy, {} },
-        { &ecs::Dielectric, {} },
-        { &ecs::Volume, {} },
-        { &ecs::MaterialPlugin, [](ecs::Component& c) -> std::vector<float> {
-            ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
-            const std::filesystem::path path = c.get<std::filesystem::path>("path");
-            plugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
-            std::vector<float> values{ static_cast<float>(plugin.getSlot()) };
-            const std::vector<float> packed = plugin.packValues();
-            values.insert(values.end(), packed.begin(), packed.end());
-            return values;
-        } },
+        {&ecs::Principled, {}},
+        {&ecs::Emissive, {}},
+        {&ecs::Diffuse, {}},
+        {&ecs::Metal, {}},
+        {&ecs::Glossy, {}},
+        {&ecs::Dielectric, {}},
+        {&ecs::Volume, {}},
+        {&ecs::MaterialPlugin,
+         [](ecs::Component& c) -> std::vector<float> {
+             ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
+             const std::filesystem::path path = c.get<std::filesystem::path>("path");
+             plugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
+             std::vector<float> values{static_cast<float>(plugin.getSlot())};
+             const std::vector<float> packed = plugin.packValues();
+             values.insert(values.end(), packed.begin(), packed.end());
+             return values;
+         }},
     };
     return table;
 }
@@ -148,17 +149,19 @@ void MaterialTable::generateDispatch() {
             "// ============================= {}{} =============================\n"
             "{}"
             "{}"
-            "ResolvedMaterial {} (int base, vec3 pos, vec2 uv, vec3 normal, vec3 wo, RngState rng, inout vec3 new_normal) {{\n"
+            "ResolvedMaterial {} (int base, vec3 pos, vec2 uv, vec3 normal, vec3 wo, RngState rng, inout vec3 "
+            "new_normal) {{\n"
             "{}"
             "ResolvedMaterial mat;\n"
             "{}"
             "return mat;\n"
             "}}\n\n",
-            MaterialTable::kType, plugin.getSlot(), GlslCodegen::declareGlobals(plugin), plugin.getDeclarations(), funcName,
+            MaterialTable::kType, plugin.getSlot(), GlslCodegen::declareGlobals(plugin), plugin.getDeclarations(),
+            funcName,
             GlslCodegen::assignParams(plugin, [](int i) { return std::format("pluginParams.values[base+{}]", i); }),
-            plugin.getBody()
-        );
-        cases += std::format("        case {}: result = {} (base, pos, uv, normal, wo, rng, new_normal); break;\n", plugin.getSlot(), funcName);
+            plugin.getBody());
+        cases += std::format("        case {}: result = {} (base, pos, uv, normal, wo, rng, new_normal); break;\n",
+                             plugin.getSlot(), funcName);
     });
 
     std::string content = std::format(
@@ -178,8 +181,7 @@ void MaterialTable::generateDispatch() {
         "    hit.normal = new_normal;\n"
         "    return result;\n"
         "}}\n",
-        functions, cases
-    );
+        functions, cases);
 
     GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/material_dispatch.glsl", content);
 }

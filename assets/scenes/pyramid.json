@@ -3,122 +3,193 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/sunset_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/sunset_sky.glsl"
+            }
         }
     ],
     "Materials": [
         {
             "name": "Floor",
-            "diffuse": { "albedo": [0.75, 0.75, 0.78] }
+            "diffuse": {
+                "albedo": [0.75, 0.75, 0.78]
+            }
         },
         {
             "name": "PyramidBox",
-            "diffuse": { "albedo": [0.75, 0.35, 0.25] }
+            "diffuse": {
+                "albedo": [0.75, 0.35, 0.25]
+            }
         },
         {
             "name": "Ball",
-            "metal": { "albedo": [1.0, 0.8, 0.3], "roughness": 0.05 }
+            "metal": {
+                "albedo": [1.0, 0.8, 0.3],
+                "roughness": 0.05
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": 31.1769 },
+            "camera": {
+                "focal_length": 31.1769
+            },
             "name": "Camera",
-            "transform": { "position": [0, 4, -12], "rotation": [-14.04, 180, 0] }
+            "transform": {
+                "position": [0, 4, -12],
+                "rotation": [-14.04, 180, 0]
+            }
         },
         {
-            "plane": {  },
-            "material_ref": { "handle": "Floor" },
+            "plane": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "Floor",
-            "transform": { "position": [0, -1, 0] },
-            "collider": { "restitution": 0.2, "friction": 0.8 }
+            "transform": {
+                "position": [0, -1, 0]
+            },
+            "collider": {
+                "restitution": 0.2,
+                "friction": 0.8
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "PyramidBox" },
+            "box": {},
+            "material_ref": {
+                "handle": "PyramidBox"
+            },
             "name": "Level0_{n}",
             "transform": {
                 "position": [
-                    { "lerp": { "from": -2.04, "to": 2.04, "axis": "n" } },
-                    -0.5,
-                    0
+                    {
+                        "lerp": {
+                            "from": -2.04,
+                            "to": 2.04,
+                            "axis": "n"
+                        }
+                    },
+                    -0.5, 0
                 ],
                 "scale": [0.5, 0.5, 0.5]
             },
-            "collider": {  },
-            "rigid_body": {  },
-            "repeat": { "count": 5 }
+            "collider": {},
+            "rigid_body": {},
+            "repeat": {
+                "count": 5
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "PyramidBox" },
+            "box": {},
+            "material_ref": {
+                "handle": "PyramidBox"
+            },
             "name": "Level1_{n}",
             "transform": {
                 "position": [
-                    { "lerp": { "from": -1.53, "to": 1.53, "axis": "n" } },
-                    0.52,
-                    0
+                    {
+                        "lerp": {
+                            "from": -1.53,
+                            "to": 1.53,
+                            "axis": "n"
+                        }
+                    },
+                    0.52, 0
                 ],
                 "scale": [0.5, 0.5, 0.5]
             },
-            "collider": {  },
-            "rigid_body": {  },
-            "repeat": { "count": 4 }
+            "collider": {},
+            "rigid_body": {},
+            "repeat": {
+                "count": 4
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "PyramidBox" },
+            "box": {},
+            "material_ref": {
+                "handle": "PyramidBox"
+            },
             "name": "Level2_{n}",
             "transform": {
                 "position": [
-                    { "lerp": { "from": -1.02, "to": 1.02, "axis": "n" } },
-                    1.54,
-                    0
+                    {
+                        "lerp": {
+                            "from": -1.02,
+                            "to": 1.02,
+                            "axis": "n"
+                        }
+                    },
+                    1.54, 0
                 ],
                 "scale": [0.5, 0.5, 0.5]
             },
-            "collider": {  },
-            "rigid_body": {  },
-            "repeat": { "count": 3 }
+            "collider": {},
+            "rigid_body": {},
+            "repeat": {
+                "count": 3
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "PyramidBox" },
+            "box": {},
+            "material_ref": {
+                "handle": "PyramidBox"
+            },
             "name": "Level3_{n}",
             "transform": {
                 "position": [
-                    { "lerp": { "from": -0.51, "to": 0.51, "axis": "n" } },
-                    2.56,
-                    0
+                    {
+                        "lerp": {
+                            "from": -0.51,
+                            "to": 0.51,
+                            "axis": "n"
+                        }
+                    },
+                    2.56, 0
                 ],
                 "scale": [0.5, 0.5, 0.5]
             },
-            "collider": {  },
-            "rigid_body": {  },
-            "repeat": { "count": 2 }
+            "collider": {},
+            "rigid_body": {},
+            "repeat": {
+                "count": 2
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "PyramidBox" },
+            "box": {},
+            "material_ref": {
+                "handle": "PyramidBox"
+            },
             "name": "Level4",
-            "transform": { "position": [0, 3.58, 0], "scale": [0.5, 0.5, 0.5] },
-            "collider": {  },
-            "rigid_body": {  }
+            "transform": {
+                "position": [0, 3.58, 0],
+                "scale": [0.5, 0.5, 0.5]
+            },
+            "collider": {},
+            "rigid_body": {}
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "Ball" },
+            "material_ref": {
+                "handle": "Ball"
+            },
             "name": "Ball",
             "transform": {
                 "position": {
                     "anim": [
-                        { "frame": 0, "value": [0, 0, -5], "ease": "ease_in_out" },
-                        { "frame": 24, "value": [0, 0, 5] }
+                        {
+                            "frame": 0,
+                            "value": [0, 0, -5],
+                            "ease": "ease_in_out"
+                        },
+                        {
+                            "frame": 24,
+                            "value": [0, 0, 5]
+                        }
                     ]
                 },
                 "scale": [0.5, 0.5, 0.5]
             },
-            "collider": {  }
+            "collider": {}
         }
     ]
 }

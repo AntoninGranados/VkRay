@@ -53,7 +53,7 @@ private:
     void load(bool migrate);
 
     ecs::ComponentType schema;
-    ecs::Component params { schema };
+    ecs::Component params{schema};
 
     std::optional<std::filesystem::path> path;
     std::string type;

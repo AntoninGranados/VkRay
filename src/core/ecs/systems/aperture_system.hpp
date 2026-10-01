@@ -7,8 +7,8 @@
 namespace ecs {
 
 struct ApertureState {
-    int  lastBlades      = -1;
-    float lastRotation   = -1.0f;
+    int lastBlades = -1;
+    float lastRotation = -1.0f;
     std::filesystem::path lastPath;
     bool defaultUploaded = false;
 };

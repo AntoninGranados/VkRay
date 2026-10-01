@@ -21,9 +21,7 @@ std::optional<std::pair<std::string, int>> parseMarker(const std::string& line) 
 
     try {
         return std::make_pair(rest.substr(0, colon), std::stoi(rest.substr(colon + 1)));
-    } catch (...) {
-        return std::nullopt;
-    }
+    } catch (...) { return std::nullopt; }
 }
 
 std::optional<std::pair<std::string, int>> resolveOrigin(const std::filesystem::path& generatedFile, int line) {
@@ -55,7 +53,8 @@ std::string ShaderSourceMap::remapError(const std::string& message) {
         const std::smatch& match = *it;
         result += message.substr(lastPos, match.position() - lastPos);
 
-        const std::optional<std::pair<std::string, int>> origin = resolveOrigin(match[1].str(), std::stoi(match[2].str()));
+        const std::optional<std::pair<std::string, int>> origin =
+            resolveOrigin(match[1].str(), std::stoi(match[2].str()));
         result += origin ? std::format("{}:{}:", origin->first, origin->second) : match.str();
 
         lastPos = match.position() + match.length();

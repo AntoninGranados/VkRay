@@ -3,29 +3,49 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/day_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/day_sky.glsl"
+            }
         }
     ],
     "Materials": [
-        { "name": "Sponza", "diffuse": { "albedo": [1, 1, 1] } }
+        {
+            "name": "Sponza",
+            "diffuse": {
+                "albedo": [1, 1, 1]
+            }
+        }
     ],
     "Assets": [
         {
             "name": "sponza",
-            "mesh": { "path": "./assets/models/sponza.obj" }
+            "mesh": {
+                "path": "./assets/models/sponza.obj"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": 25.7067 },
+            "camera": {
+                "focal_length": 25.7067
+            },
             "name": "Camera",
-            "transform": { "position": [0, 3, -5], "rotation": [0, 180, 0] }
+            "transform": {
+                "position": [0, 3, -5],
+                "rotation": [0, 180, 0]
+            }
         },
         {
-            "mesh_ref": { "handle": "sponza" },
-            "material_ref": { "handle": "Sponza" },
+            "mesh_ref": {
+                "handle": "sponza"
+            },
+            "material_ref": {
+                "handle": "Sponza"
+            },
             "name": "Sponza",
-            "transform": { "scale": [0.04, 0.04, 0.04] }
+            "transform": {
+                "scale": [0.04, 0.04, 0.04]
+            }
         }
     ]
 }

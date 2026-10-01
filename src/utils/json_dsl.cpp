@@ -19,9 +19,7 @@ static float randRange(float lo, float hi, const ResolveCtx& ctx) {
     return lo + std::uniform_real_distribution<float>(0.0f, 1.0f)(ctx.rng) * (hi - lo);
 }
 
-static float compOf(const json& v, int i) {
-    return (v.is_array() ? v[i] : v).get<float>();
-}
+static float compOf(const json& v, int i) { return (v.is_array() ? v[i] : v).get<float>(); }
 
 static float lerpAxis(float from, float to, const std::string& axis, const ResolveCtx& ctx) {
     const auto it = ctx.tokens.find(axis);
@@ -48,22 +46,18 @@ float resolveFloat(const json& v, const ResolveCtx& ctx) {
 }
 
 glm::vec2 resolveVec2(const json& v, const ResolveCtx& ctx) {
-    if (v.is_array() && v.size() >= 2)
-        return { resolveFloat(v[0], ctx), resolveFloat(v[1], ctx) };
+    if (v.is_array() && v.size() >= 2) return {resolveFloat(v[0], ctx), resolveFloat(v[1], ctx)};
     if (v.is_object()) {
         if (v.contains("rand")) {
             const auto& r = v["rand"];
-            return { randRange(compOf(r["min"],0), compOf(r["max"],0), ctx),
-                     randRange(compOf(r["min"],1), compOf(r["max"],1), ctx) };
+            return {randRange(compOf(r["min"], 0), compOf(r["max"], 0), ctx),
+                    randRange(compOf(r["min"], 1), compOf(r["max"], 1), ctx)};
         }
         if (v.contains("lerp")) {
             const auto& l = v["lerp"];
             const std::string axis = l.value("axis", "col");
             const glm::vec2 from = resolveVec2(l["from"], ctx), to = resolveVec2(l["to"], ctx);
-            return {
-                lerpAxis(from.x, to.x, axis, ctx),
-                lerpAxis(from.y, to.y, axis, ctx)
-            };
+            return {lerpAxis(from.x, to.x, axis, ctx), lerpAxis(from.y, to.y, axis, ctx)};
         }
     }
     return {};
@@ -71,23 +65,20 @@ glm::vec2 resolveVec2(const json& v, const ResolveCtx& ctx) {
 
 glm::vec3 resolveVec3(const json& v, const ResolveCtx& ctx) {
     if (v.is_array() && v.size() >= 3)
-        return { resolveFloat(v[0], ctx), resolveFloat(v[1], ctx), resolveFloat(v[2], ctx) };
+        return {resolveFloat(v[0], ctx), resolveFloat(v[1], ctx), resolveFloat(v[2], ctx)};
     if (v.is_object()) {
         if (v.contains("rand")) {
             const auto& r = v["rand"];
-            return { randRange(compOf(r["min"],0), compOf(r["max"],0), ctx),
-                     randRange(compOf(r["min"],1), compOf(r["max"],1), ctx),
-                     randRange(compOf(r["min"],2), compOf(r["max"],2), ctx) };
+            return {randRange(compOf(r["min"], 0), compOf(r["max"], 0), ctx),
+                    randRange(compOf(r["min"], 1), compOf(r["max"], 1), ctx),
+                    randRange(compOf(r["min"], 2), compOf(r["max"], 2), ctx)};
         }
         if (v.contains("lerp")) {
             const auto& l = v["lerp"];
             const std::string axis = l.value("axis", "col");
             const glm::vec3 from = resolveVec3(l["from"], ctx), to = resolveVec3(l["to"], ctx);
-            return {
-                lerpAxis(from.x, to.x, axis, ctx),
-                lerpAxis(from.y, to.y, axis, ctx),
-                lerpAxis(from.z, to.z, axis, ctx)
-            };
+            return {lerpAxis(from.x, to.x, axis, ctx), lerpAxis(from.y, to.y, axis, ctx),
+                    lerpAxis(from.z, to.z, axis, ctx)};
         }
     }
     return {};
@@ -160,8 +151,12 @@ static std::string inlineJson(const json& j) {
     return j.dump();
 }
 
-static bool isInlineVector(const json& v) { return v.is_array() && std::all_of(v.begin(), v.end(), [](const json& e){ return e.is_number(); }); }
-static bool isInlineExpression(const json& v) { return v.is_object() && v.size() == 1 && (v.contains("rand") || v.contains("lerp")); }
+static bool isInlineVector(const json& v) {
+    return v.is_array() && std::all_of(v.begin(), v.end(), [](const json& e) { return e.is_number(); });
+}
+static bool isInlineExpression(const json& v) {
+    return v.is_object() && v.size() == 1 && (v.contains("rand") || v.contains("lerp"));
+}
 static bool isInlineKeyframe(const json& v) {
     if (!v.is_object()) return false;
     const size_t n = v.size();
@@ -200,4 +195,3 @@ std::string prettifyJson(const json& j, int indent) {
     }
     return j.dump();
 }
-

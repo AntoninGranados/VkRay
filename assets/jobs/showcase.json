@@ -35,14 +35,14 @@
         //     }
         // },
         {
-            "scene":   "assets/scenes/showcase/campfire.json",
-            "output":  "snapshots/showcase/campfire.png",
+            "scene": "assets/scenes/showcase/campfire.json",
+            "output": "snapshots/showcase/campfire.png",
             // "samples": 8192,
             "samples": 2048,
             "render_size": [1080, 1080],
             "parameters": {
                 "renderer/sampling/adaptive_sampling": true,
-                "renderer/sampling/adaptive_warmup":   4096,
+                "renderer/sampling/adaptive_warmup": 4096,
                 "renderer/sampling/clamp": true
             }
         }

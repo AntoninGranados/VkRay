@@ -6,9 +6,9 @@
 
 #include "core/animation/animation_clock.hpp"
 #include "core/core.hpp"
+#include "core/ecs/systems/animation_system.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "physics_solver.hpp"
-#include "core/ecs/systems/animation_system.hpp"
 
 namespace ecs {
 
@@ -109,7 +109,8 @@ void physicsSolverSystem(Registry& registry) {
         const MeshAsset* meshAsset = nullptr;
         if (hasMesh) {
             const ecs::Entity meshEntity = meshes.get(e).get<ecs::Entity>("handle");
-            meshAsset = registry.has(meshEntity, Mesh) ? &registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry") : nullptr;
+            meshAsset = registry.has(meshEntity, Mesh) ? &registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry")
+                                                       : nullptr;
             if (!meshAsset) continue;
         }
 
@@ -150,14 +151,8 @@ void physicsSolverSystem(Registry& registry) {
                 const float radius = std::max(1e-4f, maxScale);
                 state.body = std::make_unique<RigidSphere>(radius, density, linVel, angVel);
             } else {
-                state.body = std::make_unique<RigidBox>(
-                    scaledHalfExtents.x * 2.0f,
-                    scaledHalfExtents.y * 2.0f,
-                    scaledHalfExtents.z * 2.0f,
-                    density,
-                    linVel,
-                    angVel
-                );
+                state.body = std::make_unique<RigidBox>(scaledHalfExtents.x * 2.0f, scaledHalfExtents.y * 2.0f,
+                                                        scaledHalfExtents.z * 2.0f, density, linVel, angVel);
             }
 
             const glm::quat tQuat = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
@@ -247,30 +242,25 @@ void bakePhysicsSimulation(Registry& registry) {
         registry.get(e, RigidBody).payload<physics_detail::BodyState>("state") = std::move(fresh);
     }
     for (const Entity& e : registry.storage(Collider).entities())
-        registry.get(e, Collider).payload<physics_detail::ColliderState>("prev_transform") = physics_detail::ColliderState{};
+        registry.get(e, Collider).payload<physics_detail::ColliderState>("prev_transform") =
+            physics_detail::ColliderState{};
 
-    bakeState.isBaking    = true;
-    bakeState.inProgress  = true;
-    bakeState.nextFrame   = 0;
+    bakeState.isBaking = true;
+    bakeState.inProgress = true;
+    bakeState.nextFrame = 0;
     bakeState.totalFrames = endFrame;
-    bakeState.savedFrame  = animation.getFrame();
-    bakeState.wasPaused   = animation.isPaused();
+    bakeState.savedFrame = animation.getFrame();
+    bakeState.wasPaused = animation.isPaused();
 
     animation.pause();
     Core::markRenderDirty();
 }
 
-bool isPhysicsBakeInProgress(const Registry& registry) {
-    return registry.ctx().get<PhysicsBakeState>().inProgress;
-}
+bool isPhysicsBakeInProgress(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().inProgress; }
 
-int getPhysicsBakeCurrentFrame(const Registry& registry) {
-    return registry.ctx().get<PhysicsBakeState>().nextFrame;
-}
+int getPhysicsBakeCurrentFrame(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().nextFrame; }
 
-int getPhysicsBakeTotalFrames(const Registry& registry) {
-    return registry.ctx().get<PhysicsBakeState>().totalFrames;
-}
+int getPhysicsBakeTotalFrames(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().totalFrames; }
 
 void physicsSystem(Registry& registry) {
     using namespace ecs::physics_detail;
@@ -286,7 +276,7 @@ void physicsSystem(Registry& registry) {
 
         bakeState.nextFrame++;
         if (bakeState.nextFrame >= bakeState.totalFrames) {
-            bakeState.isBaking   = false;
+            bakeState.isBaking = false;
             bakeState.inProgress = false;
             Core::getAnimation().reset(bakeState.savedFrame);
             if (!bakeState.wasPaused) Core::getAnimation().play();

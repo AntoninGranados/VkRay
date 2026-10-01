@@ -17,6 +17,6 @@ public:
     static std::string mangleName(const std::string& prefix, const std::string& group, const std::string& name);
 
     static MangleResult mangle(const std::string& source, const std::string& prefix,
-                                const std::unordered_map<std::string, std::string>& seedGlobals,
-                                const std::vector<std::string>& lineMarkers);
+                               const std::unordered_map<std::string, std::string>& seedGlobals,
+                               const std::vector<std::string>& lineMarkers);
 };

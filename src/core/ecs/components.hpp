@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/ecs/components/core.hpp"
-#include "core/ecs/components/geometry.hpp"
 #include "core/ecs/components/camera.hpp"
-#include "core/ecs/components/physics.hpp"
-#include "core/ecs/components/material.hpp"
-#include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/compositing.hpp"
+#include "core/ecs/components/core.hpp"
+#include "core/ecs/components/environment.hpp"
+#include "core/ecs/components/geometry.hpp"
+#include "core/ecs/components/material.hpp"
+#include "core/ecs/components/physics.hpp"

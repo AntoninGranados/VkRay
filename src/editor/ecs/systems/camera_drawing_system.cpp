@@ -21,7 +21,8 @@ namespace ecs {
 
 namespace {
 
-void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawList* drawList, ImVec2 windowPos, ImVec2 windowSize) {
+void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawList* drawList, ImVec2 windowPos,
+                     ImVec2 windowSize) {
     const Component& c = registry.get(e, Camera);
     const Component& t = registry.get(e, Transform);
 
@@ -85,17 +86,20 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
         if (da < 0.0f && db < 0.0f) return false;
         float t = da / (da - db);
         glm::vec4 p = a + t * (b - a);
-        if (da < 0.0f) a = p; else b = p;
+        if (da < 0.0f)
+            a = p;
+        else
+            b = p;
         return true;
     };
 
     auto clipLine = [&](glm::vec4& a, glm::vec4& b) -> bool {
-        if (!clipLineToPlane(a, b,  a.x + a.w,  b.x + b.w)) return false;
+        if (!clipLineToPlane(a, b, a.x + a.w, b.x + b.w)) return false;
         if (!clipLineToPlane(a, b, -a.x + a.w, -b.x + b.w)) return false;
-        if (!clipLineToPlane(a, b,  a.y + a.w,  b.y + b.w)) return false;
+        if (!clipLineToPlane(a, b, a.y + a.w, b.y + b.w)) return false;
         if (!clipLineToPlane(a, b, -a.y + a.w, -b.y + b.w)) return false;
-        if (!clipLineToPlane(a, b,  a.z,        b.z)) return false;
-        if (!clipLineToPlane(a, b,  a.w - a.z,  b.w - b.z)) return false;
+        if (!clipLineToPlane(a, b, a.z, b.z)) return false;
+        if (!clipLineToPlane(a, b, a.w - a.z, b.w - b.z)) return false;
         return true;
     };
 
@@ -109,7 +113,8 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
     const bool isSelected = selectedEntity.has_value() && e == *selectedEntity;
     const ImU32 lineColor = isSelected ? IM_COL32(255, 128, 16, 255) : IM_COL32(0, 0, 0, 255);
-    const float distToCamera = glm::length(registry.get(activeCamera, ecs::Transform).get<glm::vec3>("position") - camPos);
+    const float distToCamera =
+        glm::length(registry.get(activeCamera, ecs::Transform).get<glm::vec3>("position") - camPos);
     const float thickness = std::clamp(4.0f / (0.15f * distToCamera + 1.0f), 0.75f, 4.0f);
 
     auto drawClipped = [&](glm::vec4 a, glm::vec4 b) {
@@ -117,25 +122,23 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
         drawList->AddLine(toScreen(a), toScreen(b), lineColor, thickness);
     };
 
-    const int edges[4][2] = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
+    const int edges[4][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
     for (const auto& edge : edges) {
         drawClipped(clipNear[edge[0]], clipNear[edge[1]]);
         drawClipped(clipFar[edge[0]], clipFar[edge[1]]);
     }
-    for (int i = 0; i < 4; i++) {
-        drawClipped(clipNear[i], clipFar[i]);
-    }
+    for (int i = 0; i < 4; i++) { drawClipped(clipNear[i], clipFar[i]); }
 
-    const float apertureRadius = orthographic ? 0.0f : lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
+    const float apertureRadius =
+        orthographic ? 0.0f : lensRadiusFromFStop(c.get<float>("focal_length") / sensorWidth, c.get<float>("f_stop"));
     if (apertureRadius > 1e-4f) {
         const int ringSegments = 32;
         glm::vec3 prevPoint = camPos + camRight * apertureRadius;
         glm::vec4 prevClip = viewProj * glm::vec4(prevPoint, 1.0f);
         for (int i = 1; i <= ringSegments; i++) {
             float angle = (2.0f * glm::pi<float>()) * (static_cast<float>(i) / ringSegments);
-            glm::vec3 point = camPos
-                + camRight * (cosf(angle) * apertureRadius)
-                + camUp * (sinf(angle) * apertureRadius);
+            glm::vec3 point =
+                camPos + camRight * (cosf(angle) * apertureRadius) + camUp * (sinf(angle) * apertureRadius);
             glm::vec4 clip = viewProj * glm::vec4(point, 1.0f);
             drawClipped(prevClip, clip);
             prevClip = clip;
@@ -146,7 +149,7 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
 } // namespace
 
 void cameraDrawingSystem(Registry& registry) {
-    if (Core::getRenderMode() != RenderMode::Preview) return;    // don't draw the cameras when rendering
+    if (Core::getRenderMode() != RenderMode::Preview) return; // don't draw the cameras when rendering
 
     auto& cameras = registry.storage(Camera);
     auto& transforms = registry.storage(Transform);

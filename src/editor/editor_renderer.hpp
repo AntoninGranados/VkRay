@@ -19,15 +19,15 @@ public:
     void destroy();
 
     ImTextureID getDisplayTexId() const { return displayTex; }
-    ImTextureID getDebugTexId()   const { return debugTex; }
-    ImTextureID getOutputTexId()  const { return outputTex; }
+    ImTextureID getDebugTexId() const { return debugTex; }
+    ImTextureID getOutputTexId() const { return outputTex; }
 
     TimestampHandle getDisplayTimestamp() const { return displayTimestamp; }
-    TimestampHandle getDebugTimestamp()   const { return debugTimestamp; }
-    TimestampHandle getUiTimestamp()      const { return uiTimestamp; }
+    TimestampHandle getDebugTimestamp() const { return debugTimestamp; }
+    TimestampHandle getUiTimestamp() const { return uiTimestamp; }
 
 private:
-    DebugUBO   debugUBO{};
+    DebugUBO debugUBO{};
     DisplayUBO displayUBO{};
 
     ImageHandle swapchainImageHandle;
@@ -45,9 +45,9 @@ private:
     TimestampHandle uiTimestamp;
 
     SubmissionGroupHandle editorGroupHandle = {};
-    SubmissionGroupHandle uiGroupHandle     = {};
+    SubmissionGroupHandle uiGroupHandle = {};
 
-    VkExtent2D renderExtent   = {};
+    VkExtent2D renderExtent = {};
     VkExtent2D viewportExtent = {};
 
     ui::ImGuiTexture displayTex;

@@ -16,8 +16,7 @@ void requestMeshSimplify(Registry& registry, Entity meshEntity, float ratio) {
 
     MeshAsset& live = registry.get(meshEntity, Mesh).payload<MeshAsset>("geometry");
     MeshAsset& original = registry.get(meshEntity, MeshSimplify).payload<MeshAsset>("original");
-    if (original.getVertices().empty())
-        original = live;
+    if (original.getVertices().empty()) original = live;
 
     live = (ratio >= 1.0f - 1e-6f) ? original : simplifyMesh(original, ratio);
     Core::markRenderDirty();

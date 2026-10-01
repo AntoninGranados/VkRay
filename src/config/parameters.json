@@ -4,48 +4,111 @@
         "label": "Renderer",
         "debug_view": {
             "label": "Debug View",
-            "items": ["None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces", "Hit Checks", "Variance", "Selection Mask", "Sky Mask"],
+            "items": [
+                "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces",
+                "Hit Checks", "Variance", "Selection Mask", "Sky Mask"
+            ],
             "default": "None",
             "restart_accumulation": true
         },
         "sampling": {
             "label": "Sampling",
-            "max_bounces": { "label": "Max Bounces", "default": 8, "min": 1, "max": 20, "step": 1, "restart_accumulation": true },
-            "render_samples": { "label": "Render Samples", "default": 2048, "min": 1, "max": 4096, "step": 1 },
-            "importance_sampling": { "label": "Importance Sampling", "default": true },
-            "clamp": { "label": "Clamp Fireflies", "description": "Clamps high-luminance samples to reduce fireflies.", "default": false, "restart_accumulation": true },
+            "max_bounces": {
+                "label": "Max Bounces",
+                "default": 8,
+                "min": 1,
+                "max": 20,
+                "step": 1,
+                "restart_accumulation": true
+            },
+            "render_samples": {
+                "label": "Render Samples",
+                "default": 2048,
+                "min": 1,
+                "max": 4096,
+                "step": 1
+            },
+            "importance_sampling": {
+                "label": "Importance Sampling",
+                "default": true
+            },
+            "clamp": {
+                "label": "Clamp Fireflies",
+                "description": "Clamps high-luminance samples to reduce fireflies.",
+                "default": false,
+                "restart_accumulation": true
+            },
             "clamp_threshold": {
                 "label": "Clamp Threshold",
                 "description": "Luminance value above which samples are clamped.",
-                "default": 50.0, "min": 0.0, "max": 1000.0, "step": 1.0,
+                "default": 50.0,
+                "min": 0.0,
+                "max": 1000.0,
+                "step": 1.0,
                 "restart_accumulation": true,
-                "condition": { "param": "renderer/sampling/clamp" }
+                "condition": {
+                    "param": "renderer/sampling/clamp"
+                }
             },
-            "adaptive_sampling": { "label": "Adaptive Sampling", "description": "Skips already-converged pixels to focus samples where needed.", "default": true },
+            "adaptive_sampling": {
+                "label": "Adaptive Sampling",
+                "description": "Skips already-converged pixels to focus samples where needed.",
+                "default": true
+            },
             "adaptive_warmup": {
                 "label": "Adaptive Warmup",
                 "description": "Number of samples accumulated before adaptive sampling activates.",
-                "default": 64, "min": 0, "max": 2048, "step": 1,
-                "condition": { "param": "renderer/sampling/adaptive_sampling" }
+                "default": 64,
+                "min": 0,
+                "max": 2048,
+                "step": 1,
+                "condition": {
+                    "param": "renderer/sampling/adaptive_sampling"
+                }
             }
         },
 
         "viewport": {
             "label": "Viewport",
-            "max_samples": { "label": "Max Samples", "default": 0, "min": 0, "max": 4096, "step": 1 },
-            "pixel_scale": { "label": "Pixel Scale", "description": "Render at reduced resolution per axis.", "default": 2, "min": 1, "max": 8, "step": 1 }
+            "max_samples": {
+                "label": "Max Samples",
+                "default": 0,
+                "min": 0,
+                "max": 4096,
+                "step": 1
+            },
+            "pixel_scale": {
+                "label": "Pixel Scale",
+                "description": "Render at reduced resolution per axis.",
+                "default": 2,
+                "min": 1,
+                "max": 8,
+                "step": 1
+            }
         },
 
         "output": {
             "label": "Output",
-            "render_size": { "label": "Render Size", "default": [1920, 1080], "min": [1, 1], "step": 1.0 },
+            "render_size": {
+                "label": "Render Size",
+                "default": [1920, 1080],
+                "min": [1, 1],
+                "step": 1.0,
+                "restart_accumulation": true
+            },
             "output_image": {
                 "label": "Image",
                 "default": "outputs/render.png",
                 "save": true,
                 "extensions": [
-                    { "ext": "png", "name": "PNG Image" },
-                    { "ext": "exr", "name": "OpenEXR Image" }
+                    {
+                        "ext": "png",
+                        "name": "PNG Image"
+                    },
+                    {
+                        "ext": "exr",
+                        "name": "OpenEXR Image"
+                    }
                 ]
             },
             "output_video": {
@@ -53,7 +116,10 @@
                 "default": "outputs/render.mp4",
                 "save": true,
                 "extensions": [
-                    { "ext": "mp4", "name": "MP4 Video" }
+                    {
+                        "ext": "mp4",
+                        "name": "MP4 Video"
+                    }
                 ]
             },
             "frame_cache": {
@@ -66,14 +132,46 @@
 
         "aov": {
             "label": "Arbitrary Output Variables",
-            "position_w": { "label": "Position W", "description": "World-space hit position.", "default": false },
-            "position":   { "label": "Position",   "description": "Camera-space hit position.", "default": false },
-            "normal_w":   { "label": "Normal W",   "description": "World-space surface normal.", "default": false },
-            "normal":     { "label": "Normal",     "description": "Camera-space surface normal.", "default": false },
-            "albedo":     { "label": "Albedo",     "description": "Unlit surface color.", "default": false },
-            "roughness":  { "label": "Roughness",  "description": "Surface roughness value.", "default": false },
-            "mat_type":   { "label": "Mat Type",   "description": "Encoded material type per pixel.", "default": false },
-            "sky_mask":   { "label": "Sky Mask",   "description": "White for background pixels, black for geometry.", "default": false }
+            "position_w": {
+                "label": "Position W",
+                "description": "World-space hit position.",
+                "default": false
+            },
+            "position": {
+                "label": "Position",
+                "description": "Camera-space hit position.",
+                "default": false
+            },
+            "normal_w": {
+                "label": "Normal W",
+                "description": "World-space surface normal.",
+                "default": false
+            },
+            "normal": {
+                "label": "Normal",
+                "description": "Camera-space surface normal.",
+                "default": false
+            },
+            "albedo": {
+                "label": "Albedo",
+                "description": "Unlit surface color.",
+                "default": false
+            },
+            "roughness": {
+                "label": "Roughness",
+                "description": "Surface roughness value.",
+                "default": false
+            },
+            "mat_type": {
+                "label": "Mat Type",
+                "description": "Encoded material type per pixel.",
+                "default": false
+            },
+            "sky_mask": {
+                "label": "Sky Mask",
+                "description": "White for background pixels, black for geometry.",
+                "default": false
+            }
         }
     },
 
@@ -81,10 +179,26 @@
         "label": "Editor",
         "camera": {
             "label": "Camera",
-            "speed": { "label": "Speed", "default": 20.0, "min": 0.1 },
-            "sensitivity": { "label": "Sensitivity", "default": 0.2, "min": 0.01 },
-            "pan_sensitivity": { "label": "Pan Sensitivity", "default": 0.003, "min": 0.0001 },
-            "dolly_sensitivity": { "label": "Dolly Sensitivity", "default": 0.01, "min": 0.0001 }
+            "speed": {
+                "label": "Speed",
+                "default": 20.0,
+                "min": 0.1
+            },
+            "sensitivity": {
+                "label": "Sensitivity",
+                "default": 0.2,
+                "min": 0.01
+            },
+            "pan_sensitivity": {
+                "label": "Pan Sensitivity",
+                "default": 0.003,
+                "min": 0.0001
+            },
+            "dolly_sensitivity": {
+                "label": "Dolly Sensitivity",
+                "default": 0.01,
+                "min": 0.0001
+            }
         }
     }
 }

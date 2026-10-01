@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "core/core.hpp"
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
@@ -20,7 +21,6 @@
 #include "core/render/sky_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
-#include "core/core.hpp"
 #include "core/scene/scene.hpp"
 
 #include "utils/log.hpp"
@@ -58,9 +58,9 @@ Entity resolveEnvironmentEntity(Registry& registry) {
 }
 
 glm::mat4 composeTransform(const Component& transform) {
-    return glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position"))
-        * glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation"))))
-        * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+    return glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position")) *
+           glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation")))) *
+           glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
 }
 
 } // namespace
@@ -88,7 +88,8 @@ inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry
 }
 
 template <typename Header, typename T>
-inline void fillBufferWithHeader(const FrameContext& frame, SceneGpuBufferEntry& entry, const Header& header, std::vector<T>& data) {
+inline void fillBufferWithHeader(const FrameContext& frame, SceneGpuBufferEntry& entry, const Header& header,
+                                 std::vector<T>& data) {
     size_t required = nextPowerOfTwo(data.size());
     if (required > entry.capacity) {
         Core::getEngine().resizeBuffer(entry.handle, sizeof(Header) + required * sizeof(T));
@@ -134,17 +135,19 @@ void meshPackingSystem(Registry& registry) {
             .triangleCount = static_cast<uint32_t>(meshIndices.size() / 3),
             .bvhOffset = bvhOffset,
             .bvhNodeCount = static_cast<uint32_t>(meshBvhNodes.size()),
-            .aabbMinX = meshAabbMin.x, .aabbMinY = meshAabbMin.y, .aabbMinZ = meshAabbMin.z,
-            .aabbMaxX = meshAabbMax.x, .aabbMaxY = meshAabbMax.y, .aabbMaxZ = meshAabbMax.z,
+            .aabbMinX = meshAabbMin.x,
+            .aabbMinY = meshAabbMin.y,
+            .aabbMinZ = meshAabbMin.z,
+            .aabbMaxX = meshAabbMax.x,
+            .aabbMaxY = meshAabbMax.y,
+            .aabbMaxZ = meshAabbMax.z,
             .smoothShading = smooth ? 1u : 0u,
             .hasVertexColor = mesh->hasVertexColor() ? 1u : 0u,
         });
 
         vertices.insert(vertices.end(), meshVertices.begin(), meshVertices.end());
         // Offset the indices by the vertex offset
-        for (size_t i = 0; i < meshIndices.size(); i++) {
-            indices.push_back(meshIndices[i] + vertexOffset);
-        }
+        for (size_t i = 0; i < meshIndices.size(); i++) { indices.push_back(meshIndices[i] + vertexOffset); }
         // Offset the BVH links and leaf triangle indices
         for (size_t n = 0; n < meshBvhNodes.size(); n++) {
             const GpuBvhNode& node = meshBvhNodes[n];
@@ -249,12 +252,12 @@ void objectPackingSystem(Registry& registry) {
     if (transforms.has(cameraEntity)) {
         const uint32_t motionOffset = bakeMotionSamples(registry, cameraEntity, transforms.get(cameraEntity), motion);
         bakeLiveTransform(transforms.get(cameraEntity), liveMotion);
-        cameraMotion = CameraMotionInfo{ motionOffset };
+        cameraMotion = CameraMotionInfo{motionOffset};
     } else {
         cameraMotion = CameraMotionInfo{};
     }
 
-    const GpuObjectHeader header{ .objectCount = static_cast<uint32_t>(gpuObjects.size()) };
+    const GpuObjectHeader header{.objectCount = static_cast<uint32_t>(gpuObjects.size())};
     fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().object, header, gpuObjects);
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().motion, motion);
     fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().liveMotion, liveMotion);
@@ -330,7 +333,7 @@ void lightPackingSystem(Registry& registry) {
         }
     }
 
-    const GpuLightHeader header{ .totalArea = totalArea };
+    const GpuLightHeader header{.totalArea = totalArea};
     fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().light, header, lights);
 }
 

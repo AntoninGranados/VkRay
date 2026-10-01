@@ -13,16 +13,11 @@
 
 namespace ecs {
 
-enum class CameraProjection {
-    Perspective,
-    Orthographic
-};
+enum class CameraProjection { Perspective, Orthographic };
 
-enum class CameraSensorFit {
-    Horizontal,
-    Vertical,
-    Auto
-};
+enum class CameraSensorFit { Horizontal, Vertical, Auto };
+
+// clang-format off
 
 inline const ComponentType Camera = ComponentType::builder("camera")
     .description("Perspective or orthographic camera with native depth of field.")
@@ -127,4 +122,6 @@ inline const ComponentType CameraLensPlugin = ComponentType::builder("programmab
     .payload<ShaderPlugin>("plugin")
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

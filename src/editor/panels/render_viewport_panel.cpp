@@ -13,16 +13,14 @@ void RenderViewportPanel::draw() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::kDraculaBg);
     ui::drawWindow(getTitle(),
-        ImGuiWindowFlags_NoDecoration         |
-        ImGuiWindowFlags_NoMove               |
-        ImGuiWindowFlags_NoMouseInputs        |
-        ImGuiWindowFlags_NoBringToFrontOnFocus,
-        [] {
-            VkExtent2D renderExtent = Core::getCoreRenderer().getRenderExtent();
-            ui::drawFittedImage(Editor::getEditorRenderer().getOutputTexId(),
-                ImVec2(static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)));
-        }
-    );
+                   ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoMouseInputs |
+                       ImGuiWindowFlags_NoBringToFrontOnFocus,
+                   [] {
+                       VkExtent2D renderExtent = Core::getCoreRenderer().getRenderExtent();
+                       ui::drawFittedImage(
+                           Editor::getEditorRenderer().getOutputTexId(),
+                           ImVec2(static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)));
+                   });
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
 }

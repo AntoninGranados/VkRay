@@ -3,6 +3,5 @@
 #include "core/fields/field.hpp"
 
 namespace ParameterUI {
-    void drawGroup(const FieldPath& root);
+void drawGroup(const FieldPath& root);
 }
-

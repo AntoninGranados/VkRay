@@ -9,6 +9,8 @@
 
 namespace ecs {
 
+// clang-format off
+
 inline const ComponentType Environment = ComponentType::builder("environment")
     .description("Environment marker.")
     .icon(ICON_FA_CLOUD_SUN)
@@ -25,4 +27,6 @@ inline const ComponentType SkyPlugin = ComponentType::builder("programmable_sky"
     .payload<ShaderPlugin>("plugin")
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

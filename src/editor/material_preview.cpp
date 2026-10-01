@@ -28,7 +28,8 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
         registry.add(previewObject, ecs::MaterialRef);
         registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
-        const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
+        const ecs::Entity lightMaterialEntity =
+            scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
         registry.add(lightMaterialEntity, ecs::Emissive);
         registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
 
@@ -42,7 +43,8 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
         sceneInitialized = true;
     }
 
-    RenderResources resources = renderer.initGraph(builder, VkExtent2D{ kPreviewSize, kPreviewSize }, "MaterialPreview", lensImageHandle);
+    RenderResources resources =
+        renderer.initGraph(builder, VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview", lensImageHandle);
     renderer.setTargetSampleCount(0);
     return resources;
 }
@@ -51,8 +53,7 @@ void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
     renderer.getScene().setGpuBufferHandles(resources.sceneHandles);
     liveTexture = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
 
-    for (auto& entry : previewImages)
-        entry.second.textureId = registerTexture(entry.second.view.get());
+    for (auto& entry : previewImages) entry.second.textureId = registerTexture(entry.second.view.get());
 
     if (inFlight.has_value()) {
         renderer.setTargetSampleCount(kPreviewSampleCount);
@@ -84,8 +85,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
     fingerprint.type = resolveBsdfType(registry, entity);
     if (fingerprint.type) {
         const ecs::Component& component = registry.get(entity, *fingerprint.type);
-        for (const Field& field : component.getFields())
-            fingerprint.fields.push_back(field);
+        for (const Field& field : component.getFields()) fingerprint.fields.push_back(field);
         if (fingerprint.type == &ecs::MaterialPlugin) {
             const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
             fingerprint.programmableBody = plugin.getBody();
@@ -101,11 +101,8 @@ bool MaterialPreview::isStale(ecs::Entity entity, const MaterialFingerprint& fin
 
 ui::ImGuiTexture MaterialPreview::registerTexture(VkImageView view) const {
     VkSmol& engine = Core::getEngine();
-    return ui::ImGuiTexture(
-        engine.getSampler(renderer.getOutputImageHandle()).get(),
-        view,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
+    return ui::ImGuiTexture(engine.getSampler(renderer.getOutputImageHandle()).get(), view,
+                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource) {
@@ -122,8 +119,7 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
     ecs::Component& source = Core::getScene().getRegistry().get(fieldSource, type);
     ecs::Component& preview = previewRegistry.get(previewMaterialEntity, type);
 
-    for (const Field& field : source.getFields())
-        preview.getField(field.getId()) = field;
+    for (const Field& field : source.getFields()) preview.getField(field.getId()) = field;
 
     if (type == ecs::MaterialPlugin) {
         ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
@@ -138,10 +134,9 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
 
 void MaterialPreview::startGeneration(ecs::Entity materialEntity) {
     const MaterialFingerprint fingerprint = captureFingerprint(materialEntity);
-    inFlight = InFlight{ materialEntity, fingerprint };
+    inFlight = InFlight{materialEntity, fingerprint};
 
-    if (fingerprint.type)
-        syncPreviewMaterial(*fingerprint.type, resolveMaterialSource(materialEntity));
+    if (fingerprint.type) syncPreviewMaterial(*fingerprint.type, resolveMaterialSource(materialEntity));
 
     renderer.setTargetSampleCount(kPreviewSampleCount);
     renderer.restartAccumulation();
@@ -154,7 +149,8 @@ void MaterialPreview::finishGeneration() {
     auto it = previewImages.find(inFlight->entity);
     if (it == previewImages.end()) {
         PreviewImage preview;
-        preview.image = engine.createEmptyImage(VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height, "MaterialPreviewThumbnail");
+        preview.image = engine.createEmptyImage(VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height,
+                                                "MaterialPreviewThumbnail");
         preview.view = engine.createImageView(preview.image);
         preview.textureId = registerTexture(preview.view.get());
         it = previewImages.emplace(inFlight->entity, std::move(preview)).first;
@@ -196,8 +192,7 @@ void MaterialPreview::evictDeadEntries() {
 }
 
 void MaterialPreview::destroy() {
-    while (!previewImages.empty())
-        evict(previewImages.begin()->first);
+    while (!previewImages.empty()) evict(previewImages.begin()->first);
     liveTexture = ui::ImGuiTexture();
 }
 
@@ -215,8 +210,7 @@ void MaterialPreview::tick(const FrameContext& frameContext) {
     scene.runOnRender(frameContext);
     renderer.render(frameContext);
 
-    if (inFlight.has_value() && renderer.isRenderFinished())
-        finishGeneration();
+    if (inFlight.has_value() && renderer.isRenderFinished()) finishGeneration();
 }
 
 std::optional<ImTextureID> MaterialPreview::getPreview(ecs::Entity materialEntity) {
@@ -226,7 +220,8 @@ std::optional<ImTextureID> MaterialPreview::getPreview(ecs::Entity materialEntit
     if (it != previewImages.end() && !isStale(materialEntity, it->second.fingerprint))
         return it->second.textureId.get();
 
-    const bool alreadyQueued = std::find(pendingMaterials.begin(), pendingMaterials.end(), materialEntity) != pendingMaterials.end();
+    const bool alreadyQueued =
+        std::find(pendingMaterials.begin(), pendingMaterials.end(), materialEntity) != pendingMaterials.end();
     if (!alreadyQueued) pendingMaterials.push_back(materialEntity);
     return std::nullopt;
 }

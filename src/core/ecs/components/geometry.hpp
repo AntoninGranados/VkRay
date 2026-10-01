@@ -12,6 +12,8 @@
 
 namespace ecs {
 
+// clang-format off
+
 inline const ComponentType Sphere = ComponentType::builder("sphere")
     .description("Sphere primitive.")
     .icon(ICON_FA_CIRCLE)
@@ -72,4 +74,6 @@ inline const ComponentType MeshRef = ComponentType::builder("mesh_ref")
     .field<ecs::Entity>("handle", ecs::Entity{}, EntityMeta{ .needs = {"mesh"} })
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

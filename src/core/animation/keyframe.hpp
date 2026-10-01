@@ -16,8 +16,7 @@ struct Keyframe {
     void setInterpolation(Interpolation interp) { interpolationMode = interp; }
     void setValue(FieldValue v) { fieldValue = std::move(v); }
 
-    template<typename T>
-    static T interpolate(const Keyframe& prev, const Keyframe& next, float t);
+    template <typename T> static T interpolate(const Keyframe& prev, const Keyframe& next, float t);
 
 private:
     int frameNumber;
@@ -27,15 +26,12 @@ private:
     static float interpolationT(Interpolation interpolation, float t);
 };
 
-template<typename T>
-T Keyframe::interpolate(const Keyframe& prev, const Keyframe& next, float t) {
+template <typename T> T Keyframe::interpolate(const Keyframe& prev, const Keyframe& next, float t) {
     if (prev.interpolationMode == Interpolation::Step) return prev.fieldValue.get<T>();
     const float it = interpolationT(prev.interpolationMode, t);
     if constexpr (std::is_same_v<T, glm::quat>)
         return glm::slerp(prev.fieldValue.get<glm::quat>(), next.fieldValue.get<glm::quat>(), it);
-    else if constexpr (std::is_same_v<T, float>    ||
-                       std::is_same_v<T, glm::vec2> ||
-                       std::is_same_v<T, glm::vec3> ||
+    else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, glm::vec2> || std::is_same_v<T, glm::vec3> ||
                        std::is_same_v<T, glm::vec4>)
         return glm::mix(prev.fieldValue.get<T>(), next.fieldValue.get<T>(), it);
     else

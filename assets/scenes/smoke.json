@@ -3,17 +3,25 @@
     "Scene": [
         {
             "name": "Environment",
-            "programmable_sky": { "path": "assets/environment/empty_sky.glsl" }
+            "programmable_sky": {
+                "path": "assets/environment/empty_sky.glsl"
+            }
         }
     ],
     "Materials": [
         {
             "name": "Smoke",
-            "volume": { "albedo": [1, 1, 1], "density": 0.005 }
+            "volume": {
+                "albedo": [1, 1, 1],
+                "density": 0.005
+            }
         },
         {
             "name": "Light",
-            "emissive": { "albedo": [1, 1, 1], "emission_strength": 4000 }
+            "emissive": {
+                "albedo": [1, 1, 1],
+                "emission_strength": 4000
+            }
         },
         {
             "name": "Glass",
@@ -26,27 +34,46 @@
     ],
     "Objects": [
         {
-            "camera": { "focal_length": 72.1941 },
+            "camera": {
+                "focal_length": 72.1941
+            },
             "name": "Camera",
-            "transform": { "position": [0, -2, 50] }
+            "transform": {
+                "position": [0, -2, 50]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "Light" },
+            "material_ref": {
+                "handle": "Light"
+            },
             "name": "Light",
-            "transform": { "position": [0, 9, 0], "scale": [0.2, 0.2, 0.2] }
+            "transform": {
+                "position": [0, 9, 0],
+                "scale": [0.2, 0.2, 0.2]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "Glass" },
+            "material_ref": {
+                "handle": "Glass"
+            },
             "name": "Ball",
-            "transform": { "position": [0, 2.8, 0], "scale": [2.0, 2.0, 2.0] }
+            "transform": {
+                "position": [0, 2.8, 0],
+                "scale": [2.0, 2.0, 2.0]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Smoke" },
+            "box": {},
+            "material_ref": {
+                "handle": "Smoke"
+            },
             "name": "Smoke",
-            "transform": { "position": [0, -2, 0], "scale": [15, 15, 15] }
+            "transform": {
+                "position": [0, -2, 0],
+                "scale": [15, 15, 15]
+            }
         }
     ]
 }

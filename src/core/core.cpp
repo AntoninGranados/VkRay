@@ -1,5 +1,7 @@
 #include "core.hpp"
 
+#include <cassert>
+
 #include "core/ecs/components/component_serializer.hpp"
 #include "core/fields/parameter_serializer.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
@@ -10,7 +12,7 @@ Core& Core::get() {
 }
 
 void Core::init(Platform& p, uint32_t version) {
-    Core& c    = get();
+    Core& c = get();
     c.platform = &p;
     c.engine.init("VkRay", version, p);
     c.parameters = ParameterSerializer::load("./src/config/parameters.json");
@@ -74,7 +76,7 @@ void Core::reloadPipelinesIfDirty(Core& c) {
 void Core::rebuildGraphIfRequested(Core& c) {
     if (!c.graphRebuildRequested) return;
     c.graphRebuildRequested = false;
-    if (!c.graphBuilder) return;
+    assert(c.graphBuilder);
 
     c.engine.waitIdle();
     c.coreRenderer.destroy();

@@ -12,15 +12,11 @@
 #include "utils/string_utils.hpp"
 
 const std::vector<GlslTypeInfo> ShaderScript::glslTypes = {
-    { "bool",  FieldType::Bool,  1, false, true  },
-    { "float", FieldType::Float, 1, false, false },
-    { "int",   FieldType::Int,   1, true,  false },
-    { "vec2",  FieldType::Vec2,  2, false, false },
-    { "vec3",  FieldType::Vec3,  3, false, false },
-    { "vec4",  FieldType::Vec4,  4, false, false },
-    { "ivec2", FieldType::IVec2, 2, true,  false },
-    { "ivec3", FieldType::IVec3, 3, true,  false },
-    { "ivec4", FieldType::IVec4, 4, true,  false },
+    {"bool", FieldType::Bool, 1, false, true},   {"float", FieldType::Float, 1, false, false},
+    {"int", FieldType::Int, 1, true, false},     {"vec2", FieldType::Vec2, 2, false, false},
+    {"vec3", FieldType::Vec3, 3, false, false},  {"vec4", FieldType::Vec4, 4, false, false},
+    {"ivec2", FieldType::IVec2, 2, true, false}, {"ivec3", FieldType::IVec3, 3, true, false},
+    {"ivec4", FieldType::IVec4, 4, true, false},
 };
 
 const GlslTypeInfo* ShaderScript::findGlslType(const std::string& name) {
@@ -44,7 +40,8 @@ int extractDirectiveInt(const std::string& line, const std::string& key, int fal
 }
 } // namespace
 
-std::optional<Field> ShaderScript::parseParam(const std::string& group, const std::string& line, const std::filesystem::path& path, int lineNumber) {
+std::optional<Field> ShaderScript::parseParam(const std::string& group, const std::string& line,
+                                              const std::filesystem::path& path, int lineNumber) {
     std::string location = std::format("{}:{}", path.string(), lineNumber);
 
     std::vector<std::string> sections = split(trim(line.substr(7)), ':');
@@ -71,7 +68,8 @@ std::optional<Field> ShaderScript::parseParam(const std::string& group, const st
         } else {
             values = parseNumbers(trim(declaration[1]));
             if (values.size() != 1 && (int)values.size() != typeInfo.components) {
-                Log::warn("ShaderScript", std::format("{}: default value does not match type '{}'", location, typeName));
+                Log::warn("ShaderScript",
+                          std::format("{}: default value does not match type '{}'", location, typeName));
                 return std::nullopt;
             }
         }
@@ -110,7 +108,8 @@ std::optional<Field> ShaderScript::parseParam(const std::string& group, const st
     if (typeInfo.fieldType == FieldType::Bool) {
         static_cast<Field&>(field) = Field::make<bool>(fieldPath, camelCaseToLabel(name), static_cast<bool>(values[0]));
     } else {
-        static_cast<Field&>(field) = Field::makeNumeric(typeInfo.fieldType, fieldPath, camelCaseToLabel(name), values, meta);
+        static_cast<Field&>(field) =
+            Field::makeNumeric(typeInfo.fieldType, fieldPath, camelCaseToLabel(name), values, meta);
     }
     field.setAnimatable(isAnimatable);
     return field;
@@ -140,7 +139,7 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
         if (trimmed.empty()) continue;
 
         if (trimmed.starts_with("#param ")) {
-            paramLines.push_back({ group, trimmed });
+            paramLines.push_back({group, trimmed});
         } else if (trimmed.starts_with("#group ")) {
             trimmed = trimmed.substr(trimmed.find("\"") + 1);
             group = trimmed.substr(0, trimmed.find("\""));
@@ -150,8 +149,7 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
         } else {
             result.body += trimmed + "\n";
             result.bodyLineMarkers.push_back(
-                trimmed.ends_with('\\') ? std::string() : ShaderSourceMap::marker(path, static_cast<int>(lineIdx) + 1)
-            );
+                trimmed.ends_with('\\') ? std::string() : ShaderSourceMap::marker(path, static_cast<int>(lineIdx) + 1));
         }
     }
 
@@ -162,11 +160,13 @@ ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path,
 
     std::unordered_set<FieldPath> seenIds;
     for (size_t i = 0; i < paramLines.size(); i++) {
-        std::optional<Field> field = parseParam(paramLines[i].first, paramLines[i].second, path, static_cast<int>(i) + 1);
+        std::optional<Field> field =
+            parseParam(paramLines[i].first, paramLines[i].second, path, static_cast<int>(i) + 1);
         if (!field) continue;
 
         if (!seenIds.insert(field->getId()).second) {
-            Log::warn("ShaderScript", std::format("{}:{}: duplicate param '{}'", path.string(), i + 1, field->getId().string()));
+            Log::warn("ShaderScript",
+                      std::format("{}:{}: duplicate param '{}'", path.string(), i + 1, field->getId().string()));
             continue;
         }
         result.fields.push_back(std::move(*field));

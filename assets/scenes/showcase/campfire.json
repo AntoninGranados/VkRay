@@ -2,52 +2,87 @@
     "version": 1,
     "light": "empty",
     "Materials": [
-        { "name": "Base", "diffuse": { "albedo": [1, 1, 1] } },
+        {
+            "name": "Base",
+            "diffuse": {
+                "albedo": [1, 1, 1]
+            }
+        },
         {
             "name": "Fire",
-            "emissive": { "albedo": [1, 1, 1], "emission_strength": 50 }
+            "emissive": {
+                "albedo": [1, 1, 1],
+                "emission_strength": 50
+            }
         },
         {
             "name": "Fireflies",
-            "emissive": { "albedo": [1, 1, 1], "emission_strength": 5 }
+            "emissive": {
+                "albedo": [1, 1, 1],
+                "emission_strength": 5
+            }
         }
     ],
     "Assets": [
         {
             "name": "campsite",
-            "mesh": { "path": "./assets/models/campfire/campsite.obj" }
+            "mesh": {
+                "path": "./assets/models/campfire/campsite.obj"
+            }
         },
         {
             "name": "fire",
-            "mesh": { "path": "./assets/models/campfire/fire.obj" }
+            "mesh": {
+                "path": "./assets/models/campfire/fire.obj"
+            }
         },
         {
             "name": "fireflies",
-            "mesh": { "path": "./assets/models/campfire/fireflies.obj" }
+            "mesh": {
+                "path": "./assets/models/campfire/fireflies.obj"
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_distance": 11, "f_stop": 0.5 },
+            "camera": {
+                "focal_distance": 11,
+                "f_stop": 0.5
+            },
             "name": "Camera",
-            "transform": { "position": [0, 5, 10], "rotation": [-21.8, 0, 0] }
+            "transform": {
+                "position": [0, 5, 10],
+                "rotation": [-21.8, 0, 0]
+            }
         },
         {
-            "mesh_ref": { "handle": "campsite" },
-            "material_ref": { "handle": "Base" },
-            "transform": {  },
+            "mesh_ref": {
+                "handle": "campsite"
+            },
+            "material_ref": {
+                "handle": "Base"
+            },
+            "transform": {},
             "name": "Campsite"
         },
         {
-            "mesh_ref": { "handle": "fire" },
-            "material_ref": { "handle": "Fire" },
-            "transform": {  },
+            "mesh_ref": {
+                "handle": "fire"
+            },
+            "material_ref": {
+                "handle": "Fire"
+            },
+            "transform": {},
             "name": "Fire"
         },
         {
-            "mesh_ref": { "handle": "fireflies" },
-            "material_ref": { "handle": "Fireflies" },
-            "transform": {  },
+            "mesh_ref": {
+                "handle": "fireflies"
+            },
+            "material_ref": {
+                "handle": "Fireflies"
+            },
+            "transform": {},
             "name": "Fireflies"
         }
     ]

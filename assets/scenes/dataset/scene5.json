@@ -4,46 +4,100 @@
     "Materials": [
         {
             "name": "Ground",
-            "diffuse": { "albedo": [0.35, 0.35, 0.35] }
+            "diffuse": {
+                "albedo": [0.35, 0.35, 0.35]
+            }
         },
         {
             "name": "KeyLight",
-            "emissive": { "albedo": [1.0, 0.97, 0.9], "emission_strength": 40 }
+            "emissive": {
+                "albedo": [1.0, 0.97, 0.9],
+                "emission_strength": 40
+            }
         },
         {
             "name": "FillLight",
-            "emissive": { "albedo": [0.75, 0.85, 1.0], "emission_strength": 10 }
+            "emissive": {
+                "albedo": [0.75, 0.85, 1.0],
+                "emission_strength": 10
+            }
         },
         {
             "name": "SphereMat_{row}_{col}",
             "principled": {
-                "albedo": { "rand": { "min": [0.05, 0.05, 0.05], "max": [0.95, 0.95, 0.95] } },
-                "roughness": { "lerp": { "from": 0.0, "to": 0.5, "axis": "row" } },
-                "metalness": { "lerp": { "from": 0.0, "to": 1.0, "axis": "col" } },
+                "albedo": {
+                    "rand": {
+                        "min": [0.05, 0.05, 0.05],
+                        "max": [0.95, 0.95, 0.95]
+                    }
+                },
+                "roughness": {
+                    "lerp": {
+                        "from": 0.0,
+                        "to": 0.5,
+                        "axis": "row"
+                    }
+                },
+                "metalness": {
+                    "lerp": {
+                        "from": 0.0,
+                        "to": 1.0,
+                        "axis": "col"
+                    }
+                },
                 "ior": 1.5
             },
-            "grid": { "rows": 4, "cols": 4 }
+            "grid": {
+                "rows": 4,
+                "cols": 4
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": { "rand": { "min": 23.4581, "max": 34.5777 } } },
+            "camera": {
+                "focal_length": {
+                    "rand": {
+                        "min": 23.4581,
+                        "max": 34.5777
+                    }
+                }
+            },
             "name": "Camera",
             "spherical": {
-                "radius": { "rand": { "min": 9, "max": 14 } },
-                "azimuth": { "rand": { "min": -20, "max": 20 } },
-                "elevation": { "rand": { "min": 20, "max": 80 } },
+                "radius": {
+                    "rand": {
+                        "min": 9,
+                        "max": 14
+                    }
+                },
+                "azimuth": {
+                    "rand": {
+                        "min": -20,
+                        "max": 20
+                    }
+                },
+                "elevation": {
+                    "rand": {
+                        "min": 20,
+                        "max": 80
+                    }
+                },
                 "target": [0, 1, 0]
             }
         },
         {
-            "plane": {  },
-            "material_ref": { "handle": "Ground" },
+            "plane": {},
+            "material_ref": {
+                "handle": "Ground"
+            },
             "name": "Ground"
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "KeyLight" },
+            "quad": {},
+            "material_ref": {
+                "handle": "KeyLight"
+            },
             "name": "KeyLight",
             "transform": {
                 "position": [4, 20, -4],
@@ -52,8 +106,10 @@
             }
         },
         {
-            "quad": {  },
-            "material_ref": { "handle": "FillLight" },
+            "quad": {},
+            "material_ref": {
+                "handle": "FillLight"
+            },
             "name": "FillLight",
             "transform": {
                 "position": [-5, 6, 0],
@@ -63,17 +119,34 @@
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "SphereMat_{row}_{col}" },
+            "material_ref": {
+                "handle": "SphereMat_{row}_{col}"
+            },
             "name": "Sphere_{row}_{col}",
             "transform": {
                 "position": [
-                    { "lerp": { "from": -3, "to": 3, "axis": "col" } },
+                    {
+                        "lerp": {
+                            "from": -3,
+                            "to": 3,
+                            "axis": "col"
+                        }
+                    },
                     0.65,
-                    { "lerp": { "from": -3, "to": 3, "axis": "row" } }
+                    {
+                        "lerp": {
+                            "from": -3,
+                            "to": 3,
+                            "axis": "row"
+                        }
+                    }
                 ],
                 "scale": [0.65, 0.65, 0.65]
             },
-            "grid": { "rows": 4, "cols": 4 }
+            "grid": {
+                "rows": 4,
+                "cols": 4
+            }
         }
     ]
 }

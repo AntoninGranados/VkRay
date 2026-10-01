@@ -10,6 +10,8 @@
 
 namespace ecs {
 
+// clang-format off
+
 inline const ComponentType Name = ComponentType::builder("name")
     .description("Display name.")
     .icon(ICON_FA_TAG)
@@ -27,4 +29,6 @@ inline const ComponentType Transform = ComponentType::builder("transform")
     .field<glm::vec3>("scale", glm::vec3(1.0f), NumericMeta{ .min = 1e-8f, .step = 0.1f, .linkable = true }, true)
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

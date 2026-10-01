@@ -51,10 +51,27 @@
             }
         },
         {
-            "name": "BunnyMat",
+            "name": "BunnyMetal",
             "metal": {
                 "albedo": [1, 1, 1],
                 "roughness": 0.1
+            }
+        },
+        {
+            "name": "BunnyGlass",
+            "dielectric": {
+                "albedo": [1, 1, 1],
+                "roughness": 0.0,
+                "ior": 1.5,
+                "transmission": 1.0
+            }
+        },
+        {
+            "name": "BunnyFog",
+            "volume": {
+                "albedo": [0.9, 0.9, 0.9],
+                "density": 4.0,
+                "anisotropic": 0.0
             }
         }
     ],
@@ -165,13 +182,41 @@
                 "handle": "bunny"
             },
             "material_ref": {
-                "handle": "BunnyMat"
+                "handle": "BunnyMetal"
             },
-            "name": "Bunny",
+            "name": "BunnyMetal",
             "transform": {
-                "position": [0, -2.7, -1],
+                "position": [-2.0, -2.7, -0.8],
                 "rotation": [0, 160, 0],
-                "scale": [3, 3, 3]
+                "scale": [3.0, 3.0, 3.0]
+            }
+        },
+        {
+            "mesh_ref": {
+                "handle": "bunny"
+            },
+            "material_ref": {
+                "handle": "BunnyGlass"
+            },
+            "name": "BunnyGlass",
+            "transform": {
+                "position": [-0.1, 0.6, 1.4],
+                "rotation": [0, 160, 0],
+                "scale": [3.0, 3.0, 3.0]
+            }
+        },
+        {
+            "mesh_ref": {
+                "handle": "bunny"
+            },
+            "material_ref": {
+                "handle": "BunnyFog"
+            },
+            "name": "BunnyFog",
+            "transform": {
+                "position": [2.0, -2.7, -1.4],
+                "rotation": [0, 160, 0],
+                "scale": [3.0, 3.0, 3.0]
             }
         }
     ]

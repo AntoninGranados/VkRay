@@ -3,7 +3,7 @@
 size_t FileWatcher::watch(const std::filesystem::path& path, std::function<void()> callback) {
     std::error_code ec;
     const size_t id = nextId++;
-    watches.push_back({ id, path, std::filesystem::last_write_time(path, ec), std::move(callback) });
+    watches.push_back({id, path, std::filesystem::last_write_time(path, ec), std::move(callback)});
     return id;
 }
 

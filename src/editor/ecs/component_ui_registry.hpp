@@ -21,8 +21,7 @@ public:
 
     bool draw(Registry& registry, Entity e) const {
         bool changed = false;
-        for (const Drawer& drawer : drawers)
-            changed |= drawer(registry, e);
+        for (const Drawer& drawer : drawers) changed |= drawer(registry, e);
         registry.flush();
         return changed;
     }
@@ -33,14 +32,16 @@ public:
 private:
     std::vector<Drawer> drawers;
 
-    void addWithFields(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty);
+    void addWithFields(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra,
+                       bool bulletIfEmpty);
 
     static bool beginDraw(void* id) {
         ImGui::PushID(id);
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0,0,0,0));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0,0,0,0.2));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0,0,0,0));
-        ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0.2));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY,
+                          ImGuiWindowFlags_None);
 
         bool remove = ui::minusButton("Remove");
         ImGui::SameLine();

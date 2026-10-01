@@ -2,11 +2,11 @@
 
 #include <concepts>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <format>
 #include <typeindex>
 #include <unordered_map>
 #include <vector>
@@ -25,9 +25,7 @@ struct ComponentPayload {
     std::function<void(void*)> destroy;
     std::function<Component*(void*)> asComponent = nullptr;
 
-    bool operator==(const ComponentPayload& other) const {
-        return id == other.id && typeId == other.typeId;
-    };
+    bool operator==(const ComponentPayload& other) const { return id == other.id && typeId == other.typeId; };
 };
 
 class ComponentType {
@@ -52,7 +50,7 @@ public:
     static const std::vector<ComponentType>& all();
     static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
 
-    bool operator==(const ComponentType& other) const { return id == other.id;  }
+    bool operator==(const ComponentType& other) const { return id == other.id; }
 
 private:
     friend class ComponentType::Builder;
@@ -83,8 +81,7 @@ public:
 
     template <typename T>
     Builder& field(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
-        if (type.fieldIndex.contains(id))
-            throw std::invalid_argument(std::format("duplicate field id: {}", id));
+        if (type.fieldIndex.contains(id)) throw std::invalid_argument(std::format("duplicate field id: {}", id));
         const std::string label = snakeCaseToLabel(std::filesystem::path(id).filename().string());
         Field f = Field::make<T>(id, label, defaultValue, std::move(metadata), animatable);
         type.fieldIndex[f.getId()] = type.fields.size();
@@ -101,14 +98,12 @@ public:
     }
 
     Builder& condition(std::string param, int when = 1) {
-        type.fields.back().addCondition({ std::move(param), when });
+        type.fields.back().addCondition({std::move(param), when});
         return *this;
     }
 
-    template <typename T>
-    Builder& payload(std::string id) {
-        if (type.payloadIndex.contains(id))
-            throw std::invalid_argument("duplicate payload id: " + id);
+    template <typename T> Builder& payload(std::string id) {
+        if (type.payloadIndex.contains(id)) throw std::invalid_argument("duplicate payload id: " + id);
         type.payloadIndex[id] = type.payloads.size();
         ComponentPayload p{
             std::move(id),
@@ -116,20 +111,20 @@ public:
             []() -> void* { return new T(); },
             [](void* p) { delete static_cast<T*>(p); },
         };
-        if constexpr (requires (T& t) { { t.getComponent() } -> std::same_as<Component&>; })
+        if constexpr (requires(T& t) {
+                          { t.getComponent() } -> std::same_as<Component&>;
+                      })
             p.asComponent = [](void* p) -> Component* { return &static_cast<T*>(p)->getComponent(); };
         type.payloads.push_back(std::move(p));
         return *this;
     }
 
-    template <typename ...Args>
-    Builder& needs(Args... ids) {
+    template <typename... Args> Builder& needs(Args... ids) {
         (type.needs.push_back(std::string(ids)), ...);
         return *this;
     }
 
-    template <typename ...Args>
-    Builder& conflicts(Args... ids) {
+    template <typename... Args> Builder& conflicts(Args... ids) {
         (type.conflicts.push_back(std::string(ids)), ...);
         return *this;
     }

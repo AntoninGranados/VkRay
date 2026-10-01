@@ -2,8 +2,7 @@
 
 #include <cmath>
 
-AnimationClock::AnimationClock(int endFrame, double fps)
-    : endFrame(endFrame), fps(fps), fixedDt(1.0 / fps) {}
+AnimationClock::AnimationClock(int endFrame, double fps) : endFrame(endFrame), fps(fps), fixedDt(1.0 / fps) {}
 
 void AnimationClock::reset(double t) {
     time = t;

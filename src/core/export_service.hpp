@@ -22,8 +22,8 @@ private:
     void saveBufferToEXR(VkSmol& engine, const std::filesystem::path& path);
     void saveAOVs(VkSmol& engine, const std::filesystem::path& basePath, const AOVFlags& aovFlags);
 
-    Buffer       buffer;
-    Buffer       pixelInfoReadbackBuffer;
+    Buffer buffer;
+    Buffer pixelInfoReadbackBuffer;
     BufferHandle pixelInfoBufferHandle;
-    uint32_t     width = 0, height = 0;
+    uint32_t width = 0, height = 0;
 };

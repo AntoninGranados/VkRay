@@ -9,11 +9,9 @@ namespace ecs {
 
 namespace physics_detail {
 
-BodyAttributes::BodyAttributes() :
-    M(1.0f),
-    I0(1.0f), I0inv(1.0f), Iinv(1.0f),
-    X(0, 0, 0), R(1.0f), q(1, 0, 0, 0), P(0, 0, 0), L(0, 0, 0),
-    V(0, 0, 0), omega(0, 0, 0), F(0, 0, 0), tau(0, 0, 0) {}
+BodyAttributes::BodyAttributes()
+    : M(1.0f), I0(1.0f), I0inv(1.0f), Iinv(1.0f), X(0, 0, 0), R(1.0f), q(1, 0, 0, 0), P(0, 0, 0), L(0, 0, 0),
+      V(0, 0, 0), omega(0, 0, 0), F(0, 0, 0), tau(0, 0, 0) {}
 
 std::pair<int, int> BodyState::snapshotFrameRange() const {
     int minFrame = snapshots.begin()->first;
@@ -22,22 +20,18 @@ std::pair<int, int> BodyState::snapshotFrameRange() const {
         minFrame = std::min(minFrame, frame);
         maxFrame = std::max(maxFrame, frame);
     }
-    return { minFrame, maxFrame };
+    return {minFrame, maxFrame};
 }
 
-RigidBox::RigidBox(
-    const float w, const float h, const float d, const float dens,
-    const glm::vec3 v0, const glm::vec3 omega0) : width(w), height(h), depth(d)
-{
+RigidBox::RigidBox(const float w, const float h, const float d, const float dens, const glm::vec3 v0,
+                   const glm::vec3 omega0)
+    : width(w), height(h), depth(d) {
     V = v0;
     omega = omega0;
 
     M = dens * width * height * depth;
-    glm::vec3 diag = glm::vec3(
-        height * height + depth * depth,
-        width * width + depth * depth,
-        width * width + height * height
-    );
+    glm::vec3 diag =
+        glm::vec3(height * height + depth * depth, width * width + depth * depth, width * width + height * height);
     diag = diag * M / 12.0f;
     I0 = glm::mat3(diag.x, 0, 0, 0, diag.y, 0, 0, 0, diag.z);
     I0inv = glm::inverse(I0);
@@ -52,20 +46,13 @@ RigidBox::RigidBox(
                 const float nx = static_cast<float>(ix) / static_cast<float>(latticeRes);
                 const float ny = static_cast<float>(iy) / static_cast<float>(latticeRes);
                 const float nz = static_cast<float>(iz) / static_cast<float>(latticeRes);
-                vdata0.emplace_back(
-                    0.5f * w * nx,
-                    0.5f * h * ny,
-                    0.5f * d * nz
-                );
+                vdata0.emplace_back(0.5f * w * nx, 0.5f * h * ny, 0.5f * d * nz);
             }
         }
     }
 }
 
-RigidSphere::RigidSphere(
-    const float r, const float dens,
-    const glm::vec3 v0, const glm::vec3 omega0) : radius(r)
-{
+RigidSphere::RigidSphere(const float r, const float dens, const glm::vec3 v0, const glm::vec3 omega0) : radius(r) {
     V = v0;
     omega = omega0;
 
@@ -90,8 +77,8 @@ RigidSphere::RigidSphere(
     }
 }
 
-RigidSolver::RigidSolver(BodyAttributes* body0, const glm::vec3 g) :
-    body(body0), gravity(g), stepCount(0), simTime(0), appTime(0) {}
+RigidSolver::RigidSolver(BodyAttributes* body0, const glm::vec3 g)
+    : body(body0), gravity(g), stepCount(0), simTime(0), appTime(0) {}
 
 void RigidSolver::init(BodyAttributes* body0) {
     body = body0;
@@ -100,9 +87,7 @@ void RigidSolver::init(BodyAttributes* body0) {
     appTime = 0;
 }
 
-void RigidSolver::setGravity(const glm::vec3& g) {
-    gravity = g;
-}
+void RigidSolver::setGravity(const glm::vec3& g) { gravity = g; }
 
 void RigidSolver::step(const Entity bodyEntity, const float dt, Registry& registry) {
     if (!body || dt <= 0.0f) return;
@@ -156,13 +141,8 @@ void RigidSolver::computeForceAndTorque() {
     }
 }
 
-glm::vec3 computeColliderPointVelocity(
-    const ColliderState& curr,
-    const ColliderState& prev,
-    const glm::vec3& point,
-    const glm::vec3& center,
-    const float colliderDt
-) {
+glm::vec3 computeColliderPointVelocity(const ColliderState& curr, const ColliderState& prev, const glm::vec3& point,
+                                       const glm::vec3& center, const float colliderDt) {
     const glm::vec3 linearVelocity = (curr.position - prev.position) / colliderDt;
     const glm::quat qPrev = glm::normalize(glm::quat(glm::radians(prev.rotation)));
     const glm::quat qCurr = glm::normalize(glm::quat(glm::radians(curr.rotation)));
@@ -180,12 +160,8 @@ glm::vec3 computeColliderPointVelocity(
     return linearVelocity + glm::cross(angularVelocity, point - center);
 }
 
-void RigidSolver::resolveSdfCollision(
-    const Entity& e,
-    Registry& registry,
-    const float colliderDt,
-    const SdfSampler& sdfSampler
-) {
+void RigidSolver::resolveSdfCollision(const Entity& e, Registry& registry, const float colliderDt,
+                                      const SdfSampler& sdfSampler) {
     struct ContactCandidate {
         glm::vec3 rRel;
         glm::vec3 normal;
@@ -202,7 +178,7 @@ void RigidSolver::resolveSdfCollision(
     const Component& t = transforms.get(e);
     const float eps = collider.get<float>("restitution");
     const float mu = collider.get<float>("friction");
-    const ColliderState currState {
+    const ColliderState currState{
         .position = t.get<glm::vec3>("position"),
         .rotation = t.get<glm::vec3>("rotation"),
     };
@@ -214,7 +190,7 @@ void RigidSolver::resolveSdfCollision(
         const glm::vec3 rRel = body->R * body->vdata0[i];
         const glm::vec3 r = rRel + body->X;
 
-        SdfContactSample sample {};
+        SdfContactSample sample{};
         if (!sdfSampler(r, sample)) continue;
         const float dist = sample.distance;
         const float normalLen = glm::length(sample.normal);
@@ -243,13 +219,8 @@ void RigidSolver::resolveSdfCollision(
         });
     }
 
-    std::sort(
-        contacts.begin(),
-        contacts.end(),
-        [](const ContactCandidate& a, const ContactCandidate& b) {
-            return a.dist < b.dist;
-        }
-    );
+    std::sort(contacts.begin(), contacts.end(),
+              [](const ContactCandidate& a, const ContactCandidate& b) { return a.dist < b.dist; });
 
     constexpr size_t maxContactsPerCollider = 8;
     const size_t contactCount = std::min(maxContactsPerCollider, contacts.size());
@@ -266,9 +237,8 @@ void RigidSolver::resolveSdfCollision(
         const float penetration = std::max(-c.dist, 0.0f);
         const float contactSlop = 1e-4f;
         const float baumgarte = 0.2f;
-        const float bias = (penetration > contactSlop)
-            ? (baumgarte * (penetration - contactSlop) / std::max(simDt, 1e-8f))
-            : 0.0f;
+        const float bias =
+            (penetration > contactSlop) ? (baumgarte * (penetration - contactSlop) / std::max(simDt, 1e-8f)) : 0.0f;
         const float j = (-(1.0f + eps) * vRel + bias) / denom;
         if (!std::isfinite(j) || j <= 0.0f) continue;
 
@@ -327,7 +297,8 @@ void RigidSolver::resolveBoxCollision(const Entity& e, Registry& registry, const
     const glm::quat rot = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
     const glm::quat invRot = glm::inverse(glm::normalize(rot));
 
-    const SdfSampler sdfSampler = [center, halfExtents, invRot, rot](const glm::vec3& p, SdfContactSample& sample) -> bool {
+    const SdfSampler sdfSampler = [center, halfExtents, invRot, rot](const glm::vec3& p,
+                                                                     SdfContactSample& sample) -> bool {
         const glm::vec3 local = invRot * (p - center);
         const glm::vec3 q = glm::abs(local) - halfExtents;
 
@@ -344,7 +315,10 @@ void RigidSolver::resolveBoxCollision(const Entity& e, Registry& registry, const
         } else {
             int axis = 0;
             float qMax = q.x;
-            if (q.y > qMax) { axis = 1; qMax = q.y; }
+            if (q.y > qMax) {
+                axis = 1;
+                qMax = q.y;
+            }
             if (q.z > qMax) { axis = 2; }
             nLocal = glm::vec3(0.0f);
             nLocal[axis] = (local[axis] >= 0.0f) ? 1.0f : -1.0f;

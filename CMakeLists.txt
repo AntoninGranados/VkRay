@@ -127,17 +127,17 @@ if(VKRAY_BUILD_TESTS)
   target_link_libraries(VkRayTests PRIVATE glm::glm Vulkan::Vulkan)
 
   include("${CMAKE_SOURCE_DIR}/external/doctest/cmake/doctest.cmake")
-  doctest_discover_tests(VkRayTests)
+  doctest_discover_tests(VkRayTests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
   add_test(
-    NAME golden_image_reference
+    NAME "Golden image matches reference"
     COMMAND python3 "${CMAKE_SOURCE_DIR}/tests/golden/compare_render.py"
             "$<TARGET_FILE:VkRay>"
             "${CMAKE_SOURCE_DIR}"
   )
 
   add_test(
-    NAME clang_format
+    NAME "Source files match clang-format"
     COMMAND "${CMAKE_SOURCE_DIR}/tests/check_format.sh"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   )

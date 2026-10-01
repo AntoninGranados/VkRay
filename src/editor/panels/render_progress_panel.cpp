@@ -4,15 +4,15 @@
 
 #include "imgui/imgui.h"
 
-#include "core/core.hpp"
 #include "core/animation/animation_clock.hpp"
+#include "core/core.hpp"
 #include "core/fields/parameters.hpp"
 #include "editor/ui_utils.hpp"
 
 void RenderProgressPanel::draw() {
     ImGui::SetNextWindowPos({0, 0});
-    ui::drawWindow(getTitle(),
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration,
+    ui::drawWindow(
+        getTitle(), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDecoration,
         [this] {
             uint32_t sampleCount = Core::getCoreRenderer().getSampleCount();
             int renderSamplesPerPixel = Core::getParameters().get<int>("renderer/sampling/render_samples");
@@ -32,10 +32,7 @@ void RenderProgressPanel::draw() {
                 ImVec2 textSize = ImGui::CalcTextSize(overlay);
                 ImVec2 barMin = ImGui::GetItemRectMin();
                 ImVec2 barMax = ImGui::GetItemRectMax();
-                ImVec2 textPos(
-                    (barMin.x + barMax.x - textSize.x) * 0.5f,
-                    (barMin.y + barMax.y - textSize.y) * 0.5f
-                );
+                ImVec2 textPos((barMin.x + barMax.x - textSize.x) * 0.5f, (barMin.y + barMax.y - textSize.y) * 0.5f);
                 ImGui::GetWindowDrawList()->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), overlay);
 
                 if (stats.progress > 0.0f) {
@@ -50,8 +47,7 @@ void RenderProgressPanel::draw() {
                     }
                 } else {
                     ImGui::Text("ETA: --");
-                    if (Core::getRenderMode() == RenderMode::RenderAnimation)
-                        ImGui::Text("Total ETA: --");
+                    if (Core::getRenderMode() == RenderMode::RenderAnimation) ImGui::Text("Total ETA: --");
                 }
             }
 
@@ -60,6 +56,5 @@ void RenderProgressPanel::draw() {
                 int currentFrame = std::clamp(Core::getAnimation().getFrame(), 0, totalFrames - 1) + 1;
                 ImGui::Text("Frame: %d / %d", currentFrame, totalFrames);
             }
-        }
-    );
+        });
 }

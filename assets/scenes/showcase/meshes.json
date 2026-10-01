@@ -4,7 +4,10 @@
     "Materials": [
         {
             "name": "Sun",
-            "emissive": { "albedo": [1.0, 0.8, 0.8], "emission_strength": 50 }
+            "emissive": {
+                "albedo": [1.0, 0.8, 0.8],
+                "emission_strength": 50
+            }
         },
         {
             "name": "Floor",
@@ -25,17 +28,25 @@
         },
         {
             "name": "LucyMat",
-            "diffuse": { "albedo": [0.15, 0.52, 0.22] }
+            "diffuse": {
+                "albedo": [0.15, 0.52, 0.22]
+            }
         },
         {
             "name": "ArmadilloMat",
-            "metal": { "albedo": [0.85, 0.22, 0.18], "roughness": 0.35 }
+            "metal": {
+                "albedo": [0.85, 0.22, 0.18],
+                "roughness": 0.35
+            }
         }
     ],
     "Assets": [
         {
             "name": "bunny",
-            "mesh": { "path": "./assets/models/bunny.obj", "smooth": true }
+            "mesh": {
+                "path": "./assets/models/bunny.obj",
+                "smooth": true
+            }
         },
         {
             "name": "lucy-centered",
@@ -46,29 +57,48 @@
         },
         {
             "name": "armadillo",
-            "mesh": { "path": "./assets/models/armadillo.obj", "smooth": true }
+            "mesh": {
+                "path": "./assets/models/armadillo.obj",
+                "smooth": true
+            }
         }
     ],
     "Objects": [
         {
-            "camera": { "f_stop": 2.5 },
+            "camera": {
+                "f_stop": 2.5
+            },
             "name": "Camera",
-            "transform": { "position": [0, 5, -10], "rotation": [-19.29, 180, 0] }
+            "transform": {
+                "position": [0, 5, -10],
+                "rotation": [-19.29, 180, 0]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "Sun" },
+            "material_ref": {
+                "handle": "Sun"
+            },
             "name": "Sun",
-            "transform": { "position": [-200, 100, -400], "scale": [50, 50, 50] }
+            "transform": {
+                "position": [-200, 100, -400],
+                "scale": [50, 50, 50]
+            }
         },
         {
-            "plane": {  },
-            "material_ref": { "handle": "Floor" },
+            "plane": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "Floor"
         },
         {
-            "mesh_ref": { "handle": "bunny" },
-            "material_ref": { "handle": "BunnyMat" },
+            "mesh_ref": {
+                "handle": "bunny"
+            },
+            "material_ref": {
+                "handle": "BunnyMat"
+            },
             "name": "Bunny",
             "transform": {
                 "position": [-3.5, 0.94, -0.2],
@@ -77,14 +107,25 @@
             }
         },
         {
-            "mesh_ref": { "handle": "lucy-centered" },
-            "material_ref": { "handle": "LucyMat" },
+            "mesh_ref": {
+                "handle": "lucy-centered"
+            },
+            "material_ref": {
+                "handle": "LucyMat"
+            },
             "name": "Lucy",
-            "transform": { "position": [0, 0, 0.2], "rotation": [0, -15, 0] }
+            "transform": {
+                "position": [0, 0, 0.2],
+                "rotation": [0, -15, 0]
+            }
         },
         {
-            "mesh_ref": { "handle": "armadillo" },
-            "material_ref": { "handle": "ArmadilloMat" },
+            "mesh_ref": {
+                "handle": "armadillo"
+            },
+            "material_ref": {
+                "handle": "ArmadilloMat"
+            },
             "name": "Armadillo",
             "transform": {
                 "position": [3.5, 1.05, -0.2],

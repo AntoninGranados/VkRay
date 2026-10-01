@@ -5,6 +5,8 @@
 #include <optional>
 #include <string>
 
+#include "nlohmann/json.hpp"
+
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/components/material.hpp"
 #include "core/scene/scene.hpp"
@@ -159,4 +161,31 @@ TEST_CASE("SceneSerializer loadCore resolves a cross-entity name reference") {
 
     const ecs::Entity handle = scene.getRegistry().get(*obj, ecs::MaterialRef).get<ecs::Entity>("handle");
     CHECK(handle == *material);
+}
+
+TEST_CASE("SceneSerializer save round-trips the golden scene") {
+    const std::filesystem::path originalPath = "tests/golden/scene.json";
+    const std::filesystem::path savedPathA =
+        std::filesystem::temp_directory_path() / "vkray_scene_serializer_roundtrip_a.json";
+    const std::filesystem::path savedPathB =
+        std::filesystem::temp_directory_path() / "vkray_scene_serializer_roundtrip_b.json";
+
+    Scene sceneA;
+    sceneA.initContext();
+    REQUIRE(SceneSerializer::loadCore(sceneA, originalPath.string()));
+    REQUIRE(SceneSerializer::save(sceneA, savedPathA.string()));
+
+    Scene sceneB;
+    sceneB.initContext();
+    REQUIRE(SceneSerializer::loadCore(sceneB, savedPathA.string()));
+    REQUIRE(SceneSerializer::save(sceneB, savedPathB.string()));
+
+    std::ifstream savedFileA(savedPathA);
+    std::ifstream savedFileB(savedPathB);
+    REQUIRE(savedFileA.is_open());
+    REQUIRE(savedFileB.is_open());
+
+    const nlohmann::ordered_json a = nlohmann::ordered_json::parse(savedFileA);
+    const nlohmann::ordered_json b = nlohmann::ordered_json::parse(savedFileB);
+    CHECK(a == b);
 }

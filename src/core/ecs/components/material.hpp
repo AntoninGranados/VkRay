@@ -12,6 +12,8 @@
 
 namespace ecs {
 
+// clang-format off
+
 inline const ComponentType Material = ComponentType::builder("material")
     .description("Material marker.")
     .icon(ICON_FA_PALETTE)
@@ -117,4 +119,6 @@ inline const ComponentType MaterialPlugin = ComponentType::builder("programmable
     .payload<ShaderPlugin>("plugin")
     .build();
 
-}   // namespace ecs
+// clang-format on
+
+} // namespace ecs

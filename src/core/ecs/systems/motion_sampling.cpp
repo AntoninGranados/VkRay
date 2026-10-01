@@ -23,9 +23,9 @@ namespace {
 bool isEntityInMotion(Registry& registry, Entity entity, Component& transform) {
     if (registry.has(entity, RigidBody)) return true;
     AnimationStore& store = *registry.ctx().get<AnimationStore*>();
-    return !store.keyframes(transform.getField("position")).empty()
-        || !store.keyframes(transform.getField("rotation")).empty()
-        || !store.keyframes(transform.getField("scale")).empty();
+    return !store.keyframes(transform.getField("position")).empty() ||
+           !store.keyframes(transform.getField("rotation")).empty() ||
+           !store.keyframes(transform.getField("scale")).empty();
 }
 
 GpuMotionSample sampleFromValues(const glm::vec3& position, const glm::vec3& rotationEuler, const glm::vec3& scale) {
@@ -38,7 +38,8 @@ GpuMotionSample sampleFromValues(const glm::vec3& position, const glm::vec3& rot
 }
 
 GpuMotionSample sampleLiveTransform(Component& transform) {
-    return sampleFromValues(transform.get<glm::vec3>("position"), transform.get<glm::vec3>("rotation"), transform.get<glm::vec3>("scale"));
+    return sampleFromValues(transform.get<glm::vec3>("position"), transform.get<glm::vec3>("rotation"),
+                            transform.get<glm::vec3>("scale"));
 }
 
 GpuMotionSample sampleTrackAt(AnimationStore& store, Component& transform, float frame, float anchorFrame) {
@@ -46,20 +47,20 @@ GpuMotionSample sampleTrackAt(AnimationStore& store, Component& transform, float
     Field& rotationField = transform.getField("rotation");
     Field& scaleField = transform.getField("scale");
 
-    const glm::vec3 position = transform.get<glm::vec3>("position")
-        + (store.sampleAt<glm::vec3>(positionField, frame) - store.sampleAt<glm::vec3>(positionField, anchorFrame));
+    const glm::vec3 position =
+        transform.get<glm::vec3>("position") +
+        (store.sampleAt<glm::vec3>(positionField, frame) - store.sampleAt<glm::vec3>(positionField, anchorFrame));
 
-    const glm::quat rotationDelta = glm::quat(glm::radians(store.sampleAt<glm::vec3>(rotationField, frame)))
-        * glm::inverse(glm::quat(glm::radians(store.sampleAt<glm::vec3>(rotationField, anchorFrame))));
+    const glm::quat rotationDelta =
+        glm::quat(glm::radians(store.sampleAt<glm::vec3>(rotationField, frame))) *
+        glm::inverse(glm::quat(glm::radians(store.sampleAt<glm::vec3>(rotationField, anchorFrame))));
     const glm::quat rotation = rotationDelta * glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
 
     const glm::vec3 scaleAtFrame = store.sampleAt<glm::vec3>(scaleField, frame);
     const glm::vec3 scaleAtAnchor = store.sampleAt<glm::vec3>(scaleField, anchorFrame);
-    const glm::vec3 scaleRatio = glm::vec3(
-        scaleAtAnchor.x != 0.0f ? scaleAtFrame.x / scaleAtAnchor.x : 1.0f,
-        scaleAtAnchor.y != 0.0f ? scaleAtFrame.y / scaleAtAnchor.y : 1.0f,
-        scaleAtAnchor.z != 0.0f ? scaleAtFrame.z / scaleAtAnchor.z : 1.0f
-    );
+    const glm::vec3 scaleRatio = glm::vec3(scaleAtAnchor.x != 0.0f ? scaleAtFrame.x / scaleAtAnchor.x : 1.0f,
+                                           scaleAtAnchor.y != 0.0f ? scaleAtFrame.y / scaleAtAnchor.y : 1.0f,
+                                           scaleAtAnchor.z != 0.0f ? scaleAtFrame.z / scaleAtAnchor.z : 1.0f);
     const glm::vec3 scale = transform.get<glm::vec3>("scale") * scaleRatio;
 
     return GpuMotionSample{
@@ -86,11 +87,11 @@ GpuMotionSample sampleRigidBodyAt(Registry& registry, Entity entity, Component& 
 
     const auto snapHi = alpha > 0.0f ? state.snapshots.find(frameLo + 1) : state.snapshots.end();
     const glm::vec3 position = snapHi == state.snapshots.end()
-        ? snapLo->second.position
-        : glm::mix(snapLo->second.position, snapHi->second.position, alpha);
+                                   ? snapLo->second.position
+                                   : glm::mix(snapLo->second.position, snapHi->second.position, alpha);
     const glm::quat rotation = snapHi == state.snapshots.end()
-        ? snapLo->second.rotation
-        : glm::slerp(snapLo->second.rotation, snapHi->second.rotation, alpha);
+                                   ? snapLo->second.rotation
+                                   : glm::slerp(snapLo->second.rotation, snapHi->second.rotation, alpha);
 
     return GpuMotionSample{
         .rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w),
@@ -105,7 +106,8 @@ void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMo
     outMotion.push_back(sampleLiveTransform(transform));
 }
 
-uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform, std::vector<GpuMotionSample>& outMotion) {
+uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform,
+                           std::vector<GpuMotionSample>& outMotion) {
     const uint32_t offset = static_cast<uint32_t>(outMotion.size());
 
     const Entity cameraEntity = *registry.ctx().get<Entity*>();
@@ -117,15 +119,17 @@ uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transfo
         return offset;
     }
 
-    static std::mt19937 rng{ std::random_device{}() };
+    static std::mt19937 rng{std::random_device{}()};
     const int frame = Core::getAnimation().getFrame();
-    const float halfBlur = blurFractionFromShutter(shutterSpeed, static_cast<float>(Core::getAnimation().getFps())) * 0.5f;
+    const float halfBlur =
+        blurFractionFromShutter(shutterSpeed, static_cast<float>(Core::getAnimation().getFps())) * 0.5f;
     std::uniform_real_distribution<float> dist(-halfBlur, halfBlur);
     const float sampleFrame = static_cast<float>(frame) + dist(rng);
 
-    outMotion.push_back(registry.has(entity, RigidBody)
-        ? sampleRigidBodyAt(registry, entity, transform, sampleFrame)
-        : sampleTrackAt(*registry.ctx().get<AnimationStore*>(), transform, sampleFrame, static_cast<float>(frame)));
+    outMotion.push_back(
+        registry.has(entity, RigidBody)
+            ? sampleRigidBodyAt(registry, entity, transform, sampleFrame)
+            : sampleTrackAt(*registry.ctx().get<AnimationStore*>(), transform, sampleFrame, static_cast<float>(frame)));
     return offset;
 }
 

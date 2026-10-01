@@ -27,7 +27,7 @@ public:
             id = static_cast<uint32_t>(generations.size());
             generations.push_back(0);
         }
-        Entity e{ id, generations[id] };
+        Entity e{id, generations[id]};
         if (parent != Entity{}) {
             parentMap[e] = parent;
             childrenMap[parent].push_back(e);
@@ -36,10 +36,8 @@ public:
     }
 
     void destroyEntity(const Entity& e) {
-        if (!isAlive(e))
-            return;
-        for (auto& [_, storage] : storages)
-            storage.remove(e);
+        if (!isAlive(e)) return;
+        for (auto& [_, storage] : storages) storage.remove(e);
         generations[e.getId()]++;
         freeIds.push_back(e.getId());
 
@@ -47,8 +45,7 @@ public:
         if (parentIt != parentMap.end()) {
             auto& siblings = childrenMap[parentIt->second];
             siblings.erase(std::remove(siblings.begin(), siblings.end(), e), siblings.end());
-            if (siblings.empty())
-                childrenMap.erase(parentIt->second);
+            if (siblings.empty()) childrenMap.erase(parentIt->second);
             parentMap.erase(parentIt);
         }
         childrenMap.erase(e);
@@ -82,13 +79,9 @@ public:
         return it != childrenMap.end() ? it->second : empty;
     }
 
-    ComponentStorage& storage(const ComponentType& type) {
-        return storages[type.getId()];
-    }
+    ComponentStorage& storage(const ComponentType& type) { return storages[type.getId()]; }
 
-    const ComponentStorage& storage(const ComponentType& type) const {
-        return storages.at(type.getId());
-    }
+    const ComponentStorage& storage(const ComponentType& type) const { return storages.at(type.getId()); }
 
     bool canAdd(const Entity& e, const ComponentType& type) const {
         if (has(e, type)) return true;
@@ -115,13 +108,9 @@ public:
         return it != storages.end() && it->second.has(e);
     }
 
-    Component& get(const Entity& e, const ComponentType& type) {
-        return storages.at(type.getId()).get(e);
-    }
+    Component& get(const Entity& e, const ComponentType& type) { return storages.at(type.getId()).get(e); }
 
-    const Component& get(const Entity& e, const ComponentType& type) const {
-        return storages.at(type.getId()).get(e);
-    }
+    const Component& get(const Entity& e, const ComponentType& type) const { return storages.at(type.getId()).get(e); }
 
     void remove(const Entity& e, const ComponentType& type) {
         for (auto& [id, s] : storages) {
@@ -134,8 +123,7 @@ public:
     }
 
     void flush() {
-        for (const auto& [e, id] : removalQueue)
-            storages.at(id).remove(e);
+        for (const auto& [e, id] : removalQueue) storages.at(id).remove(e);
         removalQueue.clear();
     }
 

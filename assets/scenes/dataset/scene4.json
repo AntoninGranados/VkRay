@@ -5,100 +5,201 @@
         {
             "name": "Floor",
             "glossy": {
-                "albedo": { "rand": { "min": [0.04, 0.04, 0.04], "max": [0.14, 0.14, 0.14] } },
-                "roughness": { "rand": { "min": 0.0, "max": 0.08 } },
+                "albedo": {
+                    "rand": {
+                        "min": [0.04, 0.04, 0.04],
+                        "max": [0.14, 0.14, 0.14]
+                    }
+                },
+                "roughness": {
+                    "rand": {
+                        "min": 0.0,
+                        "max": 0.08
+                    }
+                },
                 "ior": 1.5
             }
         },
         {
             "name": "RedLight",
-            "emissive": { "albedo": [1.0, 0.08, 0.04], "emission_strength": 180 }
+            "emissive": {
+                "albedo": [1.0, 0.08, 0.04],
+                "emission_strength": 180
+            }
         },
         {
             "name": "BlueLight",
-            "emissive": { "albedo": [0.1, 0.25, 1.0], "emission_strength": 150 }
+            "emissive": {
+                "albedo": [0.1, 0.25, 1.0],
+                "emission_strength": 150
+            }
         },
         {
             "name": "GreenLight",
-            "emissive": { "albedo": [0.1, 0.9, 0.15], "emission_strength": 120 }
+            "emissive": {
+                "albedo": [0.1, 0.9, 0.15],
+                "emission_strength": 120
+            }
         },
         {
             "name": "YellowLight",
-            "emissive": { "albedo": [1.0, 0.85, 0.05], "emission_strength": 100 }
+            "emissive": {
+                "albedo": [1.0, 0.85, 0.05],
+                "emission_strength": 100
+            }
         },
         {
             "name": "Glass",
             "dielectric": {
-                "albedo": { "rand": { "min": [0.88, 0.88, 0.88], "max": [1.0, 1.0, 1.0] } },
+                "albedo": {
+                    "rand": {
+                        "min": [0.88, 0.88, 0.88],
+                        "max": [1.0, 1.0, 1.0]
+                    }
+                },
                 "roughness": 0.0,
-                "ior": { "rand": { "min": 1.4, "max": 1.9 } }
+                "ior": {
+                    "rand": {
+                        "min": 1.4,
+                        "max": 1.9
+                    }
+                }
             }
         },
         {
             "name": "Metal",
             "metal": {
-                "albedo": { "rand": { "min": [0.55, 0.55, 0.55], "max": [1.0, 0.95, 0.85] } },
-                "roughness": { "rand": { "min": 0.0, "max": 0.2 } }
+                "albedo": {
+                    "rand": {
+                        "min": [0.55, 0.55, 0.55],
+                        "max": [1.0, 0.95, 0.85]
+                    }
+                },
+                "roughness": {
+                    "rand": {
+                        "min": 0.0,
+                        "max": 0.2
+                    }
+                }
             }
         }
     ],
     "Objects": [
         {
-            "camera": { "focal_length": { "rand": { "min": 25.7067, "max": 43.4558 } } },
+            "camera": {
+                "focal_length": {
+                    "rand": {
+                        "min": 25.7067,
+                        "max": 43.4558
+                    }
+                }
+            },
             "name": "Camera",
             "spherical": {
-                "radius": { "rand": { "min": 4, "max": 8 } },
-                "azimuth": { "rand": { "min": -120, "max": 120 } },
-                "elevation": { "rand": { "min": 3, "max": 18 } },
+                "radius": {
+                    "rand": {
+                        "min": 4,
+                        "max": 8
+                    }
+                },
+                "azimuth": {
+                    "rand": {
+                        "min": -120,
+                        "max": 120
+                    }
+                },
+                "elevation": {
+                    "rand": {
+                        "min": 3,
+                        "max": 18
+                    }
+                },
                 "target": [0, 1, 0]
             }
         },
         {
-            "plane": {  },
-            "material_ref": { "handle": "Floor" },
+            "plane": {},
+            "material_ref": {
+                "handle": "Floor"
+            },
             "name": "Floor"
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "RedLight" },
+            "material_ref": {
+                "handle": "RedLight"
+            },
             "name": "RedLight",
-            "transform": { "position": [-3.5, 2.5, -2], "scale": [0.25, 0.25, 0.25] }
+            "transform": {
+                "position": [-3.5, 2.5, -2],
+                "scale": [0.25, 0.25, 0.25]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "BlueLight" },
+            "material_ref": {
+                "handle": "BlueLight"
+            },
             "name": "BlueLight",
-            "transform": { "position": [3.5, 2, -2], "scale": [0.25, 0.25, 0.25] }
+            "transform": {
+                "position": [3.5, 2, -2],
+                "scale": [0.25, 0.25, 0.25]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "GreenLight" },
+            "material_ref": {
+                "handle": "GreenLight"
+            },
             "name": "GreenLight",
-            "transform": { "position": [0, 4.5, 2.5], "scale": [0.3, 0.3, 0.3] }
+            "transform": {
+                "position": [0, 4.5, 2.5],
+                "scale": [0.3, 0.3, 0.3]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "YellowLight" },
+            "material_ref": {
+                "handle": "YellowLight"
+            },
             "name": "YellowLight",
-            "transform": { "position": [-2, 1.8, 3], "scale": [0.2, 0.2, 0.2] }
+            "transform": {
+                "position": [-2, 1.8, 3],
+                "scale": [0.2, 0.2, 0.2]
+            }
         },
         {
             "sphere": {},
-            "material_ref": { "handle": "Glass" },
+            "material_ref": {
+                "handle": "Glass"
+            },
             "name": "GlassSphere",
-            "transform": { "position": [0, 1, 0], "scale": [1, 1, 1] }
+            "transform": {
+                "position": [0, 1, 0],
+                "scale": [1, 1, 1]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Metal" },
+            "box": {},
+            "material_ref": {
+                "handle": "Metal"
+            },
             "name": "MetalBlock1",
-            "transform": { "position": [-2.5, 1, 0], "scale": [0.7, 1, 0.5] }
+            "transform": {
+                "position": [-2.5, 1, 0],
+                "scale": [0.7, 1, 0.5]
+            }
         },
         {
-            "box": {  },
-            "material_ref": { "handle": "Metal" },
+            "box": {},
+            "material_ref": {
+                "handle": "Metal"
+            },
             "name": "MetalBlock2",
-            "transform": { "position": [2.5, 0.75, 0], "scale": [0.7, 0.75, 0.5] }
+            "transform": {
+                "position": [2.5, 0.75, 0],
+                "scale": [0.7, 0.75, 0.5]
+            }
         }
     ]
 }

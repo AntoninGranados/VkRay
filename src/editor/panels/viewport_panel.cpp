@@ -3,14 +3,11 @@
 #include <limits>
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include "imgui/imgui.h"
-#include "imgui/ImGuizmo.h"
+#include <glm/gtx/matrix_decompose.hpp>
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
@@ -20,6 +17,7 @@
 #include "core/scene/scene.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
 #include "editor/editor.hpp"
+#include "editor/imgui_guizmo.hpp"
 #include "editor/scene/raycast.hpp"
 #include "editor/ui_utils.hpp"
 
@@ -27,7 +25,8 @@ void ViewportPanel::draw() {
     Scene& scene = Core::getScene();
 
     const ecs::Component& activeCamera = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
-    ImGuizmo::SetOrthographic(static_cast<ecs::CameraProjection>(activeCamera.get<int>("projection")) == ecs::CameraProjection::Orthographic);
+    ImGuizmo::SetOrthographic(static_cast<ecs::CameraProjection>(activeCamera.get<int>("projection")) ==
+                              ecs::CameraProjection::Orthographic);
     ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::BeginFrame();
 
@@ -35,37 +34,34 @@ void ViewportPanel::draw() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     drawList = nullptr;
     ui::drawWindow(getTitle(),
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse,
-        [&] {
-            hovered = ImGui::IsWindowHovered();
-            pos = ImGui::GetWindowPos();
-            size = ImGui::GetContentRegionAvail();
-            drawList = ImGui::GetWindowDrawList();
-            ImGui::Image(Editor::getEditorRenderer().getDisplayTexId(), size);
+                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse,
+                   [&] {
+                       hovered = ImGui::IsWindowHovered();
+                       pos = ImGui::GetWindowPos();
+                       size = ImGui::GetContentRegionAvail();
+                       drawList = ImGui::GetWindowDrawList();
+                       ImGui::Image(Editor::getEditorRenderer().getDisplayTexId(), size);
 
-            if (ImGui::IsItemHovered()) {
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
-                    ImVec2 mp = ImGui::GetMousePos();
-                    float dist;
-                    auto entityId = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist);
-                    if (onEntitySelection) onEntitySelection(entityId);
-                }
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
-                    ImVec2 mp = ImGui::GetMousePos();
-                    float dist;
-                    auto hit = raycast(scene, { mp.x - pos.x, mp.y - pos.y }, dist, false);
-                    if (hit.has_value()) {
-                        ecs::Component& cam = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
-                        cam.set<float>("focal_distance", dist);
-                        cam.set<ecs::Entity>("focus_target", ecs::Entity{});
-                        Core::markRenderDirty();
-                    }
-                }
-            }
-        }
-    );
+                       if (ImGui::IsItemHovered()) {
+                           if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
+                               ImVec2 mp = ImGui::GetMousePos();
+                               float dist;
+                               auto entityId = raycast(scene, {mp.x - pos.x, mp.y - pos.y}, dist);
+                               if (onEntitySelection) onEntitySelection(entityId);
+                           }
+                           if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+                               ImVec2 mp = ImGui::GetMousePos();
+                               float dist;
+                               auto hit = raycast(scene, {mp.x - pos.x, mp.y - pos.y}, dist, false);
+                               if (hit.has_value()) {
+                                   ecs::Component& cam = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
+                                   cam.set<float>("focal_distance", dist);
+                                   cam.set<ecs::Entity>("focus_target", ecs::Entity{});
+                                   Core::markRenderDirty();
+                               }
+                           }
+                       }
+                   });
     ImGui::PopStyleVar();
 
     if (!drawList) return;
@@ -85,9 +81,9 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     if (!scene.getRegistry().has(e, ecs::Transform)) return;
 
     ecs::Component& t = scene.getRegistry().get(e, ecs::Transform);
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position"))
-        * glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation"))))
-        * glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position")) *
+                      glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation")))) *
+                      glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
 
     const ecs::Entity& camera = scene.getCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
@@ -98,12 +94,8 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     const int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE;
 
     ImGuizmo::PushID(static_cast<int>(e.getId()) * 2);
-    if (ImGuizmo::Manipulate(
-            glm::value_ptr(view),
-            glm::value_ptr(proj),
-            static_cast<ImGuizmo::OPERATION>(opFlags),
-            ImGuizmo::MODE::WORLD,
-            glm::value_ptr(model))) {
+    if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), static_cast<ImGuizmo::OPERATION>(opFlags),
+                             ImGuizmo::MODE::WORLD, glm::value_ptr(model))) {
         if (isInvalid(model)) {
             ImGuizmo::PopID();
             return;
@@ -113,10 +105,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         glm::vec3 translation, scale, skew;
         glm::quat rotation;
         glm::vec4 perspective;
-        glm::decompose(model,
-            scale, rotation, translation,
-            skew, perspective
-        );
+        glm::decompose(model, scale, rotation, translation, skew, perspective);
 
         const glm::quat oldRotation = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
 
@@ -131,23 +120,18 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     if (!scene.getRegistry().has(e, ecs::TiltShiftLens)) return;
     ecs::Component& ts = scene.getRegistry().get(e, ecs::TiltShiftLens);
 
-    glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("plane_position"))
-        * glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))));
+    glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("plane_position")) *
+                        glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))));
 
     ImGuizmo::PushID(static_cast<int>(e.getId()) * 2 + 1);
     if (ImGuizmo::Manipulate(
-            glm::value_ptr(view),
-            glm::value_ptr(proj),
+            glm::value_ptr(view), glm::value_ptr(proj),
             static_cast<ImGuizmo::OPERATION>(ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE),
-            ImGuizmo::MODE::WORLD,
-            glm::value_ptr(tsModel))) {
+            ImGuizmo::MODE::WORLD, glm::value_ptr(tsModel))) {
         if (!isInvalid(tsModel)) {
             glm::vec3 translation, rotationEuler, scale;
-            ImGuizmo::DecomposeMatrixToComponents(
-                glm::value_ptr(tsModel),
-                glm::value_ptr(translation),
-                glm::value_ptr(rotationEuler),
-                glm::value_ptr(scale));
+            ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(tsModel), glm::value_ptr(translation),
+                                                  glm::value_ptr(rotationEuler), glm::value_ptr(scale));
             ts.set<glm::vec3>("plane_position", translation);
             ts.set<glm::vec3>("plane_rotation", rotationEuler);
             Core::markRenderDirty();
@@ -156,8 +140,9 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     ImGuizmo::PopID();
 }
 
-std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist, bool includeCameras) {
-    const Ray ray = getRay(screenPos, { size.x, size.y }, scene.getCamera());
+std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist,
+                                                  bool includeCameras) {
+    const Ray ray = getRay(screenPos, {size.x, size.y}, scene.getCamera());
     float tClosest = std::numeric_limits<float>::infinity();
     std::optional<ecs::Entity> entityClosest;
 
@@ -175,9 +160,8 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
         const ecs::Component& transform = transformStorage.get(e);
         const glm::vec3 tPos = transform.get<glm::vec3>("position");
         const glm::quat tRot = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos)
-            * glm::mat4_cast(tRot)
-            * glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+        const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos) * glm::mat4_cast(tRot) *
+                                glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
         float t = -1.0f;
 
         if (scene.getRegistry().has(e, ecs::Sphere)) {
@@ -196,7 +180,8 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
         } else if (includeCameras && cameraStorage.has(e)) {
             if (activeCamera == e) continue;
             constexpr float cameraSelectRadius = 0.6f;
-            const glm::mat4 cameraLocal = glm::translate(glm::mat4(1.0f), tPos) * glm::scale(glm::mat4(1.0f), glm::vec3(cameraSelectRadius));
+            const glm::mat4 cameraLocal =
+                glm::translate(glm::mat4(1.0f), tPos) * glm::scale(glm::mat4(1.0f), glm::vec3(cameraSelectRadius));
             t = raySphereIntersection(ray, cameraLocal);
         }
 

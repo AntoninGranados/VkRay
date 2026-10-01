@@ -11,8 +11,8 @@
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr/tinyexr.h"
 
-#include "utils/log.hpp"
 #include "core/render_structures.hpp"
+#include "utils/log.hpp"
 
 namespace {
 
@@ -48,9 +48,8 @@ public:
 };
 
 template <int N, typename Accessor>
-void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channels,
-                  size_t pixelCount, const std::string& baseName,
-                  std::initializer_list<const char*> suffixes, Accessor accessor) {
+void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channels, size_t pixelCount,
+                 const std::string& baseName, std::initializer_list<const char*> suffixes, Accessor accessor) {
     std::array<std::vector<float>, N> comps;
     for (auto& c : comps) c.resize(pixelCount);
     for (size_t i = 0; i < pixelCount; i++) {
@@ -61,17 +60,16 @@ void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channe
             for (int k = 0; k < N; k++) comps[k][i] = v[k];
         }
     }
-    for (int k = 0; k < N; k++)
-        channels.emplace_back(baseName + "." + suffixes.begin()[k], std::move(comps[k]));
+    for (int k = 0; k < N; k++) channels.emplace_back(baseName + "." + suffixes.begin()[k], std::move(comps[k]));
 }
 
 } // namespace
 
 void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
-    width  = _width;
+    width = _width;
     height = _height;
     buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
-    pixelInfoBufferHandle  = pixelInfoHandle;
+    pixelInfoBufferHandle = pixelInfoHandle;
     pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
@@ -83,7 +81,7 @@ void ExportService::destroy(VkSmol& engine) {
 void ExportService::resize(VkSmol& engine, uint32_t _width, uint32_t _height) {
     engine.destroyBuffer(buffer);
     engine.destroyBuffer(pixelInfoReadbackBuffer);
-    width  = _width;
+    width = _width;
     height = _height;
     buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
     pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
@@ -106,7 +104,7 @@ std::filesystem::path ExportService::buildAnimationFramePath(int frame, const st
 
 void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path& path) {
     size_t floatCount = static_cast<size_t>(width) * height * 4;
-    size_t byteCount  = floatCount * sizeof(float);
+    size_t byteCount = floatCount * sizeof(float);
     std::vector<float> floatPixels(floatCount);
     engine.readBuffer(buffer, floatPixels.data(), byteCount);
 
@@ -123,7 +121,8 @@ void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path&
         pixels[i + 3] = 255;
     }
 
-    if (stbi_write_png(path.c_str(), static_cast<int>(width), static_cast<int>(height), 4, pixels.data(), static_cast<int>(width) * 4) != 0) {
+    if (stbi_write_png(path.c_str(), static_cast<int>(width), static_cast<int>(height), 4, pixels.data(),
+                       static_cast<int>(width) * 4) != 0) {
         Log::success("ExportService", std::format("Saved screenshot to {}", path.string()));
     } else {
         Log::error("ExportService", "Failed to write screenshot");
@@ -132,7 +131,7 @@ void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path&
 
 void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path& path) {
     size_t floatCount = static_cast<size_t>(width) * height * 4;
-    size_t byteCount  = floatCount * sizeof(float);
+    size_t byteCount = floatCount * sizeof(float);
     std::vector<float> floatPixels(floatCount);
     engine.readBuffer(buffer, floatPixels.data(), byteCount);
 
@@ -156,9 +155,9 @@ void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path&
     image_ptr[3] = &(images[0].at(0)); // R
 
     ExrChannelBuffer exr(4);
-    exr.image.images       = (unsigned char**)image_ptr;
-    exr.image.width        = width;
-    exr.image.height       = height;
+    exr.image.images = (unsigned char**)image_ptr;
+    exr.image.width = width;
+    exr.image.height = height;
     exr.image.num_channels = 4;
     exr.setChannelName(0, "A");
     exr.setChannelName(1, "B");
@@ -176,8 +175,8 @@ void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path&
 }
 
 void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
-    bool anyEnabled = f.positionW || f.position || f.normalW || f.normal
-                   || f.albedo   || f.roughness || f.matType || f.skyMask;
+    bool anyEnabled =
+        f.positionW || f.position || f.normalW || f.normal || f.albedo || f.roughness || f.matType || f.skyMask;
     if (!anyEnabled) return;
 
     engine.copyBuffer(engine.getBuffer(pixelInfoBufferHandle), pixelInfoReadbackBuffer);
@@ -190,40 +189,42 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
 
     if (f.positionW)
         pushChannel<3>(channels, pixelCount, "position_w", {"X", "Y", "Z"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.positionW : glm::vec3(0.0f); });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.positionW : glm::vec3(0.0f); });
 
     if (f.position)
         pushChannel<3>(channels, pixelCount, "position", {"X", "Y", "Z"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.position : glm::vec3(0.0f); });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.position : glm::vec3(0.0f); });
 
     if (f.normalW)
         pushChannel<3>(channels, pixelCount, "normal_w", {"X", "Y", "Z"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normalW : glm::vec3(0.0f); });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normalW : glm::vec3(0.0f); });
 
     if (f.normal)
         pushChannel<2>(channels, pixelCount, "normal", {"X", "Y"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normal : glm::vec2(0.0f); });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normal : glm::vec2(0.0f); });
 
     if (f.albedo)
         pushChannel<3>(channels, pixelCount, "albedo", {"R", "G", "B"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.albedo : glm::vec3(0.0f); });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.albedo : glm::vec3(0.0f); });
 
     if (f.roughness)
         pushChannel<1>(channels, pixelCount, "roughness", {"V"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f; });
+                       [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f; });
 
     if (f.matType)
-        pushChannel<1>(channels, pixelCount, "mat_type", {"V"},
-            [&](size_t i) { return pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f; });
+        pushChannel<1>(channels, pixelCount, "mat_type", {"V"}, [&](size_t i) {
+            return pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
+        });
 
     if (f.skyMask)
-        pushChannel<1>(channels, pixelCount, "sky_mask", {"V"},
-            [&](size_t i) { int c = pixels[i].count; return c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f; });
+        pushChannel<1>(channels, pixelCount, "sky_mask", {"V"}, [&](size_t i) {
+            int c = pixels[i].count;
+            return c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;
+        });
 
     if (channels.empty()) return;
 
-    std::sort(channels.begin(), channels.end(),
-        [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::sort(channels.begin(), channels.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
 
     int nch = static_cast<int>(channels.size());
 
@@ -231,9 +232,9 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
     for (int i = 0; i < nch; i++) ptrs[i] = channels[i].second.data();
 
     ExrChannelBuffer exr(nch);
-    exr.image.images       = (unsigned char**)ptrs.data();
-    exr.image.width        = width;
-    exr.image.height       = height;
+    exr.image.images = (unsigned char**)ptrs.data();
+    exr.image.width = width;
+    exr.image.height = height;
     exr.image.num_channels = nch;
     for (int i = 0; i < nch; i++) exr.setChannelName(i, channels[i].first);
 
@@ -253,9 +254,8 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
 void ExportService::convertFramesToVideo(const std::filesystem::path& path, const std::filesystem::path& framePath) {
     std::filesystem::path framesPath = framePath / "frame_%05d.png";
 
-    std::string cmd = std::format(
-        "ffmpeg -framerate 24 -i {} -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p {}", framesPath.c_str(), path.c_str()
-    );
+    std::string cmd = std::format("ffmpeg -framerate 24 -i {} -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p {}",
+                                  framesPath.c_str(), path.c_str());
     int ret = std::system(cmd.c_str());
     if (ret == 0)
         Log::success("ExportService", std::format("Video saved to {}", path.c_str()));

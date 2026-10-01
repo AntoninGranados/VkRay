@@ -10,13 +10,12 @@
 
 #include "core/animation/animation_store.hpp"
 #include "core/camera/camera.hpp"
-#include "core/ecs/entity.hpp"
-#include "core/scene/asset/mesh.hpp"
-#include "core/ecs/registry.hpp"
 #include "core/ecs/components.hpp"
+#include "core/ecs/entity.hpp"
+#include "core/ecs/registry.hpp"
 #include "core/ecs/system_scheduler.hpp"
 #include "core/render_structures.hpp"
-
+#include "core/scene/asset/mesh.hpp"
 
 struct SceneGpuBufferEntry {
     BufferHandle handle;
@@ -110,7 +109,7 @@ public:
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
-    
+
     AnimationStore& getAnimationStore() { return animationStore; }
 
     SceneGpuBuffers& getBuffers() { return registry.ctx().get<SceneGpuBuffers>(); }
@@ -141,5 +140,4 @@ private:
 
     void resetSceneState();
     void addDefaultAssets();
-
 };
