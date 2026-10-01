@@ -57,7 +57,7 @@ void ViewportPanel::draw() {
                                    ecs::Component& cam = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
                                    cam.set<float>("focal_distance", dist);
                                    cam.set<ecs::Entity>("focus_target", ecs::Entity{});
-                                   Core::markRenderDirty();
+                                   scene.getRegistry().markChanged(ecs::Camera);
                                }
                            }
                        }
@@ -113,7 +113,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
         t.set<glm::vec3>("scale", scale);
         if (glm::abs(glm::dot(oldRotation, rotation)) < 0.99999f)
             t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(rotation)));
-        Core::markRenderDirty();
+        scene.getRegistry().markChanged(ecs::Transform);
     }
     ImGuizmo::PopID();
 
@@ -134,7 +134,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
                                                   glm::value_ptr(rotationEuler), glm::value_ptr(scale));
             ts.set<glm::vec3>("plane_position", translation);
             ts.set<glm::vec3>("plane_rotation", rotationEuler);
-            Core::markRenderDirty();
+            scene.getRegistry().markChanged(ecs::TiltShiftLens);
         }
     }
     ImGuizmo::PopID();

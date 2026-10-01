@@ -1,9 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -37,7 +39,11 @@ public:
 
     void destroyEntity(const Entity& e) {
         if (!isAlive(e)) return;
-        for (auto& [_, storage] : storages) storage.remove(e);
+        for (auto& [id, storage] : storages) {
+            if (!storage.has(e)) continue;
+            storage.remove(e);
+            markChangedById(id);
+        }
         generations[e.getId()]++;
         freeIds.push_back(e.getId());
 
@@ -56,6 +62,7 @@ public:
         parentMap.clear();
         childrenMap.clear();
         removalQueue.clear();
+        for (auto& [id, tick] : changeTicks) tick = ++changeTick;
 
         for (uint32_t& gen : generations) gen++;
         freeIds.clear();
@@ -100,6 +107,7 @@ public:
             if (auto t = ComponentType::find(id); t && !has(e, t->get())) add(e, t->get());
 
         storages[type.getId()].add(e, type);
+        markChanged(type);
         return true;
     }
 
@@ -123,18 +131,56 @@ public:
     }
 
     void flush() {
-        for (const auto& [e, id] : removalQueue) storages.at(id).remove(e);
+        for (const auto& [e, id] : removalQueue) {
+            storages.at(id).remove(e);
+            markChangedById(id);
+        }
         removalQueue.clear();
+    }
+
+    void markChanged(const ComponentType& type) { markChangedById(type.getId()); }
+
+    void markChanged(const std::unordered_set<const Field*>& fields) {
+        if (fields.empty()) return;
+        for (auto& [id, storage] : storages) {
+            bool owned = false;
+            for (const Entity& e : storage.entities()) {
+                storage.get(e).forEachField([&](Field& field) { owned |= fields.contains(&field); });
+                if (owned) break;
+            }
+            if (owned) markChangedById(id);
+        }
+    }
+
+    uint64_t getChangeTick() const { return changeTick; }
+
+    uint64_t getChangeTick(const ComponentType& type) const {
+        auto it = changeTicks.find(type.getId());
+        return it != changeTicks.end() ? it->second : 0;
+    }
+
+    bool hasChangedSince(uint64_t tick, const std::vector<const ComponentType*>& ignored = {}) const {
+        for (const auto& [id, changed] : changeTicks) {
+            if (changed <= tick) continue;
+            const bool isIgnored = std::any_of(ignored.begin(), ignored.end(),
+                                               [&](const ComponentType* type) { return type->getId() == id; });
+            if (!isIgnored) return true;
+        }
+        return false;
     }
 
 private:
     std::unordered_map<std::string, ComponentStorage> storages;
+    std::unordered_map<std::string, uint64_t> changeTicks;
+    uint64_t changeTick = 0;
     std::unordered_map<Entity, Entity> parentMap;
     std::unordered_map<Entity, std::vector<Entity>> childrenMap;
     std::vector<uint32_t> generations;
     std::vector<uint32_t> freeIds;
     std::vector<std::pair<Entity, std::string>> removalQueue;
     RegistryContext context;
+
+    void markChangedById(const std::string& id) { changeTicks[id] = ++changeTick; }
 
     bool hasById(const Entity& e, const std::string& id) const {
         auto it = storages.find(id);

@@ -12,8 +12,6 @@
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"
 
-struct FrameContext;
-
 struct RenderResources {
     ImageHandle outputImageHandle = {};
     BufferHandle pixelInfoBufferHandle = {};
@@ -31,7 +29,7 @@ public:
     void setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }
     void restartAccumulation() { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
-    void render(const FrameContext& frameContext);
+    void render();
     void resize(uint32_t width, uint32_t height);
 
     VkExtent2D getRenderExtent() const { return renderExtent; }
@@ -73,4 +71,5 @@ private:
     VkExtent2D renderExtent = {};
 
     SampleAccumulator accumulator;
+    uint64_t seenChangeTick = 0;
 };

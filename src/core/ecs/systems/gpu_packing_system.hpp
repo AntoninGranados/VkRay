@@ -10,6 +10,7 @@ namespace ecs {
 const std::vector<const ComponentType*>& objectTypeOrder();
 
 void meshPackingSystem(Registry& registry);
+void meshInstancePackingSystem(Registry& registry);
 void materialPackingSystem(Registry& registry);
 void objectPackingSystem(Registry& registry);
 void lightPackingSystem(Registry& registry);

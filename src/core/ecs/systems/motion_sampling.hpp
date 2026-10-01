@@ -18,4 +18,6 @@ uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transfo
 
 void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMotion);
 
+bool isMotionBlurActive(Registry& registry);
+
 } // namespace ecs

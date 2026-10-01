@@ -14,11 +14,11 @@
 void Scene::initContext() {
     registry.ctx().emplace<SceneRoots>();
     registry.ctx().emplace<SceneGpuBuffers>();
+    registry.ctx().emplace<MeshTemplates>();
     registry.ctx().emplace<CameraMotionInfo>();
     registry.ctx().emplace<LensPluginInfo>();
     registry.ctx().emplace<SkyPluginInfo>();
     registry.ctx().emplace<CompositingChainInfo>();
-    registry.ctx().emplace<FrameContext>();
     registry.ctx().emplace<ecs::ApertureState>();
     registry.ctx().emplace<ecs::PhysicsBakeState>();
     registry.ctx().emplace<AnimationStore*>(&animationStore);
@@ -26,20 +26,12 @@ void Scene::initContext() {
     addDefaultAssets();
 }
 
-void Scene::setGpuBufferHandles(SceneGpuBuffers handles) { registry.ctx().get<SceneGpuBuffers>() = handles; }
+void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
+    registry.ctx().get<SceneGpuBuffers>() = handles;
+    invalidateGpuData();
+}
 
 void Scene::clear() {
-    SceneGpuBuffers& gpuBuffers = registry.ctx().get<SceneGpuBuffers>();
-    gpuBuffers.vertex.capacity = 0;
-    gpuBuffers.index.capacity = 0;
-    gpuBuffers.bvh.capacity = 0;
-    gpuBuffers.mesh.capacity = 0;
-    gpuBuffers.material.capacity = 0;
-    gpuBuffers.pluginParams.capacity = 0;
-    gpuBuffers.object.capacity = 0;
-    gpuBuffers.light.capacity = 0;
-    gpuBuffers.motion.capacity = 0;
-    gpuBuffers.liveMotion.capacity = 0;
     resetSceneState();
     addDefaultAssets();
 }

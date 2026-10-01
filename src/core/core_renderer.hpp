@@ -8,7 +8,6 @@
 class CoreRenderer : public PathtraceRenderer {
 public:
     RenderResources initGraph(RenderGraphBuilder& builder);
-    void destroy();
     // TODO: make it non blocking (compile/build in the background and replace when finished)
     void buildPipelines();
 

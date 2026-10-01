@@ -27,14 +27,9 @@ RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     exportPass.setGroup(getGroupHandle());
     exportPass.copyFrom(resources.outputImageHandle);
 
-    exportService.init(engine, engine.getExtent().width, engine.getExtent().height, resources.pixelInfoBufferHandle);
+    exportService.init(engine.getExtent().width, engine.getExtent().height, resources.pixelInfoBufferHandle);
 
     return resources;
-}
-
-void CoreRenderer::destroy() {
-    VkSmol& engine = Core::getEngine();
-    exportService.destroy(engine);
 }
 
 void CoreRenderer::buildPipelines() {
@@ -63,7 +58,7 @@ void CoreRenderer::onAfterDispatch(CommandBuffer& commandBuffer) {
 void CoreRenderer::onResize(uint32_t width, uint32_t height) {
     VkSmol& engine = Core::getEngine();
     if (engine.isHeadless()) engine.getExtent() = {width, height};
-    exportService.resize(engine, width, height);
+    exportService.resize(width, height);
 }
 
 void CoreRenderer::bindParameters() {

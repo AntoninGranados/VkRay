@@ -1,12 +1,10 @@
 #include "gpu_packing_system.hpp"
 
 #include <algorithm>
-#include <cstring>
 #include <utility>
 #include <vector>
 
 #include "VkSmol/engine.hpp"
-#include "VkSmol/frame_context.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -24,7 +22,6 @@
 #include "core/scene/scene.hpp"
 
 #include "utils/log.hpp"
-#include "utils/math_utils.hpp"
 
 namespace ecs {
 
@@ -66,50 +63,16 @@ glm::mat4 composeTransform(const Component& transform) {
 } // namespace
 
 const std::vector<const ComponentType*>& objectTypeOrder() {
-    static const std::vector<const ComponentType*> order = [] {
-        std::vector<const ComponentType*> result;
-        for (const ComponentType& type : ComponentType::all())
-            if (type.getGroup() == "object") result.push_back(&type);
-        return result;
-    }();
+    static const std::vector<const ComponentType*> order = ComponentType::inGroup("object");
     return order;
 }
 
-template <typename T>
-inline void fillBufferWithPadding(const FrameContext& frame, SceneGpuBufferEntry& entry, std::vector<T>& data) {
-    size_t required = nextPowerOfTwo(data.size());
-    if (required > entry.capacity) {
-        Core::getEngine().resizeBuffer(entry.handle, required * sizeof(T));
-        entry.capacity = required;
-    }
-    Buffer& buf = Core::getEngine().getBuffer(entry.handle, frame.currentFrame);
-    data.resize(buf.getSize() / sizeof(T));
-    Core::getEngine().fillBuffer(buf, data.data());
-}
-
-template <typename Header, typename T>
-inline void fillBufferWithHeader(const FrameContext& frame, SceneGpuBufferEntry& entry, const Header& header,
-                                 std::vector<T>& data) {
-    size_t required = nextPowerOfTwo(data.size());
-    if (required > entry.capacity) {
-        Core::getEngine().resizeBuffer(entry.handle, sizeof(Header) + required * sizeof(T));
-        entry.capacity = required;
-    }
-    data.resize(entry.capacity);
-
-    std::vector<char> buffer(sizeof(Header) + sizeof(T) * entry.capacity, 0);
-    std::memcpy(buffer.data(), &header, sizeof(Header));
-    std::memcpy(buffer.data() + sizeof(Header), data.data(), data.size() * sizeof(T));
-
-    Core::getEngine().fillBuffer(Core::getEngine().getBuffer(entry.handle, frame.currentFrame), buffer.data());
-}
-
 void meshPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
-    auto& meshRefs = registry.storage(MeshRef);
-    auto& transforms = registry.storage(Transform);
+    VkSmol& engine = Core::getEngine();
+    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
 
-    std::vector<GpuMesh> meshTemplates;
+    std::vector<GpuMesh>& meshTemplates = registry.ctx().get<MeshTemplates>().meshes;
+    meshTemplates.clear();
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<GpuBvhNode> bvhNodes;
@@ -162,9 +125,15 @@ void meshPackingSystem(Registry& registry) {
         }
     }
 
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().vertex, vertices);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().index, indices);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().bvh, bvhNodes);
+    engine.writeBuffer(buffers.vertex, vertices);
+    engine.writeBuffer(buffers.index, indices);
+    engine.writeBuffer(buffers.bvh, bvhNodes);
+}
+
+void meshInstancePackingSystem(Registry& registry) {
+    const std::vector<GpuMesh>& meshTemplates = registry.ctx().get<MeshTemplates>().meshes;
+    auto& meshRefs = registry.storage(MeshRef);
+    auto& transforms = registry.storage(Transform);
 
     std::vector<GpuMesh> meshes;
 
@@ -175,11 +144,10 @@ void meshPackingSystem(Registry& registry) {
         meshes.push_back(meshTemplates[meshSlot]);
     }
 
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
+    Core::getEngine().writeBuffer(registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
 }
 
 void materialPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
     const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
 
     std::vector<GpuMaterial> gpuMaterials;
@@ -216,12 +184,13 @@ void materialPackingSystem(Registry& registry) {
         }
     }
 
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().material, gpuMaterials);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().pluginParams, pluginParams);
+    VkSmol& engine = Core::getEngine();
+    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
+    engine.writeBuffer(buffers.material, gpuMaterials);
+    engine.writeBuffer(buffers.pluginParams, pluginParams);
 }
 
 void objectPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
 
@@ -257,14 +226,16 @@ void objectPackingSystem(Registry& registry) {
         cameraMotion = CameraMotionInfo{};
     }
 
+    VkSmol& engine = Core::getEngine();
+    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuObjectHeader header{.objectCount = static_cast<uint32_t>(gpuObjects.size())};
-    fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().object, header, gpuObjects);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().motion, motion);
-    fillBufferWithPadding(frame, registry.ctx().get<SceneGpuBuffers>().liveMotion, liveMotion);
+    engine.writeBuffer(buffers.object, header);
+    engine.writeBuffer(buffers.object, gpuObjects, sizeof(GpuObjectHeader));
+    engine.writeBuffer(buffers.motion, motion);
+    engine.writeBuffer(buffers.liveMotion, liveMotion);
 }
 
 void lightPackingSystem(Registry& registry) {
-    const FrameContext& frame = registry.ctx().get<FrameContext>();
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
@@ -333,8 +304,11 @@ void lightPackingSystem(Registry& registry) {
         }
     }
 
+    VkSmol& engine = Core::getEngine();
+    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuLightHeader header{.totalArea = totalArea};
-    fillBufferWithHeader(frame, registry.ctx().get<SceneGpuBuffers>().light, header, lights);
+    engine.writeBuffer(buffers.light, header);
+    engine.writeBuffer(buffers.light, lights, sizeof(GpuLightHeader));
 }
 
 } // namespace ecs

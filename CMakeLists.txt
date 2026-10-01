@@ -115,6 +115,7 @@ if(VKRAY_BUILD_TESTS)
     "${CMAKE_SOURCE_DIR}/tests/core/render/sample_accumulator_test.cpp"
     "${CMAKE_SOURCE_DIR}/tests/core/animation/animation_clock_test.cpp"
     "${CMAKE_SOURCE_DIR}/tests/core/ecs/registry_test.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/core/ecs/system_scheduler_test.cpp"
     "${CMAKE_SOURCE_DIR}/tests/core/scene/scene_serializer_test.cpp"
   )
 

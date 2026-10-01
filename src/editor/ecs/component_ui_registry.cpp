@@ -1,6 +1,5 @@
 #include "component_ui_registry.hpp"
 
-#include <cstdlib>
 #include <format>
 #include <utility>
 
@@ -59,7 +58,7 @@ void ComponentUiRegistry::add(const ecs::ComponentType& type,
 void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type,
                                         std::function<bool(Component&, Registry&, Entity)> extra, bool bulletIfEmpty) {
     drawers.emplace_back([extra, type, bulletIfEmpty](Registry& registry, Entity e) {
-        if (!registry.has(e, type)) return false;
+        if (!registry.has(e, type)) return;
 
         Component& component = registry.get(e, type);
         const std::string header = std::format("{} {}", component.getType().getIcon(), component.getType().getLabel());
@@ -75,21 +74,21 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type,
             update |= extra(component, registry, e);
         }
         ComponentUiRegistry::endDraw();
-        return remove || update;
+        if (update) registry.markChanged(type);
     });
 }
 
 void ComponentUiRegistry::addCustom(const ecs::ComponentType& type,
                                     std::function<bool(Component&, Registry&, Entity)> custom) {
     drawers.emplace_back([custom, type](Registry& registry, Entity e) {
-        if (!registry.has(e, type)) return false;
+        if (!registry.has(e, type)) return;
 
         Component& component = registry.get(e, type);
         bool remove = ComponentUiRegistry::beginDraw(&component);
         if (remove) registry.remove(e, type);
         bool update = !remove && custom(component, registry, e);
         ComponentUiRegistry::endDraw();
-        return remove || update;
+        if (update) registry.markChanged(type);
     });
 }
 
@@ -196,6 +195,9 @@ void ComponentUiRegistry::init() {
 
         bool update = false;
         CompositingPasses& list = c.payload<CompositingPasses>("passes");
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        const ImGuiID selectedId = ImGui::GetID("##CompositingSelectedPass");
+        int selected = storage->GetInt(selectedId, -1);
 
         ImGui::BeginChild("##CompositingPassList", ImVec2(0, 120), ImGuiChildFlags_Borders);
         ImGui::PushStyleColor(ImGuiCol_Header,
@@ -205,43 +207,43 @@ void ComponentUiRegistry::init() {
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ui::kDraculaPurple);
         for (size_t i = 0; i < list.passes.size(); i++)
             if (ImGui::Selectable(std::format("{}##{}", list.passes[i].name, i).c_str(),
-                                  list.selected == static_cast<int>(i)))
-                list.selected = static_cast<int>(i);
+                                  selected == static_cast<int>(i)))
+                selected = static_cast<int>(i);
         ImGui::PopStyleColor(3);
         ImGui::EndChild();
 
         if (ui::plusButton("AddCompositingPass")) {
             CompositingPassEntry pass;
-            pass.name = std::format("Pass-uid[{:02d}]", rand());
+            pass.name = std::format("Pass {}", list.passes.size() + 1);
             list.passes.push_back(std::move(pass));
-            list.selected = static_cast<int>(list.passes.size()) - 1;
+            selected = static_cast<int>(list.passes.size()) - 1;
             update = true;
         }
         ImGui::SameLine();
 
-        const bool hasSelection = list.selected >= 0 && list.selected < static_cast<int>(list.passes.size());
+        const bool hasSelection = selected >= 0 && selected < static_cast<int>(list.passes.size());
         if (!hasSelection) ImGui::BeginDisabled();
         if (ui::minusButton("RemoveCompositingPass")) {
-            list.passes.erase(list.passes.begin() + list.selected);
-            list.selected = -1;
+            list.passes.erase(list.passes.begin() + selected);
+            selected = -1;
             update = true;
         }
         ImGui::SameLine();
-        if (ui::upButton("MoveCompositingPassUp") && list.selected > 0) {
-            std::swap(list.passes[list.selected], list.passes[list.selected - 1]);
-            list.selected--;
+        if (ui::upButton("MoveCompositingPassUp") && selected > 0) {
+            std::swap(list.passes[selected], list.passes[selected - 1]);
+            selected--;
             update = true;
         }
         ImGui::SameLine();
-        if (ui::downButton("MoveCompositingPassDown") && list.selected < static_cast<int>(list.passes.size()) - 1) {
-            std::swap(list.passes[list.selected], list.passes[list.selected + 1]);
-            list.selected++;
+        if (ui::downButton("MoveCompositingPassDown") && selected < static_cast<int>(list.passes.size()) - 1) {
+            std::swap(list.passes[selected], list.passes[selected + 1]);
+            selected++;
             update = true;
         }
         if (!hasSelection) ImGui::EndDisabled();
 
-        if (list.selected >= 0 && list.selected < static_cast<int>(list.passes.size())) {
-            CompositingPassEntry& pass = list.passes[list.selected];
+        if (selected >= 0 && selected < static_cast<int>(list.passes.size())) {
+            CompositingPassEntry& pass = list.passes[selected];
             ImGui::Separator();
 
             std::string name = pass.name;
@@ -262,9 +264,10 @@ void ComponentUiRegistry::init() {
                 }
             }
 
-            update |= drawPluginErrorAndFields(*pass.plugin, std::format("##CompositingPass{}", list.selected));
+            update |= drawPluginErrorAndFields(*pass.plugin, std::format("##CompositingPass{}", selected));
         }
 
+        storage->SetInt(selectedId, selected);
         return update;
     });
 }

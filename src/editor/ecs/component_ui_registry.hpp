@@ -13,17 +13,15 @@ namespace ecs {
 
 class ComponentUiRegistry {
 public:
-    using Drawer = std::function<bool(Registry&, Entity)>;
+    using Drawer = std::function<void(Registry&, Entity)>;
 
     void add(const ComponentType& componentType);
     void add(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra);
     void addCustom(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> custom);
 
-    bool draw(Registry& registry, Entity e) const {
-        bool changed = false;
-        for (const Drawer& drawer : drawers) changed |= drawer(registry, e);
+    void draw(Registry& registry, Entity e) const {
+        for (const Drawer& drawer : drawers) drawer(registry, e);
         registry.flush();
-        return changed;
     }
 
     static ComponentUiRegistry& get();

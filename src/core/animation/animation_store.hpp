@@ -2,6 +2,7 @@
 
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "core/animation/keyframe.hpp"
 #include "core/animation/track.hpp"
@@ -18,7 +19,7 @@ public:
     void setInterpolation(Field& field, int frame, Interpolation interp);
     const std::map<int, Keyframe>& keyframes(Field& field) const;
     void remove(ecs::Registry& registry, ecs::Entity& e);
-    void evaluate(float frame);
+    std::unordered_set<const Field*> evaluate(float frame);
     void clear();
     bool isEmpty() const;
 

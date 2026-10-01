@@ -55,10 +55,7 @@ void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
 
     for (auto& entry : previewImages) entry.second.textureId = registerTexture(entry.second.view.get());
 
-    if (inFlight.has_value()) {
-        renderer.setTargetSampleCount(kPreviewSampleCount);
-        renderer.restartAccumulation();
-    }
+    if (inFlight.has_value()) renderer.setTargetSampleCount(kPreviewSampleCount);
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
@@ -130,6 +127,8 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
         for (const Field& field : sourcePlugin.getComponent().getFields())
             previewPlugin.getComponent().getField(field.getId()) = field;
     }
+
+    previewRegistry.markChanged(type);
 }
 
 void MaterialPreview::startGeneration(ecs::Entity materialEntity) {
@@ -196,7 +195,7 @@ void MaterialPreview::destroy() {
     liveTexture = ui::ImGuiTexture();
 }
 
-void MaterialPreview::tick(const FrameContext& frameContext) {
+void MaterialPreview::tick() {
     evictDeadEntries();
 
     if (!inFlight.has_value() && !pendingMaterials.empty()) {
@@ -207,8 +206,8 @@ void MaterialPreview::tick(const FrameContext& frameContext) {
     }
 
     Scene& scene = renderer.getScene();
-    scene.runOnRender(frameContext);
-    renderer.render(frameContext);
+    scene.runOnRender();
+    renderer.render();
 
     if (inFlight.has_value() && renderer.isRenderFinished()) finishGeneration();
 }

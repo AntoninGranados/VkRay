@@ -104,7 +104,7 @@ void cameraControlSystem(Registry& registry) {
         if (moved) {
             state.anchor += position - t.get<glm::vec3>("position");
             t.set<glm::vec3>("position", position);
-            Core::markRenderDirty();
+            registry.markChanged(ecs::Transform);
         }
     }
 }
@@ -130,7 +130,7 @@ void cameraCursorCallback(Registry& registry, ecs::Entity camera, double x, doub
 
     float xoffset = x - state.lastX;
     float yoffset = state.lastY - y;
-    if (xoffset != 0 || yoffset != 0) Core::markRenderDirty();
+    if (xoffset != 0 || yoffset != 0) registry.markChanged(ecs::Transform);
     state.lastX = x;
     state.lastY = y;
 
@@ -190,7 +190,7 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
         const float newSensorWidth = glm::clamp(sensorWidth * glm::pow(0.9f, static_cast<float>(yoffset)),
                                                 sensorWidthMeta.min, sensorWidthMeta.max);
         c.set<float>("sensor_width", newSensorWidth);
-        if (yoffset != 0) Core::markRenderDirty();
+        if (yoffset != 0) registry.markChanged(ecs::Camera);
         return;
     }
 
@@ -203,7 +203,7 @@ void cameraScrollCallback(Registry& registry, ecs::Entity camera, [[maybe_unused
 
     const float newFov = glm::clamp(fov - static_cast<float>(yoffset), minFov, maxFov);
     c.set<float>("focal_length", focalLengthFromFov(newFov) * sensorWidth);
-    if (yoffset != 0) Core::markRenderDirty();
+    if (yoffset != 0) registry.markChanged(ecs::Camera);
 }
 
 } // namespace ecs

@@ -87,10 +87,8 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
         builder.createImage("DebugImage", VK_FORMAT_R32G32B32A32_SFLOAT, debugExtent.width, debugExtent.height);
     outputImageHandle = renderResources.outputImageHandle;
 
-    debugUBOHandle = builder.createBuffer("DebugUBO", sizeof(DebugUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    displayUBOHandle = builder.createBuffer("DisplayUBO", sizeof(DisplayUBO), VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    debugUBOHandle = builder.createBuffer("DebugUBO", sizeof(DebugUBO));
+    displayUBOHandle = builder.createBuffer("DisplayUBO", sizeof(DisplayUBO));
 
     // Display pass — beauty + selection edges + focus plane overlay (compute, at viewport resolution)
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
@@ -100,14 +98,14 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     display.readBuffer(1, renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
     display.writeImage(2, displayImageHandle, ImageUsageType::Storage);
     display.readBuffer(3, displayUBOHandle, BufferUsageType::Uniform);
-    display.readBuffer(4, renderResources.sceneHandles.vertex.handle, BufferUsageType::Storage);
-    display.readBuffer(5, renderResources.sceneHandles.index.handle, BufferUsageType::Storage);
-    display.readBuffer(6, renderResources.sceneHandles.bvh.handle, BufferUsageType::Storage);
-    display.readBuffer(7, renderResources.sceneHandles.mesh.handle, BufferUsageType::Storage);
-    display.readBuffer(8, renderResources.sceneHandles.object.handle, BufferUsageType::Storage);
-    display.readBuffer(9, renderResources.sceneHandles.material.handle, BufferUsageType::Storage);
-    display.readBuffer(10, renderResources.sceneHandles.liveMotion.handle, BufferUsageType::Storage);
-    display.readBuffer(11, renderResources.sceneHandles.pluginParams.handle, BufferUsageType::Storage);
+    display.readBuffer(4, renderResources.sceneHandles.vertex, BufferUsageType::Storage);
+    display.readBuffer(5, renderResources.sceneHandles.index, BufferUsageType::Storage);
+    display.readBuffer(6, renderResources.sceneHandles.bvh, BufferUsageType::Storage);
+    display.readBuffer(7, renderResources.sceneHandles.mesh, BufferUsageType::Storage);
+    display.readBuffer(8, renderResources.sceneHandles.object, BufferUsageType::Storage);
+    display.readBuffer(9, renderResources.sceneHandles.material, BufferUsageType::Storage);
+    display.readBuffer(10, renderResources.sceneHandles.liveMotion, BufferUsageType::Storage);
+    display.readBuffer(11, renderResources.sceneHandles.pluginParams, BufferUsageType::Storage);
     display.setPipeline("./src/shaders/editor/display.glsl");
     displayTimestamp = display.setTimestamp();
 
@@ -206,8 +204,8 @@ void EditorRenderer::render(const FrameContext& frameContext) {
         }
     }
 
-    engine.fillBuffer(engine.getBuffer(debugUBOHandle, frameContext.currentFrame), &debugUBO);
-    engine.fillBuffer(engine.getBuffer(displayUBOHandle, frameContext.currentFrame), &displayUBO);
+    engine.writeBuffer(debugUBOHandle, debugUBO);
+    engine.writeBuffer(displayUBOHandle, displayUBO);
 
     engine.bindImage(swapchainImageHandle, engine.getSwapchainImage(frameContext.imageIndex).get(),
                      engine.getSwapchainImageView(frameContext.imageIndex).get());

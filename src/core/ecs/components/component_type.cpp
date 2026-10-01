@@ -36,6 +36,13 @@ std::optional<std::reference_wrapper<const ComponentType>> ComponentType::find(c
     return std::nullopt;
 }
 
+std::vector<const ComponentType*> ComponentType::inGroup(const std::string& group) {
+    std::vector<const ComponentType*> types;
+    for (const ComponentType& type : storage)
+        if (type.getGroup() == group) types.push_back(&type);
+    return types;
+}
+
 ComponentType& ComponentType::Builder::build() {
     ComponentType::storage.push_back(std::move(type));
     return ComponentType::storage.back();

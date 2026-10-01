@@ -65,35 +65,25 @@ void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channe
 
 } // namespace
 
-void ExportService::init(VkSmol& engine, uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
+void ExportService::init(uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
     width = _width;
     height = _height;
-    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
     pixelInfoBufferHandle = pixelInfoHandle;
-    pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
-void ExportService::destroy(VkSmol& engine) {
-    engine.destroyBuffer(buffer);
-    engine.destroyBuffer(pixelInfoReadbackBuffer);
-}
-
-void ExportService::resize(VkSmol& engine, uint32_t _width, uint32_t _height) {
-    engine.destroyBuffer(buffer);
-    engine.destroyBuffer(pixelInfoReadbackBuffer);
+void ExportService::resize(uint32_t _width, uint32_t _height) {
     width = _width;
     height = _height;
-    buffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * 4 * sizeof(float));
-    pixelInfoReadbackBuffer = engine.createReadbackBuffer(static_cast<size_t>(width) * height * sizeof(PixelInfo));
 }
 
 void ExportService::save(VkSmol& engine, Image& image, const std::filesystem::path& path, const AOVFlags& aovFlags) {
     engine.waitIdle();
-    engine.copyImageToBuffer(image, buffer);
+    std::vector<float> floatPixels(static_cast<size_t>(width) * height * 4);
+    engine.readImage(image, floatPixels.data(), floatPixels.size() * sizeof(float));
     if (path.extension() == ".exr") {
-        saveBufferToEXR(engine, path);
+        saveBufferToEXR(floatPixels, path);
     } else {
-        saveBufferToPNG(engine, path);
+        saveBufferToPNG(floatPixels, path);
     }
     saveAOVs(engine, path, aovFlags);
 }
@@ -102,11 +92,8 @@ std::filesystem::path ExportService::buildAnimationFramePath(int frame, const st
     return dir / std::format("frame_{:05d}.png", frame);
 }
 
-void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path& path) {
-    size_t floatCount = static_cast<size_t>(width) * height * 4;
-    size_t byteCount = floatCount * sizeof(float);
-    std::vector<float> floatPixels(floatCount);
-    engine.readBuffer(buffer, floatPixels.data(), byteCount);
+void ExportService::saveBufferToPNG(const std::vector<float>& floatPixels, const std::filesystem::path& path) {
+    const size_t floatCount = floatPixels.size();
 
     std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * 4);
     auto toByte = [](float v) -> uint8_t {
@@ -129,12 +116,7 @@ void ExportService::saveBufferToPNG(VkSmol& engine, const std::filesystem::path&
     }
 }
 
-void ExportService::saveBufferToEXR(VkSmol& engine, const std::filesystem::path& path) {
-    size_t floatCount = static_cast<size_t>(width) * height * 4;
-    size_t byteCount = floatCount * sizeof(float);
-    std::vector<float> floatPixels(floatCount);
-    engine.readBuffer(buffer, floatPixels.data(), byteCount);
-
+void ExportService::saveBufferToEXR(const std::vector<float>& floatPixels, const std::filesystem::path& path) {
     std::vector<float> images[4];
     images[0].resize(width * height);
     images[1].resize(width * height);
@@ -179,11 +161,9 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
         f.positionW || f.position || f.normalW || f.normal || f.albedo || f.roughness || f.matType || f.skyMask;
     if (!anyEnabled) return;
 
-    engine.copyBuffer(engine.getBuffer(pixelInfoBufferHandle), pixelInfoReadbackBuffer);
-
     size_t pixelCount = static_cast<size_t>(width) * height;
     std::vector<PixelInfo> pixels(pixelCount);
-    engine.readBuffer(pixelInfoReadbackBuffer, pixels.data(), pixelCount * sizeof(PixelInfo));
+    engine.readBuffer(pixelInfoBufferHandle, pixels);
 
     std::vector<std::pair<std::string, std::vector<float>>> channels;
 

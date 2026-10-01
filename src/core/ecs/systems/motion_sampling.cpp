@@ -106,6 +106,13 @@ void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMo
     outMotion.push_back(sampleLiveTransform(transform));
 }
 
+bool isMotionBlurActive(Registry& registry) {
+    const Entity cameraEntity = *registry.ctx().get<Entity*>();
+    if (!registry.has(cameraEntity, Camera) || registry.get(cameraEntity, Camera).get<float>("shutter_speed") <= 0.0f)
+        return false;
+    return registry.storage(RigidBody).size() > 0 || !registry.ctx().get<AnimationStore*>()->isEmpty();
+}
+
 uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform,
                            std::vector<GpuMotionSample>& outMotion) {
     const uint32_t offset = static_cast<uint32_t>(outMotion.size());

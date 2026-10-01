@@ -25,7 +25,6 @@ void ScenePanel::draw() {
                 if (SceneSerializer::load(scene, path->string())) {
                     const ecs::Entity camera = scene.getCamera();
                     Editor::selectEntity(camera == scene.getDefaultCamera() ? std::nullopt : std::optional{camera});
-                    Core::markRenderDirty();
                     Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
             }
@@ -78,14 +77,12 @@ void ScenePanel::draw() {
                 const ecs::Entity e =
                     scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
                 reg.add(e, ecs::Transform);
-                Core::markRenderDirty();
                 Editor::selectEntity(e);
             }
             if (ImGui::Selectable("Material")) {
                 const ecs::Entity e =
                     scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
                 reg.add(e, ecs::Diffuse);
-                Core::markRenderDirty();
                 Editor::selectEntity(e);
             }
             if (ImGui::Selectable("Mesh Asset")) {
@@ -93,7 +90,6 @@ void ScenePanel::draw() {
                     const ecs::Entity meshAssetEntity =
                         scene.loadMeshAsset(snakeCaseToLabel(path->stem().string()), path->string());
                     if (meshAssetEntity != ecs::Entity{}) {
-                        Core::markRenderDirty();
                         Editor::selectEntity(meshAssetEntity);
                         Log::success("ScenePanel", std::format("Loaded mesh: {}", path->string()));
                     }
@@ -102,7 +98,6 @@ void ScenePanel::draw() {
             if (ImGui::Selectable("Empty")) {
                 const ecs::Entity e =
                     scene.createNamedEntity(std::format("Entity-uid[{:02d}]", rand()), scene.getObjectsRoot());
-                Core::markRenderDirty();
                 Editor::selectEntity(e);
             }
             ImGui::EndPopup();
@@ -128,6 +123,7 @@ void ScenePanel::draw() {
                     if (ref.get<ecs::Entity>("handle") == entityToDelete)
                         ref.set<ecs::Entity>("handle", scene.getDefaultMaterial());
                 }
+                reg.markChanged(ecs::MaterialRef);
             } else if (parent.has_value() && *parent == scene.getAssetsRoot()) {
                 auto& meshRefStorage = reg.storage(ecs::MeshRef);
                 for (size_t i = 0; i < meshRefStorage.size(); i++) {
@@ -135,9 +131,9 @@ void ScenePanel::draw() {
                     if (ref.get<ecs::Entity>("handle") == entityToDelete)
                         ref.set<ecs::Entity>("handle", scene.getDefaultMesh());
                 }
+                reg.markChanged(ecs::MeshRef);
             }
             reg.destroyEntity(entityToDelete);
-            Core::markRenderDirty();
             Editor::selectEntity(std::nullopt);
         }
         if (!canDelete) ImGui::EndDisabled();

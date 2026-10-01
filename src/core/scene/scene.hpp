@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "VkSmol/frame_context.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/animation/animation_store.hpp"
@@ -16,23 +15,23 @@
 #include "core/ecs/system_scheduler.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/asset/mesh.hpp"
-
-struct SceneGpuBufferEntry {
-    BufferHandle handle;
-    size_t capacity = 0;
-};
+#include "core/scene/gpu_structs.hpp"
 
 struct SceneGpuBuffers {
-    SceneGpuBufferEntry vertex;
-    SceneGpuBufferEntry index;
-    SceneGpuBufferEntry bvh;
-    SceneGpuBufferEntry mesh;
-    SceneGpuBufferEntry material;
-    SceneGpuBufferEntry pluginParams;
-    SceneGpuBufferEntry object;
-    SceneGpuBufferEntry light;
-    SceneGpuBufferEntry motion;
-    SceneGpuBufferEntry liveMotion;
+    BufferHandle vertex;
+    BufferHandle index;
+    BufferHandle bvh;
+    BufferHandle mesh;
+    BufferHandle material;
+    BufferHandle pluginParams;
+    BufferHandle object;
+    BufferHandle light;
+    BufferHandle motion;
+    BufferHandle liveMotion;
+};
+
+struct MeshTemplates {
+    std::vector<GpuMesh> meshes;
 };
 
 struct CameraMotionInfo {
@@ -102,10 +101,7 @@ public:
     int getPhysicsBakeTotalFrames() const;
 
     void runPreRender() { preUpdateScheduler.run(registry); }
-    void runOnRender(const FrameContext& frame) {
-        registry.ctx().get<FrameContext>() = frame;
-        onRenderScheduler.run(registry);
-    }
+    void runOnRender() { onRenderScheduler.run(registry); }
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
@@ -115,6 +111,7 @@ public:
     SceneGpuBuffers& getBuffers() { return registry.ctx().get<SceneGpuBuffers>(); }
     const SceneGpuBuffers& getBuffers() const { return registry.ctx().get<SceneGpuBuffers>(); }
     void setGpuBufferHandles(SceneGpuBuffers handles);
+    void invalidateGpuData() { onRenderScheduler.invalidate(); }
 
     MeshAsset* getMeshAsset(ecs::Entity e);
     const MeshAsset* getMeshAsset(ecs::Entity e) const;

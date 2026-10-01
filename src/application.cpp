@@ -106,8 +106,7 @@ void Application::buildRenderGraph(bool offline) {
 
     ShaderPlugin::regenerateAllDispatch();
 
-    Core::getEngine().setGraph(builder);
-    Core::getEngine().initGraph();
+    Core::getEngine().rebuildGraph(builder);
 
     if (!offline) {
         Editor::getEditorRenderer().registerImGuiTextures();

@@ -32,7 +32,6 @@ def main():
     parser.add_argument("--test-dir", default="build")
     args = parser.parse_args()
 
-    failed = False
     for name in list_tests(args.test_dir):
         print(f"[RUN] {name} ...", end="", flush=True)
         ok, log = run_test(args.test_dir, name)
@@ -41,9 +40,9 @@ def main():
         else:
             print(f"\r\033[K{RED}[FAIL]{RESET} {name}")
             print(log)
-            failed = True
+            return 1
 
-    return 1 if failed else 0
+    return 0
 
 
 if __name__ == "__main__":

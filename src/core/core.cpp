@@ -25,7 +25,6 @@ void Core::init(Platform& p, uint32_t version) {
 void Core::terminate() {
     Core& c = get();
     c.engine.waitIdle();
-    c.coreRenderer.destroy();
     c.engine.destroyGraph();
     c.coreRenderer.getScene().destroy();
     c.engine.terminate();
@@ -78,11 +77,7 @@ void Core::rebuildGraphIfRequested(Core& c) {
     c.graphRebuildRequested = false;
     assert(c.graphBuilder);
 
-    c.engine.waitIdle();
-    c.coreRenderer.destroy();
-    c.engine.destroyGraph();
     c.graphBuilder();
-    c.restartAccumulation();
 }
 
 void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
@@ -101,10 +96,10 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
         return;
     }
 
-    scene.runOnRender(*frameContext);
+    scene.runOnRender();
     reloadPipelinesIfDirty(c);
 
-    c.coreRenderer.render(*frameContext);
+    c.coreRenderer.render();
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
 }
@@ -113,6 +108,7 @@ void Core::reloadShaders() {
     Core& c = get();
     ShaderPlugin::regenerateAllDispatch();
     c.coreRenderer.buildPipelines();
+    c.coreRenderer.getScene().invalidateGpuData();
     markRenderDirty();
 }
 

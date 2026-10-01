@@ -49,6 +49,7 @@ public:
 
     static const std::vector<ComponentType>& all();
     static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
+    static std::vector<const ComponentType*> inGroup(const std::string& group);
 
     bool operator==(const ComponentType& other) const { return id == other.id; }
 

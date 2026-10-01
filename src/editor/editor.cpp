@@ -108,7 +108,7 @@ void Editor::run() {
 
         Core::renderFrame([&](FrameContext& frameContext) {
             get().editorRenderer.render(frameContext);
-            get().materialPreview.tick(frameContext);
+            get().materialPreview.tick();
             Core::getEngine().present();
         });
     }

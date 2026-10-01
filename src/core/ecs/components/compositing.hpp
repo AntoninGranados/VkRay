@@ -21,7 +21,6 @@ struct CompositingPassEntry {
 class CompositingPasses {
 public:
     std::vector<CompositingPassEntry> passes;
-    int selected = -1;
 };
 
 // clang-format off

@@ -40,6 +40,6 @@ void main() {
         case 0: return vec3(luma(sampleOriginal(pixelCoord, texSize)));
         case 1:
         case 2: return vec3(blurAlongDir(pixelCoord, texSize, sigma1, sigma2, passId-1), 0);
-        case 3: return vec3(abs(result.g - result.r) > threshold ? 1 : 0);
+        case 3: return vec3(abs(result.g - result.r)); // vec3(abs(result.g - result.r) > threshold ? 1 : 0);
     }
 }

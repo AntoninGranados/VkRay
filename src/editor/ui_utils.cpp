@@ -1,5 +1,7 @@
 #include "ui_utils.hpp"
 
+#include <unordered_set>
+
 #include <nfd.hpp>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -55,7 +57,7 @@ void drawKeyframeButton(Field& field) {
             store.remove(field, frame);
         else
             store.capture(field, frame);
-        Core::markRenderDirty();
+        Core::getScene().getRegistry().markChanged(std::unordered_set<const Field*>{&field});
     }
 
     drawKeyframeIcon(has, hovered, active);

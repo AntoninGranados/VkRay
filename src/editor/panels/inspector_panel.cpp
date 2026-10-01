@@ -31,10 +31,7 @@ void InspectorPanel::draw() {
         ImGui::SameLine();
         if (ui::plusButton("AddComponent")) openNewComponentPopup = true;
 
-        auto& reg = scene.getRegistry();
-        auto& uiReg = ecs::ComponentUiRegistry::get();
-        bool changed = uiReg.draw(reg, entity);
-        if (changed && !reg.has(entity, ecs::Compositing)) Core::markRenderDirty();
+        ecs::ComponentUiRegistry::get().draw(scene.getRegistry(), entity);
     });
 
     if (!selectedEntity.has_value()) return;
@@ -88,7 +85,6 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
         const std::string label = type->getIcon() + " " + type->getLabel();
         if (ImGui::Button(label.c_str(), {-FLT_MIN, 0})) {
             registry.add(entity, *type);
-            Core::markRenderDirty();
             ImGui::CloseCurrentPopup();
         }
 

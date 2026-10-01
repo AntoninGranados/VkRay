@@ -109,3 +109,83 @@ TEST_CASE("Registry clear invalidates all previously created entities") {
     CHECK_FALSE(registry.isAlive(a));
     CHECK_FALSE(registry.isAlive(b));
 }
+
+TEST_CASE("Registry structural changes advance the change tick of the affected type only") {
+    ecs::ComponentType a = ecs::ComponentType::builder("registry_test.tick_a").buildDetached();
+    ecs::ComponentType b = ecs::ComponentType::builder("registry_test.tick_b").buildDetached();
+
+    ecs::Registry registry;
+    ecs::Entity e = registry.createEntity();
+    CHECK(registry.getChangeTick(a) == 0);
+
+    registry.add(e, a);
+    const uint64_t afterAdd = registry.getChangeTick(a);
+    CHECK(afterAdd > 0);
+    CHECK(registry.getChangeTick(b) == 0);
+
+    registry.add(e, a);
+    CHECK(registry.getChangeTick(a) == afterAdd);
+
+    registry.remove(e, a);
+    CHECK(registry.getChangeTick(a) == afterAdd);
+    registry.flush();
+    const uint64_t afterRemove = registry.getChangeTick(a);
+    CHECK(afterRemove > afterAdd);
+
+    registry.add(e, b);
+    registry.destroyEntity(e);
+    CHECK(registry.getChangeTick(b) > afterRemove);
+    CHECK(registry.getChangeTick(a) == afterRemove);
+}
+
+TEST_CASE("Registry clear marks every previously seen type as changed") {
+    ecs::ComponentType a = ecs::ComponentType::builder("registry_test.clear_tick").buildDetached();
+
+    ecs::Registry registry;
+    registry.add(registry.createEntity(), a);
+    const uint64_t before = registry.getChangeTick(a);
+
+    registry.clear();
+    CHECK(registry.getChangeTick(a) > before);
+}
+
+TEST_CASE("Registry markChanged on fields marks the owning component type") {
+    ecs::ComponentType owner =
+        ecs::ComponentType::builder("registry_test.field_owner").field<int>("value", 0).buildDetached();
+    ecs::ComponentType other =
+        ecs::ComponentType::builder("registry_test.field_other").field<int>("value", 0).buildDetached();
+
+    ecs::Registry registry;
+    ecs::Entity e = registry.createEntity();
+    registry.add(e, owner);
+    registry.add(e, other);
+    const uint64_t ownerBefore = registry.getChangeTick(owner);
+    const uint64_t otherBefore = registry.getChangeTick(other);
+
+    Field& field = registry.get(e, owner).getField("value");
+    field.set<int>(3);
+    registry.markChanged(std::unordered_set<const Field*>{&field});
+
+    CHECK(registry.getChangeTick(owner) > ownerBefore);
+    CHECK(registry.getChangeTick(other) == otherBefore);
+}
+
+TEST_CASE("Registry hasChangedSince skips ignored types") {
+    ecs::ComponentType watched = ecs::ComponentType::builder("registry_test.watched").buildDetached();
+    ecs::ComponentType ignored = ecs::ComponentType::builder("registry_test.ignored").buildDetached();
+
+    ecs::Registry registry;
+    ecs::Entity e = registry.createEntity();
+    registry.add(e, watched);
+    registry.add(e, ignored);
+    const uint64_t tick = registry.getChangeTick();
+
+    CHECK_FALSE(registry.hasChangedSince(tick));
+
+    registry.markChanged(ignored);
+    CHECK(registry.hasChangedSince(tick));
+    CHECK_FALSE(registry.hasChangedSince(tick, {&ignored}));
+
+    registry.markChanged(watched);
+    CHECK(registry.hasChangedSince(tick, {&ignored}));
+}

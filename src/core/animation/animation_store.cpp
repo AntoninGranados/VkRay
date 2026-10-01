@@ -50,10 +50,13 @@ bool AnimationStore::isEmpty() const {
     return true;
 }
 
-void AnimationStore::evaluate(float frame) {
+std::unordered_set<const Field*> AnimationStore::evaluate(float frame) {
+    std::unordered_set<const Field*> evaluated;
     for (auto& [field, track] : tracks) {
         if (track.isEmpty()) continue;
 
         field->dispatch([&]<typename T>(T) { field->set<T>(track.sample<T>(frame)); });
+        evaluated.insert(field);
     }
+    return evaluated;
 }

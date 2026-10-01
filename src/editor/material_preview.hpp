@@ -14,8 +14,6 @@
 #include "core/scene/scene.hpp"
 #include "editor/imgui_texture.hpp"
 
-struct FrameContext;
-
 struct MaterialFingerprint {
     const ecs::ComponentType* type = nullptr;
     std::vector<FieldValue> fields;
@@ -39,7 +37,7 @@ public:
 
     RenderResources initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle);
     void onGraphCompiled(const RenderResources& resources);
-    void tick(const FrameContext& frameContext);
+    void tick();
     void destroy();
 
     void drawPreview(ecs::Entity materialEntity);

@@ -27,53 +27,24 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     resources.outputImageHandle =
         builder.createImage(tag + "OutputImage", VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height);
 
-    pathtracingUBOHandle = builder.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO),
-                                                VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    pathtracingUBOHandle = builder.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO));
     resources.pixelInfoBufferHandle = builder.createBuffer(
-        tag + "PixelInfoBuffer", static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo), 0,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        tag + "PixelInfoBuffer", static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo));
 
     // Scene buffers must be created before passes so binding slots can be declared
-    resources.sceneHandles.vertex = {builder.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex),
-                                                          VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                     16};
-    resources.sceneHandles.index = {builder.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t),
-                                                         VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                    16};
-    resources.sceneHandles.bvh = {builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode),
-                                                       VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                  16};
-    resources.sceneHandles.mesh = {builder.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh),
-                                                        VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                   16};
-    resources.sceneHandles.material = {builder.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial),
-                                                            VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                       16};
-    resources.sceneHandles.pluginParams = {builder.createBuffer(tag + "ScenePluginParamsBuffer", 16 * sizeof(float),
-                                                                VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                           16};
-    resources.sceneHandles.object = {
-        builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject),
-                             VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-        16};
-    resources.sceneHandles.light = {
-        builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight),
-                             VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-        16};
-    resources.sceneHandles.motion = {builder.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample),
-                                                          VKSMOL_BUFFER_CREATE_PER_FRAME_BIT,
-                                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-                                     16};
-    resources.sceneHandles.liveMotion = {
-        builder.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample),
-                             VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-        16};
+    resources.sceneHandles.vertex = builder.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex));
+    resources.sceneHandles.index = builder.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t));
+    resources.sceneHandles.bvh = builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode));
+    resources.sceneHandles.mesh = builder.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh));
+    resources.sceneHandles.material = builder.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial));
+    resources.sceneHandles.pluginParams = builder.createBuffer(tag + "ScenePluginParamsBuffer", 16 * sizeof(float));
+    resources.sceneHandles.object =
+        builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject));
+    resources.sceneHandles.light =
+        builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight));
+    resources.sceneHandles.motion = builder.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample));
+    resources.sceneHandles.liveMotion =
+        builder.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample));
 
     // Pathtracing pass
     ComputePassBuilder pathtrace = builder.addComputePass(tag + "PathtracingPass");
@@ -82,17 +53,17 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.readBuffer(0, pathtracingUBOHandle, BufferUsageType::Uniform);
     pathtrace.readImage(1, previousPathtracingImageHandle, ImageUsageType::Sampled);
     pathtrace.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    pathtrace.readBuffer(3, resources.sceneHandles.vertex.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(4, resources.sceneHandles.index.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(5, resources.sceneHandles.bvh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(6, resources.sceneHandles.mesh.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(7, resources.sceneHandles.material.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(8, resources.sceneHandles.pluginParams.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(9, resources.sceneHandles.object.handle, BufferUsageType::Storage);
-    pathtrace.readBuffer(10, resources.sceneHandles.light.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(3, resources.sceneHandles.vertex, BufferUsageType::Storage);
+    pathtrace.readBuffer(4, resources.sceneHandles.index, BufferUsageType::Storage);
+    pathtrace.readBuffer(5, resources.sceneHandles.bvh, BufferUsageType::Storage);
+    pathtrace.readBuffer(6, resources.sceneHandles.mesh, BufferUsageType::Storage);
+    pathtrace.readBuffer(7, resources.sceneHandles.material, BufferUsageType::Storage);
+    pathtrace.readBuffer(8, resources.sceneHandles.pluginParams, BufferUsageType::Storage);
+    pathtrace.readBuffer(9, resources.sceneHandles.object, BufferUsageType::Storage);
+    pathtrace.readBuffer(10, resources.sceneHandles.light, BufferUsageType::Storage);
     pathtrace.writeImage(11, currentPathtracingImageHandle, ImageUsageType::Storage);
     pathtrace.readImage(12, lensImageHandle, ImageUsageType::Sampled);
-    pathtrace.readBuffer(13, resources.sceneHandles.motion.handle, BufferUsageType::Storage);
+    pathtrace.readBuffer(13, resources.sceneHandles.motion, BufferUsageType::Storage);
     pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
     pathtracingTimestamp = pathtrace.setTimestamp();
 
@@ -111,8 +82,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     compositingPassUBOHandles.clear();
     for (size_t i = 0; i < passCount; i++) {
         BufferHandle passUboHandle =
-            builder.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO),
-                                 VKSMOL_BUFFER_CREATE_PER_FRAME_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            builder.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO));
         compositingPassUBOHandles.push_back(passUboHandle);
 
         const ImageHandle readHandle = i == 0 ? currentPathtracingImageHandle : compositingPingHandles[(i - 1) % 2];
@@ -126,7 +96,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         pass.readBuffer(1, passUboHandle, BufferUsageType::Uniform);
         pass.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
         pass.writeImage(3, writeHandle, ImageUsageType::Storage);
-        pass.readBuffer(4, resources.sceneHandles.pluginParams.handle, BufferUsageType::Storage);
+        pass.readBuffer(4, resources.sceneHandles.pluginParams, BufferUsageType::Storage);
         pass.readImage(5, currentPathtracingImageHandle, ImageUsageType::Sampled);
         pass.setPipeline("./src/shaders/core/compositing.glsl");
         if (i == 0) compositingTimestamp = pass.setTimestamp();
@@ -148,7 +118,7 @@ void PathtraceRenderer::setDefaultUBOs() {
     pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
 }
 
-void PathtraceRenderer::render(const FrameContext& frameContext) {
+void PathtraceRenderer::render() {
     VkSmol& engine = Core::getEngine();
 
     ecs::Registry& registry = scene.getRegistry();
@@ -157,6 +127,9 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
     const CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
     if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassHandles.size())
         Core::requestGraphRebuild();
+
+    if (registry.hasChangedSince(seenChangeTick, {&ecs::Compositing})) accumulator.restart();
+    seenChangeTick = registry.getChangeTick();
 
     const bool converged = isRenderFinished();
 
@@ -170,7 +143,7 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
     pathtracerUBO.camera = buildCameraUBO(registry, camera, pathtracerUBO.screen.aspect);
     pathtracerUBO.render.skyParamsBase = registry.ctx().get<SkyPluginInfo>().paramsBase;
 
-    engine.fillBuffer(engine.getBuffer(pathtracingUBOHandle, frameContext.currentFrame), &pathtracerUBO);
+    engine.writeBuffer(pathtracingUBOHandle, pathtracerUBO);
 
     for (size_t i = 0; i < compositingPassUBOHandles.size(); i++) {
         CompositingPassUBO passUbo{};
@@ -179,7 +152,7 @@ void PathtraceRenderer::render(const FrameContext& frameContext) {
             passUbo.paramsBase = compositingInfo.passes[i].paramsBase;
             passUbo.passId = compositingInfo.passes[i].passId;
         }
-        engine.fillBuffer(engine.getBuffer(compositingPassUBOHandles[i], frameContext.currentFrame), &passUbo);
+        engine.writeBuffer(compositingPassUBOHandles[i], passUbo);
     }
 
     CommandBuffer& commandBuffer = engine.beginRecording(groupHandle);

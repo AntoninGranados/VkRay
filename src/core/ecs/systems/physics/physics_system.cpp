@@ -253,7 +253,7 @@ void bakePhysicsSimulation(Registry& registry) {
     bakeState.wasPaused = animation.isPaused();
 
     animation.pause();
-    Core::markRenderDirty();
+    registry.markChanged(Transform);
 }
 
 bool isPhysicsBakeInProgress(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().inProgress; }
@@ -272,7 +272,7 @@ void physicsSystem(Registry& registry) {
         Core::getAnimation().sample();
         evaluateAnimation(registry);
         physicsSolverSystem(registry);
-        Core::markRenderDirty();
+        registry.markChanged(Transform);
 
         bakeState.nextFrame++;
         if (bakeState.nextFrame >= bakeState.totalFrames) {
@@ -312,7 +312,7 @@ void physicsSystem(Registry& registry) {
         t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snap->second.rotation))));
     }
 
-    Core::markRenderDirty();
+    registry.markChanged(Transform);
 }
 
 } // namespace ecs
