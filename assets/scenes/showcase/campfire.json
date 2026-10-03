@@ -27,19 +27,19 @@
         {
             "name": "campsite",
             "mesh": {
-                "path": "./assets/models/campfire/campsite.obj"
+                "path": "../../models/campfire/campsite.obj"
             }
         },
         {
             "name": "fire",
             "mesh": {
-                "path": "./assets/models/campfire/fire.obj"
+                "path": "../../models/campfire/fire.obj"
             }
         },
         {
             "name": "fireflies",
             "mesh": {
-                "path": "./assets/models/campfire/fireflies.obj"
+                "path": "../../models/campfire/fireflies.obj"
             }
         }
     ],

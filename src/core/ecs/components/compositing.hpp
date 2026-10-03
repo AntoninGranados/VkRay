@@ -29,7 +29,8 @@ inline const ComponentType Compositing = ComponentType::builder("compositing")
     .description("Compositing chain, an ordered list of programmable passes.")
     .icon(ICON_FA_LAYER_GROUP)
     .group("compositing")
-    .conflicts("transform")
+    .kind()
+    .permanent()
     .payload<CompositingPasses>("passes")
     .build();
 

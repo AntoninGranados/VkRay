@@ -24,7 +24,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     .icon(ICON_FA_VIDEO)
     .group("camera")
     .needs("transform")
-    .conflicts("sphere", "plane", "box", "quad", "mesh_ref")
+    .slot("shape")
     .field<int>("projection", std::to_underlying(CameraProjection::Perspective), EnumMeta{ .items = {"Perspective", "Orthographic"} })
     .field<float>("focal_length", 21.45f, NumericMeta{ .min = 1.0f, .max = 300.0f, .step = 0.5f, .unit = "mm" }, true)
     .condition("projection", std::to_underlying(CameraProjection::Perspective))
@@ -82,6 +82,7 @@ inline const ComponentType TiltShiftLens = ComponentType::builder("tilt_shift_le
     .icon(ICON_FA_EXPAND)
     .group("camera")
     .needs("camera")
+    .slot("lens")
     .field<glm::vec3>("plane_position", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 0.1f }, true)
     .field<glm::vec3>("plane_rotation", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 1.0f }, true)
     .field<float>("shift_x", 0.0f, NumericMeta{ .step = 0.01f }, true)
@@ -93,7 +94,7 @@ inline const ComponentType GeometricAperture = ComponentType::builder("geometric
     .icon(ICON_FA_STAR)
     .group("camera")
     .needs("camera")
-    .conflicts("image_aperture")
+    .slot("aperture")
     .field<int>("blades", 6, NumericMeta{ .min = 3, .max = 12, .step = 1 })
     .field<float>("rotation", 0.0f, NumericMeta{ .min = 0.0f, .max = 360.0f, .step = 1.0f })
     .build();
@@ -103,12 +104,12 @@ inline const ComponentType ImageAperture = ComponentType::builder("image_apertur
     .icon(ICON_FA_IMAGE)
     .group("camera")
     .needs("camera")
-    .conflicts("geometric_aperture")
+    .slot("aperture")
     .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "pgm,png,jpg,jpeg,hdr", .name = "Image" }}, .presets = {
-        {"ring",    "assets/apertures/ring.pgm"},
-        {"star",    "assets/apertures/star.pgm"},
-        {"heart",   "assets/apertures/heart.pgm"},
-        {"cat eye", "assets/apertures/cat_eye.pgm"}
+        {"ring",    "builtin:/apertures/ring.pgm"},
+        {"star",    "builtin:/apertures/star.pgm"},
+        {"heart",   "builtin:/apertures/heart.pgm"},
+        {"cat eye", "builtin:/apertures/cat_eye.pgm"}
     } })
     .build();
 
@@ -117,7 +118,7 @@ inline const ComponentType CameraLensPlugin = ComponentType::builder("programmab
     .icon(ICON_FA_CODE)
     .group("camera")
     .needs("camera")
-    .conflicts("tilt_shift_lens")
+    .slot("lens")
     .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Camera Lens Shader" }} })
     .payload<ShaderPlugin>("plugin")
     .build();

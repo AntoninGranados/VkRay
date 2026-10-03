@@ -2,12 +2,15 @@
 
 #include <format>
 #include <unordered_map>
+#include <utility>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
+
+#include "utils/resources.hpp"
 
 namespace {
 const bool registered = [] {
@@ -60,5 +63,5 @@ void SkyTable::generateDispatch() {
         "{}",
         body);
 
-    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/sky_dispatch.glsl", content);
+    Resources::add("builtin:/shaders/generated/sky_dispatch.glsl", std::move(content));
 }

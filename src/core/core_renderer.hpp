@@ -8,8 +8,6 @@
 class CoreRenderer : public PathtraceRenderer {
 public:
     RenderResources initGraph(RenderGraphBuilder& builder);
-    // TODO: make it non blocking (compile/build in the background and replace when finished)
-    void buildPipelines();
 
     void saveCapture(const std::filesystem::path& path);
 

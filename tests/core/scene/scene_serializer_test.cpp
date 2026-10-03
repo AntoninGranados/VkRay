@@ -5,6 +5,8 @@
 #include <optional>
 #include <string>
 
+#include <glm/gtc/quaternion.hpp>
+
 #include "nlohmann/json.hpp"
 
 #include "core/ecs/components/core.hpp"
@@ -113,6 +115,30 @@ TEST_CASE("SceneSerializer loadCore places a spherical node") {
     CHECK(position.x == doctest::Approx(0.0f));
     CHECK(position.y == doctest::Approx(0.0f));
     CHECK(position.z == doctest::Approx(10.0f));
+}
+
+TEST_CASE("SceneSerializer loadCore aims a spherical node at its target") {
+    const std::filesystem::path path = writeSceneFile(R"({
+        "version": 1,
+        "Objects": [
+            { "name": "OrbitCam", "spherical": { "radius": 10, "azimuth": 90, "elevation": 30 } }
+        ]
+    })");
+
+    Scene scene;
+    scene.initContext();
+    REQUIRE(SceneSerializer::loadCore(scene, path.string()));
+
+    const auto entity = findChildByName(scene, scene.getObjectsRoot(), "OrbitCam");
+    REQUIRE(entity.has_value());
+    const ecs::Component& transform = scene.getRegistry().get(*entity, ecs::Transform);
+    const glm::vec3 position = transform.get<glm::vec3>("position");
+    const glm::quat rotation = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
+    const glm::vec3 forward = rotation * glm::vec3(0.0f, 0.0f, -1.0f);
+    const glm::vec3 toTarget = glm::normalize(-position);
+    CHECK(forward.x == doctest::Approx(toTarget.x).epsilon(1e-4));
+    CHECK(forward.y == doctest::Approx(toTarget.y).epsilon(1e-4));
+    CHECK(forward.z == doctest::Approx(toTarget.z).epsilon(1e-4));
 }
 
 TEST_CASE("SceneSerializer loadCore applies keyframes at frame zero") {

@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <print>
@@ -62,10 +63,24 @@ void Log::warn(std::string_view src, std::string_view msg) { get().push(LogLevel
 void Log::error(std::string_view src, std::string_view msg) { get().push(LogLevel::Error, src, msg); }
 void Log::debug(std::string_view src, std::string_view msg) { get().push(LogLevel::Debug, src, msg); }
 
+std::filesystem::path Log::getLogDirectory() {
+#if defined(_WIN32)
+    if (const char* localAppData = std::getenv("LOCALAPPDATA")) return std::filesystem::path(localAppData) / "VkRay";
+#elif defined(__APPLE__)
+    if (const char* home = std::getenv("HOME")) return std::filesystem::path(home) / "Library" / "Logs" / "VkRay";
+#else
+    if (const char* stateHome = std::getenv("XDG_STATE_HOME"); stateHome && *stateHome)
+        return std::filesystem::path(stateHome) / "vkray";
+    if (const char* home = std::getenv("HOME")) return std::filesystem::path(home) / ".local" / "state" / "vkray";
+#endif
+    return std::filesystem::temp_directory_path() / "VkRay";
+}
+
 void Log::ensureFile() {
     if (file.is_open()) return;
-    std::filesystem::create_directories("logs");
-    file.open("logs/vkray.log", std::ios::app);
+    const std::filesystem::path directory = getLogDirectory();
+    std::filesystem::create_directories(directory);
+    file.open(directory / "vkray.log", std::ios::app);
     auto now = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
     std::println(file, "\n=== Session {} ===", std::format("{:%Y-%m-%d %H:%M:%S}", now));
 }

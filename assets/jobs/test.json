@@ -2,8 +2,8 @@
     "version": 1,
     "jobs": [
         {
-            "scene": "assets/scenes/room.json",
-            "output": "outputs/render.png",
+            "scene": "../scenes/room.json",
+            "output": "../../outputs/render.png",
             "samples": 100000,
             "render_size": [1280, 720],
             "parameters": {

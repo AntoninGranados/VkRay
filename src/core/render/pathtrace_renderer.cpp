@@ -1,6 +1,7 @@
 #include "pathtrace_renderer.hpp"
 
 #include <algorithm>
+#include <string>
 
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
 #include "VkSmol/graph/render_graph_builder.hpp"
@@ -11,6 +12,7 @@
 #include "core/fields/parameters.hpp"
 #include "core/render/compositing_table.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include "core/shader_plugin/glsl_codegen.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
                                              ImageHandle lensImageHandle) {
@@ -64,7 +66,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.writeImage(11, currentPathtracingImageHandle, ImageUsageType::Storage);
     pathtrace.readImage(12, lensImageHandle, ImageUsageType::Sampled);
     pathtrace.readBuffer(13, resources.sceneHandles.motion, BufferUsageType::Storage);
-    pathtrace.setPipeline("./src/shaders/core/pathtracing.glsl");
+    pathtrace.setPipeline(GlslCodegen::loadShader("builtin:/shaders/core/pathtracing.glsl"));
     pathtracingTimestamp = pathtrace.setTimestamp();
 
     // Compositing pass
@@ -80,6 +82,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
 
     compositingPassHandles.clear();
     compositingPassUBOHandles.clear();
+    const std::string compositingShader = GlslCodegen::loadShader("builtin:/shaders/core/compositing.glsl");
     for (size_t i = 0; i < passCount; i++) {
         BufferHandle passUboHandle =
             builder.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO));
@@ -98,7 +101,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         pass.writeImage(3, writeHandle, ImageUsageType::Storage);
         pass.readBuffer(4, resources.sceneHandles.pluginParams, BufferUsageType::Storage);
         pass.readImage(5, currentPathtracingImageHandle, ImageUsageType::Sampled);
-        pass.setPipeline("./src/shaders/core/compositing.glsl");
+        pass.setPipeline(compositingShader);
         if (i == 0) compositingTimestamp = pass.setTimestamp();
     }
 

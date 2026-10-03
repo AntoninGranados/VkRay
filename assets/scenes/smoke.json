@@ -4,7 +4,7 @@
         {
             "name": "Environment",
             "programmable_sky": {
-                "path": "assets/environment/empty_sky.glsl"
+                "path": "../environment/empty_sky.glsl"
             }
         }
     ],

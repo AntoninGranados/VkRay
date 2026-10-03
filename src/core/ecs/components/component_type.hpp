@@ -39,10 +39,16 @@ public:
     const std::string& getIcon() const { return icon; }
     const std::string& getGroup() const { return group; }
     const std::vector<std::string>& getNeeds() const { return needs; }
-    const std::vector<std::string>& getConflicts() const { return conflicts; }
+    bool isKind() const { return kind; }
+    const std::string& getSlot() const { return slot; }
+    bool isPermanent() const { return permanent; }
 
     const std::vector<Field>& getFields() const { return fields; }
     const Field& getField(const std::string& id) const { return fields[fieldIndex.at(id)]; }
+    std::optional<size_t> findFieldIndex(const std::string& id) const {
+        const auto it = fieldIndex.find(id);
+        return it != fieldIndex.end() ? std::optional(it->second) : std::nullopt;
+    }
 
     const std::vector<ComponentPayload>& getPayloads() const { return payloads; }
     size_t getPayloadIndex(const std::string& id) const { return payloadIndex.at(id); }
@@ -63,11 +69,13 @@ private:
     std::string description;
     std::string icon;
     std::string group;
+    bool kind = false;
+    std::string slot;
+    bool permanent = false;
 
     std::vector<std::string> needs;
-    std::vector<std::string> conflicts;
     std::vector<Field> fields;
-    std::unordered_map<FieldPath, size_t> fieldIndex;
+    std::unordered_map<std::string, size_t> fieldIndex;
     std::vector<ComponentPayload> payloads;
     std::unordered_map<std::string, size_t> payloadIndex;
 };
@@ -79,21 +87,33 @@ public:
     Builder& description(std::string description);
     Builder& icon(std::string icon);
     Builder& group(std::string group);
+    Builder& kind() {
+        type.kind = true;
+        return *this;
+    }
+    Builder& slot(std::string slot) {
+        type.slot = std::move(slot);
+        return *this;
+    }
+    Builder& permanent() {
+        type.permanent = true;
+        return *this;
+    }
 
     template <typename T>
     Builder& field(std::string id, T defaultValue = T{}, FieldMetadata metadata = {}, bool animatable = false) {
         if (type.fieldIndex.contains(id)) throw std::invalid_argument(std::format("duplicate field id: {}", id));
         const std::string label = snakeCaseToLabel(std::filesystem::path(id).filename().string());
         Field f = Field::make<T>(id, label, defaultValue, std::move(metadata), animatable);
-        type.fieldIndex[f.getId()] = type.fields.size();
+        type.fieldIndex[f.getId().string()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;
     }
 
     Builder& field(Field f) {
-        if (type.fieldIndex.contains(f.getId()))
+        if (type.fieldIndex.contains(f.getId().string()))
             throw std::invalid_argument(std::format("duplicate field id: {}", f.getId().string()));
-        type.fieldIndex[f.getId()] = type.fields.size();
+        type.fieldIndex[f.getId().string()] = type.fields.size();
         type.fields.push_back(std::move(f));
         return *this;
     }
@@ -122,11 +142,6 @@ public:
 
     template <typename... Args> Builder& needs(Args... ids) {
         (type.needs.push_back(std::string(ids)), ...);
-        return *this;
-    }
-
-    template <typename... Args> Builder& conflicts(Args... ids) {
-        (type.conflicts.push_back(std::string(ids)), ...);
         return *this;
     }
 

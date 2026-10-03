@@ -40,6 +40,7 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
 
     JobQueue queue;
     std::mt19937 rng(0);
+    const std::filesystem::path jobDirectory = std::filesystem::absolute(path).parent_path();
 
     for (const auto& j : root.at("jobs")) {
         const uint32_t repeatCount = j.contains("repeat") ? j.at("repeat").value("count", 1u) : 1u;
@@ -86,7 +87,8 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
 
         for (uint32_t n = 0; n < repeatCount; ++n) {
             ResolveCtx nCtx{rng, {{"n", {static_cast<int>(n), static_cast<int>(repeatCount)}}}};
-            const std::string scenePath = resolveTemplate(j.at("scene").get<std::string>(), nCtx);
+            const std::filesystem::path scenePath =
+                (jobDirectory / resolveTemplate(j.at("scene").get<std::string>(), nCtx)).lexically_normal();
             const uint32_t nSeed = rng();
 
             for (size_t ci = 0; ci < checkpoints.size(); ++ci) {
@@ -102,7 +104,7 @@ JobQueue JobQueue::fromFile(const std::filesystem::path& path) {
                 job.parameterOverrides = parameterOverrides;
                 job.parameterOverrides.push_back(
                     {"renderer/output/output_image",
-                     std::filesystem::path(resolveTemplate(j.at("output").get<std::string>(), ctx))});
+                     (jobDirectory / resolveTemplate(j.at("output").get<std::string>(), ctx)).lexically_normal()});
                 job.parameterOverrides.push_back(
                     {"renderer/sampling/render_samples", static_cast<int>(checkpoints[ci].spp)});
                 job.parameterOverrides.insert(job.parameterOverrides.end(), aovOverrides.begin(), aovOverrides.end());

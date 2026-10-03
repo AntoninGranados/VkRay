@@ -72,13 +72,6 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
         const bool alreadyPresent = registry.has(entity, *type);
 
-        std::vector<std::string> conflicting;
-        for (const auto& cid : type->getConflicts()) {
-            auto it = typeById.find(cid);
-            if (it != typeById.end() && registry.has(entity, *it->second))
-                conflicting.push_back(it->second->getLabel());
-        }
-
         const bool disabled = alreadyPresent || !registry.canAdd(entity, *type);
         if (disabled) ImGui::BeginDisabled();
 
@@ -90,20 +83,15 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
         if (disabled) ImGui::EndDisabled();
 
-        const bool hasTooltip = alreadyPresent || !type->getDescription().empty() || !type->getConflicts().empty() ||
-                                !type->getNeeds().empty();
+        const bool hasTooltip =
+            alreadyPresent || !type->getDescription().empty() || !type->getSlot().empty() || !type->getNeeds().empty();
 
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && hasTooltip) {
             ImGui::BeginTooltip();
             if (alreadyPresent) ImGui::TextDisabled("Already added");
             if (!type->getDescription().empty()) ImGui::TextUnformatted(type->getDescription().c_str());
-            if (!type->getConflicts().empty()) {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Conflicts:");
-                for (const auto& cid : type->getConflicts()) {
-                    auto it = typeById.find(cid);
-                    ImGui::BulletText("%s", it != typeById.end() ? it->second->getLabel().c_str() : cid.c_str());
-                }
-            }
+            if (!type->getSlot().empty())
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "One %s per entity", type->getSlot().c_str());
             if (!type->getNeeds().empty()) {
                 ImGui::TextColored(ImVec4(0.9f, 0.8f, 0.4f, 1.0f), "Needs:");
                 for (const auto& nid : type->getNeeds()) {

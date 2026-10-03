@@ -17,6 +17,7 @@
 class Core {
 public:
     static void init(Platform& platform, uint32_t version);
+    static void loadParameters();
     static void terminate();
 
     static VkSmol& getEngine() { return get().engine; }
@@ -35,7 +36,11 @@ public:
     static bool isRenderDirty() { return get().renderDirty; }
     static bool consumeRenderDirty();
 
-    static void markPipelinesDirty() { get().pipelinesDirty = true; }
+    static void setTargetSampleCount(int count) { get().coreRenderer.setTargetSampleCount(count); }
+    static uint32_t getSampleCount() { return get().coreRenderer.getSampleCount(); }
+    static bool isRenderFinished() { return get().coreRenderer.isRenderFinished(); }
+    static VkExtent2D getRenderExtent() { return get().coreRenderer.getRenderExtent(); }
+    static void saveCapture(const std::filesystem::path& path) { get().coreRenderer.saveCapture(path); }
 
     static void installGraphBuilder(std::function<void()> fn) {
         Core& c = get();
@@ -62,9 +67,7 @@ private:
     Core() = default;
     static Core& get();
 
-    static void reloadShaders();
     static void updateAnimationDirty(Core& c);
-    static void reloadPipelinesIfDirty(Core& c);
     static void rebuildGraphIfRequested(Core& c);
 
     Platform* platform = nullptr;
@@ -75,7 +78,6 @@ private:
     FileWatcher fileWatcher;
     RenderMode renderMode = RenderMode::Preview;
     bool renderDirty = false;
-    bool pipelinesDirty = false;
     bool graphRebuildRequested = false;
     std::function<void()> graphBuilder;
     VkExtent2D targetExtent = {};

@@ -64,7 +64,7 @@ void ComponentUiRegistry::addWithFields(const ecs::ComponentType& type,
         const std::string header = std::format("{} {}", component.getType().getIcon(), component.getType().getLabel());
         auto& fields = component.getFields();
 
-        bool remove = ComponentUiRegistry::beginDraw(&component);
+        bool remove = ComponentUiRegistry::beginDraw(&component, type);
         if (remove) registry.remove(e, type);
         bool update = false;
         const bool useBullet = bulletIfEmpty && fields.empty();
@@ -84,7 +84,7 @@ void ComponentUiRegistry::addCustom(const ecs::ComponentType& type,
         if (!registry.has(e, type)) return;
 
         Component& component = registry.get(e, type);
-        bool remove = ComponentUiRegistry::beginDraw(&component);
+        bool remove = ComponentUiRegistry::beginDraw(&component, type);
         if (remove) registry.remove(e, type);
         bool update = !remove && custom(component, registry, e);
         ComponentUiRegistry::endDraw();

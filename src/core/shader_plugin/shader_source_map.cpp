@@ -2,11 +2,14 @@
 
 #include <algorithm>
 #include <format>
-#include <fstream>
 #include <optional>
 #include <regex>
+#include <sstream>
+#include <string_view>
 #include <utility>
 #include <vector>
+
+#include "utils/resources.hpp"
 
 namespace {
 const std::string kMarkerPrefix = "// @src ";
@@ -25,12 +28,13 @@ std::optional<std::pair<std::string, int>> parseMarker(const std::string& line) 
 }
 
 std::optional<std::pair<std::string, int>> resolveOrigin(const std::filesystem::path& generatedFile, int line) {
-    std::ifstream file(generatedFile);
-    if (!file.is_open()) return std::nullopt;
+    const std::optional<std::string_view> source = Resources::find(generatedFile);
+    if (!source) return std::nullopt;
 
     std::vector<std::string> lines;
+    std::istringstream stream{std::string(*source)};
     std::string current;
-    while (std::getline(file, current)) lines.push_back(current);
+    while (std::getline(stream, current)) lines.push_back(current);
 
     for (int i = std::min(line, static_cast<int>(lines.size())) - 1; i >= 0; i--) {
         std::optional<std::pair<std::string, int>> origin = parseMarker(lines[i]);

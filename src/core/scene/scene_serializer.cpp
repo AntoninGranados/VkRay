@@ -16,12 +16,14 @@
 #include "nlohmann/json.hpp"
 
 #include "core/ecs/components/compositing.hpp"
+#include "core/ecs/components/core.hpp"
 #include "core/ecs/components/environment.hpp"
 #include "core/fields/field_serializer.hpp"
 #include "scene.hpp"
 #include "scene_serializer_internal.hpp"
 #include "utils/json_dsl.hpp"
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -75,7 +77,20 @@ void applyKeyframes(const json& anim, FieldType type, const std::string& fieldId
     }
 }
 
-json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, const ecs::Registry& registry) {
+std::filesystem::path makeSceneAbsolute(const std::filesystem::path& path,
+                                        const std::filesystem::path& sceneDirectory) {
+    if (path.empty() || path.is_absolute() || Resources::isBuiltin(path)) return path;
+    return (sceneDirectory / path).lexically_normal();
+}
+
+std::filesystem::path makeSceneRelative(const std::filesystem::path& path,
+                                        const std::filesystem::path& sceneDirectory) {
+    if (path.empty() || Resources::isBuiltin(path)) return path;
+    return std::filesystem::absolute(path).lexically_normal().lexically_proximate(sceneDirectory);
+}
+
+json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, const ecs::Registry& registry,
+                        const std::filesystem::path& sceneDirectory) {
     json j = json::object();
     comp.forEachField([&](Field& f) {
         const std::string id = f.getId().generic_string();
@@ -87,17 +102,21 @@ json serializeComponent(ecs::Component& comp, const AnimationStore& animStore, c
             }
             return;
         }
+        if (f.getType() == FieldType::Path) {
+            j[id] = makeSceneRelative(f.get<std::filesystem::path>(), sceneDirectory).generic_string();
+            return;
+        }
         j[id] = serializeField(f, animStore.keyframes(f));
     });
     return j;
 }
 
-json serializeCompositingPasses(ecs::Component& comp) {
+json serializeCompositingPasses(ecs::Component& comp, const std::filesystem::path& sceneDirectory) {
     json arr = json::array();
     for (ecs::CompositingPassEntry& pass : comp.payload<ecs::CompositingPasses>("passes").passes) {
         json entry;
         entry["name"] = pass.name;
-        entry["path"] = pass.path.string();
+        entry["path"] = makeSceneRelative(pass.path, sceneDirectory).generic_string();
         json params = json::object();
         for (const Field& f : pass.plugin->getComponent().getFields())
             params[f.getId().generic_string()] = fieldValueToJson(f);
@@ -140,7 +159,7 @@ void spawnSpherical(const json& node, ecs::Entity e, ecs::Registry& registry, co
     auto& t = registry.get(e, ttype->get());
     t.set<glm::vec3>("position", pos);
     t.set<glm::vec3>("rotation", {glm::degrees(std::asin(glm::clamp(dir.y, -1.0f, 1.0f))),
-                                  glm::degrees(std::atan2(dir.x, -dir.z)), 0.0f});
+                                  glm::degrees(std::atan2(-dir.x, -dir.z)), 0.0f});
 }
 
 bool hasPluginPayload(const ecs::ComponentType& type) {
@@ -157,7 +176,12 @@ void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveC
             Log::warn("SceneSerializer", std::format("Unknown component '{}'", key));
             continue;
         }
-        if (spawn.registry.add(e, type->get()) && value.is_object()) {
+        if (!spawn.registry.add(e, type->get())) {
+            Log::warn("SceneSerializer", std::format("Component '{}' cannot be added to '{}' and was skipped", key,
+                                                     node.value("name", std::string("unnamed"))));
+            continue;
+        }
+        if (value.is_object()) {
             if (type->get() == ecs::Compositing) {
                 loadCompositingPasses(value, spawn.registry.get(e, type->get()), e, resolveCtx,
                                       spawn.deferredCompositingParams);
@@ -242,13 +266,13 @@ void warnUnknownFields(const json& obj, ecs::Component& comp) {
 }
 
 std::optional<json> parseSceneFile(const std::string& path) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
+    const std::optional<std::string> source = Resources::read(path);
+    if (!source) {
         Log::error("SceneSerializer", std::format("Cannot open scene: {}", path));
         return std::nullopt;
     }
     try {
-        return json::parse(file, nullptr, true, true);
+        return json::parse(*source, nullptr, true, true);
     } catch (const json::parse_error& e) {
         Log::error("SceneSerializer", std::format("Scene parse error: {}", e.what()));
         return std::nullopt;
@@ -292,6 +316,21 @@ void resolveDeferredEntityFields(ecs::Registry& registry, const std::vector<Defe
     }
 }
 
+void resolveScenePaths(ecs::Registry& registry, const std::filesystem::path& sceneDirectory) {
+    for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
+        for (const ecs::Entity entity : registry.storage(type).entities()) {
+            ecs::Component& comp = registry.get(entity, type);
+            comp.forEachField([&](Field& f) {
+                if (f.getType() == FieldType::Path)
+                    f.set(makeSceneAbsolute(f.get<std::filesystem::path>(), sceneDirectory));
+            });
+            if (type == ecs::Compositing)
+                for (ecs::CompositingPassEntry& pass : comp.payload<ecs::CompositingPasses>("passes").passes)
+                    pass.path = makeSceneAbsolute(pass.path, sceneDirectory);
+        }
+    }
+}
+
 void reloadMeshAssets(ecs::Registry& registry, const Scene& scene) {
     for (const ecs::Entity entity : scene.getChildren(scene.getAssetsRoot())) {
         if (!registry.has(entity, ecs::Mesh)) continue;
@@ -324,6 +363,8 @@ void ensureSceneDefaults(Scene& scene) {
         const ecs::Entity e = scene.createNamedEntity("Compositing", scene.getSceneRoot());
         registry.add(e, ecs::Compositing);
     }
+    registry.add(scene.getEnvironment(), ecs::Locked);
+    registry.add(scene.getCompositing(), ecs::Locked);
 }
 
 bool SceneSerializer::loadCore(Scene& scene, const std::string& path, std::optional<uint32_t> forceSeed) {
@@ -353,6 +394,7 @@ bool SceneSerializer::loadCore(Scene& scene, const std::string& path, std::optio
     loadSection(j, "Assets", scene.getAssetsRoot(), ctx, spawn);
     loadSection(j, "Objects", scene.getObjectsRoot(), ctx, spawn);
 
+    resolveScenePaths(spawn.registry, std::filesystem::absolute(path).parent_path());
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
 
@@ -363,6 +405,8 @@ bool SceneSerializer::loadCore(Scene& scene, const std::string& path, std::optio
 bool SceneSerializer::save(Scene& scene, const std::string& path) {
     json j;
     j["version"] = kSceneVersion;
+
+    const std::filesystem::path sceneDirectory = std::filesystem::absolute(path).parent_path();
 
     ecs::Registry& reg = scene.getRegistry();
     const AnimationStore& animStore = scene.getAnimationStore();
@@ -378,10 +422,10 @@ bool SceneSerializer::save(Scene& scene, const std::string& path) {
             if (type.getId() == "name") continue;
             if (type.getId() == "material") continue;
             if (type == ecs::Compositing) {
-                node["compositing"] = serializeCompositingPasses(reg.get(e, type));
+                node["compositing"] = serializeCompositingPasses(reg.get(e, type), sceneDirectory);
                 continue;
             }
-            node[type.getId()] = serializeComponent(reg.get(e, type), animStore, reg);
+            node[type.getId()] = serializeComponent(reg.get(e, type), animStore, reg, sceneDirectory);
         }
 
         json childrenJson = json::array();

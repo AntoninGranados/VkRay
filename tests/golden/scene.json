@@ -79,7 +79,7 @@
         {
             "name": "bunny",
             "mesh": {
-                "path": "./assets/models/bunny.obj",
+                "path": "../../assets/models/bunny.obj",
                 "smooth": true
             }
         }

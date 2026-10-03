@@ -57,7 +57,39 @@ file(GLOB_RECURSE VKRAY_ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*
 set(VKRAY_SOURCES ${VKRAY_ALL_SOURCES})
 list(FILTER VKRAY_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 
-add_executable(VkRay ${VKRAY_SOURCES} "${CMAKE_SOURCE_DIR}/src/main.cpp")
+file(GLOB_RECURSE VKRAY_EMBEDDED_FILES CONFIGURE_DEPENDS
+  "${CMAKE_SOURCE_DIR}/src/shaders/*.glsl"
+  "${CMAKE_SOURCE_DIR}/assets/fonts/*.ttf"
+  "${CMAKE_SOURCE_DIR}/assets/fonts/*.otf"
+  "${CMAKE_SOURCE_DIR}/assets/apertures/*.pgm"
+)
+list(APPEND VKRAY_EMBEDDED_FILES
+  "${CMAKE_SOURCE_DIR}/src/config/parameters.json"
+  "${CMAKE_SOURCE_DIR}/assets/camera/tilt_shift.glsl"
+  "${CMAKE_SOURCE_DIR}/assets/scenes/default.json"
+)
+
+set(VKRAY_EMBEDDED_ARRAYS "")
+set(VKRAY_EMBEDDED_ENTRIES "")
+set(VKRAY_EMBEDDED_INDEX 0)
+foreach(VKRAY_EMBEDDED_FILE IN LISTS VKRAY_EMBEDDED_FILES)
+  file(RELATIVE_PATH VKRAY_EMBEDDED_NAME "${CMAKE_SOURCE_DIR}" "${VKRAY_EMBEDDED_FILE}")
+  string(REGEX REPLACE "^(src|assets)/" "builtin:/" VKRAY_EMBEDDED_NAME "${VKRAY_EMBEDDED_NAME}")
+  string(APPEND VKRAY_EMBEDDED_ARRAYS
+    "constexpr unsigned char kResource${VKRAY_EMBEDDED_INDEX}[] = {\n#embed \"${VKRAY_EMBEDDED_FILE}\"\n};\n")
+  string(APPEND VKRAY_EMBEDDED_ENTRIES
+    "    {\"${VKRAY_EMBEDDED_NAME}\", kResource${VKRAY_EMBEDDED_INDEX}},\n")
+  math(EXPR VKRAY_EMBEDDED_INDEX "${VKRAY_EMBEDDED_INDEX} + 1")
+endforeach()
+
+set(VKRAY_EMBEDDED_SOURCE "${CMAKE_BINARY_DIR}/resources.cpp")
+configure_file("${CMAKE_SOURCE_DIR}/src/utils/resources.cpp.in" "${VKRAY_EMBEDDED_SOURCE}" @ONLY)
+set_source_files_properties("${VKRAY_EMBEDDED_SOURCE}" PROPERTIES
+  COMPILE_OPTIONS "-Wno-c23-extensions"
+  OBJECT_DEPENDS "${VKRAY_EMBEDDED_FILES}"
+)
+
+add_executable(VkRay ${VKRAY_SOURCES} "${VKRAY_EMBEDDED_SOURCE}" "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 target_include_directories(VkRay PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
@@ -73,20 +105,8 @@ target_compile_options(VkRay PRIVATE -Wall -Wextra)
 set_source_files_properties("${CMAKE_SOURCE_DIR}/src/core/export_service.cpp" PROPERTIES
   COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-function;-Wno-unused-parameter;-Wno-missing-field-initializers"
 )
-target_compile_definitions(VkRay PRIVATE BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(DEFINED ENV{VULKAN_SDK})
   set_property(TARGET VkRay PROPERTY BUILD_RPATH "$ENV{VULKAN_SDK}/lib")
-endif()
-
-# ── Post-build ────────────────────────────────────────────────────────────────
-option(VKRAY_COPY_RESOURCES "Copy res/ into the build output directory" ON)
-if(VKRAY_COPY_RESOURCES)
-  add_custom_command(
-    TARGET VkRay POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/assets"
-            "$<TARGET_FILE_DIR:VkRay>/assets"
-  )
 endif()
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
@@ -109,6 +129,7 @@ if(VKRAY_BUILD_TESTS)
     "${CMAKE_SOURCE_DIR}/src/utils/json_dsl.cpp"
     "${CMAKE_SOURCE_DIR}/src/utils/log.cpp"
     "${CMAKE_SOURCE_DIR}/src/utils/string_utils.cpp"
+    "${VKRAY_EMBEDDED_SOURCE}"
     "${CMAKE_SOURCE_DIR}/tests/support/gtest_style_reporter.cpp"
     "${CMAKE_SOURCE_DIR}/tests/support/shader_plugin_stub.cpp"
     "${CMAKE_SOURCE_DIR}/tests/main.cpp"
@@ -117,6 +138,7 @@ if(VKRAY_BUILD_TESTS)
     "${CMAKE_SOURCE_DIR}/tests/core/ecs/registry_test.cpp"
     "${CMAKE_SOURCE_DIR}/tests/core/ecs/system_scheduler_test.cpp"
     "${CMAKE_SOURCE_DIR}/tests/core/scene/scene_serializer_test.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/utils/resources_test.cpp"
   )
 
   target_include_directories(VkRayTests PRIVATE
@@ -135,6 +157,12 @@ if(VKRAY_BUILD_TESTS)
     COMMAND python3 "${CMAKE_SOURCE_DIR}/tests/golden/compare_render.py"
             "$<TARGET_FILE:VkRay>"
             "${CMAKE_SOURCE_DIR}"
+  )
+
+  add_test(
+    NAME "Docs match generated output"
+    COMMAND "${CMAKE_SOURCE_DIR}/tests/check_docs.sh" "$<TARGET_FILE:VkRay>"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   )
 
   add_test(

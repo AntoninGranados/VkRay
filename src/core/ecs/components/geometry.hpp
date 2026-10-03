@@ -2,7 +2,10 @@
 
 // ECS-side definitions of the scene primitives; see core/scene/gpu_structs.hpp for their GPU-side mirror.
 
+#include <cstdint>
 #include <filesystem>
+
+#include <glm/glm.hpp>
 
 #include "FontAwesome/IconsFontAwesome7.h"
 
@@ -12,6 +15,13 @@
 
 namespace ecs {
 
+struct MeshAreaCache {
+    glm::vec3 scale{0.0f};
+    uint64_t changeTick = 0;
+    float area = 0.0f;
+    bool valid = false;
+};
+
 // clang-format off
 
 inline const ComponentType Sphere = ComponentType::builder("sphere")
@@ -19,7 +29,7 @@ inline const ComponentType Sphere = ComponentType::builder("sphere")
     .icon(ICON_FA_CIRCLE)
     .group("object")
     .needs("transform")
-    .conflicts("plane", "box", "mesh_ref", "camera")
+    .slot("shape")
     .build();
 
 inline const ComponentType Plane = ComponentType::builder("plane")
@@ -27,7 +37,7 @@ inline const ComponentType Plane = ComponentType::builder("plane")
     .icon(ICON_FA_SQUARE)
     .group("object")
     .needs("transform")
-    .conflicts("sphere", "box", "mesh_ref", "quad", "camera")
+    .slot("shape")
     .build();
 
 inline const ComponentType Box = ComponentType::builder("box")
@@ -35,7 +45,7 @@ inline const ComponentType Box = ComponentType::builder("box")
     .icon(ICON_FA_BOX)
     .group("object")
     .needs("transform")
-    .conflicts("sphere", "plane", "mesh_ref", "quad", "camera")
+    .slot("shape")
     .build();
 
 inline const ComponentType Quad = ComponentType::builder("quad")
@@ -43,17 +53,18 @@ inline const ComponentType Quad = ComponentType::builder("quad")
     .icon(ICON_FA_SQUARE)
     .group("object")
     .needs("transform")
-    .conflicts("sphere", "plane", "box", "mesh_ref", "camera")
+    .slot("shape")
     .build();
 
 inline const ComponentType Mesh = ComponentType::builder("mesh")
     .description("Mesh geometry asset loaded from file.")
     .icon(ICON_FA_CUBE)
     .group("asset")
+    .kind()
+    .permanent()
     .field<std::filesystem::path>("path", {})
     .field<bool>("smooth", false)
     .payload<MeshAsset>("geometry")
-    .conflicts("transform")
     .build();
 
 inline const ComponentType MeshSimplify = ComponentType::builder("mesh_simplify")
@@ -70,8 +81,9 @@ inline const ComponentType MeshRef = ComponentType::builder("mesh_ref")
     .icon(ICON_FA_CUBE)
     .group("object")
     .needs("transform")
-    .conflicts("sphere", "plane", "box", "quad", "camera")
+    .slot("shape")
     .field<ecs::Entity>("handle", ecs::Entity{}, EntityMeta{ .needs = {"mesh"} })
+    .payload<MeshAreaCache>("area_cache")
     .build();
 
 // clang-format on

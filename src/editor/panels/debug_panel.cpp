@@ -14,7 +14,7 @@ void DebugPanel::draw() {
 
     ImGui::SetNextWindowSize(ImVec2(400.0f, 300.0f), ImGuiCond_FirstUseEver);
     ui::drawWindow(getTitle(), ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, [] {
-        VkExtent2D extent = Core::getCoreRenderer().getRenderExtent();
+        VkExtent2D extent = Core::getRenderExtent();
         if (extent.width == 0 || extent.height == 0) return;
 
         ui::drawFittedImage(Editor::getEditorRenderer().getDebugTexId(),

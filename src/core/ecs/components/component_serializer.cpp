@@ -96,7 +96,7 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
     std::ofstream file(path);
 
     file << "# Components\n\n";
-    file << "Components are defined in `src/core/ecs/components.hpp`.\n";
+    file << "Components are defined in `src/core/ecs/components/`.\n";
 
     std::map<std::string, std::vector<const ecs::ComponentType*>> groups;
     for (const auto& type : ecs::ComponentType::all()) groups[type.getGroup()].push_back(&type);
@@ -107,21 +107,19 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
             file << "\n### " << type->getLabel() << "\n";
             if (!type->getDescription().empty()) file << type->getDescription() << "\n";
 
-            if (!type->getNeeds().empty() || !type->getConflicts().empty()) {
+            std::vector<std::string> properties;
+            if (type->isKind()) properties.push_back("**Kind**");
+            if (!type->getSlot().empty()) properties.push_back(std::format("**Slot:** `{}`", type->getSlot()));
+            if (!type->getNeeds().empty()) {
+                std::string needs = "**Needs:**";
+                for (const auto& n : type->getNeeds()) needs += std::format(" `{}`", n);
+                properties.push_back(needs);
+            }
+            if (type->isPermanent()) properties.push_back("**Permanent**");
+            if (!properties.empty()) {
+                file << "\n" << properties[0];
+                for (size_t i = 1; i < properties.size(); i++) file << " · " << properties[i];
                 file << "\n";
-                if (!type->getNeeds().empty()) {
-                    file << "**Needs:**";
-                    for (const auto& n : type->getNeeds()) file << " `" << n << "`";
-                    if (!type->getConflicts().empty())
-                        file << " —";
-                    else
-                        file << "\n";
-                }
-                if (!type->getConflicts().empty()) {
-                    file << " **Conflicts:**";
-                    for (const auto& c : type->getConflicts()) file << " `" << c << "`";
-                    file << "\n";
-                }
             }
 
             std::vector<const Field*> publicFields;

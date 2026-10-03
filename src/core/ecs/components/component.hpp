@@ -3,9 +3,9 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "component_type.hpp"
@@ -14,11 +14,7 @@ namespace ecs {
 
 class Component {
 public:
-    explicit Component(const ComponentType& proto) : type(&proto) {
-        for (const auto& f : proto.getFields()) {
-            fieldIndex[f.getId()] = fields.size();
-            fields.push_back(f);
-        }
+    explicit Component(const ComponentType& proto) : type(&proto), fields(proto.getFields()) {
         for (const auto& p : proto.getPayloads()) payloads.emplace_back(p.construct(), p.destroy);
     }
     Component(Component&&) = default;
@@ -57,8 +53,7 @@ public:
 
 private:
     Field* findField(const std::string& id) {
-        const auto it = fieldIndex.find(id);
-        if (it != fieldIndex.end()) return &fields[it->second];
+        if (const std::optional<size_t> index = type->findFieldIndex(id)) return &fields[*index];
 
         const auto& payloadTypes = type->getPayloads();
         for (size_t i = 0; i < payloads.size(); ++i) {
@@ -70,7 +65,6 @@ private:
 
     const ComponentType* type;
     std::vector<Field> fields;
-    std::unordered_map<FieldPath, size_t> fieldIndex;
     std::vector<std::unique_ptr<void, std::function<void(void*)>>> payloads;
 };
 

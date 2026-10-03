@@ -52,12 +52,25 @@ JOB_TEMPLATE = {
 }
 
 
+def absolutize_paths(node, base):
+    if isinstance(node, dict):
+        return {
+            key: str((base / value).resolve()) if key == "path" and isinstance(value, str) and value
+            else absolutize_paths(value, base)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [absolutize_paths(value, base) for value in node]
+    return node
+
+
 def run_job(vkray_binary, samples, repo_root, clamp, denoise):
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         output_path = tmp_dir / "render.png"
 
         job = json.loads(json.dumps(JOB_TEMPLATE))
+        job["jobs"][0]["scene"] = str(repo_root / SCENE_PATH)
         job["jobs"][0]["samples"] = samples
         job["jobs"][0]["output"] = str(output_path)
         job["jobs"][0]["parameters"]["renderer/sampling/clamp"] = clamp
@@ -65,8 +78,9 @@ def run_job(vkray_binary, samples, repo_root, clamp, denoise):
             job["jobs"][0]["parameters"]["renderer/sampling/clamp_threshold"] = 50.0
 
         if denoise:
-            scene = json.loads((repo_root / SCENE_PATH).read_text())
-            scene.update(DENOISE_SCENE_OVERRIDE)
+            scene_file = repo_root / SCENE_PATH
+            scene = absolutize_paths(json.loads(scene_file.read_text()), scene_file.parent)
+            scene.update(absolutize_paths(DENOISE_SCENE_OVERRIDE, repo_root))
             scene_path = tmp_dir / "scene_denoised.json"
             scene_path.write_text(json.dumps(scene))
             job["jobs"][0]["scene"] = str(scene_path)

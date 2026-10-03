@@ -65,7 +65,9 @@ void applyDeferredPluginParams(ecs::Registry& registry, AnimationStore& animStor
                                const std::vector<DeferredPluginParams>& deferred) {
     for (const DeferredPluginParams& d : deferred) {
         ecs::Component& comp = registry.get(d.entity, *d.componentType);
-        applyComponent(d.value, comp, animStore, d.ctx);
+        json scriptParams = d.value;
+        for (const Field& field : d.componentType->getFields()) scriptParams.erase(field.getId().generic_string());
+        applyComponent(scriptParams, comp, animStore, d.ctx);
         warnUnknownFields(d.value, comp);
     }
 }
@@ -108,6 +110,7 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     loadSection(j, "Assets", scene.getAssetsRoot(), ctx, spawn);
     loadSection(j, "Objects", scene.getObjectsRoot(), ctx, spawn);
 
+    resolveScenePaths(spawn.registry, std::filesystem::absolute(path).parent_path());
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
 

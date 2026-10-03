@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -32,6 +33,10 @@ struct SceneGpuBuffers {
 
 struct MeshTemplates {
     std::vector<GpuMesh> meshes;
+};
+
+struct ObjectIndices {
+    std::unordered_map<ecs::Entity, int> byEntity;
 };
 
 struct CameraMotionInfo {

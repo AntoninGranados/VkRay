@@ -44,21 +44,21 @@
         {
             "name": "bunny",
             "mesh": {
-                "path": "./assets/models/bunny.obj",
+                "path": "../../models/bunny.obj",
                 "smooth": true
             }
         },
         {
             "name": "lucy-centered",
             "mesh": {
-                "path": "./assets/models/lucy-centered.obj",
+                "path": "../../models/lucy-centered.obj",
                 "smooth": true
             }
         },
         {
             "name": "armadillo",
             "mesh": {
-                "path": "./assets/models/armadillo.obj",
+                "path": "../../models/armadillo.obj",
                 "smooth": true
             }
         }

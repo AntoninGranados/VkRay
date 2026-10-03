@@ -5,8 +5,11 @@
 
 #include "core/core.hpp"
 #include "core/fields/field.hpp"
+#include "core/render/compositing_table.hpp"
 #include "core/shader_plugin/glsl_mangler.hpp"
 #include "core/shader_plugin/shader_script.hpp"
+
+#include "utils/log.hpp"
 
 ShaderPlugin::ShaderPlugin() { registry().push_back(this); }
 
@@ -42,6 +45,7 @@ void ShaderPlugin::load(bool migrate) {
     ShaderScript::ParseResult script = ShaderScript::parse(*path, type, version);
     if (!script.ok) {
         error = script.error;
+        Log::error("ShaderPlugin", error);
         return;
     }
     passCount = script.passCount;
@@ -55,6 +59,7 @@ void ShaderPlugin::load(bool migrate) {
         GlslMangler::mangle(script.body, manglePrefix, seedGlobals, script.bodyLineMarkers);
     if (!mangled.ok) {
         error = std::format("{}: {}", path->string(), mangled.error);
+        Log::error("ShaderPlugin", error);
         return;
     }
     declarations = std::move(mangled.declarations);
@@ -74,7 +79,8 @@ void ShaderPlugin::load(bool migrate) {
                 }
     params = std::move(newParams);
 
-    Core::markPipelinesDirty();
+    Core::requestGraphRebuild();
+    if (type != CompositingTable::kType) Core::markRenderDirty();
 }
 
 bool ShaderPlugin::parse(const std::filesystem::path& newPath, const std::string& newType, int newVersion,

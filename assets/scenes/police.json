@@ -4,7 +4,7 @@
         {
             "name": "Environment",
             "programmable_sky": {
-                "path": "assets/environment/sunset_sky.glsl"
+                "path": "../environment/sunset_sky.glsl"
             }
         }
     ],
@@ -27,19 +27,19 @@
         {
             "name": "car1",
             "mesh": {
-                "path": "./assets/models/police/car1.obj"
+                "path": "../models/police/car1.obj"
             }
         },
         {
             "name": "car2",
             "mesh": {
-                "path": "./assets/models/police/car2.obj"
+                "path": "../models/police/car2.obj"
             }
         },
         {
             "name": "road",
             "mesh": {
-                "path": "./assets/models/police/road.obj"
+                "path": "../models/police/road.obj"
             }
         }
     ],

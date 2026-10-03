@@ -2,11 +2,15 @@
 
 #include <fstream>
 #include <limits>
+#include <optional>
+#include <string_view>
 
 #include "nlohmann/json.hpp"
 
 #include "core/core.hpp"
 #include "core/fields/field_serializer.hpp"
+
+#include "utils/resources.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -228,11 +232,11 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 }
 
 ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {
-    std::ifstream f(path);
-    if (!f.is_open()) throw std::runtime_error(std::format("Cannot open parameter file [{}]", path.string()));
+    const std::optional<std::string_view> source = Resources::find(path);
+    if (!source) throw std::runtime_error(std::format("Parameter file [{}] is not embedded", path.string()));
 
     ParameterRegistry parameters;
-    json root = json::parse(f, nullptr, true, true);
+    json root = json::parse(*source, nullptr, true, true);
 
     const int version = root.value("version", -1);
     if (version != kParameterVersion)

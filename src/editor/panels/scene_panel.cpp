@@ -7,6 +7,7 @@
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
+#include "core/ecs/components/core.hpp"
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "editor/editor.hpp"
@@ -82,7 +83,7 @@ void ScenePanel::draw() {
             if (ImGui::Selectable("Material")) {
                 const ecs::Entity e =
                     scene.createNamedEntity(std::format("Material-uid[{:02d}]", rand()), scene.getMaterialsRoot());
-                reg.add(e, ecs::Diffuse);
+                reg.add(e, ecs::Material);
                 Editor::selectEntity(e);
             }
             if (ImGui::Selectable("Mesh Asset")) {
@@ -105,12 +106,7 @@ void ScenePanel::draw() {
         ImGui::SameLine();
 
         const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
-        const bool canDelete = selectedEntity.has_value() && *selectedEntity != scene.getDefaultMaterial() &&
-                               *selectedEntity != scene.getDefaultMesh() &&
-                               *selectedEntity != scene.getMaterialsRoot() &&
-                               *selectedEntity != scene.getAssetsRoot() && *selectedEntity != scene.getObjectsRoot() &&
-                               *selectedEntity != scene.getSceneRoot() && *selectedEntity != scene.getEnvironment() &&
-                               *selectedEntity != scene.getCompositing();
+        const bool canDelete = selectedEntity.has_value() && !reg.has(*selectedEntity, ecs::Locked);
         if (!canDelete) ImGui::BeginDisabled();
         if (ui::minusButton("DeleteEntity")) {
             ecs::Entity entityToDelete = *selectedEntity;

@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <cstdint>
+#include <optional>
+#include <string>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
@@ -9,6 +11,7 @@
 #include "stb_image/stb_image.h"
 
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
 
 namespace aperture {
 
@@ -60,7 +63,10 @@ void makePolygon(std::vector<uint8_t>& out, int blades, float rotationDeg) {
 
 bool loadFromFile(std::vector<uint8_t>& out, const std::filesystem::path& path) {
     int w, h, ch;
-    uint8_t* data = stbi_load(path.string().c_str(), &w, &h, &ch, 1);
+    const std::optional<std::string> file = Resources::read(path);
+    uint8_t* data = file ? stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(file->data()),
+                                                 static_cast<int>(file->size()), &w, &h, &ch, 1)
+                         : nullptr;
     if (!data) {
         Log::error("Aperture", "Failed to load " + path.string());
         return false;

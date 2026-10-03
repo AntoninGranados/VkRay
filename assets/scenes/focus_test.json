@@ -4,7 +4,7 @@
         {
             "name": "Environment",
             "programmable_sky": {
-                "path": "assets/environment/empty_sky.glsl"
+                "path": "../environment/empty_sky.glsl"
             }
         }
     ],
@@ -20,7 +20,7 @@
         {
             "name": "Wall",
             "programmable": {
-                "path": "assets/materials/test_grid.glsl",
+                "path": "../materials/test_grid.glsl",
                 "scale": 0.1,
                 "feather": 0.005,
                 "darkening": 0.6

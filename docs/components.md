@@ -1,13 +1,13 @@
 # Components
 
-Components are defined in `src/core/ecs/components.hpp`.
+Components are defined in `src/core/ecs/components/`.
 
 ## Asset
 
 ### Mesh
 Mesh geometry asset loaded from file.
 
- **Conflicts:** `transform`
+**Kind** · **Permanent**
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -28,7 +28,7 @@ Simplifies the mesh asset to a target ratio.
 ### Camera
 Perspective or orthographic camera with native depth of field.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `mesh_ref`
+**Slot:** `shape` · **Needs:** `transform`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -45,7 +45,7 @@ Perspective or orthographic camera with native depth of field.
 ### Tilt Shift Lens
 Tilted focal plane and lens shift (Scheimpflug principle).
 
-**Needs:** `camera`
+**Slot:** `lens` · **Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -57,7 +57,7 @@ Tilted focal plane and lens shift (Scheimpflug principle).
 ### Geometric Aperture
 Polygon aperture blade shape.
 
-**Needs:** `camera` — **Conflicts:** `image_aperture`
+**Slot:** `aperture` · **Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -67,7 +67,7 @@ Polygon aperture blade shape.
 ### Image Aperture
 Custom image mask as aperture shape.
 
-**Needs:** `camera` — **Conflicts:** `geometric_aperture`
+**Slot:** `aperture` · **Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -76,7 +76,7 @@ Custom image mask as aperture shape.
 ### Programmable Lens
 Programmable custom lens, defined by a GLSL shader-definition file.
 
-**Needs:** `camera` — **Conflicts:** `tilt_shift_lens`
+**Slot:** `lens` · **Needs:** `camera`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -87,14 +87,14 @@ Programmable custom lens, defined by a GLSL shader-definition file.
 ### Compositing
 Compositing chain, an ordered list of programmable passes.
 
- **Conflicts:** `transform`
+**Kind** · **Permanent**
 
 ## Environment
 
 ### Environment
 Environment marker.
 
- **Conflicts:** `transform`
+**Kind** · **Permanent**
 
 ### Programmable Sky
 Programmable custom sky, defined by a GLSL shader-definition file.
@@ -107,6 +107,9 @@ Programmable custom sky, defined by a GLSL shader-definition file.
 
 ## Internal
 
+### Locked
+Prevents the entity from being deleted in the editor.
+
 ### Camera Navigation
 Live interactive navigation state for the active camera.
 
@@ -117,10 +120,12 @@ Live interactive navigation state for the active camera.
 ### Material
 Material marker.
 
- **Conflicts:** `transform`
+**Kind** · **Permanent**
 
 ### Material Ref
 Material reference.
+
+**Needs:** `transform`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -129,7 +134,7 @@ Material reference.
 ### Diffuse
 Diffuse BSDF.
 
-**Needs:** `material` — **Conflicts:** `emissive` `metal` `glossy` `dielectric` `volume` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -138,7 +143,7 @@ Diffuse BSDF.
 ### Emissive
 Emissive light source BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `metal` `glossy` `dielectric` `volume` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -148,7 +153,7 @@ Emissive light source BSDF.
 ### Metal
 GGX metallic BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `glossy` `dielectric` `volume` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -158,7 +163,7 @@ GGX metallic BSDF.
 ### Glossy
 GGX glossy dielectric BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `dielectric` `volume` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -169,7 +174,7 @@ GGX glossy dielectric BSDF.
 ### Dielectric
 Dielectric refractive BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `volume` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -183,7 +188,7 @@ Dielectric refractive BSDF.
 ### Volume
 Homogeneous participating media BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `principled` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -194,7 +199,7 @@ Homogeneous participating media BSDF.
 ### Principled
 PBR principled BSDF.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `volume` `programmable`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -210,7 +215,7 @@ PBR principled BSDF.
 ### Programmable
 Programmable custom BSDF, defined by a GLSL shader-definition file.
 
-**Needs:** `material` — **Conflicts:** `diffuse` `emissive` `metal` `glossy` `dielectric` `volume` `principled`
+**Slot:** `bsdf` · **Needs:** `material`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -221,7 +226,7 @@ Programmable custom BSDF, defined by a GLSL shader-definition file.
 ### Transform
 World-space transform.
 
- **Conflicts:** `material`
+**Kind** · **Permanent**
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -234,27 +239,27 @@ World-space transform.
 ### Sphere
 Sphere primitive.
 
-**Needs:** `transform` — **Conflicts:** `plane` `box` `mesh_ref` `camera`
+**Slot:** `shape` · **Needs:** `transform`
 
 ### Plane
 Infinite plane primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `box` `mesh_ref` `quad` `camera`
+**Slot:** `shape` · **Needs:** `transform`
 
 ### Box
 Box primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `mesh_ref` `quad` `camera`
+**Slot:** `shape` · **Needs:** `transform`
 
 ### Quad
 Single face quad primitive.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `mesh_ref` `camera`
+**Slot:** `shape` · **Needs:** `transform`
 
 ### Mesh Ref
 Reference to a mesh asset.
 
-**Needs:** `transform` — **Conflicts:** `sphere` `plane` `box` `quad` `camera`
+**Slot:** `shape` · **Needs:** `transform`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
@@ -265,6 +270,8 @@ Reference to a mesh asset.
 ### Name
 Display name.
 
+**Permanent**
+
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `value` | string |  |  | no |
@@ -274,6 +281,8 @@ Display name.
 ### Collider
 Physics collider shape.
 
+**Needs:** `transform`
+
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|
 | `restitution` | float | 0.4 | 0 ... 1 | no |
@@ -281,6 +290,8 @@ Physics collider shape.
 
 ### Rigid Body
 Physics rigid body.
+
+**Needs:** `transform`
 
 | Field | Type | Default | Constraints | Animatable |
 |-------|------|---------|-------------|------------|

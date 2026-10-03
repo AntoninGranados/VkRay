@@ -16,7 +16,7 @@ void RenderViewportPanel::draw() {
                    ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoMouseInputs |
                        ImGuiWindowFlags_NoBringToFrontOnFocus,
                    [] {
-                       VkExtent2D renderExtent = Core::getCoreRenderer().getRenderExtent();
+                       VkExtent2D renderExtent = Core::getRenderExtent();
                        ui::drawFittedImage(
                            Editor::getEditorRenderer().getOutputTexId(),
                            ImVec2(static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)));

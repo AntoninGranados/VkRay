@@ -1,6 +1,7 @@
 #include "gpu_packing_system.hpp"
 
 #include <algorithm>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -156,7 +157,8 @@ void materialPackingSystem(Registry& registry) {
 
     for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
-        MaterialTable::pack(registry, entity, gpu, pluginParams);
+        if (!MaterialTable::pack(registry, entity, gpu, pluginParams) && !gpuMaterials.empty())
+            gpu = gpuMaterials.front();
         gpuMaterials.push_back(gpu);
     }
 
@@ -197,6 +199,8 @@ void objectPackingSystem(Registry& registry) {
     std::vector<GpuObject> gpuObjects;
     std::vector<GpuMotionSample> motion;
     std::vector<GpuMotionSample> liveMotion;
+    std::unordered_map<Entity, int>& objectIndices = registry.ctx().get<ObjectIndices>().byEntity;
+    objectIndices.clear();
 
     const std::vector<const ComponentType*>& order = objectTypeOrder();
     for (size_t i = 0; i < order.size(); i++) {
@@ -206,6 +210,7 @@ void objectPackingSystem(Registry& registry) {
             if (!transforms.has(entity)) continue;
             const uint32_t motionOffset = bakeMotionSamples(registry, entity, transforms.get(entity), motion);
             bakeLiveTransform(transforms.get(entity), liveMotion);
+            objectIndices[entity] = static_cast<int>(gpuObjects.size());
             gpuObjects.push_back(GpuObject{
                 .type = objectType,
                 .id = idx,
@@ -285,12 +290,22 @@ void lightPackingSystem(Registry& registry) {
                 const glm::vec3 v = glm::vec3(local[1]);
                 area = glm::length(glm::cross(u, v));
             } else if (*type == MeshRef) {
-                const Component& meshTransform = transforms.get(entity);
-                const glm::mat4 mLocal = composeTransform(meshTransform);
-                const Entity meshAssetEntity = meshes.get(entity).get<Entity>("handle");
+                const glm::vec3 scale = transforms.get(entity).get<glm::vec3>("scale");
+                Component& meshRef = meshes.get(entity);
+                const Entity meshAssetEntity = meshRef.get<Entity>("handle");
                 const MeshAsset* meshAsset = getMeshAsset(registry, meshAssetEntity);
                 if (!meshAsset) continue;
-                area = meshAsset->computeArea(mLocal);
+
+                MeshAreaCache& cache = meshRef.payload<MeshAreaCache>("area_cache");
+                const uint64_t changeTick = std::max(registry.getChangeTick(Mesh), registry.getChangeTick(MeshRef));
+                if (!cache.valid || cache.scale != scale || cache.changeTick != changeTick)
+                    cache = MeshAreaCache{
+                        .scale = scale,
+                        .changeTick = changeTick,
+                        .area = meshAsset->computeArea(glm::scale(glm::mat4(1.0f), scale)),
+                        .valid = true,
+                    };
+                area = cache.area;
             } else {
                 std::unreachable();
             }

@@ -1,24 +1,19 @@
 {
     "version": 1,
-    "Scene": [
-        {
-            "name": "Environment",
-            "programmable_sky": {
-                "path": "assets/environment/day_sky.glsl"
-            }
-        }
-    ],
     "Materials": [
         {
             "name": "Floor",
-            "programmable": {
-                "path": "assets/materials/voronoi.glsl"
+            "principled": {
+                "albedo": [0.8, 0.8, 0.8],
+                "roughness": 0.0,
+                "ior": 1.0
             }
         },
         {
             "name": "Cube",
-            "programmable": {
-                "path": "assets/materials/brick.glsl"
+            "principled": {
+                "albedo": [0.8, 0.2, 0.15],
+                "roughness": 0.2
             }
         }
     ],

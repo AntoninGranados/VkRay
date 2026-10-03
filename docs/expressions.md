@@ -22,11 +22,11 @@ Any numeric field accepts a `rand`, `lerp`, or `anim` object instead of a litera
 | `lerp` | Linearly interpolates `from` → `to` across an index axis. |
 | `anim` | Keyframe animation. Array of `{ "frame", "value", "ease" }` objects. See [scene-format](scene-format.md#animation). |
 
-`lerp` `axis`: `"col"` `"row"` `"n"` — maps the value across the grid column, grid row, or repeat index respectively.
+`lerp` `axis`: `"col"` (default), `"row"` or `"n"`, mapping the value across the grid column, grid row, or repeat index respectively. Vec4 fields take expressions per component; integer and enum fields accept `rand` and `lerp` and round the result.
 
 ## String tokens
 
-String fields such as `name`, `material`, `scene`, and `output` support `{token}` substitutions. Tokens are replaced with zero-padded integers based on the current index and total count.
+String fields such as `name`, entity references (`material_ref.handle`, `mesh_ref.handle`), and a job's `scene` and `output` support `{token}` substitutions. Tokens are replaced with zero-padded integers based on the current index and total count.
 
 | Token | Index |
 |-------|-------|

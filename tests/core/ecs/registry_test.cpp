@@ -58,18 +58,32 @@ TEST_CASE("Registry component add/has/get/remove round-trips a default field val
     CHECK_FALSE(registry.has(e, type));
 }
 
-TEST_CASE("Registry conflicts blocks adding a conflicting component") {
-    ecs::ComponentType a = ecs::ComponentType::builder("registry_test.conflict_a").build();
-    ecs::ComponentType b =
-        ecs::ComponentType::builder("registry_test.conflict_b").conflicts("registry_test.conflict_a").build();
+TEST_CASE("Registry allows a single kind per entity, including through needs") {
+    ecs::ComponentType kindA = ecs::ComponentType::builder("registry_test.kind_a").kind().build();
+    ecs::ComponentType kindB = ecs::ComponentType::builder("registry_test.kind_b").kind().build();
+    ecs::ComponentType needsB =
+        ecs::ComponentType::builder("registry_test.needs_kind_b").needs("registry_test.kind_b").build();
 
     ecs::Registry registry;
     ecs::Entity e = registry.createEntity();
-    REQUIRE(registry.add(e, a));
+    REQUIRE(registry.add(e, kindA));
 
-    CHECK_FALSE(registry.canAdd(e, b));
-    CHECK_FALSE(registry.add(e, b));
-    CHECK_FALSE(registry.has(e, b));
+    CHECK_FALSE(registry.canAdd(e, kindB));
+    CHECK_FALSE(registry.add(e, needsB));
+    CHECK_FALSE(registry.has(e, kindB));
+}
+
+TEST_CASE("Registry allows a single component per slot") {
+    ecs::ComponentType first = ecs::ComponentType::builder("registry_test.slot_first").slot("test_slot").build();
+    ecs::ComponentType second = ecs::ComponentType::builder("registry_test.slot_second").slot("test_slot").build();
+    ecs::ComponentType other = ecs::ComponentType::builder("registry_test.slot_other").slot("other_slot").build();
+
+    ecs::Registry registry;
+    ecs::Entity e = registry.createEntity();
+    REQUIRE(registry.add(e, first));
+
+    CHECK_FALSE(registry.canAdd(e, second));
+    CHECK(registry.canAdd(e, other));
 }
 
 TEST_CASE("Registry needs cascades add of the required component") {

@@ -33,7 +33,7 @@ private:
     void addWithFields(const ComponentType& type, std::function<bool(Component&, Registry&, Entity)> extra,
                        bool bulletIfEmpty);
 
-    static bool beginDraw(void* id) {
+    static bool beginDraw(void* id, const ComponentType& type) {
         ImGui::PushID(id);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0.2));
@@ -41,7 +41,9 @@ private:
         ImGui::BeginChild("Component", ImVec2{0, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY,
                           ImGuiWindowFlags_None);
 
+        ImGui::BeginDisabled(type.isPermanent());
         bool remove = ui::minusButton("Remove");
+        ImGui::EndDisabled();
         ImGui::SameLine();
         return remove;
     }

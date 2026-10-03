@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -57,6 +58,7 @@ void loadSection(const nlohmann::ordered_json& j, const std::string& key, ecs::E
 std::unordered_map<std::string, ecs::Entity> buildEntityNameMap(const Scene& scene, const ecs::Registry& registry);
 void resolveDeferredEntityFields(ecs::Registry& registry, const std::vector<DeferredEntityField>& deferredEntityFields,
                                  const std::unordered_map<std::string, ecs::Entity>& entityByName);
+void resolveScenePaths(ecs::Registry& registry, const std::filesystem::path& sceneDirectory);
 void reloadMeshAssets(ecs::Registry& registry, const Scene& scene);
 void replaceSceneRootIfProvided(const nlohmann::ordered_json& j, Scene& scene);
 void ensureSceneDefaults(Scene& scene);

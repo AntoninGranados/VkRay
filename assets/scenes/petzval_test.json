@@ -4,7 +4,7 @@
         {
             "name": "Environment",
             "programmable_sky": {
-                "path": "assets/environment/sunset_sky.glsl"
+                "path": "../environment/sunset_sky.glsl"
             }
         }
     ],
@@ -12,7 +12,7 @@
         {
             "name": "Ground",
             "programmable": {
-                "path": "assets/materials/voronoi.glsl"
+                "path": "../materials/voronoi.glsl"
             }
         },
         {
@@ -48,7 +48,7 @@
         {
             "name": "bunny",
             "mesh": {
-                "path": "./assets/models/bunny.obj",
+                "path": "../models/bunny.obj",
                 "smooth": true
             }
         }
@@ -61,7 +61,7 @@
                 "f_stop": 2
             },
             "programmable_lens": {
-                "path": "assets/camera/petzval.glsl"
+                "path": "../camera/petzval.glsl"
             },
             "name": "Camera",
             "transform": {

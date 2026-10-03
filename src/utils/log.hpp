@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <string>
@@ -36,6 +37,7 @@ private:
     ~Log() = default;
 
     static Log& get();
+    static std::filesystem::path getLogDirectory();
     void push(LogLevel level, std::string_view source, std::string_view msg);
     void ensureFile();
 

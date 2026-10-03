@@ -2,9 +2,7 @@
 
 #include <cassert>
 
-#include "core/ecs/components/component_serializer.hpp"
 #include "core/fields/parameter_serializer.hpp"
-#include "core/shader_plugin/shader_plugin.hpp"
 
 Core& Core::get() {
     static Core instance;
@@ -15,12 +13,11 @@ void Core::init(Platform& p, uint32_t version) {
     Core& c = get();
     c.platform = &p;
     c.engine.init("VkRay", version, p);
-    c.parameters = ParameterSerializer::load("./src/config/parameters.json");
+    loadParameters();
     c.coreRenderer.bindParameters();
-    // TODO: move that to a meta programm (compile time)
-    ParameterSerializer::saveDocumentation("./docs/parameters.md");
-    ComponentSerializer::saveDocumentation("./docs/components.md");
 }
+
+void Core::loadParameters() { get().parameters = ParameterSerializer::load("builtin:/config/parameters.json"); }
 
 void Core::terminate() {
     Core& c = get();
@@ -66,12 +63,6 @@ void Core::updateAnimationDirty(Core& c) {
     consumeRenderDirty();
 }
 
-void Core::reloadPipelinesIfDirty(Core& c) {
-    if (!c.pipelinesDirty) return;
-    c.pipelinesDirty = false;
-    reloadShaders();
-}
-
 void Core::rebuildGraphIfRequested(Core& c) {
     if (!c.graphRebuildRequested) return;
     c.graphRebuildRequested = false;
@@ -97,19 +88,10 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
     }
 
     scene.runOnRender();
-    reloadPipelinesIfDirty(c);
 
     c.coreRenderer.render();
     if (onRender) onRender(*frameContext);
     c.engine.advanceFrame();
-}
-
-void Core::reloadShaders() {
-    Core& c = get();
-    ShaderPlugin::regenerateAllDispatch();
-    c.coreRenderer.buildPipelines();
-    c.coreRenderer.getScene().invalidateGpuData();
-    markRenderDirty();
 }
 
 void Core::startRender() {

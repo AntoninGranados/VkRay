@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <limits>
+#include <map>
 #include <numeric>
 #include <unordered_map>
 #include <utility>
@@ -62,7 +63,9 @@ std::optional<MeshAsset> MeshAsset::load(const std::string& path) {
         });
     }
 
-    std::vector<int> vertexMaterial(vertices.size(), -1);
+    std::vector<int64_t> vertexVariant(vertices.size(), -1);
+    std::vector<bool> fileNormal(vertices.size(), false);
+    std::map<std::pair<int, int>, uint32_t> variantIds;
     std::unordered_map<uint64_t, unsigned int> splitVertices;
 
     for (const tinyobj::shape_t& shape : shapes) {
@@ -88,26 +91,38 @@ std::optional<MeshAsset> MeshAsset::load(const std::string& path) {
                 const tinyobj::index_t idx = shape.mesh.indices[indexOffset + v];
                 if (idx.vertex_index < 0) continue;
                 const int origIdx = idx.vertex_index;
+                const int normalIdx = idx.normal_index;
 
-                if (!hasMat) {
-                    indices.push_back(static_cast<unsigned int>(origIdx));
-                    continue;
-                }
+                const auto [variantIt, inserted] =
+                    variantIds.try_emplace({normalIdx, hasMat ? matId : -1}, static_cast<uint32_t>(variantIds.size()));
+                const uint32_t variant = variantIt->second;
 
-                if (vertexMaterial[origIdx] == -1) {
-                    vertices[origIdx].color = faceColor;
-                    vertexMaterial[origIdx] = matId;
+                auto initialize = [&](unsigned int index) {
+                    if (hasMat) vertices[index].color = faceColor;
+                    if (normalIdx >= 0) {
+                        vertices[index].normal =
+                            glm::vec3(attrib.normals[3 * normalIdx + 0], attrib.normals[3 * normalIdx + 1],
+                                      attrib.normals[3 * normalIdx + 2]);
+                        fileNormal[index] = true;
+                    }
+                };
+
+                if (vertexVariant[origIdx] == -1) {
+                    vertexVariant[origIdx] = variant;
+                    initialize(static_cast<unsigned int>(origIdx));
                     indices.push_back(static_cast<unsigned int>(origIdx));
-                } else if (vertexMaterial[origIdx] == matId) {
+                } else if (vertexVariant[origIdx] == variant) {
                     indices.push_back(static_cast<unsigned int>(origIdx));
                 } else {
-                    const uint64_t key = static_cast<uint64_t>(origIdx) | (static_cast<uint64_t>(matId) << 32);
+                    const uint64_t key = static_cast<uint64_t>(origIdx) | (static_cast<uint64_t>(variant) << 32);
                     auto it = splitVertices.find(key);
                     if (it != splitVertices.end()) {
                         indices.push_back(it->second);
                     } else {
                         const unsigned int newIdx = static_cast<unsigned int>(vertices.size());
-                        vertices.push_back(Vertex{.position = vertices[origIdx].position, .color = faceColor});
+                        vertices.push_back(Vertex{.position = vertices[origIdx].position, .normal = glm::vec3(0.0f)});
+                        fileNormal.push_back(false);
+                        initialize(newIdx);
                         splitVertices[key] = newIdx;
                         indices.push_back(newIdx);
                     }
@@ -122,9 +137,9 @@ std::optional<MeshAsset> MeshAsset::load(const std::string& path) {
         glm::vec3 e1 = vertices[i1].position - vertices[i0].position;
         glm::vec3 e2 = vertices[i2].position - vertices[i0].position;
         glm::vec3 n = glm::cross(e1, e2);
-        vertices[i0].normal += n;
-        vertices[i1].normal += n;
-        vertices[i2].normal += n;
+        if (!fileNormal[i0]) vertices[i0].normal += n;
+        if (!fileNormal[i1]) vertices[i1].normal += n;
+        if (!fileNormal[i2]) vertices[i2].normal += n;
     }
     for (Vertex& v : vertices) v.normal = glm::normalize(v.normal);
 

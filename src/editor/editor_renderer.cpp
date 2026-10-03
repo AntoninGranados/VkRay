@@ -1,5 +1,7 @@
 #include "editor_renderer.hpp"
 
+#include <unordered_map>
+
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
@@ -16,8 +18,9 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
-#include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/fields/parameters.hpp"
+#include "core/scene/scene.hpp"
+#include "core/shader_plugin/glsl_codegen.hpp"
 #include "editor.hpp"
 #include "editor/camera_preview.hpp"
 #include "editor/ui_utils.hpp"
@@ -25,16 +28,9 @@
 namespace {
 
 int resolveSelectedObjectIndex(const ecs::Registry& reg, ecs::Entity selected) {
-    const auto& allTransforms = reg.storage(ecs::Transform);
-    int flatIdx = 0;
-    for (const ecs::ComponentType* type : ecs::objectTypeOrder()) {
-        for (const auto& entity : reg.storage(*type).entities()) {
-            if (!allTransforms.has(entity)) continue;
-            if (entity == selected) return flatIdx;
-            flatIdx++;
-        }
-    }
-    return -1;
+    const std::unordered_map<ecs::Entity, int>& objectIndices = reg.ctx().get<ObjectIndices>().byEntity;
+    const auto it = objectIndices.find(selected);
+    return it != objectIndices.end() ? it->second : -1;
 }
 
 struct FocusPlane {
@@ -106,7 +102,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     display.readBuffer(9, renderResources.sceneHandles.material, BufferUsageType::Storage);
     display.readBuffer(10, renderResources.sceneHandles.liveMotion, BufferUsageType::Storage);
     display.readBuffer(11, renderResources.sceneHandles.pluginParams, BufferUsageType::Storage);
-    display.setPipeline("./src/shaders/editor/display.glsl");
+    display.setPipeline(GlslCodegen::loadShader("builtin:/shaders/editor/display.glsl"));
     displayTimestamp = display.setTimestamp();
 
     // Debug pass — debug view visualization (compute)
@@ -116,7 +112,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     debug.readBuffer(0, debugUBOHandle, BufferUsageType::Uniform);
     debug.readBuffer(1, renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
     debug.writeImage(2, debugImageHandle, ImageUsageType::Storage);
-    debug.setPipeline("./src/shaders/editor/debug.glsl");
+    debug.setPipeline(GlslCodegen::loadShader("builtin:/shaders/editor/debug.glsl"));
     debugTimestamp = debug.setTimestamp();
 
     // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers

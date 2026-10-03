@@ -2,6 +2,7 @@
 
 #include <format>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -12,9 +13,11 @@
 #include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 
+#include "utils/resources.hpp"
+
 namespace {
 
-constexpr const char* kTiltShiftPath = "assets/camera/tilt_shift.glsl";
+constexpr const char* kTiltShiftPath = "builtin:/camera/tilt_shift.glsl";
 
 ShaderPlugin& tiltShiftPlugin() {
     static ShaderPlugin plugin;
@@ -107,5 +110,5 @@ void CameraLensTable::generateDispatch() {
                     "}}\n",
                     functions, cases);
 
-    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/camera_lens_dispatch.glsl", content);
+    Resources::add("builtin:/shaders/generated/camera_lens_dispatch.glsl", std::move(content));
 }

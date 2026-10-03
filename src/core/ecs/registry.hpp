@@ -92,8 +92,13 @@ public:
 
     bool canAdd(const Entity& e, const ComponentType& type) const {
         if (has(e, type)) return true;
-        for (const auto& id : type.getConflicts())
-            if (hasById(e, id)) return false;
+        for (const auto& [id, s] : storages) {
+            if (!s.has(e)) continue;
+            const auto existing = ComponentType::find(id);
+            if (!existing) continue;
+            if (type.isKind() && existing->get().isKind()) return false;
+            if (!type.getSlot().empty() && existing->get().getSlot() == type.getSlot()) return false;
+        }
         for (const auto& id : type.getNeeds())
             if (auto t = ComponentType::find(id); t && !canAdd(e, t->get())) return false;
         return true;
@@ -181,11 +186,6 @@ private:
     RegistryContext context;
 
     void markChangedById(const std::string& id) { changeTicks[id] = ++changeTick; }
-
-    bool hasById(const Entity& e, const std::string& id) const {
-        auto it = storages.find(id);
-        return it != storages.end() && it->second.has(e);
-    }
 };
 
 } // namespace ecs

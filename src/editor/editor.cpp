@@ -60,7 +60,7 @@ void Editor::handleViewportResize() {
 
     if (Core::consumeResize()) {
         if (Core::getRenderMode() == RenderMode::Preview) {
-            get().editorRenderer.resize(Core::getCoreRenderer().getRenderExtent(), vpExtent);
+            get().editorRenderer.resize(Core::getRenderExtent(), vpExtent);
         } else {
             get().editorRenderer.registerImGuiTextures();
         }
@@ -70,19 +70,18 @@ void Editor::handleViewportResize() {
 
 void Editor::handleRenderModeCompletion() {
     if (Core::getRenderMode() == RenderMode::Preview || Core::isRenderDirty()) return;
-    if (!Core::getCoreRenderer().isRenderFinished()) return;
+    if (!Core::isRenderFinished()) return;
 
     if (Core::getRenderMode() == RenderMode::RenderAnimation) {
         const auto cacheDir = Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache");
-        Core::getCoreRenderer().saveCapture(
-            ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
+        Core::saveCapture(ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
         Core::getAnimation().stepFixed();
         if (Core::getAnimation().getFrame() == 0) {
             ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir);
             Core::setRenderMode(RenderMode::Preview);
         }
     } else {
-        Core::getCoreRenderer().saveCapture(Core::getOutputPath());
+        Core::saveCapture(Core::getOutputPath());
         Core::setRenderMode(RenderMode::Preview);
     }
 

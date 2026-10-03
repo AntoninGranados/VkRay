@@ -6,12 +6,14 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/material.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
+#include "utils/resources.hpp"
 #include "utils/string_utils.hpp"
 
 namespace {
@@ -105,15 +107,6 @@ bool MaterialTable::pack(ecs::Registry& registry, ecs::Entity entity, GpuMateria
         packFields(c, params);
         return true;
     }
-
-    for (size_t i = 0; i < table.size(); i++) {
-        if (table[i].type != &ecs::Diffuse) continue;
-        gpu.type = static_cast<int>(i);
-        gpu.base = static_cast<uint32_t>(params.size());
-        ecs::Component fallback(*table[i].type);
-        packFields(fallback, params);
-        break;
-    }
     return false;
 }
 
@@ -137,7 +130,7 @@ void MaterialTable::generateGlsl() {
         }
     }
 
-    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/material_types.glsl", content);
+    Resources::add("builtin:/shaders/generated/material_types.glsl", std::move(content));
 }
 
 void MaterialTable::generateDispatch() {
@@ -183,5 +176,5 @@ void MaterialTable::generateDispatch() {
         "}}\n",
         functions, cases);
 
-    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/material_dispatch.glsl", content);
+    Resources::add("builtin:/shaders/generated/material_dispatch.glsl", std::move(content));
 }

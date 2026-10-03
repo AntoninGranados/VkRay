@@ -1,0 +1,47 @@
+#include "utils/resources.hpp"
+
+#include <fstream>
+#include <span>
+#include <sstream>
+#include <unordered_map>
+#include <utility>
+
+namespace {
+
+@VKRAY_EMBEDDED_ARRAYS@
+constexpr std::pair<std::string_view, std::span<const unsigned char>> kEmbedded[] = {
+@VKRAY_EMBEDDED_ENTRIES@};
+
+std::unordered_map<std::string, std::string>& added() {
+    static std::unordered_map<std::string, std::string> resources;
+    return resources;
+}
+
+} // namespace
+
+bool Resources::isBuiltin(const std::filesystem::path& path) { return path.generic_string().starts_with(kBuiltinPrefix); }
+
+void Resources::add(const std::filesystem::path& path, std::string content) {
+    added()[path.lexically_normal().generic_string()] = std::move(content);
+}
+
+std::optional<std::string_view> Resources::find(const std::filesystem::path& path) {
+    const std::string key = path.lexically_normal().generic_string();
+    if (const auto it = added().find(key); it != added().end()) return it->second;
+    for (const auto& [name, data] : kEmbedded) {
+        if (name == key) return std::string_view(reinterpret_cast<const char*>(data.data()), data.size());
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> Resources::read(const std::filesystem::path& path) {
+    if (isBuiltin(path)) {
+        const std::optional<std::string_view> builtin = find(path);
+        return builtin ? std::optional<std::string>(*builtin) : std::nullopt;
+    }
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) return std::nullopt;
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}

@@ -2,13 +2,14 @@
 
 #include <algorithm>
 #include <format>
-#include <fstream>
+#include <optional>
 #include <sstream>
 #include <unordered_set>
 
 #include "core/shader_plugin/shader_source_map.hpp"
 
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
 #include "utils/string_utils.hpp"
 
 const std::vector<GlslTypeInfo> ShaderScript::glslTypes = {
@@ -118,20 +119,18 @@ std::optional<Field> ShaderScript::parseParam(const std::string& group, const st
 ShaderScript::ParseResult ShaderScript::parse(const std::filesystem::path& path, const std::string& type, int version) {
     ParseResult result;
 
-    std::ifstream file(path);
-    if (!file.is_open()) {
+    const std::optional<std::string> source = Resources::read(path);
+    if (!source) {
         result.error = std::format("Could not open file [{}]", path.string());
         return result;
     }
-    std::stringstream buffer;
-    buffer << file.rdbuf();
 
     bool hasVersion = false;
     std::string group = "";
     std::vector<std::pair<std::string, std::string>> paramLines;
     const std::string versionDirective = "#" + type;
 
-    const std::vector<std::string> lines = split(buffer.str(), '\n');
+    const std::vector<std::string> lines = split(*source, '\n');
     for (size_t lineIdx = 0; lineIdx < lines.size(); lineIdx++) {
         std::string trimmed = trim(lines[lineIdx]);
         const size_t commentPos = trimmed.find("//");

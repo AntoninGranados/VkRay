@@ -7,8 +7,6 @@
 
 #include "core/core.hpp"
 #include "core/fields/parameters.hpp"
-#include "core/shader_plugin/shader_source_map.hpp"
-#include "utils/log.hpp"
 
 RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     VkSmol& engine = Core::getEngine();
@@ -30,20 +28,6 @@ RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     exportService.init(engine.getExtent().width, engine.getExtent().height, resources.pixelInfoBufferHandle);
 
     return resources;
-}
-
-void CoreRenderer::buildPipelines() {
-    VkSmol& engine = Core::getEngine();
-    engine.waitIdle();
-
-    try {
-        engine.reloadPipelines(true);
-    } catch (const std::exception& e) {
-        Log::error(ShaderSourceMap::remapError(e.what()));
-        return;
-    }
-
-    Log::success("CoreRenderer", "(Re)Built the pipelines");
 }
 
 void CoreRenderer::saveCapture(const std::filesystem::path& path) {

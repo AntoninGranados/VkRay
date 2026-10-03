@@ -43,13 +43,13 @@
         {
             "name": "vkray",
             "mesh": {
-                "path": "./assets/models/vkray.obj"
+                "path": "../../models/vkray.obj"
             }
         },
         {
             "name": "dragon",
             "mesh": {
-                "path": "./assets/models/dragon.obj",
+                "path": "../../models/dragon.obj",
                 "smooth": true
             }
         }

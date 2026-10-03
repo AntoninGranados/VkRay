@@ -29,7 +29,7 @@ void StatsPanel::draw() {
     }};
 
     FrameSample sample;
-    const bool paused = coreRenderer.isRenderFinished();
+    const bool paused = Core::isRenderFinished();
     sample.ms[0] = paused ? 0.0f : static_cast<float>(engine.getTimestampMs(passes[0].timestamp));
     for (int p = 1; p < kNumPasses; ++p) sample.ms[p] = static_cast<float>(engine.getTimestampMs(passes[p].timestamp));
 

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <unordered_map>
+#include <utility>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/compositing.hpp"
@@ -10,6 +11,8 @@
 #include "core/scene/scene.hpp"
 #include "core/shader_plugin/glsl_codegen.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
+
+#include "utils/resources.hpp"
 
 namespace {
 const bool registered = [] {
@@ -86,5 +89,5 @@ void CompositingTable::generateDispatch() {
         "}}\n",
         functions, cases);
 
-    GlslCodegen::writeGeneratedFileIfChanged("./src/shaders/generated/compositing_dispatch.glsl", content);
+    Resources::add("builtin:/shaders/generated/compositing_dispatch.glsl", std::move(content));
 }
