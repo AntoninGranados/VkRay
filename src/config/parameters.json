@@ -34,13 +34,14 @@
             },
             "clamp": {
                 "label": "Clamp Fireflies",
-                "description": "Clamps high-luminance samples to reduce fireflies.",
+                "description": "Clamps high-intensity indirect light contributions to reduce fireflies.",
                 "default": false,
                 "restart_accumulation": true
             },
             "clamp_threshold": {
                 "label": "Clamp Threshold",
-                "description": "Luminance value above which samples are clamped.",
+                "description":
+                    "Indirect light contributions (after the first bounce) above this value are scaled down to it.",
                 "default": 50.0,
                 "min": 0.0,
                 "max": 1000.0,

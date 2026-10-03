@@ -80,6 +80,13 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
     }
 }
 
+vec3 clampIndirect(vec3 contribution, int bounce) {
+    if (ubo.render.clipAccumulation == 0 || bounce <= 0) return contribution;
+    float sum = contribution.r + contribution.g + contribution.b;
+    if (sum <= ubo.render.clipThreshold) return contribution;
+    return contribution * (ubo.render.clipThreshold / sum);
+}
+
 vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
@@ -108,7 +115,7 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
 
     for (; i < ubo.render.maxBounces; i++) {
         if (!foundIntersection(hit)) {
-            radiance += throughput * skyColor(ray.dir);
+            radiance += clampIndirect(throughput * skyColor(ray.dir), i - 1);
             break;
         }
 
@@ -131,7 +138,7 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
                     if (volLight.pdf > EPS) {
                         float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
                         float wMIS = powerHeuristic(volLight.pdf, phase);
-                        radiance += throughput * omega * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf;
+                        radiance += clampIndirect(throughput * omega * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf, i);
                     }
                 } else {
                     prevIsSkipped = false;
@@ -168,7 +175,7 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
                 w = powerHeuristic(prevBsdf.pdf, pdfL);
             }
 
-            radiance += throughput * w * Le;
+            radiance += clampIndirect(throughput * w * Le, i - 1);
             break;
         }
 
@@ -189,7 +196,7 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
                 BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi, rng);
                 float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
                 float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
-                radiance += throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf;
+                radiance += clampIndirect(throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf, i);
             }
         }
 
@@ -233,7 +240,6 @@ vec3 computeFragmentColor(in vec2 fragPos, inout RngState rng, float sampleProb,
         if (isnan(rayColor.r) || isnan(rayColor.g) || isnan(rayColor.b) || isinf(rayColor.r) || isinf(rayColor.g) || isinf(rayColor.b)) {
             pixelInfo.count--;
         } else {
-            if (ubo.render.clipAccumulation == 1) rayColor = min(rayColor, vec3(ubo.render.clipThreshold));
             colorSum.rgb += rayColor.rgb;
 
             takenSamples = 1.0;

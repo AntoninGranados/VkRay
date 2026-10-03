@@ -19,26 +19,34 @@
         },
         {
             "name": "Left",
-            "programmable": {
-                "albedo": [1.0, 0.1, 0.1]
+            "glossy": {
+                "albedo": [1.0, 0.1, 0.1],
+                "roughness": 0.4,
+                "ior": 2
             }
         },
         {
             "name": "Right",
-            "programmable": {
-                "albedo": [0.1, 1.0, 0.1]
+            "glossy": {
+                "albedo": [0.1, 1.0, 0.1],
+                "roughness": 0.4,
+                "ior": 2
             }
         },
         {
             "name": "Wall",
-            "programmable": {
-                "albedo": [1.0, 1.0, 1.0]
+            "glossy": {
+                "albedo": [1.0, 1.0, 1.0],
+                "roughness": 0.4,
+                "ior": 2
             }
         },
         {
             "name": "Back",
-            "programmable": {
-                "albedo": [0.2, 0.2, 0.6]
+            "glossy": {
+                "albedo": [0.2, 0.2, 0.6],
+                "roughness": 0.4,
+                "ior": 2
             }
         },
         {

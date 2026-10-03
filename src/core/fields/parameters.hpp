@@ -121,7 +121,10 @@ public:
     void set(const FieldPath& id, const T& value)
         requires(!std::is_enum_v<T>)
     {
-        getParam(id).set(value);
+        Parameter& parameter = getParam(id);
+        if constexpr (std::is_same_v<T, int>)
+            if (parameter.getType() == FieldType::Float) return parameter.set(static_cast<float>(value));
+        parameter.set(value);
     }
     template <typename T>
     void set(const FieldPath& id, T value)

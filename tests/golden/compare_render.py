@@ -16,7 +16,7 @@ TIME_TOLERANCE = 1.3
 
 REFERENCE_SAMPLES = 131072
 # REFERENCE_SAMPLES = 256
-FAST_SAMPLES = 1024
+FAST_SAMPLES = 2048
 
 SCENE_PATH = "tests/golden/scene.json"
 
@@ -46,6 +46,8 @@ JOB_TEMPLATE = {
             "parameters": {
                 "renderer/sampling/max_bounces": 15,
                 "renderer/sampling/adaptive_sampling": False,
+                "renderer/sampling/clamp": True,
+                "renderer/sampling/clamp_threshold": 500.0,
             },
         }
     ],
@@ -64,7 +66,7 @@ def absolutize_paths(node, base):
     return node
 
 
-def run_job(vkray_binary, samples, repo_root, clamp, denoise):
+def run_job(vkray_binary, samples, repo_root, denoise):
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         output_path = tmp_dir / "render.png"
@@ -73,9 +75,6 @@ def run_job(vkray_binary, samples, repo_root, clamp, denoise):
         job["jobs"][0]["scene"] = str(repo_root / SCENE_PATH)
         job["jobs"][0]["samples"] = samples
         job["jobs"][0]["output"] = str(output_path)
-        job["jobs"][0]["parameters"]["renderer/sampling/clamp"] = clamp
-        if clamp:
-            job["jobs"][0]["parameters"]["renderer/sampling/clamp_threshold"] = 50.0
 
         if denoise:
             scene_file = repo_root / SCENE_PATH
@@ -156,13 +155,13 @@ def save_history(golden_dir, repo_root, render, heatmap):
 
 
 def update_reference(vkray_binary, repo_root, golden_dir):
-    _, render = run_job(vkray_binary, REFERENCE_SAMPLES, repo_root, clamp=False, denoise=False)
+    _, render = run_job(vkray_binary, REFERENCE_SAMPLES, repo_root, denoise=False)
     save_image(render, golden_dir / "reference.png")
     print(f"Updated {golden_dir / 'reference.png'}")
 
 
 def update_baseline_time(vkray_binary, repo_root, golden_dir):
-    elapsed, _ = run_job(vkray_binary, FAST_SAMPLES, repo_root, clamp=False, denoise=True)
+    elapsed, _ = run_job(vkray_binary, FAST_SAMPLES, repo_root, denoise=True)
     (golden_dir / "baseline_time.json").write_text(json.dumps({"seconds": elapsed}, indent=4) + "\n")
     print(f"Updated baseline time ({elapsed:.2f}s)")
 
@@ -179,7 +178,7 @@ def check(vkray_binary, repo_root, golden_dir):
         print(f"No reference image at {reference_path}; run with --update first", file=sys.stderr)
         return 1
 
-    elapsed, render = run_job(vkray_binary, FAST_SAMPLES, repo_root, clamp=False, denoise=True)
+    elapsed, render = run_job(vkray_binary, FAST_SAMPLES, repo_root, denoise=True)
 
     reference = load_image(reference_path)
     if reference.shape != render.shape:
