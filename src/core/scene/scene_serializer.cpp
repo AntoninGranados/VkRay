@@ -18,6 +18,7 @@
 #include "core/ecs/components/compositing.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/components/environment.hpp"
+#include "core/ecs/components/physics.hpp"
 #include "core/fields/field_serializer.hpp"
 #include "scene.hpp"
 #include "scene_serializer_internal.hpp"
@@ -363,6 +364,7 @@ void ensureSceneDefaults(Scene& scene) {
         const ecs::Entity e = scene.createNamedEntity("Compositing", scene.getSceneRoot());
         registry.add(e, ecs::Compositing);
     }
+    registry.add(scene.getEnvironment(), ecs::Physics);
     registry.add(scene.getEnvironment(), ecs::Locked);
     registry.add(scene.getCompositing(), ecs::Locked);
 }

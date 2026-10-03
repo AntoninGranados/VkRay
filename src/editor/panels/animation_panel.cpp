@@ -1,7 +1,6 @@
 #include "animation_panel.hpp"
 
 #include <algorithm>
-#include <cstdio>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -170,26 +169,8 @@ void AnimationPanel::draw() {
             if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, {24, 0})) animation.toggle();
             ImGui::SameLine();
 
-            if (scene.isPhysicsBakeInProgress()) {
-                const int total = std::max(1, scene.getPhysicsBakeTotalFrames());
-                const int current = std::clamp(scene.getPhysicsBakeCurrentFrame(), 0, total);
-                const float progress = float(current) / float(total);
-                char overlay[16];
-                std::snprintf(overlay, sizeof(overlay), "%.0f%%", progress * 100.0f);
-                ImGui::ProgressBar(progress, ImVec2(120.0f, 0.0f), "");
-                const ImVec2 textSize = ImGui::CalcTextSize(overlay);
-                const ImVec2 barMin = ImGui::GetItemRectMin();
-                const ImVec2 barMax = ImGui::GetItemRectMax();
-                ImGui::GetWindowDrawList()->AddText(
-                    ImVec2((barMin.x + barMax.x - textSize.x) * 0.5f, (barMin.y + barMax.y - textSize.y) * 0.5f),
-                    ImGui::GetColorU32(ImGuiCol_Text), overlay);
-            } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", {120, 0})) {
-                scene.bakePhysics();
-            }
-            ImGui::SameLine();
-
-            // TODO: put this in the constants
-            ImGui::PushItemWidth(50);
+            constexpr float kFrameFieldWidth = 50.0f;
+            ImGui::PushItemWidth(kFrameFieldWidth);
             int currentFrame = animation.getFrame();
             if (ImGui::DragInt("##CurrentFrame", &currentFrame, 1, 0, animation.getEndFrame() - 1)) {
                 animation.reset(currentFrame);

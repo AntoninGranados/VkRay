@@ -110,6 +110,15 @@ Programmable custom sky, defined by a GLSL shader-definition file.
 ### Locked
 Prevents the entity from being deleted in the editor.
 
+### Physics
+Scene-wide physics settings.
+
+**Needs:** `environment` · **Permanent**
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `gravity` | vec3 | [0, -9.81, 0] |  | no |
+
 ### Camera Navigation
 Live interactive navigation state for the active camera.
 

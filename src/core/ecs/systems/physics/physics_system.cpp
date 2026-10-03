@@ -75,9 +75,10 @@ void applyFrameSnapshot(BodyAttributes& body, const FrameSnapshot& snapshot, ecs
     transform.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(glm::normalize(snapshot.rotation))));
 }
 
-// TODO: manually set the gravity so it is not an hardcoded value
-glm::vec3 gravityFor(const ecs::Component& rb) {
-    return rb.get<bool>("use_gravity") ? glm::vec3(0.0f, -9.81f, 0.0f) : glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 gravityFor(Registry& registry, const ecs::Component& rb) {
+    auto& physics = registry.storage(Physics);
+    if (!rb.get<bool>("use_gravity") || physics.entities().empty()) return glm::vec3(0.0f);
+    return physics.get(physics.entities().front()).get<glm::vec3>("gravity");
 }
 
 } // namespace physics_detail
@@ -165,7 +166,7 @@ void physicsSolverSystem(Registry& registry) {
             state.body->L = I * angVel;
 
             state.solver.init(state.body.get());
-            state.solver.setGravity(gravityFor(rb));
+            state.solver.setGravity(gravityFor(registry, rb));
             state.initializedFrame = currFrame;
             state.snapshots.clear();
             state.snapshots.insert_or_assign(currFrame, captureFrameSnapshot(*state.body, t));
@@ -173,7 +174,7 @@ void physicsSolverSystem(Registry& registry) {
 
         if (!state.body) continue;
 
-        state.solver.setGravity(gravityFor(rb));
+        state.solver.setGravity(gravityFor(registry, rb));
 
         auto exact = state.snapshots.find(currFrame);
         if (exact != state.snapshots.end()) {

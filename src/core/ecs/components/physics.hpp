@@ -31,6 +31,15 @@ inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
     .payload<physics_detail::BodyState>("state")
     .build();
 
+inline const ComponentType Physics = ComponentType::builder("physics")
+    .description("Scene-wide physics settings.")
+    .icon(ICON_FA_ATOM)
+    .group("internal")
+    .needs("environment")
+    .permanent()
+    .field<glm::vec3>("gravity", glm::vec3(0.0f, -9.81f, 0.0f), NumericMeta{ .step = 0.01f, .unit = "m/s²" })
+    .build();
+
 // clang-format on
 
 } // namespace ecs

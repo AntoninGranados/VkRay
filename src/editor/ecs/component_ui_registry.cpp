@@ -1,5 +1,6 @@
 #include "component_ui_registry.hpp"
 
+#include <algorithm>
 #include <format>
 #include <utility>
 
@@ -185,6 +186,18 @@ void ComponentUiRegistry::init() {
     });
 
     ui_reg.add(ecs::Environment);
+    ui_reg.add(ecs::Physics, [](Component&, Registry&, Entity) {
+        Scene& scene = Core::getScene();
+        if (scene.isPhysicsBakeInProgress()) {
+            const int total = std::max(1, scene.getPhysicsBakeTotalFrames());
+            const int current = std::clamp(scene.getPhysicsBakeCurrentFrame(), 0, total);
+            const float progress = float(current) / float(total);
+            ImGui::ProgressBar(progress, ImVec2(-FLT_MIN, 0.0f), std::format("{:.0f}%", progress * 100.0f).c_str());
+        } else if (ImGui::Button(ICON_FA_HARD_DRIVE " Bake Physics", ImVec2(-FLT_MIN, 0.0f))) {
+            scene.bakePhysics();
+        }
+        return false;
+    });
     ui_reg.addCustom(ecs::SkyPlugin, [](Component& c, Registry&, Entity) {
         return drawShaderPluginField(c, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor);
     });

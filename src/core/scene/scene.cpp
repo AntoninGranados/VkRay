@@ -95,6 +95,7 @@ void Scene::addDefaultAssets() {
 
     const ecs::Entity environment = createNamedEntity("Environment", sceneRoots.sceneRoot);
     registry.add(environment, ecs::Environment);
+    registry.add(environment, ecs::Physics);
 
     const ecs::Entity compositing = createNamedEntity("Compositing", sceneRoots.sceneRoot);
     registry.add(compositing, ecs::Compositing);

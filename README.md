@@ -73,6 +73,6 @@ Built on [VkSmol](external/VkSmol), a self-contained Vulkan engine submodule tha
 
 ## Roadmap
 
-Active areas: renderer/editor decoupling, OIDN integration, BDPT, texture support. See [`PLAN.md`](PLAN.md).
+Active areas: spectral rendering, BDPT, denoising, textures and HDRI environments, heterogeneous volumes. See [`PLAN.md`](PLAN.md).
 
 *[Antonin Granados](https://github.com/antoningranados)*
