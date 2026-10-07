@@ -28,10 +28,11 @@ struct Object {
     uint id;
     MaterialSlot materialSlot;
     uint motionOffset;
+    int lightId;
 };
 
-#define OBJECT_NONE Object(obj_None, -1, 0, 0)
-#define OBJECT_AABB Object(obj_Aabb, -1, 0, 0)
+#define OBJECT_NONE Object(obj_None, -1, 0, 0, -1)
+#define OBJECT_AABB Object(obj_Aabb, -1, 0, 0, -1)
 
 struct MotionSample {
     vec4 rotation;
@@ -135,7 +136,8 @@ struct Hit {
 struct Light {
     int objectId;
     float area;
-    float pdfA;     // 1 / area
+    float selectionProbability;
+    float cumulativeProbability;
 };
 
 struct SurfaceSample {

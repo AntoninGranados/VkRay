@@ -24,6 +24,7 @@
 #include "core/scene/gpu_structs.hpp"
 #include "core/scene/scene.hpp"
 
+#include "utils/color_utils.hpp"
 #include "utils/log.hpp"
 
 namespace ecs {
@@ -103,6 +104,23 @@ float containingVolume(Registry& registry, const ComponentType& type, const Enti
     if (!mesh || !meshContains(*mesh, local)) return 0.0f;
     const glm::vec3 extent = mesh->getAabbMax() - mesh->getAabbMin();
     return scale * extent.x * extent.y * extent.z;
+}
+
+float emittedLuminance(Registry& registry, const Entity& materialEntity) {
+    const Component& emissive = registry.get(materialEntity, Emissive);
+    return luminance(emissive.get<glm::vec3>("albedo") * emissive.get<float>("emission_strength"));
+}
+
+bool isSampledLight(Registry& registry, const ComponentStorage& materialRefs, const ComponentType& type,
+                    const Entity& entity) {
+    // Planes can't be used for importance sampling (infinite area)
+    if (type == Plane || !materialRefs.has(entity)) return false;
+
+    const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
+    if (!registry.has(materialEntity, Emissive) || emittedLuminance(registry, materialEntity) <= 0.0f) return false;
+
+    if (type != MeshRef) return true;
+    return getMeshAsset(registry, registry.get(entity, MeshRef).get<Entity>("handle")) != nullptr;
 }
 
 } // namespace
@@ -252,6 +270,7 @@ void objectPackingSystem(Registry& registry) {
         hasCamera ? transforms.get(cameraEntity).get<glm::vec3>("position") : glm::vec3(0.0f);
     std::vector<std::pair<float, int>> cameraMedia;
 
+    int32_t lightCount = 0;
     const std::vector<const ComponentType*>& order = objectTypeOrder();
     for (size_t i = 0; i < order.size(); i++) {
         const ObjectType objectType = static_cast<ObjectType>(i + 1);
@@ -271,6 +290,7 @@ void objectPackingSystem(Registry& registry) {
                 .id = idx,
                 .materialSlot = resolveMaterialSlot(registry, materialRefs, entity),
                 .motionOffset = motionOffset,
+                .lightId = isSampledLight(registry, materialRefs, *order[i], entity) ? lightCount++ : -1,
             });
             idx++;
         }
@@ -306,24 +326,17 @@ void lightPackingSystem(Registry& registry) {
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
 
-    auto isEmissive = [&](Entity objectEntity) -> bool {
-        if (!materialRefs.has(objectEntity)) return false;
-        const Entity materialEntity = materialRefs.get(objectEntity).get<Entity>("handle");
-        return registry.has(materialEntity, ecs::Emissive);
-    };
-
     std::vector<GpuLight> lights;
+    std::vector<float> powers;
     int32_t objectId = 0;
-    float totalArea = 0.0f;
+    float totalPower = 0.0f;
 
     for (const ComponentType* type : objectTypeOrder()) {
         for (const auto& entity : registry.storage(*type).entities()) {
             if (!transforms.has(entity)) continue;
             objectId++;
 
-            // Planes can't be used for importance sampling (infinite area)
-            if (type == &Plane) continue;
-            if (!isEmissive(entity)) continue;
+            if (!isSampledLight(registry, materialRefs, *type, entity)) continue;
 
             float area;
             if (*type == Sphere) {
@@ -371,18 +384,32 @@ void lightPackingSystem(Registry& registry) {
                 std::unreachable();
             }
 
-            totalArea += area;
+            const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
+            const float power = area * emittedLuminance(registry, materialEntity);
+            totalPower += power;
+            powers.push_back(power);
             lights.push_back(GpuLight{
                 .objectId = objectId - 1,
                 .area = area,
-                .pdfA = 1.0f / area,
+                .selectionProbability = 0.0f,
+                .cumulativeProbability = 0.0f,
             });
         }
     }
 
+    float cumulativePower = 0.0f;
+    size_t lastSelectable = 0;
+    for (size_t i = 0; i < lights.size() && totalPower > 0.0f; i++) {
+        cumulativePower += powers[i];
+        lights[i].selectionProbability = powers[i] / totalPower;
+        lights[i].cumulativeProbability = cumulativePower / totalPower;
+        if (powers[i] > 0.0f) lastSelectable = i;
+    }
+    for (size_t i = lastSelectable; i < lights.size() && totalPower > 0.0f; i++) lights[i].cumulativeProbability = 1.0f;
+
     VkSmol& engine = Core::getEngine();
     const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
-    const GpuLightHeader header{.totalArea = totalArea};
+    const GpuLightHeader header{.lightCount = static_cast<uint32_t>(lights.size())};
     engine.writeBuffer(buffers.light, header);
     engine.writeBuffer(buffers.light, lights, sizeof(GpuLightHeader));
 }

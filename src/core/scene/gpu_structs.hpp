@@ -57,6 +57,7 @@ struct GpuObject {
     uint32_t id;
     uint32_t materialSlot;
     uint32_t motionOffset;
+    int32_t lightId = -1;
 };
 
 struct GpuObjectHeader {
@@ -66,11 +67,12 @@ struct GpuObjectHeader {
 struct GpuLight {
     int objectId;
     float area;
-    float pdfA;
+    float selectionProbability;
+    float cumulativeProbability;
 };
 
 struct GpuLightHeader {
-    float totalArea;
+    uint32_t lightCount;
 };
 
 inline bool isInvalid(glm::mat4 matrix) {

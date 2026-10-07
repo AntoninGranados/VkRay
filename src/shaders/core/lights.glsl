@@ -6,27 +6,17 @@
 #include "random/utils.glsl"
 
 int getRandomLightId(inout RngState rng) {
-    if (lightBuffer.totalArea <= EPS) return -1;
+    if (lightBuffer.lightCount == 0) return -1;
 
     float r = rand(rng);
-    float t = 0.0;
-    int i = 0;
-    while (r > t) {
-        t += lightBuffer.lights[i].area / lightBuffer.totalArea;
-        i++;
+    int low = 0;
+    int high = int(lightBuffer.lightCount) - 1;
+    while (low < high) {
+        int middle = (low + high) / 2;
+        if (lightBuffer.lights[middle].cumulativeProbability > r) high = middle;
+        else low = middle + 1;
     }
-    return i-1;
-}
-
-// TODO: store the light count or find a better way to find the corresponding light from an object
-uint getLightIdFromObjectId(uint objectId) {
-    uint i = 0;
-    for (float a = 0; a < lightBuffer.totalArea;) {
-        if (lightBuffer.lights[i].objectId == objectId) return i;
-        a += lightBuffer.lights[i].area;
-        i++;
-    }
-    return 0;
+    return low;
 }
 
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats); // Forward declaration
@@ -38,13 +28,14 @@ struct LightSample {
     bool skip;
 };
 
-float lightPDF(in uint objectId, in float dist, in vec3 normal, in vec3 wo, in vec3 wi) {
-    uint lightId = getLightIdFromObjectId(objectId);
-    if (lightId < 0) return -1.0;
+float lightPDF(in int lightId, in float dist, in vec3 normal, in vec3 wi) {
+    if (lightId < 0) return 0.0;
 
     Light light = lightBuffer.lights[lightId];
+    if (light.selectionProbability <= 0.0) return 0.0;
+
     float cosLight = abs(dot(normal, wi));
-    return light.pdfA * dist*dist / max(cosLight, EPS) * light.area / lightBuffer.totalArea;
+    return light.selectionProbability * dist*dist / (max(cosLight, EPS) * light.area);
 }
 
 LightSample sampleLight(in Hit hit, inout RngState rng) {
@@ -83,7 +74,7 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
         return light;
     }
 
-    light.pdf = lightPDF(lightObj.id, dist, surfaceSample.normal, light.wi, light.wi);
+    light.pdf = lightPDF(lightId, dist, surfaceSample.normal, light.wi);
     ResolvedMaterial lightMat = unpackMaterial(getMaterial(lightObj));
     light.Le = albedo(lightMat) * emissiveEmissionStrength(lightMat);
     return light;

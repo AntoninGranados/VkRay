@@ -56,7 +56,7 @@ layout(set = 0, binding = 9) buffer readonly ObjectBuffer {
     Object objects[];
 } objectBuffer;
 layout(set = 0, binding = 10) buffer readonly LightBuffer {
-    float totalArea;
+    uint lightCount;
     Light lights[];
 } lightBuffer;
 

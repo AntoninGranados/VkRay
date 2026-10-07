@@ -194,7 +194,7 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             vec3 Le = albedo(mat) * emissiveEmissionStrength(mat);
             float w = 1.0;
             if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
-                float pdfL = lightPDF(hit.object.id, length(hit.p - prevHit.p), hit.normal, prevBsdf.wi, prevHit.p - hit.p);
+                float pdfL = lightPDF(hit.object.lightId, length(hit.p - prevHit.p), hit.normal, ray.dir);
                 w = powerHeuristic(prevBsdf.pdf, pdfL);
             }
 
