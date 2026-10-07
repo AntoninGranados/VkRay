@@ -30,22 +30,26 @@
 namespace ecs {
 
 namespace {
-uint32_t resolveMaterialSlot(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {
-    if (!materialRefs.has(entity)) return 0u;
-    const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
-    const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
-    const auto found = std::find(materialEntities.begin(), materialEntities.end(), materialEntity);
-    if (found == materialEntities.end()) return 0u;
-    return static_cast<uint32_t>(found - materialEntities.begin());
+using EntitySlots = std::unordered_map<Entity, uint32_t>;
+
+EntitySlots buildEntitySlots(const std::vector<Entity>& entities) {
+    EntitySlots slots;
+    slots.reserve(entities.size());
+    for (size_t i = 0; i < entities.size(); i++) slots.emplace(entities[i], static_cast<uint32_t>(i));
+    return slots;
 }
 
-uint32_t resolveMeshSlot(Registry& registry, const ComponentStorage& meshRefs, const Entity& entity) {
+uint32_t resolveMaterialSlot(const EntitySlots& materialSlots, const ComponentStorage& materialRefs,
+                             const Entity& entity) {
+    if (!materialRefs.has(entity)) return 0u;
+    const auto found = materialSlots.find(materialRefs.get(entity).get<Entity>("handle"));
+    return found == materialSlots.end() ? 0u : found->second;
+}
+
+uint32_t resolveMeshSlot(const EntitySlots& meshSlots, const ComponentStorage& meshRefs, const Entity& entity) {
     if (!meshRefs.has(entity)) return 0u;
-    const Entity meshEntity = meshRefs.get(entity).get<Entity>("handle");
-    const auto& assetEntities = registry.getChildren(registry.ctx().get<SceneRoots>().assetsRoot);
-    const auto found = std::find(assetEntities.begin(), assetEntities.end(), meshEntity);
-    if (found == assetEntities.end()) return 0u;
-    return static_cast<uint32_t>(found - assetEntities.begin());
+    const auto found = meshSlots.find(meshRefs.get(entity).get<Entity>("handle"));
+    return found == meshSlots.end() ? 0u : found->second;
 }
 
 const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
@@ -199,10 +203,11 @@ void meshInstancePackingSystem(Registry& registry) {
     auto& transforms = registry.storage(Transform);
 
     std::vector<GpuMesh> meshes;
+    const EntitySlots meshSlots = buildEntitySlots(registry.getChildren(registry.ctx().get<SceneRoots>().assetsRoot));
 
     for (const auto& entity : meshRefs.entities()) {
         if (!transforms.has(entity)) continue;
-        const uint32_t meshSlot = resolveMeshSlot(registry, meshRefs, entity);
+        const uint32_t meshSlot = resolveMeshSlot(meshSlots, meshRefs, entity);
         if (meshSlot >= static_cast<uint32_t>(meshTemplates.size())) continue;
         meshes.push_back(meshTemplates[meshSlot]);
     }
@@ -263,6 +268,8 @@ void objectPackingSystem(Registry& registry) {
     std::vector<GpuMotionSample> liveMotion;
     std::unordered_map<Entity, int>& objectIndices = registry.ctx().get<ObjectIndices>().byEntity;
     objectIndices.clear();
+    const EntitySlots materialSlots =
+        buildEntitySlots(registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot));
 
     const Entity cameraEntity = *registry.ctx().get<Entity*>();
     const bool hasCamera = transforms.has(cameraEntity);
@@ -288,7 +295,7 @@ void objectPackingSystem(Registry& registry) {
             gpuObjects.push_back(GpuObject{
                 .type = objectType,
                 .id = idx,
-                .materialSlot = resolveMaterialSlot(registry, materialRefs, entity),
+                .materialSlot = resolveMaterialSlot(materialSlots, materialRefs, entity),
                 .motionOffset = motionOffset,
                 .lightId = isSampledLight(registry, materialRefs, *order[i], entity) ? lightCount++ : -1,
             });

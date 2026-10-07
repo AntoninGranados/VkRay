@@ -13,7 +13,8 @@ const mat3 NOISE_ROTATION = mat3(
     -0.60, -0.48,  0.64
 );
 
-const float FBM_SIGMA = 0.115;
+const float FBM_SIGMA = 0.115 * PERLIN_NOISE_3D_NORM;
+const float TURBULENCE_SIGMA = 0.16 * PERLIN_NOISE_3D_NORM;
 
 float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
     RngState rng = RngState(0);
@@ -44,7 +45,7 @@ float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
         amplitude *= gain;
         q = NOISE_ROTATION * (q * lacunarity);
     }
-    return sum / (maxAmplitude * 0.16);
+    return sum / (maxAmplitude * TURBULENCE_SIGMA);
 }
 
 #endif

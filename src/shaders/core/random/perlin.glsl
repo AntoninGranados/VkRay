@@ -33,12 +33,11 @@ NoiseState2D perlinNoise(in vec2 p, inout RngState rng) {
     }
 
     float r = mix(nx[0], nx[1], v);
-    r /= PERLIN_NOISE_2D_NORM;
+    r *= PERLIN_NOISE_2D_NORM;
     return NoiseState2D(r * 0.5 + 0.5, vec2(0));
 }
 
-// WARN: Nor normalized to be in [0,1] (no closed form value like in 2D ?)
-// TODO: Find a normalization constant
+#define PERLIN_NOISE_3D_NORM (2.0 / sqrt(3.0))
 NoiseState3D perlinNoise(in vec3 p, inout RngState rng) {
     hashRngState(rng);
 
@@ -68,6 +67,7 @@ NoiseState3D perlinNoise(in vec3 p, inout RngState rng) {
     }
 
     float r = mix(nxy[0], nxy[1], w);
+    r *= PERLIN_NOISE_3D_NORM;
     return NoiseState3D(r * 0.5 + 0.5, vec3(0));
 }
 

@@ -58,25 +58,21 @@ vec4 rand4(inout RngState rng) {
 }
 
 vec3 randomOnSphere(inout RngState rng) {
-    float theta = rand(rng) * PI;
+    float z = 1.0 - 2.0 * rand(rng);
+    float r = sqrt(max(0.0, 1.0 - z*z));
     float phi = rand(rng) * 2 * PI;
-    float x = sin(theta) * cos(phi);
-    float y = sin(theta) * sin(phi);
-    float z = cos(theta);
-    return vec3(x, y, z);
-}
-
-vec3 randomInBall(inout RngState rng) {
-    float z  = 1.0 - 2.0 * rand(rng);
-    float r  = sqrt(max(0.0, 1.0 - z*z));
-    float phi = 6.2831853 * rand(rng);
     float x = r * cos(phi);
     float y = r * sin(phi);
     return vec3(x, y, z);
 }
 
+vec3 randomInBall(inout RngState rng) {
+    vec3 direction = randomOnSphere(rng);
+    return direction * pow(rand(rng), 1.0 / 3.0);
+}
+
 vec3 randomInHemisphere(inout RngState rng, vec3 normal) {
-    vec3 v = randomInBall(rng);
+    vec3 v = randomOnSphere(rng);
     return dot(v, normal) < 0.0 ? -v : v;
 }
 

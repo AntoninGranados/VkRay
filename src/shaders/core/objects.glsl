@@ -252,7 +252,7 @@ Hit rayMeshIntersection(in Ray ray, in Mesh mesh, bool anyHit, float tMax, inout
 // ================ SURFACE SAMPLING ================
 SurfaceSample sampleSphereSurface(inout RngState rng) {
     SurfaceSample surfaceSample;
-    surfaceSample.normal = normalize(randomInBall(rng));
+    surfaceSample.normal = randomOnSphere(rng);
     surfaceSample.p = surfaceSample.normal;
     return surfaceSample;
 }
