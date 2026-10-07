@@ -7,8 +7,10 @@
 
 #include "VkSmol/engine.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/intersect.hpp>
 
 #include "core/core.hpp"
 #include "core/ecs/components/environment.hpp"
@@ -59,6 +61,48 @@ glm::mat4 composeTransform(const Component& transform) {
     return glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position")) *
            glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation")))) *
            glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+}
+
+bool isMediumCandidate(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {
+    if (!materialRefs.has(entity)) return false;
+    const Entity material = materialRefs.get(entity).get<Entity>("handle");
+    return registry.has(material, Dielectric) || registry.has(material, Volume) || registry.has(material, Principled) ||
+           registry.has(material, MaterialPlugin);
+}
+
+bool meshContains(const MeshAsset& mesh, const glm::vec3& point) {
+    if (glm::any(glm::lessThan(point, mesh.getAabbMin())) || glm::any(glm::greaterThan(point, mesh.getAabbMax())))
+        return false;
+
+    const glm::vec3 direction = glm::normalize(glm::vec3(1.0f, 0.37f, 0.21f));
+    const std::vector<Vertex>& vertices = mesh.getVertices();
+    const std::vector<uint32_t>& indices = mesh.getIndices();
+    int crossings = 0;
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        glm::vec2 barycentric;
+        float distance;
+        if (glm::intersectRayTriangle(point, direction, vertices[indices[i]].position,
+                                      vertices[indices[i + 1]].position, vertices[indices[i + 2]].position, barycentric,
+                                      distance) &&
+            distance > 0.0f)
+            crossings++;
+    }
+    return crossings % 2 == 1;
+}
+
+float containingVolume(Registry& registry, const ComponentType& type, const Entity& entity, const glm::mat4& model,
+                       const glm::vec3& point) {
+    const glm::vec3 local = glm::vec3(glm::inverse(model) * glm::vec4(point, 1.0f));
+    const float scale = std::abs(glm::determinant(model));
+
+    if (type == Sphere) return glm::length(local) < 1.0f ? scale * 4.0f / 3.0f * glm::pi<float>() : 0.0f;
+    if (type == Box) return glm::all(glm::lessThan(glm::abs(local), glm::vec3(1.0f))) ? scale * 8.0f : 0.0f;
+    if (type != MeshRef) return 0.0f;
+
+    const MeshAsset* mesh = getMeshAsset(registry, registry.get(entity, MeshRef).get<Entity>("handle"));
+    if (!mesh || !meshContains(*mesh, local)) return 0.0f;
+    const glm::vec3 extent = mesh->getAabbMax() - mesh->getAabbMin();
+    return scale * extent.x * extent.y * extent.z;
 }
 
 } // namespace
@@ -202,6 +246,12 @@ void objectPackingSystem(Registry& registry) {
     std::unordered_map<Entity, int>& objectIndices = registry.ctx().get<ObjectIndices>().byEntity;
     objectIndices.clear();
 
+    const Entity cameraEntity = *registry.ctx().get<Entity*>();
+    const bool hasCamera = transforms.has(cameraEntity);
+    const glm::vec3 cameraPosition =
+        hasCamera ? transforms.get(cameraEntity).get<glm::vec3>("position") : glm::vec3(0.0f);
+    std::vector<std::pair<float, int>> cameraMedia;
+
     const std::vector<const ComponentType*>& order = objectTypeOrder();
     for (size_t i = 0; i < order.size(); i++) {
         const ObjectType objectType = static_cast<ObjectType>(i + 1);
@@ -210,6 +260,11 @@ void objectPackingSystem(Registry& registry) {
             if (!transforms.has(entity)) continue;
             const uint32_t motionOffset = bakeMotionSamples(registry, entity, transforms.get(entity), motion);
             bakeLiveTransform(transforms.get(entity), liveMotion);
+            if (hasCamera && isMediumCandidate(registry, materialRefs, entity)) {
+                const float volume = containingVolume(registry, *order[i], entity,
+                                                      composeTransform(transforms.get(entity)), cameraPosition);
+                if (volume > 0.0f) cameraMedia.emplace_back(volume, static_cast<int>(gpuObjects.size()));
+            }
             objectIndices[entity] = static_cast<int>(gpuObjects.size());
             gpuObjects.push_back(GpuObject{
                 .type = objectType,
@@ -221,9 +276,15 @@ void objectPackingSystem(Registry& registry) {
         }
     }
 
-    const Entity cameraEntity = *registry.ctx().get<Entity*>();
+    std::ranges::sort(cameraMedia, std::ranges::greater{});
+    const size_t firstMedium = cameraMedia.size() > 4 ? cameraMedia.size() - 4 : 0;
+    CameraMediaInfo& cameraMediaInfo = registry.ctx().get<CameraMediaInfo>();
+    cameraMediaInfo = CameraMediaInfo{};
+    for (size_t i = firstMedium; i < cameraMedia.size(); i++)
+        cameraMediaInfo.objects[cameraMediaInfo.count++] = cameraMedia[i].second;
+
     CameraMotionInfo& cameraMotion = registry.ctx().get<CameraMotionInfo>();
-    if (transforms.has(cameraEntity)) {
+    if (hasCamera) {
         const uint32_t motionOffset = bakeMotionSamples(registry, cameraEntity, transforms.get(cameraEntity), motion);
         bakeLiveTransform(transforms.get(cameraEntity), liveMotion);
         cameraMotion = CameraMotionInfo{motionOffset};

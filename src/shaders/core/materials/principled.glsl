@@ -14,14 +14,16 @@ ResolvedMaterial principledGlossyProxy(in ResolvedMaterial mat) {
 }
 
 ResolvedMaterial principledDielectricProxy(in ResolvedMaterial mat) {
-    return Dielectric(
+    ResolvedMaterial proxy = Dielectric(
         albedo(mat),
         principledRoughness(mat),
         principledIor(mat),
-        principledTransmission(mat),
+        0.0,
         principledDensity(mat),
         principledAnisotropic(mat)
     );
+    dielectricPriority(proxy) = principledPriority(mat);
+    return proxy;
 }
 
 BSDFEval evalPrincipledBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3 wi) {

@@ -193,6 +193,7 @@ Dielectric refractive BSDF.
 | `density` | float | 0 | ≥ 0 | yes |
 | `transmission` | float | 1 | 0 ... 1 | yes |
 | `anisotropic` | float | 0 | -1 ... 1 | yes |
+| `priority` | int | 0 | ≥ 0 | no |
 
 ### Volume
 Homogeneous participating media BSDF.
@@ -204,6 +205,7 @@ Homogeneous participating media BSDF.
 | `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
 | `density` | float | 1 | ≥ 0 | yes |
 | `anisotropic` | float | 0 | -1 ... 1 | yes |
+| `priority` | int | 0 | ≥ 0 | no |
 
 ### Principled
 PBR principled BSDF.
@@ -220,6 +222,7 @@ PBR principled BSDF.
 | `density` | float | 0 | ≥ 0 | yes |
 | `anisotropic` | float | 0 | -1 ... 1 | yes |
 | `alpha` | float | 1 | 0 ... 1 | yes |
+| `priority` | int | 0 | ≥ 0 | no |
 
 ### Programmable
 Programmable custom BSDF, defined by a GLSL shader-definition file.

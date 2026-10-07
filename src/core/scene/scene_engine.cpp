@@ -70,7 +70,7 @@ void Scene::initSystems() {
     onRenderScheduler.add(ecs::meshPackingSystem, {&ecs::Mesh});
     onRenderScheduler.add(ecs::meshInstancePackingSystem, {&ecs::Mesh, &ecs::MeshRef, &ecs::Transform});
     onRenderScheduler.add(ecs::objectPackingSystem,
-                          join({objects, materials, {&ecs::Transform, &ecs::Camera, &ecs::RigidBody}}),
+                          join({objects, materials, {&ecs::Transform, &ecs::Camera, &ecs::RigidBody, &ecs::Mesh}}),
                           ecs::isMotionBlurActive);
     onRenderScheduler.add(ecs::lightPackingSystem, join({objects, materials, {&ecs::Transform, &ecs::Mesh}}));
 }

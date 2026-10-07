@@ -50,6 +50,7 @@ ResolvedMaterial Dielectric(vec3 albedo, float roughness, float ior, float trans
     dielectricTransmission(m) = transmission;
     dielectricDensity(m) = density;
     dielectricAnisotropic(m) = anisotropic;
+    dielectricPriority(m) = 0.0;
     return m;
 }
 
@@ -61,7 +62,11 @@ ResolvedMaterial Principled(vec3 albedo, float roughness, float metalness, float
     principledRoughness(m) = roughness;
     principledMetalness(m) = metalness;
     principledIor(m) = ior;
+    principledTransmission(m) = 0.0;
+    principledDensity(m) = 0.0;
+    principledAnisotropic(m) = 0.0;
     principledAlpha(m) = alpha;
+    principledPriority(m) = 0.0;
     return m;
 }
 
@@ -89,6 +94,7 @@ struct BSDFEval {
 };
 
 #define DEFAULT_MATERIAL unpackMaterial(materialBuffer.materials[0])
+#define NO_MEDIUM BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0)
 
 // ============== REFRACTION/REFLECTION ==============
 #define SCHLICK_APPROX(cosine, F0) F0 + (1-F0) * pow((1 - cosine), 5)
@@ -116,6 +122,133 @@ bool isTransmissive(in ResolvedMaterial mat) {
     if (mat.type == mat_Dielectric) return true;
     if (mat.type == mat_Principled) return (1.0 - principledMetalness(mat)) * principledTransmission(mat) > EPS;
     return false;
+}
+
+bool isMediumBoundary(in ResolvedMaterial mat) {
+    return mat.type == mat_Volume || isTransmissive(mat);
+}
+
+int mediumPriority(in ResolvedMaterial mat) {
+    switch (mat.type) {
+        case mat_Dielectric: return int(dielectricPriority(mat));
+        case mat_Principled: return int(principledPriority(mat));
+        case mat_Volume:     return int(volumePriority(mat));
+        default:             return 0;
+    }
+}
+
+struct MediumEntry {
+    uint objectKey;
+    int priority;
+    float ior;
+    vec3 absorption;
+    float density;
+    float scatterAlbedo;
+    float anisotropic;
+};
+
+uint mediumObjectKey(in Object object) {
+    return (uint(object.type) << 24) | object.id;
+}
+
+#define MEDIUM_STACK_SIZE 4
+
+MediumEntry mediumStack[MEDIUM_STACK_SIZE];
+int mediumStackDepth = 0;
+
+void resetMediumStack() {
+    mediumStackDepth = 0;
+}
+
+void pushMedium(in MediumEntry entry) {
+    if (mediumStackDepth == MEDIUM_STACK_SIZE) {
+        for (int i = 1; i < MEDIUM_STACK_SIZE; i++) mediumStack[i - 1] = mediumStack[i];
+        mediumStackDepth--;
+    }
+    mediumStack[mediumStackDepth] = entry;
+    mediumStackDepth++;
+}
+
+int findMedium(in Object object) {
+    uint objectKey = mediumObjectKey(object);
+    for (int i = mediumStackDepth - 1; i >= 0; i--)
+        if (mediumStack[i].objectKey == objectKey) return i;
+    return -1;
+}
+
+void removeMedium(in Object object) {
+    int index = findMedium(object);
+    if (index < 0) return;
+    for (int i = index + 1; i < mediumStackDepth; i++) mediumStack[i - 1] = mediumStack[i];
+    mediumStackDepth--;
+}
+
+int activeMediumIndex(int excluded) {
+    int activeIndex = -1;
+    for (int i = 0; i < mediumStackDepth; i++) {
+        if (i == excluded) continue;
+        if (activeIndex < 0 || mediumStack[i].priority >= mediumStack[activeIndex].priority) activeIndex = i;
+    }
+    return activeIndex;
+}
+
+float activeIor(int excluded) {
+    int activeIndex = activeMediumIndex(excluded);
+    return activeIndex < 0 ? 1.0 : mediumStack[activeIndex].ior;
+}
+
+BSDFMediumInfo activeMedium() {
+    int activeIndex = activeMediumIndex(-1);
+    if (activeIndex < 0) return NO_MEDIUM;
+    return BSDFMediumInfo(
+        false, mediumStack[activeIndex].density > 0.0, mediumStack[activeIndex].absorption,
+        mediumStack[activeIndex].density, mediumStack[activeIndex].scatterAlbedo, mediumStack[activeIndex].anisotropic
+    );
+}
+
+MediumEntry makeMediumEntry(in ResolvedMaterial mat, in Object object) {
+    uint objectKey = mediumObjectKey(object);
+    switch (mat.type) {
+        case mat_Dielectric:
+            return MediumEntry(
+                objectKey, mediumPriority(mat), dielectricIor(mat), albedo(mat),
+                dielectricDensity(mat), dielectricTransmission(mat), dielectricAnisotropic(mat)
+            );
+        case mat_Principled:
+            return MediumEntry(
+                objectKey, mediumPriority(mat), principledIor(mat), albedo(mat),
+                principledDensity(mat), 0.0, principledAnisotropic(mat)
+            );
+        default:
+            return MediumEntry(
+                objectKey, mediumPriority(mat), activeIor(-1), albedo(mat),
+                volumeDensity(mat), 1.0, volumeAnisotropic(mat)
+            );
+    }
+}
+
+bool isFalseInterface(in ResolvedMaterial mat, in Hit hit) {
+    if (hit.frontFace) {
+        int activeIndex = activeMediumIndex(-1);
+        return activeIndex >= 0 && mediumPriority(mat) < mediumStack[activeIndex].priority;
+    }
+    int index = findMedium(hit.object);
+    return index >= 0 && index != activeMediumIndex(-1);
+}
+
+void interfaceIors(in Hit hit, float ior, out float etaI, out float etaT) {
+    if (hit.frontFace) {
+        etaI = activeIor(-1);
+        etaT = ior;
+    } else {
+        etaI = ior;
+        etaT = activeIor(findMedium(hit.object));
+    }
+}
+
+void crossInterface(in ResolvedMaterial mat, in Hit hit) {
+    if (hit.frontFace) pushMedium(makeMediumEntry(mat, hit.object));
+    else removeMedium(hit.object);
 }
 
 // ============== MIRROR ==============

@@ -47,6 +47,8 @@ struct alignas(16) RenderUBO {
     float clipThreshold;
     int varianceSampling;
     int varianceWarmupSamples;
+    int cameraMediumCount = 0;
+    alignas(16) glm::ivec4 cameraMedia{-1};
 };
 
 struct PathtracerUBO {

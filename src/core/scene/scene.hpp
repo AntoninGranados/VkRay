@@ -43,6 +43,11 @@ struct CameraMotionInfo {
     uint32_t motionOffset = 0;
 };
 
+struct CameraMediaInfo {
+    int count = 0;
+    glm::ivec4 objects{-1};
+};
+
 struct LensPluginInfo {
     int32_t slot = -1;
     int32_t paramsBase = 0;

@@ -16,6 +16,8 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #define CAMERA_LENS_APERTURE
 #include "camera/camera.glsl"
 
+#define MAX_FALSE_INTERFACES 16
+
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     Hit bestHit = NO_HIT;
     for (int i = 0; i < objectBuffer.objectCount; i++) {
@@ -87,6 +89,16 @@ vec3 clampIndirect(vec3 contribution, int bounce) {
     return contribution * (ubo.render.clipThreshold / sum);
 }
 
+void initMediumStack(in Ray ray, inout RngState rng) {
+    resetMediumStack();
+    for (int i = 0; i < ubo.render.cameraMediumCount; i++) {
+        Object object = objectBuffer.objects[ubo.render.cameraMedia[i]];
+        Hit hit = Hit(ray.origin, vec2(0.0), -ray.dir, 0.0, true, object, vec3(1.0));
+        ResolvedMaterial mat = resolveMaterial(getMaterial(object), hit, -ray.dir, rng);
+        if (isMediumBoundary(mat)) pushMedium(makeMediumEntry(mat, object));
+    }
+}
+
 vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     Statistics stats = Statistics(0, 0);
     Hit hit = intersection(ray, false, INFINITY, stats);
@@ -96,6 +108,8 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
 
     vec3 throughput = vec3(1.0);
     vec3 radiance = vec3(0.0);
+    initMediumStack(ray, rng);
+    int falseInterfaces = 0;
 
     int i = 0;
     BSDFSample bsdf;
@@ -110,7 +124,6 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
         BSDFMediumInfo(false, false, vec3(1.0), 1.0, 0.0, 0.0)
     );
     Hit prevHit;
-    BSDFMediumInfo currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
     bool prevIsSkipped = false;
 
     for (; i < ubo.render.maxBounces; i++) {
@@ -119,9 +132,10 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             break;
         }
 
-        if (currentMedium.isVolume) {
-            float sigma_t = currentMedium.density;
-            float omega   = currentMedium.scatterAlbedo;
+        BSDFMediumInfo medium = activeMedium();
+        if (medium.isVolume) {
+            float sigma_t = medium.density;
+            float omega   = medium.scatterAlbedo;
             float sigma_s = sigma_t * omega;
             float sigma_a = sigma_t * (1.0 - omega);
 
@@ -129,38 +143,47 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             if (t_scatter < hit.t) {
                 ray.origin += ray.dir * t_scatter;
 
-                throughput *= pow(max(currentMedium.absorption, vec3(1e-4)), vec3(sigma_a * t_scatter));
+                throughput *= pow(max(medium.absorption, vec3(1e-4)), vec3(sigma_a * t_scatter));
 
                 if (ubo.render.importanceSampling == 1) {
                     Hit scatterHit = Hit(ray.origin, vec2(0), vec3(0.0), t_scatter, true, OBJECT_NONE, vec3(1.0));
                     LightSample volLight = sampleLight(scatterHit, rng);
                     prevIsSkipped = volLight.skip;
                     if (volLight.pdf > EPS) {
-                        float phase = phaseFunctionHG(currentMedium.anisotropic, volLight.wi, ray.dir);
+                        float phase = phaseFunctionHG(medium.anisotropic, volLight.wi, ray.dir);
                         float wMIS = powerHeuristic(volLight.pdf, phase);
-                        radiance += clampIndirect(throughput * omega * currentMedium.absorption * phase * volLight.Le * wMIS / volLight.pdf, i);
+                        radiance += clampIndirect(throughput * omega * medium.absorption * phase * volLight.Le * wMIS / volLight.pdf, i);
                     }
                 } else {
                     prevIsSkipped = false;
                 }
 
                 vec3 incomingDir = ray.dir;
-                ray.dir = sampleHG(currentMedium.anisotropic, ray.dir, rng);
-                throughput *= omega * currentMedium.absorption;
+                ray.dir = sampleHG(medium.anisotropic, ray.dir, rng);
+                throughput *= omega * medium.absorption;
 
-                prevBsdf.pdf = phaseFunctionHG(currentMedium.anisotropic, ray.dir, incomingDir);
+                prevBsdf.pdf = phaseFunctionHG(medium.anisotropic, ray.dir, incomingDir);
                 prevBsdf.isDelta = false;
                 prevHit.p = ray.origin;
 
                 hit = intersection(ray, false, INFINITY, stats);
                 continue;
             } else {
-                throughput *= pow(max(currentMedium.absorption, vec3(1e-4)), vec3(sigma_a * hit.t));
+                throughput *= pow(max(medium.absorption, vec3(1e-4)), vec3(sigma_a * hit.t));
             }
         }
 
         mat = resolveMaterial(getMaterial(hit.object), hit, -ray.dir, rng);
         setAlbedo(mat, albedo(mat) * hit.vertexColor);
+
+        if (isMediumBoundary(mat) && falseInterfaces < MAX_FALSE_INTERFACES && isFalseInterface(mat, hit)) {
+            falseInterfaces++;
+            crossInterface(mat, hit);
+            ray = Ray(hit.p + ray.dir * EPS, ray.dir);
+            hit = intersection(ray, false, INFINITY, stats);
+            i--;
+            continue;
+        }
 
         if (mat.type == mat_Emissive) {
             if (i == 0) {
@@ -182,11 +205,6 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
         bsdf = sampleBSDF(mat, hit, -ray.dir, rng);
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
-        }
-        if (mat.type == mat_Volume || mat.type == mat_Dielectric || mat.type == mat_Principled) {
-            currentMedium = bsdf.medium.isVolume ? bsdf.medium : BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
-        } else {
-            currentMedium = BSDFMediumInfo(false, false, vec3(1.0), 0.0, 0.0, 0.0);
         }
         bool isSkipped = false;
         if (ubo.render.importanceSampling == 1 && !bsdf.isDelta) {
@@ -218,9 +236,6 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
 
         ray = Ray(hit.p + bsdf.wi * EPS, bsdf.wi);
         hit = intersection(ray, false, INFINITY, stats);
-        if (prevBsdf.medium.isDielectric && !prevBsdf.medium.isVolume) {
-            throughput *= pow(max(prevBsdf.medium.absorption, vec3(1e-4)), vec3(hit.t * prevBsdf.medium.density));
-        }
     }
     if (i == ubo.render.maxBounces) radiance = vec3(0.0);
 

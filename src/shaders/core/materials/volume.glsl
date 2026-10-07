@@ -49,6 +49,8 @@ BSDFEval evalVolumeBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in vec3
 }
 
 BSDFSample sampleVolumeBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
+    crossInterface(mat, hit);
+
     BSDFSample bsdf;
     bsdf.wi      = -wo;
     bsdf.weight  = vec3(1.0);

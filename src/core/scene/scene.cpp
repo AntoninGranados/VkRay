@@ -18,6 +18,7 @@ void Scene::initContext() {
     registry.ctx().emplace<MeshTemplates>();
     registry.ctx().emplace<ObjectIndices>();
     registry.ctx().emplace<CameraMotionInfo>();
+    registry.ctx().emplace<CameraMediaInfo>();
     registry.ctx().emplace<LensPluginInfo>();
     registry.ctx().emplace<SkyPluginInfo>();
     registry.ctx().emplace<CompositingChainInfo>();

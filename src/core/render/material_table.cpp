@@ -29,7 +29,9 @@ std::string glslMacroName(const ecs::ComponentType& type, const Field& field) {
     return prefix + snakeCaseToPascalCase(field.getId().string());
 }
 
-bool isPackableField(const Field& field) { return field.getId() != "albedo" && field.getType() == FieldType::Float; }
+bool isPackableField(const Field& field) {
+    return field.getId() != "albedo" && (field.getType() == FieldType::Float || field.getType() == FieldType::Int);
+}
 
 bool hasAlbedoField(const ecs::ComponentType& type) {
     for (const Field& field : type.getFields())
@@ -46,7 +48,10 @@ void packFields(ecs::Component& c, std::vector<float>& params) {
     }
     for (const Field& field : c.getType().getFields()) {
         if (!isPackableField(field)) continue;
-        params.push_back(c.get<float>(field.getId()));
+        if (field.getType() == FieldType::Int)
+            params.push_back(static_cast<float>(c.get<int>(field.getId())));
+        else
+            params.push_back(c.get<float>(field.getId()));
     }
 }
 

@@ -82,6 +82,7 @@ inline const ComponentType Dielectric = ComponentType::builder("dielectric")
     .field<float>("density", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.01f }, true)
     .field<float>("transmission", 1.0f, NumericMeta{ .min = 0.0f, .max = 1.0f, .step = 0.01f }, true)
     .field<float>("anisotropic", 0.0f, NumericMeta{ .min = -1.0f, .max = 1.0f, .step = 0.01f }, true)
+    .field<int>("priority", 0, NumericMeta{ .min = 0, .step = 1 })
     .build();
 
 inline const ComponentType Volume = ComponentType::builder("volume")
@@ -93,6 +94,7 @@ inline const ComponentType Volume = ComponentType::builder("volume")
     .field<glm::vec3>("albedo", glm::vec3(0.8f), NumericMeta{ .min = 0.0f, .max = 1.0f, .step = 0.01f, .color = true }, true)
     .field<float>("density", 1.0f, NumericMeta{ .min = 0.0f, .step = 0.01f }, true)
     .field<float>("anisotropic", 0.0f, NumericMeta{ .min = -1.0f, .max = 1.0f, .step = 0.01f }, true)
+    .field<int>("priority", 0, NumericMeta{ .min = 0, .step = 1 })
     .build();
 
 inline const ComponentType Principled = ComponentType::builder("principled")
@@ -109,6 +111,7 @@ inline const ComponentType Principled = ComponentType::builder("principled")
     .field<float>("density", 0.0f, NumericMeta{ .min = 0.0f, .step = 0.01f }, true)
     .field<float>("anisotropic", 0.0f, NumericMeta{ .min = -1.0f, .max = 1.0f, .step = 0.01f }, true)
     .field<float>("alpha", 1.0f, NumericMeta{ .min = 0.0f, .max = 1.0f, .step = 0.01f }, true)
+    .field<int>("priority", 0, NumericMeta{ .min = 0, .step = 1 })
     .build();
 
 inline const ComponentType MaterialPlugin = ComponentType::builder("programmable")

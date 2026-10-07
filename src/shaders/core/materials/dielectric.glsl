@@ -14,9 +14,8 @@ BSDFEval evalDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, in 
 }
 
 BSDFSample sampleDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo, inout RngState rng) {
-    float etaI = 1.0;   // TODO: keep track of the current IOR as we traverse the scene
-    float etaT = dielectricIor(mat);
-    if (!hit.frontFace) { float t = etaI; etaI = etaT; etaT = t; }
+    float etaI, etaT;
+    interfaceIors(hit, dielectricIor(mat), etaI, etaT);
 
     vec3 normal = hit.normal + randomInBall(rng) * dielectricRoughness(mat);
     if (length(normal) < EPS) normal = hit.normal;
@@ -41,6 +40,8 @@ BSDFSample sampleDielectricBSDF(in ResolvedMaterial mat, in Hit hit, in vec3 wo,
 
         pdf = max(1.0 - F, EPS);
         weight = vec3(etaFactor);
+
+        crossInterface(mat, hit);
     }
 
     bool entering = (dot(wi, hit.normal) < 0.0) == hit.frontFace;

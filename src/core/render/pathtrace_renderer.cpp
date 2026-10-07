@@ -145,6 +145,9 @@ void PathtraceRenderer::render() {
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
     pathtracerUBO.camera = buildCameraUBO(registry, camera, pathtracerUBO.screen.aspect);
     pathtracerUBO.render.skyParamsBase = registry.ctx().get<SkyPluginInfo>().paramsBase;
+    const CameraMediaInfo& cameraMedia = registry.ctx().get<CameraMediaInfo>();
+    pathtracerUBO.render.cameraMediumCount = cameraMedia.count;
+    pathtracerUBO.render.cameraMedia = cameraMedia.objects;
 
     engine.writeBuffer(pathtracingUBOHandle, pathtracerUBO);
 
