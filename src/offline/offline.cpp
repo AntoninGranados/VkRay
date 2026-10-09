@@ -8,7 +8,8 @@
 #include "utils/log.hpp"
 #include "utils/progress.hpp"
 
-void Offline::run(JobQueue& queue) {
+void Offline::run() {
+    JobQueue& queue = Core::getJobQueue();
     const int totalJobs = static_cast<int>(queue.entries().size());
 
     int jobIndex = 0;

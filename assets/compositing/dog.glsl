@@ -20,7 +20,7 @@ vec2 blurAlongDir(ivec2 pixelCoord, ivec2 texSize, float sigma1, float sigma2, i
         ivec2 px = pixelCoord + dir;
         if (px.x < 0 || px.x >= texSize.x || px.y < 0 || px.y >= texSize.y) continue;
 
-        vec3 color = sampleSource(px, texSize);
+        vec3 color = sampleSource(px, texSize).rgb;
         c = color.r;
         w = exp(- dx * dx / twoSigma1Sq);
         totalW[0] += w;
@@ -37,9 +37,9 @@ vec2 blurAlongDir(ivec2 pixelCoord, ivec2 texSize, float sigma1, float sigma2, i
 
 void main() {
     switch (passId) {
-        case 0: return vec3(luma(sampleOriginal(pixelCoord, texSize)));
+        case 0: return vec4(vec3(luma(sampleOriginal(pixelCoord, texSize).rgb)), 1);
         case 1:
-        case 2: return vec3(blurAlongDir(pixelCoord, texSize, sigma1, sigma2, passId-1), 0);
-        case 3: return vec3(abs(result.g - result.r)); // vec3(abs(result.g - result.r) > threshold ? 1 : 0);
+        case 2: return vec4(blurAlongDir(pixelCoord, texSize, sigma1, sigma2, passId-1), 0, 1);
+        case 3: return vec4(vec3(abs(result.g - result.r)), 1); // vec3(abs(result.g - result.r) > threshold ? 1 : 0);
     }
 }

@@ -68,6 +68,10 @@ layout(set = 0, binding = 13) buffer readonly MotionBuffer {
     MotionSample samples[];
 } motionBuffer;
 
+layout(set = 0, binding = 14) buffer readonly BlueNoiseBuffer {
+    uint values[];
+} blueNoiseBuffer;
+
 ResolvedMaterial unpackMaterial(in Material mat) {
     ResolvedMaterial resolved;
     resolved.type = mat.type;

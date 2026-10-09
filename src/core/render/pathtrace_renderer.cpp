@@ -15,7 +15,7 @@
 #include "core/shader_plugin/glsl_codegen.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
-                                             ImageHandle lensImageHandle) {
+                                             ImageHandle lensImageHandle, BufferHandle blueNoiseBufferHandle) {
     renderExtent = extent;
     groupHandle = builder.addSubmissionGroup(tag.empty() ? "Core" : tag);
 
@@ -66,6 +66,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.writeImage(11, currentPathtracingImageHandle, ImageUsageType::Storage);
     pathtrace.readImage(12, lensImageHandle, ImageUsageType::Sampled);
     pathtrace.readBuffer(13, resources.sceneHandles.motion, BufferUsageType::Storage);
+    pathtrace.readBuffer(14, blueNoiseBufferHandle, BufferUsageType::Storage);
     pathtrace.setPipeline(GlslCodegen::loadShader("builtin:/shaders/core/pathtracing.glsl"));
     pathtracingTimestamp = pathtrace.setTimestamp();
 

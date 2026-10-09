@@ -10,7 +10,7 @@
 void main() {
     vec2 local = uv / scale;
 
-    rng = RngState(seed);
+    rng = initRngState(uint(seed));
     VoronoiState state = voronoiNoise(local, randomness, rng);
 
     ivec2 idx = state.cellIndex;

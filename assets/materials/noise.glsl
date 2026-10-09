@@ -5,7 +5,7 @@
 #param float scale = 1: min(0)
 
 void main() {
-    RngState localRng = RngState(seed);
+    RngState localRng = initRngState(uint(seed));
     vec2 local = uv / scale;
 
     float r;

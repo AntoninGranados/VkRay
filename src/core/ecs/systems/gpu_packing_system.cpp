@@ -26,6 +26,7 @@
 
 #include "utils/color_utils.hpp"
 #include "utils/log.hpp"
+#include "utils/transform_utils.hpp"
 
 namespace ecs {
 
@@ -60,12 +61,6 @@ Entity resolveEnvironmentEntity(Registry& registry) {
     for (const Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
         if (registry.has(e, Environment)) return e;
     return {};
-}
-
-glm::mat4 composeTransform(const Component& transform) {
-    return glm::translate(glm::mat4(1.0f), transform.get<glm::vec3>("position")) *
-           glm::mat4_cast(glm::quat(glm::radians(transform.get<glm::vec3>("rotation")))) *
-           glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
 }
 
 bool isMediumCandidate(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {

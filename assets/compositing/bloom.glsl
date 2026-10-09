@@ -29,7 +29,7 @@ vec3 erode(ivec2 pixelCoord, ivec2 texSize, int radius) {
 }
 
 vec3 blurAlongDir(ivec2 pixelCoord, ivec2 texSize, float sigma, int direction) {
-    if (sigma < 1e-3) return sampleSource(pixelCoord, texSize);
+    if (sigma < 1e-3) return sampleSource(pixelCoord, texSize).rgb;
     int radius = int(round(3 * sigma));
     float twoSigmaSq = 2 * sigma * sigma;
 
@@ -42,7 +42,7 @@ vec3 blurAlongDir(ivec2 pixelCoord, ivec2 texSize, float sigma, int direction) {
 
         float w = exp(- dx * dx / twoSigmaSq);
         totalW += w;
-        total += w * sampleSource(px, texSize);
+        total += w * sampleSource(px, texSize).rgb;
     }
 
     return total / totalW;
@@ -50,15 +50,15 @@ vec3 blurAlongDir(ivec2 pixelCoord, ivec2 texSize, float sigma, int direction) {
 
 void main() {
     if (passId == 0) { // mask
-        float l = luma(result);
-        return vec3(l > threshold ? 1 : 0);
+        float l = luma(result.rgb);
+        return vec4(vec3(l > threshold ? 1 : 0), 1);
     } else if (passId == 1 || passId == 4) {    // erode
-        return erode(pixelCoord, texSize, morphoRadius);
+        return vec4(erode(pixelCoord, texSize, morphoRadius), 1);
     } else if (passId == 2 || passId == 3) {    // dilate
-        return dilate(pixelCoord, texSize, morphoRadius);
+        return vec4(dilate(pixelCoord, texSize, morphoRadius), 1);
     } else if (passId == 5 || passId == 6) {    // blur
-        return blurAlongDir(pixelCoord, texSize, sigma, passId - 5);
+        return vec4(blurAlongDir(pixelCoord, texSize, sigma, passId - 5), 1);
     } else {
-        return sampleOriginal(pixelCoord, texSize) + intensity * sampleSource(pixelCoord, texSize);
+        return vec4(sampleOriginal(pixelCoord, texSize).rgb + intensity * sampleSource(pixelCoord, texSize).rgb, 1);
     }
 }

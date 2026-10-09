@@ -2,12 +2,10 @@
 
 #include <limits>
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
@@ -20,6 +18,7 @@
 #include "editor/imgui_guizmo.hpp"
 #include "editor/scene/raycast.hpp"
 #include "editor/ui_utils.hpp"
+#include "utils/transform_utils.hpp"
 
 void ViewportPanel::draw() {
     Scene& scene = Core::getScene();
@@ -81,9 +80,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     if (!scene.getRegistry().has(e, ecs::Transform)) return;
 
     ecs::Component& t = scene.getRegistry().get(e, ecs::Transform);
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), t.get<glm::vec3>("position")) *
-                      glm::mat4_cast(glm::quat(glm::radians(t.get<glm::vec3>("rotation")))) *
-                      glm::scale(glm::mat4(1.0f), t.get<glm::vec3>("scale"));
+    glm::mat4 model = composeTransform(t);
 
     const ecs::Entity& camera = scene.getCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
@@ -101,18 +98,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
             return;
         }
 
-        // TODO: move transform update to a better place
-        glm::vec3 translation, scale, skew;
-        glm::quat rotation;
-        glm::vec4 perspective;
-        glm::decompose(model, scale, rotation, translation, skew, perspective);
-
-        const glm::quat oldRotation = glm::quat(glm::radians(t.get<glm::vec3>("rotation")));
-
-        t.set<glm::vec3>("position", translation);
-        t.set<glm::vec3>("scale", scale);
-        if (glm::abs(glm::dot(oldRotation, rotation)) < 0.99999f)
-            t.set<glm::vec3>("rotation", glm::degrees(glm::eulerAngles(rotation)));
+        applyTransform(t, model);
         scene.getRegistry().markChanged(ecs::Transform);
     }
     ImGuizmo::PopID();
@@ -159,9 +145,7 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
 
         const ecs::Component& transform = transformStorage.get(e);
         const glm::vec3 tPos = transform.get<glm::vec3>("position");
-        const glm::quat tRot = glm::quat(glm::radians(transform.get<glm::vec3>("rotation")));
-        const glm::mat4 local = glm::translate(glm::mat4(1.0f), tPos) * glm::mat4_cast(tRot) *
-                                glm::scale(glm::mat4(1.0f), transform.get<glm::vec3>("scale"));
+        const glm::mat4 local = composeTransform(transform);
         float t = -1.0f;
 
         if (scene.getRegistry().has(e, ecs::Sphere)) {

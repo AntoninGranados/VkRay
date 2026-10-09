@@ -1,5 +1,7 @@
 #include "core_renderer.hpp"
 
+#include <string_view>
+
 #include "VkSmol/graph/pass/transfer_pass_builder.hpp"
 #include "VkSmol/graph/render_graph_builder.hpp"
 
@@ -7,6 +9,7 @@
 
 #include "core/core.hpp"
 #include "core/fields/parameters.hpp"
+#include "utils/resources.hpp"
 
 RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
     VkSmol& engine = Core::getEngine();
@@ -16,9 +19,14 @@ RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
         VK_IMAGE_USAGE_TRANSFER_DST_BIT, ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read},
         ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read});
 
+    const std::string_view blueNoise = Resources::find("builtin:/noise/blue_noise.bin").value();
+    blueNoiseBufferHandle =
+        builder.createBuffer("BlueNoiseBuffer", blueNoise.size(), VKSMOL_BUFFER_OWNERSHIP_MANAGED, 0, blueNoise.data());
+
     const VkExtent2D renderExtent = getRenderExtent();
     const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : engine.getExtent();
-    RenderResources resources = PathtraceRenderer::initGraph(builder, extent, "", lensImageHandle);
+    RenderResources resources =
+        PathtraceRenderer::initGraph(builder, extent, "", lensImageHandle, blueNoiseBufferHandle);
 
     TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
     exportPassHandle = exportPass.getHandle();

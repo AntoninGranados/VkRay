@@ -35,7 +35,8 @@ public:
     static constexpr int kPreviewSize = 256;
     static constexpr int kPreviewSampleCount = 256;
 
-    RenderResources initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle);
+    RenderResources initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle,
+                              BufferHandle blueNoiseBufferHandle);
     void onGraphCompiled(const RenderResources& resources);
     void tick();
     void destroy();

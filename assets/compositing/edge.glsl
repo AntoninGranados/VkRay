@@ -62,29 +62,29 @@ void main() {
     float t = smoothstep(-feather, feather, grad - threshold);
 
     PixelInfo info = fetchPixelInfoOriginal(pixelCoord, texSize);
-    vec3 color = sampleSource(pixelCoord, texSize);
-    if (info.aov.skyMask == 1u) result = color;
+    vec3 color = sampleSource(pixelCoord, texSize).rgb;
+    if (info.aov.skyMask == 1u) result.rgb = color;
     else {
-        RngState rng = RngState(0);
+        RngState rng = initRngState(0u);
 
         vec3 albedo = info.aov.albedo;
         float shadow = luma(color / albedo);
-        result = albedo;
+        result.rgb = albedo;
         if (shadow * 3 <= 1) {
             NoiseState2D state = perlinNoise(vec2(pixelCoord) / 8, rng);
             float diag = fract(float(pixelCoord.x + pixelCoord.y) / hashingSpacing);
-            result *= step(0.5 + (state.value - 0.5) * 1, diag);
+            result.rgb *= step(0.5 + (state.value - 0.5) * 1, diag);
         }
         if (shadow * 3 <= 2) {
             NoiseState2D state = perlinNoise(vec2(pixelCoord) / 8, rng);
             float diag = fract(float(pixelCoord.x - pixelCoord.y) / hashingSpacing);
-            result *= step(0.5 + (state.value - 0.5) * 1, diag);
+            result.rgb *= step(0.5 + (state.value - 0.5) * 1, diag);
         }
         if (shadow > 4) {
-            result = vec3(1);
+            result.rgb = vec3(1);
         }
 
-        result = mix(result, borderColor, t);
+        result.rgb = mix(result.rgb, borderColor, t);
     }
 
 }

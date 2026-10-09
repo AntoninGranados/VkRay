@@ -2,12 +2,12 @@
 // ivec2 pixelCoord
 // ivec2 texSize
 // int passId
-// vec3 sampleSource(ivec2 coord, ivec2 texSize)
-// vec3 sampleOriginal(ivec2 coord, ivec2 texSize)
+// vec4 sampleSource(ivec2 coord, ivec2 texSize)
+// vec4 sampleOriginal(ivec2 coord, ivec2 texSize)
 // PixelInfo fetchPixelInfoOriginal(ivec2 coord, ivec2 texSize)
 
 // --------------- OUTPUTS ---------------
-// vec3 result
+// vec4 result
 
 #compositing: version(1), pass_count(5)
 
@@ -33,7 +33,7 @@ void main() {
         ivec2(-2, 2), ivec2(-1, 2), ivec2( 0, 2), ivec2( 1, 2), ivec2( 2, 2)
     );
 
-    vec3 cVal = sampleSource(pixelCoord, texSize);
+    vec3 cVal = sampleSource(pixelCoord, texSize).rgb;
     PixelInfo centerInfo = fetchPixelInfoOriginal(pixelCoord, texSize);
 
     float cPhiPass = cPhi / float(1 << passId);
@@ -43,7 +43,7 @@ void main() {
     for (int i = 0; i < 25; i++) {
         ivec2 sampleCoord = pixelCoord + offsets[i] * stride;
 
-        vec3 cTmp = sampleSource(sampleCoord, texSize);
+        vec3 cTmp = sampleSource(sampleCoord, texSize).rgb;
         float cW = 1.0;
         if (passId > 0) {
             vec3 cDelta = cVal - cTmp;
@@ -75,6 +75,6 @@ void main() {
         cumW += w;
     }
 
-    if (cumW > 1e-8) result = sum / cumW;
-    else result = cVal;
+    if (cumW > 1e-8) result.rgb = sum / cumW;
+    else result.rgb = cVal;
 }

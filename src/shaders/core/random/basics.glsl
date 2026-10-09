@@ -3,7 +3,15 @@
 
 struct RngState {
     uint seed;
+    uvec2 pixel;
+    uint sampleIndex;
+    uint dimension;
+    uint dimensionEnd;
 };
+
+#ifdef RANDOM_BLUE_NOISE
+float blueNoise(uvec2 pixel, uint dimension);
+#endif
 
 struct NoiseState2D {
     float value;
@@ -25,22 +33,44 @@ uint pcgHash(uint v) {
     return (word >> 22u) ^ word;
 }
 
+RngState initRngState(uint seed) {
+    return RngState(seed, uvec2(0), 0u, 0u, 0u);
+}
+
 RngState initRngState(uvec2 pos, uint frame) {
     uint v = pos.x + pos.y * 4096u + frame * 1315423911u;
-    return RngState(pcgHash(v));
+    return initRngState(pcgHash(v));
 }
 
 RngState initRngState(uvec3 pos, uint frame) {
     uint v = pos.x + pos.y * 4096u + pos.z * 4096u * 4096u + frame * 1315423911u;
-    return RngState(pcgHash(v));
+    return initRngState(pcgHash(v));
+}
+
+RngState initBlueNoiseRngState(uvec2 pixel, uint sampleIndex) {
+    RngState rng = initRngState(pixel, sampleIndex);
+    rng.pixel = pixel;
+    rng.sampleIndex = sampleIndex;
+    return rng;
+}
+
+void setRngDimensions(inout RngState rng, uint first, uint count) {
+    rng.dimension = first;
+    rng.dimensionEnd = first + count;
 }
 
 void hashRngState(inout RngState rng) {
-    rng.seed = pcgHash(rng.seed);    
+    rng.seed = pcgHash(rng.seed);
 }
 
 #define UINT_MAX uint(-1)
 float rand(inout RngState rng) {
+#ifdef RANDOM_BLUE_NOISE
+    if (rng.dimension < rng.dimensionEnd) {
+        float shift = float(pcgHash(pcgHash(rng.sampleIndex) + rng.dimension)) / float(UINT_MAX);
+        return fract(blueNoise(rng.pixel, rng.dimension++) + shift);
+    }
+#endif
     hashRngState(rng);
     return float(rng.seed) / float(UINT_MAX);
 }

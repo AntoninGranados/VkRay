@@ -105,11 +105,11 @@ void Application::initOfflineMode(const std::string& jobFile) {
     platform = std::make_unique<HeadlessPlatform>(
         1080, 1080); // This size is arbitrary as the buffers will be resized with the first jobs parameters
     Core::init(*platform, VK_RAY_VERSION);
+    Core::getJobQueue() = std::move(queue);
 
     initScene();
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
-    // TODO: move job queue into Core; that removes the lifetime issue and this capture
-    runFn = [q = std::move(queue)]() mutable { Offline::run(q); };
+    runFn = Offline::run;
 }
 
 void Application::buildRenderGraph(bool offline) {
@@ -120,8 +120,8 @@ void Application::buildRenderGraph(bool offline) {
     RenderResources previewResources;
     if (!offline) {
         Editor::getEditorRenderer().initGraph(builder, resources);
-        previewResources =
-            Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle());
+        previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle(),
+                                                                  Core::getCoreRenderer().getBlueNoiseBufferHandle());
     }
 
     for (const std::string& error : Core::getEngine().rebuildGraph(builder))

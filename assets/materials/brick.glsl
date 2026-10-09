@@ -232,7 +232,7 @@ void main() {
     }
 
     if (hasDirt) {
-        RngState tempState = RngState(0);
+        RngState tempState = initRngState(0u);
         float dirt = perlinNoise(vec2(uv.x, uv.y * 0.4) * 20, tempState).value;
         dirt = mix(dirt, 1, smoothstep(dirtHeight - dirtFalloff, dirtHeight + dirtFalloff, mix(dirtFalloff, 1 - dirtFalloff, uv.y)));
 

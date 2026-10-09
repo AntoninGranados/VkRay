@@ -23,7 +23,7 @@ public:
     virtual ~PathtraceRenderer() = default;
 
     RenderResources initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
-                              ImageHandle lensImageHandle);
+                              ImageHandle lensImageHandle, BufferHandle blueNoiseBufferHandle);
 
     uint32_t getSampleCount() { return accumulator.getSampleCount(); }
     void setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }

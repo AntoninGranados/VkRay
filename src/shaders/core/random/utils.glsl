@@ -17,7 +17,7 @@ const float FBM_SIGMA = 0.115 * PERLIN_NOISE_3D_NORM;
 const float TURBULENCE_SIGMA = 0.16 * PERLIN_NOISE_3D_NORM;
 
 float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
-    RngState rng = RngState(0);
+    RngState rng = initRngState(0u);
 
     float amplitude = 1.0;
     float maxAmplitude = 0.0;
@@ -33,7 +33,7 @@ float fractalNoise(vec3 p, int octaves, float lacunarity, float gain) {
 }
 
 float turbulence(vec3 p, int octaves, float lacunarity, float gain) {
-    RngState rng = RngState(0);
+    RngState rng = initRngState(0u);
 
     float amplitude = 1.0;
     float maxAmplitude = 0.0;

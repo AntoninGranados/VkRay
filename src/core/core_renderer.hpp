@@ -13,6 +13,7 @@ public:
 
     void bindParameters();
     ImageHandle getLensImageHandle() const { return lensImageHandle; }
+    BufferHandle getBlueNoiseBufferHandle() const { return blueNoiseBufferHandle; }
 
 protected:
     void onAfterDispatch(CommandBuffer& commandBuffer) override;
@@ -21,6 +22,7 @@ protected:
 private:
     ExportService exportService;
     ImageHandle lensImageHandle;
+    BufferHandle blueNoiseBufferHandle;
     AOVFlags aovFlags = {};
     PassHandle exportPassHandle;
 };

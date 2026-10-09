@@ -46,7 +46,7 @@ float getValue(in vec2 uv, in float aspect, in ivec2 texSize, in float angle, in
         for (int j = -1; j <= 1; j++) {
             vec2 center = getCenter(aspect, index + vec2(i, j));
             vec2 local = getLocal(gridUV, center, aspect);
-            vec3 color = sampleSource(ivec2(rotate(center, aspect, c, -s) * texSize), texSize);
+            vec3 color = sampleSource(ivec2(rotate(center, aspect, c, -s) * texSize), texSize).rgb;
 
             float l;
             switch (channel) {
@@ -74,6 +74,6 @@ void main() {
     float y = getValue(uv, aspect, texSize, angles.z, 2);
     float k = getValue(uv, aspect, texSize, angles.w, 3);
 
-    result = cmyk2rgb(CMYK(c, m, y, k));
+    result = vec4(cmyk2rgb(CMYK(c, m, y, k)), 1);
 }
 

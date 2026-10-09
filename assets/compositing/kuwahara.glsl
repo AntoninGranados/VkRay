@@ -35,7 +35,7 @@ void main() {
             ivec2 px = pixelCoord + d;
             px = clamp(px, ivec2(0), texSize - 1);
 
-            vec3 color = sampleOriginal(px, texSize);
+            vec3 color = sampleOriginal(px, texSize).rgb;
             color = clamp(color, 0, 1);
 
             float w = getGaussianWeight(d, twoSigmaSq);
@@ -59,5 +59,5 @@ void main() {
     }
     vec3 color = total / totalW;
 
-    return color;
+    return vec4(color, 1);
 }

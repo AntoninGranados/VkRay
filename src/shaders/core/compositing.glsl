@@ -26,14 +26,14 @@ PixelInfo fetchPixelInfoOriginal(ivec2 coord, ivec2 texSize) {
     return pixelInfoBuffer.pixels[index];
 }
 
-vec3 sampleSource(ivec2 coord, ivec2 texSize) {
+vec4 sampleSource(ivec2 coord, ivec2 texSize) {
     ivec2 c = clamp(coord, ivec2(0), texSize - ivec2(1));
-    return texelFetch(sourceTexture, c, 0).rgb;
+    return texelFetch(sourceTexture, c, 0);
 }
 
-vec3 sampleOriginal(ivec2 coord, ivec2 texSize) {
+vec4 sampleOriginal(ivec2 coord, ivec2 texSize) {
     ivec2 c = clamp(coord, ivec2(0), texSize - ivec2(1));
-    return texelFetch(originalTexture, c, 0).rgb;
+    return texelFetch(originalTexture, c, 0);
 }
 
 #include "../generated/compositing_dispatch.glsl"
@@ -43,6 +43,6 @@ void main() {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
     if (pixelCoord.x >= texSize.x || pixelCoord.y >= texSize.y) return;
 
-    vec3 color = dispatchCompositingPass(passUbo.slot, passUbo.paramsBase, pixelCoord, texSize, passUbo.passId);
-    imageStore(destinationImage, pixelCoord, vec4(color, 1.0));
+    vec4 color = dispatchCompositingPass(passUbo.slot, passUbo.paramsBase, pixelCoord, texSize, passUbo.passId);
+    imageStore(destinationImage, pixelCoord, color);
 }

@@ -2,6 +2,7 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+#define RANDOM_BLUE_NOISE
 #include "inputs.glsl"
 #include "utils.glsl"
 #include "materials/materials.glsl"
@@ -9,6 +10,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "lights.glsl"
 #include "global.glsl"
 #include "random/utils.glsl"
+#include "random/blue_noise.glsl"
 #include "colors/utils.glsl"
 #include "environment.glsl"
 #include "adaptive_sampling.glsl"
@@ -17,6 +19,10 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "camera/camera.glsl"
 
 #define MAX_FALSE_INTERFACES 16
+
+#define BLUE_NOISE_CAMERA_DIMENSIONS 16u
+#define BLUE_NOISE_SEGMENT_DIMENSIONS 16u
+#define BLUE_NOISE_SEGMENTS 3u
 
 Hit intersection(in Ray ray, bool anyHit, float tMax, inout Statistics stats) {
     Hit bestHit = NO_HIT;
@@ -126,7 +132,12 @@ vec3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     Hit prevHit;
     bool prevIsSkipped = false;
 
-    for (; i < ubo.render.maxBounces; i++) {
+    for (uint segment = 0u; i < ubo.render.maxBounces; i++, segment++) {
+        if (segment < BLUE_NOISE_SEGMENTS)
+            setRngDimensions(rng, BLUE_NOISE_CAMERA_DIMENSIONS + segment * BLUE_NOISE_SEGMENT_DIMENSIONS, BLUE_NOISE_SEGMENT_DIMENSIONS);
+        else
+            setRngDimensions(rng, 0u, 0u);
+
         if (!foundIntersection(hit)) {
             radiance += clampIndirect(throughput * skyColor(ray.dir), i - 1);
             break;
@@ -294,7 +305,8 @@ void main() {
         pixelInfoBuffer.pixels[varianceIndex] = initInfo;
     }
 
-    RngState rng = initRngState(uvec2(pixelCoord), uint(ubo.sampleCount));
+    RngState rng = initBlueNoiseRngState(uvec2(pixelCoord), uint(ubo.sampleCount));
+    setRngDimensions(rng, 0u, BLUE_NOISE_CAMERA_DIMENSIONS);
 
     uint blockVarianceIndex = varianceIndexFromCoord(pixelCoord, texSize);
     PixelInfo pixelInfo = pixelInfoBuffer.pixels[blockVarianceIndex];

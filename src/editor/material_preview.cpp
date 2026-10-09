@@ -11,7 +11,8 @@
 #include "core/shader_plugin/shader_plugin.hpp"
 #include "editor/ui_utils.hpp"
 
-RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle) {
+RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle,
+                                           BufferHandle blueNoiseBufferHandle) {
     Scene& scene = renderer.getScene();
 
     if (!sceneInitialized) {
@@ -43,8 +44,8 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
         sceneInitialized = true;
     }
 
-    RenderResources resources =
-        renderer.initGraph(builder, VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview", lensImageHandle);
+    RenderResources resources = renderer.initGraph(builder, VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview",
+                                                   lensImageHandle, blueNoiseBufferHandle);
     renderer.setTargetSampleCount(0);
     return resources;
 }

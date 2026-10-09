@@ -67,6 +67,7 @@ list(APPEND VKRAY_EMBEDDED_FILES
   "${CMAKE_SOURCE_DIR}/src/config/parameters.json"
   "${CMAKE_SOURCE_DIR}/assets/camera/tilt_shift.glsl"
   "${CMAKE_SOURCE_DIR}/assets/scenes/default.json"
+  "${CMAKE_SOURCE_DIR}/assets/noise/blue_noise.bin"
 )
 
 set(VKRAY_EMBEDDED_ARRAYS "")

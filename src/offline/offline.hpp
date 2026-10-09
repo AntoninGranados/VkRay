@@ -1,11 +1,10 @@
 #pragma once
 
 #include "offline/job.hpp"
-#include "offline/job_queue.hpp"
 
 class Offline {
 public:
-    static void run(JobQueue& queue);
+    static void run();
 
 private:
     Offline() = default;
