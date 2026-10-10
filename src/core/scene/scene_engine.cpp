@@ -24,21 +24,6 @@ void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
     registry.markChanged(ecs::Camera);
 }
 
-bool Scene::resetActiveCamera() {
-    if (activeCamera == defaultCamera) return true;
-    setActiveCamera(defaultCamera);
-    return false;
-}
-
-void Scene::activateSceneCamera() {
-    for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
-        if (entity == defaultCamera) continue;
-        setActiveCamera(entity);
-        return;
-    }
-    setActiveCamera(defaultCamera);
-}
-
 void Scene::bakePhysics() { ecs::bakePhysicsSimulation(registry); }
 
 bool Scene::isPhysicsBakeInProgress() const { return ecs::isPhysicsBakeInProgress(registry); }

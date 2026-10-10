@@ -106,7 +106,7 @@ void EditorUi::draw(const CommandBuffer& commandBuffer) {
     ImGui_ImplGlfw_NewFrame();
 
     const ecs::Registry& registry = Core::getScene().getRegistry();
-    const ecs::Entity camera = Core::getScene().getCamera();
+    const ecs::Entity camera = *Core::getScene().getActiveCamera();
     if (!registry.get(camera, ecs::CameraNavigation).payload<ecs::CameraNavigationState>("state").locked)
         ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 

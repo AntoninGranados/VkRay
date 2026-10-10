@@ -17,8 +17,6 @@
 #include "version.hpp"
 
 #include "core/core.hpp"
-#include "core/ecs/components/component_serializer.hpp"
-#include "core/fields/parameter_serializer.hpp"
 #include "core/scene/scene_serializer.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 #include "core/shader_plugin/shader_source_map.hpp"
@@ -35,8 +33,6 @@
 Application::Application(int argc, char* argv[]) {
     if (argc >= 3 && std::string_view(argv[1]) == "--job") {
         initOfflineMode(argv[2]);
-    } else if (argc >= 3 && std::string_view(argv[1]) == "--generate-docs") {
-        generateDocumentation(argv[2]);
     } else {
         initEditorMode();
     }
@@ -50,14 +46,6 @@ Application::~Application() {
     if (!platform) return;
     if (!platform->isHeadless()) Editor::terminate();
     Core::terminate();
-}
-
-void Application::generateDocumentation(const std::filesystem::path& directory) {
-    std::filesystem::create_directories(directory);
-    Core::loadParameters();
-    // TODO: move that to a meta programm (compile time)
-    ParameterSerializer::saveDocumentation(directory / "parameters.md");
-    ComponentSerializer::saveDocumentation(directory / "components.md");
 }
 
 void Application::initEditorMode() {
@@ -88,6 +76,7 @@ void Application::initEditorMode() {
     io.FontGlobalScale = 1.0f / xscale;
 
     initScene();
+    Editor::loadScene(kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(false); });
     runFn = Editor::run;
 }
@@ -108,6 +97,7 @@ void Application::initOfflineMode(const std::string& jobFile) {
     Core::getJobQueue() = std::move(queue);
 
     initScene();
+    SceneSerializer::load(Core::getScene(), kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
     runFn = Offline::run;
 }
@@ -134,10 +124,8 @@ void Application::buildRenderGraph(bool offline) {
     Core::getScene().setGpuBufferHandles(resources.sceneHandles);
 }
 
-void Application::initScene(const std::string& sceneFile) {
+void Application::initScene() {
     Core::getScene().init();
 
     ecs::ComponentUiRegistry::init();
-
-    SceneSerializer::load(Core::getScene(), sceneFile);
 }

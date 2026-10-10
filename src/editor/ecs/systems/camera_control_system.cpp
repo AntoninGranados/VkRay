@@ -24,14 +24,14 @@
 namespace ecs {
 
 void cameraActivationSystem(Registry& registry) {
-    const ecs::Entity camera = Core::getScene().getCamera();
+    const ecs::Entity camera = *Core::getScene().getActiveCamera();
     if (!registry.has(camera, CameraNavigation)) registry.add(camera, CameraNavigation);
 }
 
 void cameraControlSystem(Registry& registry) {
     if (Core::getRenderMode() != RenderMode::Preview) return; // don't move the cameras when rendering
 
-    const ecs::Entity camera = Core::getScene().getCamera();
+    const ecs::Entity camera = *Core::getScene().getActiveCamera();
 
     Platform& platform = Core::getPlatform();
     ecs::Component& navigation = registry.get(camera, ecs::CameraNavigation);

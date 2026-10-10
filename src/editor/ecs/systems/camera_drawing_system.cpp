@@ -164,11 +164,11 @@ void cameraDrawingSystem(Registry& registry) {
     if (!drawList) return;
     drawList->PushClipRect(windowPos, ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y), true);
 
-    const ecs::Entity activeCamera = Core::getScene().getCamera();
-    const ecs::Entity defaultCamera = Core::getScene().getDefaultCamera();
+    const ecs::Entity activeCamera = *Core::getScene().getActiveCamera();
+    const ecs::Entity viewportCamera = Editor::getViewportCamera();
     for (const auto& e : cameras.entities()) {
         if (!transforms.has(e)) continue;
-        if (e == activeCamera || e == defaultCamera) continue;
+        if (e == activeCamera || e == viewportCamera) continue;
         drawCameraGizmo(registry, e, activeCamera, drawList, windowPos, windowSize);
     }
 

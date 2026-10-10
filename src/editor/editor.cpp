@@ -6,8 +6,14 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+
 #include "core/core.hpp"
+#include "core/ecs/components/camera.hpp"
+#include "core/ecs/components/core.hpp"
 #include "core/export_service.hpp"
+#include "core/scene/scene.hpp"
+#include "core/scene/scene_serializer.hpp"
 #include "editor/camera_preview.hpp"
 
 Editor& Editor::get() {
@@ -41,6 +47,39 @@ void Editor::selectEntity(std::optional<ecs::Entity> entity) {
         clearSelectedEntity();
 
     if (changed) Core::markRenderDirty();
+}
+
+bool Editor::loadScene(const std::string& path) {
+    Scene& scene = Core::getScene();
+    const bool loaded = SceneSerializer::load(scene, path);
+
+    if (!scene.getRegistry().isAlive(get().viewportCamera)) createViewportCamera();
+    if (!scene.getActiveCamera()) scene.setActiveCamera(get().viewportCamera);
+    return loaded;
+}
+
+void Editor::createViewportCamera() {
+    Scene& scene = Core::getScene();
+    ecs::Registry& registry = scene.getRegistry();
+
+    ecs::Entity& camera = get().viewportCamera;
+    camera = scene.createNamedEntity("Viewport Camera", scene.getInternalsRoot());
+    registry.add(camera, ecs::Camera);
+    registry.get(camera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
+    registry.get(camera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
+    registry.add(camera, ecs::Locked);
+}
+
+bool Editor::isUsingSceneCamera() { return Core::getScene().getActiveCamera() != get().viewportCamera; }
+
+void Editor::activateSceneCamera() {
+    Scene& scene = Core::getScene();
+    for (const ecs::Entity& entity : scene.getRegistry().storage(ecs::Camera).entities()) {
+        if (entity == get().viewportCamera) continue;
+        scene.setActiveCamera(entity);
+        return;
+    }
+    scene.setActiveCamera(get().viewportCamera);
 }
 
 void Editor::stepAnimation(float deltaTime) {

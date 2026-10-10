@@ -126,7 +126,7 @@ void PathtraceRenderer::render() {
     VkSmol& engine = Core::getEngine();
 
     ecs::Registry& registry = scene.getRegistry();
-    const ecs::Entity camera = scene.getCamera();
+    const ecs::Entity camera = *scene.getActiveCamera();
 
     const CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
     if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassHandles.size())

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <random>
 
 #include <glm/glm.hpp>
@@ -107,8 +108,9 @@ void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMo
 }
 
 bool isMotionBlurActive(Registry& registry) {
-    const Entity cameraEntity = *registry.ctx().get<Entity*>();
-    if (!registry.has(cameraEntity, Camera) || registry.get(cameraEntity, Camera).get<float>("shutter_speed") <= 0.0f)
+    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+    if (!cameraEntity || !registry.has(*cameraEntity, Camera) ||
+        registry.get(*cameraEntity, Camera).get<float>("shutter_speed") <= 0.0f)
         return false;
     return registry.storage(RigidBody).size() > 0 || !registry.ctx().get<AnimationStore*>()->isEmpty();
 }
@@ -117,8 +119,8 @@ uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transfo
                            std::vector<GpuMotionSample>& outMotion) {
     const uint32_t offset = static_cast<uint32_t>(outMotion.size());
 
-    const Entity cameraEntity = *registry.ctx().get<Entity*>();
-    const float shutterSpeed = registry.get(cameraEntity, Camera).get<float>("shutter_speed");
+    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+    const float shutterSpeed = cameraEntity ? registry.get(*cameraEntity, Camera).get<float>("shutter_speed") : 0.0f;
     const bool inMotion = isEntityInMotion(registry, entity, transform);
 
     if (shutterSpeed <= 0.0f || !inMotion) {

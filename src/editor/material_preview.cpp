@@ -19,7 +19,12 @@ RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHan
         scene.init();
 
         ecs::Registry& registry = scene.getRegistry();
-        registry.get(scene.getDefaultCamera(), ecs::Camera).set<float>("focal_length", 136.72f);
+        const ecs::Entity previewCamera = scene.createNamedEntity("Preview Camera", scene.getObjectsRoot());
+        registry.add(previewCamera, ecs::Camera);
+        registry.get(previewCamera, ecs::Camera).set<float>("focal_length", 136.72f);
+        registry.get(previewCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
+        registry.get(previewCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
+        scene.setActiveCamera(previewCamera);
 
         previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
         registry.add(previewMaterialEntity, ecs::Diffuse);

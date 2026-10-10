@@ -21,7 +21,7 @@ bool InputHandler::isMouseInputBlocked() {
     if (ImGuizmo::IsUsing()) return true;
 
     const ecs::Registry& registry = Core::getScene().getRegistry();
-    const ecs::Entity camera = Core::getScene().getCamera();
+    const ecs::Entity camera = *Core::getScene().getActiveCamera();
     if (!registry.get(camera, ecs::CameraNavigation).payload<ecs::CameraNavigationState>("state").locked) return false;
 
     return Editor::getUi().isMouseCaptured() || ImGui::GetIO().WantCaptureMouse;
@@ -30,12 +30,13 @@ bool InputHandler::isMouseInputBlocked() {
 void InputHandler::initCallbacks() {
     Core::getPlatform().setCursorPosCallback([](double x, double y) {
         if (isMouseInputBlocked()) return;
-        ecs::cameraCursorCallback(Core::getScene().getRegistry(), Core::getScene().getCamera(), x, y);
+        ecs::cameraCursorCallback(Core::getScene().getRegistry(), *Core::getScene().getActiveCamera(), x, y);
     });
 
     Core::getPlatform().setScrollCallback([](double xoffset, double yoffset) {
         if (ImGui::GetIO().WantCaptureMouse || Editor::getUi().isMouseCaptured()) return;
-        ecs::cameraScrollCallback(Core::getScene().getRegistry(), Core::getScene().getCamera(), xoffset, yoffset);
+        ecs::cameraScrollCallback(Core::getScene().getRegistry(), *Core::getScene().getActiveCamera(), xoffset,
+                                  yoffset);
     });
 }
 
@@ -61,7 +62,7 @@ void InputHandler::handlePreview(float dt) {
     const bool blockKeyboardInput = Editor::getUi().isKeyboardCaptured() || ImGui::GetIO().WantCaptureKeyboard;
 
     const ecs::Component& navigation =
-        Core::getScene().getRegistry().get(Core::getScene().getCamera(), ecs::CameraNavigation);
+        Core::getScene().getRegistry().get(*Core::getScene().getActiveCamera(), ecs::CameraNavigation);
     const ecs::CameraNavigationState& cameraState = navigation.payload<ecs::CameraNavigationState>("state");
 
     Core::getPlatform().setCursorMode((cameraState.locked || blockMouseInput) ? GLFW_CURSOR_NORMAL
@@ -70,8 +71,8 @@ void InputHandler::handlePreview(float dt) {
     if (Core::getPlatform().getKey(GLFW_KEY_ESCAPE)) Editor::selectEntity(std::nullopt);
 
     if (!blockKeyboardInput && justPressed(GLFW_KEY_TAB)) {
-        if (Core::getScene().isUsingSceneCamera()) {
-            Core::getScene().resetActiveCamera();
+        if (Editor::isUsingSceneCamera()) {
+            Core::getScene().setActiveCamera(Editor::getViewportCamera());
         } else if (const auto selected = Editor::getSelectedEntity();
                    selected && Core::getScene().getRegistry().has(*selected, ecs::Camera)) {
             Core::getScene().setActiveCamera(*selected);

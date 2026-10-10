@@ -1,6 +1,7 @@
 #include "gpu_packing_system.hpp"
 
 #include <algorithm>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -229,7 +230,8 @@ void materialPackingSystem(Registry& registry) {
 
     LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
     lensInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
-    lensInfo.slot = CameraLensTable::pack(registry, *registry.ctx().get<Entity*>(), pluginParams);
+    const std::optional<Entity> lensCamera = *registry.ctx().get<std::optional<Entity>*>();
+    lensInfo.slot = lensCamera ? CameraLensTable::pack(registry, *lensCamera, pluginParams) : -1;
 
     SkyPluginInfo& skyInfo = registry.ctx().get<SkyPluginInfo>();
     const size_t skyBase = pluginParams.size();
@@ -266,10 +268,10 @@ void objectPackingSystem(Registry& registry) {
     const EntitySlots materialSlots =
         buildEntitySlots(registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot));
 
-    const Entity cameraEntity = *registry.ctx().get<Entity*>();
-    const bool hasCamera = transforms.has(cameraEntity);
+    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+    const bool hasCamera = cameraEntity && transforms.has(*cameraEntity);
     const glm::vec3 cameraPosition =
-        hasCamera ? transforms.get(cameraEntity).get<glm::vec3>("position") : glm::vec3(0.0f);
+        hasCamera ? transforms.get(*cameraEntity).get<glm::vec3>("position") : glm::vec3(0.0f);
     std::vector<std::pair<float, int>> cameraMedia;
 
     int32_t lightCount = 0;
@@ -307,8 +309,8 @@ void objectPackingSystem(Registry& registry) {
 
     CameraMotionInfo& cameraMotion = registry.ctx().get<CameraMotionInfo>();
     if (hasCamera) {
-        const uint32_t motionOffset = bakeMotionSamples(registry, cameraEntity, transforms.get(cameraEntity), motion);
-        bakeLiveTransform(transforms.get(cameraEntity), liveMotion);
+        const uint32_t motionOffset = bakeMotionSamples(registry, *cameraEntity, transforms.get(*cameraEntity), motion);
+        bakeLiveTransform(transforms.get(*cameraEntity), liveMotion);
         cameraMotion = CameraMotionInfo{motionOffset};
     } else {
         cameraMotion = CameraMotionInfo{};

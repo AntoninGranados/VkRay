@@ -72,9 +72,8 @@ void applyDeferredPluginParams(ecs::Registry& registry, AnimationStore& animStor
     }
 }
 
-void activateFirstNonDefaultCamera(ecs::Registry& registry, Scene& scene) {
+void activateFirstCamera(ecs::Registry& registry, Scene& scene) {
     for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
-        if (entity == scene.getDefaultCamera()) continue;
         scene.setActiveCamera(entity);
         break;
     }
@@ -122,7 +121,7 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     applyMeshSimplification(spawn.registry, scene);
     parseCompositingPlugins(spawn.registry, spawn.deferredCompositingParams);
     applyDeferredPluginParams(spawn.registry, spawn.animStore, spawn.deferredPluginParams);
-    activateFirstNonDefaultCamera(spawn.registry, scene);
+    activateFirstCamera(spawn.registry, scene);
 
     spawn.animStore.evaluate(0.0f);
     return true;

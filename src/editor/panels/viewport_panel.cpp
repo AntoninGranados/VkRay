@@ -23,7 +23,7 @@
 void ViewportPanel::draw() {
     Scene& scene = Core::getScene();
 
-    const ecs::Component& activeCamera = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
+    const ecs::Component& activeCamera = scene.getRegistry().get(*scene.getActiveCamera(), ecs::Camera);
     ImGuizmo::SetOrthographic(static_cast<ecs::CameraProjection>(activeCamera.get<int>("projection")) ==
                               ecs::CameraProjection::Orthographic);
     ImGuizmo::AllowAxisFlip(false);
@@ -53,7 +53,7 @@ void ViewportPanel::draw() {
                                float dist;
                                auto hit = raycast(scene, {mp.x - pos.x, mp.y - pos.y}, dist, false);
                                if (hit.has_value()) {
-                                   ecs::Component& cam = scene.getRegistry().get(scene.getCamera(), ecs::Camera);
+                                   ecs::Component& cam = scene.getRegistry().get(*scene.getActiveCamera(), ecs::Camera);
                                    cam.set<float>("focal_distance", dist);
                                    cam.set<ecs::Entity>("focus_target", ecs::Entity{});
                                    scene.getRegistry().markChanged(ecs::Camera);
@@ -82,7 +82,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     ecs::Component& t = scene.getRegistry().get(e, ecs::Transform);
     glm::mat4 model = composeTransform(t);
 
-    const ecs::Entity& camera = scene.getCamera();
+    const ecs::Entity camera = *scene.getActiveCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
     const glm::mat4 view = getView(scene.getRegistry(), camera);
     const glm::mat4 proj = getProjection(scene.getRegistry(), camera, aspect);
@@ -128,7 +128,7 @@ void ViewportPanel::drawGizmo(Scene& scene) {
 
 std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2& screenPos, float& dist,
                                                   bool includeCameras) {
-    const Ray ray = getRay(screenPos, {size.x, size.y}, scene.getCamera());
+    const Ray ray = getRay(screenPos, {size.x, size.y}, *scene.getActiveCamera());
     float tClosest = std::numeric_limits<float>::infinity();
     std::optional<ecs::Entity> entityClosest;
 
@@ -139,7 +139,7 @@ std::optional<ecs::Entity> ViewportPanel::raycast(Scene& scene, const glm::vec2&
     auto& cameraStorage = scene.getRegistry().storage(ecs::Camera);
     auto& transformStorage = scene.getRegistry().storage(ecs::Transform);
 
-    const ecs::Entity& activeCamera = scene.getCamera();
+    const ecs::Entity activeCamera = *scene.getActiveCamera();
     for (const ecs::Entity& e : scene.getChildren(scene.getObjectsRoot())) {
         if (!transformStorage.has(e)) continue;
 

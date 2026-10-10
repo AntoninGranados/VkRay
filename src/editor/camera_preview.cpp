@@ -5,6 +5,7 @@
 #include "core/ecs/components/camera.hpp"
 #include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
+#include "editor/editor.hpp"
 
 namespace {
 
@@ -12,7 +13,7 @@ constexpr float kPreviewMinFrameFraction = 0.9f;
 
 float widenForPreview(const ecs::Registry& registry, ecs::Entity camera, float aspect, float trueValue) {
     if (&registry != &Core::getScene().getRegistry() || Core::getRenderMode() != RenderMode::Preview ||
-        !Core::getScene().isUsingSceneCamera() || camera != Core::getScene().getCamera())
+        !Editor::isUsingSceneCamera() || camera != Core::getScene().getActiveCamera())
         return trueValue;
 
     const ecs::Component& c = registry.get(camera, ecs::Camera);

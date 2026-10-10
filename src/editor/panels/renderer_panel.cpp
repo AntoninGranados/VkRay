@@ -18,7 +18,7 @@ static void startRender(const char* paramPath, auto startFn) {
     }
     Core::setOutputPath(path);
     Editor::selectEntity(std::nullopt);
-    Core::getScene().activateSceneCamera();
+    Editor::activateSceneCamera();
     startFn();
 }
 

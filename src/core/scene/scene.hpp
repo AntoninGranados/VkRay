@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -91,19 +92,16 @@ public:
     ecs::Entity getAssetsRoot() const { return registry.ctx().get<SceneRoots>().assetsRoot; }
     ecs::Entity getObjectsRoot() const { return registry.ctx().get<SceneRoots>().objectsRoot; }
     ecs::Entity getSceneRoot() const { return registry.ctx().get<SceneRoots>().sceneRoot; }
+    ecs::Entity getInternalsRoot() const { return registry.ctx().get<SceneRoots>().internalsRoot; }
     ecs::Entity getDefaultMaterial() const { return defaultMaterial; }
     ecs::Entity getDefaultMesh() const { return defaultMesh; }
-    ecs::Entity getDefaultCamera() const { return defaultCamera; }
     ecs::Entity getEnvironment() const;
     ecs::Entity getCompositing() const;
 
     static ecs::Entity findSceneRootChild(const ecs::Registry& registry, const ecs::ComponentType& type);
 
-    ecs::Entity& getCamera() { return activeCamera; }
-    bool isUsingSceneCamera() { return activeCamera != defaultCamera; }
+    std::optional<ecs::Entity> getActiveCamera() const { return activeCamera; }
     void setActiveCamera(ecs::Entity newActiveCamera);
-    bool resetActiveCamera();
-    void activateSceneCamera();
 
     void bakePhysics();
     bool isPhysicsBakeInProgress() const;
@@ -134,10 +132,7 @@ private:
     ecs::Entity defaultMaterial;
     ecs::Entity defaultMesh;
 
-    // TODO: find a better architecture place as this is an Editor object (not Core)
-    // Used as the main viewport camera in the editor (until we preview)
-    ecs::Entity defaultCamera;
-    ecs::Entity activeCamera;
+    std::optional<ecs::Entity> activeCamera;
 
     AnimationStore animationStore;
 

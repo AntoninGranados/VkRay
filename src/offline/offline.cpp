@@ -24,6 +24,12 @@ void Offline::run() {
             queue.fail();
             continue;
         }
+        if (!Core::getScene().getActiveCamera()) {
+            Log::error("Offline",
+                       std::format("No camera in the scene `{}` for the job {}", job->scene.string(), jobIndex));
+            queue.fail();
+            continue;
+        }
         Log::success("Offline", std::format("[{}/{}] Loaded: `{}`", jobIndex, totalJobs, job->scene.string()));
         Core::setRenderMode(RenderMode::RenderSingle);
 

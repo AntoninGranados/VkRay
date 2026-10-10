@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 
 #include "core/core.hpp"
 #include "core/ecs/entity.hpp"
@@ -26,12 +27,20 @@ public:
     static std::optional<ecs::Entity> getSelectedEntity();
     static void selectEntity(std::optional<ecs::Entity> entity);
 
+    static bool loadScene(const std::string& path);
+
+    static ecs::Entity getViewportCamera() { return get().viewportCamera; }
+    static bool isUsingSceneCamera();
+    static void activateSceneCamera();
+
 private:
     Editor() = default;
     static Editor& get();
 
     static void setSelectedEntity(ecs::Entity entity);
     static void clearSelectedEntity();
+
+    static void createViewportCamera();
 
     static void stepAnimation(float deltaTime);
     static void handleViewportResize();
@@ -43,4 +52,5 @@ private:
     MaterialPreview materialPreview;
 
     std::optional<ecs::Entity> selectedEntity;
+    ecs::Entity viewportCamera;
 };

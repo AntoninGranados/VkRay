@@ -23,9 +23,9 @@ void ScenePanel::draw() {
     ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [&] {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", {-FLT_MIN, 0})) {
             if (auto path = ui::openFileDialog({{"Scene", "json"}}, "assets/scenes/")) {
-                if (SceneSerializer::load(scene, path->string())) {
-                    const ecs::Entity camera = scene.getCamera();
-                    Editor::selectEntity(camera == scene.getDefaultCamera() ? std::nullopt : std::optional{camera});
+                if (Editor::loadScene(path->string())) {
+                    Editor::selectEntity(Editor::isUsingSceneCamera() ? scene.getActiveCamera()
+                                                                      : std::optional<ecs::Entity>{});
                     Log::success("ScenePanel", std::format("Scene loaded: {}", path->string()));
                 }
             }

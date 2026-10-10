@@ -168,7 +168,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     debugUBO.debugView = Core::getParameters().get<DebugView>("renderer/debug_view");
 
     Scene& scene = Core::getScene();
-    const ecs::Entity& camera = scene.getCamera();
+    const ecs::Entity camera = *scene.getActiveCamera();
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
     ecs::Registry& reg = scene.getRegistry();
     const float aspect =
@@ -179,7 +179,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane = 0;
     displayUBO.previewBorderEnabled =
-        (Core::getRenderMode() == RenderMode::Preview && scene.isUsingSceneCamera()) ? 1 : 0;
+        (Core::getRenderMode() == RenderMode::Preview && Editor::isUsingSceneCamera()) ? 1 : 0;
 
     const glm::ivec2 outputRenderSize = Core::getParameters().get<glm::ivec2>("renderer/output/render_size");
     const float outputAspect = outputRenderSize.y > 0
@@ -191,7 +191,7 @@ void EditorRenderer::render(const FrameContext& frameContext) {
         const ecs::Entity e = *selectedEntity;
         displayUBO.selectedObjectId = resolveSelectedObjectIndex(reg, e);
 
-        if (scene.isUsingSceneCamera()) {
+        if (Editor::isUsingSceneCamera()) {
             const FocusPlane focus = resolveFocusPlane(reg, e, camera);
             if (focus.visible) {
                 displayUBO.showFocusPlane = 1;

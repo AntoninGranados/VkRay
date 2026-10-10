@@ -27,4 +27,12 @@ run_step() {
 
 run_step "Test Build" cmake --build build --target VkRayTests
 run_step "Main Build" cmake --build build --target VkRay
+run_step "Docs Build" cmake --build build --target VkRayDocs
+
+if ! git diff --quiet -- docs/parameters.md docs/components.md; then
+    printf "${RED}[FAIL]${RESET} Docs Check\n"
+    echo "The build regenerated docs/. Stage it: git add docs/parameters.md docs/components.md"
+    exit 1
+fi
+printf "${GREEN}[OK]${RESET} Docs Check\n"
 python3 tests/run_tests.py --test-dir build

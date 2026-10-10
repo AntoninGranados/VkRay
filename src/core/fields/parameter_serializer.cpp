@@ -1,5 +1,7 @@
 #include "parameter_serializer.hpp"
 
+#include <algorithm>
+#include <climits>
 #include <fstream>
 #include <limits>
 #include <optional>
@@ -7,7 +9,6 @@
 
 #include "nlohmann/json.hpp"
 
-#include "core/core.hpp"
 #include "core/fields/field_serializer.hpp"
 
 #include "utils/resources.hpp"
@@ -31,14 +32,15 @@ Parameter& parseVecNode(const json& obj, ParameterRegistry& parameters, const st
     return parameters.add<T>(path, label, val, std::move(meta), restart);
 }
 
-void serializeParameterPath(std::ofstream& file, const FieldPath& prefix, int depth = 0) {
-    for (const auto& parameter : Core::getParameters().getAll()) {
+void serializeParameterPath(std::ofstream& file, const ParameterRegistry& parameters, const FieldPath& prefix,
+                            int depth = 0) {
+    for (const auto& parameter : parameters.getAll()) {
         if (parameter->getId().parent_path() != prefix) continue;
         file << parameter->print() << std::endl;
     }
 
     std::vector<std::string> seen;
-    for (const auto& parameter : Core::getParameters().getAll()) {
+    for (const auto& parameter : parameters.getAll()) {
         auto rel = parameter->getId().lexically_relative(prefix);
         if (rel.empty()) continue;
         auto it = rel.begin();
@@ -49,14 +51,13 @@ void serializeParameterPath(std::ofstream& file, const FieldPath& prefix, int de
         if (std::find(seen.begin(), seen.end(), seg) != seen.end()) continue;
         seen.push_back(seg);
 
-        auto labelIt = Core::getParameters().getNodeLabels().find((prefix / seg).generic_string());
-        const std::string& displayLabel =
-            labelIt != Core::getParameters().getNodeLabels().end() ? labelIt->second : seg;
+        auto labelIt = parameters.getNodeLabels().find((prefix / seg).generic_string());
+        const std::string& displayLabel = labelIt != parameters.getNodeLabels().end() ? labelIt->second : seg;
         file << std::endl << std::string(depth + 2, '#') << ' ' << displayLabel << std::endl;
         file << "| Path | Label | Description | Type | Default | Constraints | Restart |" << std::endl;
         file << "|------|-------|-------------|------|---------|-------------|---------|" << std::endl;
 
-        serializeParameterPath(file, prefix / seg, depth + 1);
+        serializeParameterPath(file, parameters, prefix / seg, depth + 1);
     }
 }
 
@@ -158,7 +159,7 @@ void parseNode(const json& obj, ParameterRegistry& parameters, const std::string
 
 } // namespace
 
-void ParameterSerializer::saveDocumentation(std::filesystem::path path) {
+void ParameterSerializer::saveDocumentation(const ParameterRegistry& parameters, std::filesystem::path path) {
     std::ofstream file(path);
 
     file << R"(# Parameters
@@ -228,7 +229,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ---
 )";
 
-    serializeParameterPath(file, "");
+    serializeParameterPath(file, parameters, "");
 }
 
 ParameterRegistry ParameterSerializer::load(std::filesystem::path path) {

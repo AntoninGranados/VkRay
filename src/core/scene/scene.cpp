@@ -5,7 +5,6 @@
 #include <optional>
 #include <utility>
 
-#include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/ecs/systems/aperture_system.hpp"
@@ -25,7 +24,7 @@ void Scene::initContext() {
     registry.ctx().emplace<ecs::ApertureState>();
     registry.ctx().emplace<ecs::PhysicsBakeState>();
     registry.ctx().emplace<AnimationStore*>(&animationStore);
-    registry.ctx().emplace<ecs::Entity*>(&activeCamera);
+    registry.ctx().emplace<std::optional<ecs::Entity>*>(&activeCamera);
     addDefaultAssets();
 }
 
@@ -101,17 +100,12 @@ void Scene::addDefaultAssets() {
     const ecs::Entity compositing = createNamedEntity("Compositing", sceneRoots.sceneRoot);
     registry.add(compositing, ecs::Compositing);
 
-    defaultCamera = createNamedEntity("Default Camera", sceneRoots.internalsRoot);
-    registry.add(defaultCamera, ecs::Camera);
-    registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
-    registry.get(defaultCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
-
     for (const ecs::Entity entity :
          {sceneRoots.sceneRoot, sceneRoots.materialsRoot, sceneRoots.assetsRoot, sceneRoots.objectsRoot,
-          sceneRoots.internalsRoot, defaultMaterial, defaultMesh, environment, compositing, defaultCamera})
+          sceneRoots.internalsRoot, defaultMaterial, defaultMesh, environment, compositing})
         registry.add(entity, ecs::Locked);
 
-    activeCamera = defaultCamera;
+    activeCamera.reset();
 }
 
 MeshAsset* Scene::getMeshAsset(ecs::Entity e) {
