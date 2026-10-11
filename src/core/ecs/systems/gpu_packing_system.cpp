@@ -301,7 +301,7 @@ void objectPackingSystem(Registry& registry) {
     }
 
     std::ranges::sort(cameraMedia, std::ranges::greater{});
-    const size_t firstMedium = cameraMedia.size() > 4 ? cameraMedia.size() - 4 : 0;
+    const size_t firstMedium = cameraMedia.size() > kMediumStackSize ? cameraMedia.size() - kMediumStackSize : 0;
     CameraMediaInfo& cameraMediaInfo = registry.ctx().get<CameraMediaInfo>();
     cameraMediaInfo = CameraMediaInfo{};
     for (size_t i = firstMedium; i < cameraMedia.size(); i++)

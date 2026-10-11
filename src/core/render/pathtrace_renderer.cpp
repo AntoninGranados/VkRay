@@ -12,7 +12,6 @@
 #include "core/fields/parameters.hpp"
 #include "core/render/compositing_table.hpp"
 #include "core/scene/gpu_structs.hpp"
-#include "core/shader_plugin/glsl_codegen.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
                                              ImageHandle lensImageHandle, BufferHandle blueNoiseBufferHandle) {
@@ -52,22 +51,31 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     ComputePassBuilder pathtrace = builder.addComputePass(tag + "PathtracingPass");
     pathtracePassHandle = pathtrace.getHandle();
     pathtrace.setGroup(groupHandle);
-    pathtrace.readBuffer(0, pathtracingUBOHandle, BufferUsageType::Uniform);
-    pathtrace.readImage(1, previousPathtracingImageHandle, ImageUsageType::Sampled);
-    pathtrace.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    pathtrace.readBuffer(3, resources.sceneHandles.vertex, BufferUsageType::Storage);
-    pathtrace.readBuffer(4, resources.sceneHandles.index, BufferUsageType::Storage);
-    pathtrace.readBuffer(5, resources.sceneHandles.bvh, BufferUsageType::Storage);
-    pathtrace.readBuffer(6, resources.sceneHandles.mesh, BufferUsageType::Storage);
-    pathtrace.readBuffer(7, resources.sceneHandles.material, BufferUsageType::Storage);
-    pathtrace.readBuffer(8, resources.sceneHandles.pluginParams, BufferUsageType::Storage);
-    pathtrace.readBuffer(9, resources.sceneHandles.object, BufferUsageType::Storage);
-    pathtrace.readBuffer(10, resources.sceneHandles.light, BufferUsageType::Storage);
-    pathtrace.writeImage(11, currentPathtracingImageHandle, ImageUsageType::Storage);
-    pathtrace.readImage(12, lensImageHandle, ImageUsageType::Sampled);
-    pathtrace.readBuffer(13, resources.sceneHandles.motion, BufferUsageType::Storage);
-    pathtrace.readBuffer(14, blueNoiseBufferHandle, BufferUsageType::Storage);
-    pathtrace.setPipeline(GlslCodegen::loadShader("builtin:/shaders/core/pathtracing.glsl"));
+    const std::string pathtracingShader = "builtin:/shaders/core/pathtracing.slang";
+    const ShaderDefines pathtracingDefines = {{"RANDOM_BLUE_NOISE", "1"}, {"CAMERA_LENS_APERTURE", "1"}};
+    const auto pathtracingLocation = [&](const std::string& name) {
+        return Core::getEngine().getShaderLocation(pathtracingShader, name, pathtracingDefines);
+    };
+    pathtrace.readBuffer(pathtracingLocation("ubo"), pathtracingUBOHandle, BufferUsageType::Uniform);
+    pathtrace.readImage(pathtracingLocation("prevTex"), previousPathtracingImageHandle, ImageUsageType::Sampled);
+    pathtrace.readBuffer(pathtracingLocation("pixelInfoBuffer"), resources.pixelInfoBufferHandle,
+                         BufferUsageType::Storage);
+    pathtrace.writeImage(pathtracingLocation("outputImage"), currentPathtracingImageHandle, ImageUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.vertices"), resources.sceneHandles.vertex,
+                         BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.indices"), resources.sceneHandles.index, BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.bvhNodes"), resources.sceneHandles.bvh, BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.meshes"), resources.sceneHandles.mesh, BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.materials"), resources.sceneHandles.material,
+                         BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.pluginParams"), resources.sceneHandles.pluginParams,
+                         BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.objects"), resources.sceneHandles.object, BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("scene.motion"), resources.sceneHandles.motion, BufferUsageType::Storage);
+    pathtrace.readBuffer(pathtracingLocation("lightBuffer"), resources.sceneHandles.light, BufferUsageType::Storage);
+    pathtrace.readImage(pathtracingLocation("lensSampler"), lensImageHandle, ImageUsageType::Sampled);
+    pathtrace.readBuffer(pathtracingLocation("blueNoiseBuffer"), blueNoiseBufferHandle, BufferUsageType::Storage);
+    pathtrace.setPipeline(pathtracingShader, pathtracingDefines);
     pathtracingTimestamp = pathtrace.setTimestamp();
 
     // Compositing pass
@@ -83,7 +91,10 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
 
     compositingPassHandles.clear();
     compositingPassUBOHandles.clear();
-    const std::string compositingShader = GlslCodegen::loadShader("builtin:/shaders/core/compositing.glsl");
+    const std::string compositingShader = "builtin:/shaders/core/compositing.slang";
+    const auto compositingLocation = [&](const std::string& name) {
+        return Core::getEngine().getShaderLocation(compositingShader, name);
+    };
     for (size_t i = 0; i < passCount; i++) {
         BufferHandle passUboHandle =
             builder.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO));
@@ -96,12 +107,14 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         ComputePassBuilder pass = builder.addComputePass(tag + "CompositingPass" + std::to_string(i));
         compositingPassHandles.push_back(pass.getHandle());
         pass.setGroup(groupHandle);
-        pass.readImage(0, readHandle, ImageUsageType::Sampled);
-        pass.readBuffer(1, passUboHandle, BufferUsageType::Uniform);
-        pass.readBuffer(2, resources.pixelInfoBufferHandle, BufferUsageType::Storage);
-        pass.writeImage(3, writeHandle, ImageUsageType::Storage);
-        pass.readBuffer(4, resources.sceneHandles.pluginParams, BufferUsageType::Storage);
-        pass.readImage(5, currentPathtracingImageHandle, ImageUsageType::Sampled);
+        pass.readImage(compositingLocation("sourceTexture"), readHandle, ImageUsageType::Sampled);
+        pass.readBuffer(compositingLocation("passUbo"), passUboHandle, BufferUsageType::Uniform);
+        pass.readBuffer(compositingLocation("pixelInfoBuffer"), resources.pixelInfoBufferHandle,
+                        BufferUsageType::Storage);
+        pass.writeImage(compositingLocation("destinationImage"), writeHandle, ImageUsageType::Storage);
+        pass.readBuffer(compositingLocation("pluginParams"), resources.sceneHandles.pluginParams,
+                        BufferUsageType::Storage);
+        pass.readImage(compositingLocation("originalTexture"), currentPathtracingImageHandle, ImageUsageType::Sampled);
         pass.setPipeline(compositingShader);
         if (i == 0) compositingTimestamp = pass.setTimestamp();
     }

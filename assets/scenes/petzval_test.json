@@ -4,7 +4,7 @@
         {
             "name": "Environment",
             "programmable_sky": {
-                "path": "../environment/sunset_sky.glsl"
+                "path": "../environment/sunset_sky.slang"
             }
         }
     ],
@@ -12,7 +12,7 @@
         {
             "name": "Ground",
             "programmable": {
-                "path": "../materials/voronoi.glsl"
+                "path": "../materials/voronoi.slang"
             }
         },
         {
@@ -61,7 +61,7 @@
                 "f_stop": 2
             },
             "programmable_lens": {
-                "path": "../camera/petzval.glsl"
+                "path": "../camera/petzval.slang"
             },
             "name": "Camera",
             "transform": {

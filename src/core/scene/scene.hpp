@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -46,7 +47,7 @@ struct CameraMotionInfo {
 
 struct CameraMediaInfo {
     int count = 0;
-    glm::ivec4 objects{-1};
+    std::array<int32_t, kMediumStackSize> objects{};
 };
 
 struct LensPluginInfo {

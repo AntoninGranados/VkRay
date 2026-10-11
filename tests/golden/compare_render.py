@@ -28,7 +28,7 @@ DENOISE_SCENE_OVERRIDE = {
                 "passes": [
                     {
                         "name": "ATrous",
-                        "path": "assets/compositing/a_trous.glsl",
+                        "path": "assets/compositing/a_trous.slang",
                         "params": {"cPhi": 0.02},
                     }
                 ]

@@ -24,7 +24,7 @@ inline const ComponentType SkyPlugin = ComponentType::builder("programmable_sky"
     .icon(ICON_FA_CODE)
     .group("environment")
     .needs("environment")
-    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Sky Shader" }} })
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "slang", .name = "Sky Shader" }} })
     .payload<ShaderPlugin>("plugin")
     .build();
 

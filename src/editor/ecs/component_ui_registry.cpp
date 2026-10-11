@@ -269,7 +269,7 @@ void ComponentUiRegistry::init() {
             ImGui::TextUnformatted(pass.path.empty() ? "(no script)" : pass.path.filename().string().c_str());
             ImGui::SameLine();
             if (ImGui::Button(ICON_FA_FOLDER_OPEN "##BrowseCompositingPassScript")) {
-                if (auto path = ui::openFileDialog({{"Compositing Pass Shader", "glsl"}}, "assets/compositing/")) {
+                if (auto path = ui::openFileDialog({{"Compositing Pass Shader", "slang"}}, "assets/compositing/")) {
                     pass.path = *path;
                     pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion,
                                        CompositingTable::slotFor(pass.path));

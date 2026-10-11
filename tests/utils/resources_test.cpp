@@ -17,12 +17,12 @@ TEST_CASE("Resources serves the embedded copy of a builtin file") {
 }
 
 TEST_CASE("Resources normalizes builtin paths") {
-    CHECK(Resources::find("builtin:/shaders/core/../core/pathtracing.glsl").has_value());
+    CHECK(Resources::find("builtin:/shaders/core/../core/pathtracing.slang").has_value());
 }
 
 TEST_CASE("Resources serves added builtin files") {
-    Resources::add("builtin:/shaders/generated/test.glsl", "content");
-    CHECK(Resources::read("builtin:/shaders/generated/test.glsl") == "content");
+    Resources::add("builtin:/shaders/generated/test.slang", "content");
+    CHECK(Resources::read("builtin:/shaders/generated/test.slang") == "content");
 }
 
 TEST_CASE("Resources reads non-builtin paths from disk only") {

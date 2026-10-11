@@ -8,8 +8,6 @@
 class ShaderPlugin;
 
 namespace GlslCodegen {
-std::string loadShader(const std::filesystem::path& path);
-
 std::string declareGlobals(const ShaderPlugin& plugin);
 std::string assignParams(const ShaderPlugin& plugin, const std::function<std::string(int)>& valueAt);
 

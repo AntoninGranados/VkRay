@@ -81,10 +81,10 @@ Relative file paths (meshes, shader scripts, aperture images, compositing passes
 
 ```json
 "Scene": [
-    { "name": "Environment", "programmable_sky": { "path": "../environment/sunset_sky.glsl" } }
+    { "name": "Environment", "programmable_sky": { "path": "../environment/sunset_sky.slang" } }
 ],
 "Materials": [
-    { "name": "Floor", "programmable": { "path": "../materials/voronoi.glsl", "scale": 4.0 } }
+    { "name": "Floor", "programmable": { "path": "../materials/voronoi.slang", "scale": 4.0 } }
 ]
 ```
 
@@ -96,7 +96,7 @@ The compositing chain is an ordered list of passes, each with its own script and
         "name": "Compositing",
         "compositing": {
             "passes": [
-                { "name": "ATrous", "path": "../compositing/a_trous.glsl", "params": { "cPhi": 0.02 } }
+                { "name": "ATrous", "path": "../compositing/a_trous.slang", "params": { "cPhi": 0.02 } }
             ]
         }
     }

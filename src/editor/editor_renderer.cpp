@@ -20,7 +20,6 @@
 #include "core/ecs/entity.hpp"
 #include "core/fields/parameters.hpp"
 #include "core/scene/scene.hpp"
-#include "core/shader_plugin/glsl_codegen.hpp"
 #include "editor.hpp"
 #include "editor/camera_preview.hpp"
 #include "editor/ui_utils.hpp"
@@ -90,29 +89,42 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     ComputePassBuilder display = builder.addComputePass("DisplayPass");
     displayPassHandle = display.getHandle();
     display.setGroup(editorGroupHandle);
-    display.readImage(0, renderResources.outputImageHandle, ImageUsageType::Sampled);
-    display.readBuffer(1, renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    display.writeImage(2, displayImageHandle, ImageUsageType::Storage);
-    display.readBuffer(3, displayUBOHandle, BufferUsageType::Uniform);
-    display.readBuffer(4, renderResources.sceneHandles.vertex, BufferUsageType::Storage);
-    display.readBuffer(5, renderResources.sceneHandles.index, BufferUsageType::Storage);
-    display.readBuffer(6, renderResources.sceneHandles.bvh, BufferUsageType::Storage);
-    display.readBuffer(7, renderResources.sceneHandles.mesh, BufferUsageType::Storage);
-    display.readBuffer(8, renderResources.sceneHandles.object, BufferUsageType::Storage);
-    display.readBuffer(9, renderResources.sceneHandles.material, BufferUsageType::Storage);
-    display.readBuffer(10, renderResources.sceneHandles.liveMotion, BufferUsageType::Storage);
-    display.readBuffer(11, renderResources.sceneHandles.pluginParams, BufferUsageType::Storage);
-    display.setPipeline(GlslCodegen::loadShader("builtin:/shaders/editor/display.glsl"));
+    const std::string displayShader = "builtin:/shaders/editor/display.slang";
+    const auto displayLocation = [&](const std::string& name) {
+        return Core::getEngine().getShaderLocation(displayShader, name);
+    };
+    display.readBuffer(displayLocation("ubo"), displayUBOHandle, BufferUsageType::Uniform);
+    display.readImage(displayLocation("outputTex"), renderResources.outputImageHandle, ImageUsageType::Sampled);
+    display.readBuffer(displayLocation("pixelInfoBuffer"), renderResources.pixelInfoBufferHandle,
+                       BufferUsageType::Storage);
+    display.writeImage(displayLocation("displayOut"), displayImageHandle, ImageUsageType::Storage);
+    display.readBuffer(displayLocation("scene.vertices"), renderResources.sceneHandles.vertex,
+                       BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.indices"), renderResources.sceneHandles.index, BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.bvhNodes"), renderResources.sceneHandles.bvh, BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.meshes"), renderResources.sceneHandles.mesh, BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.materials"), renderResources.sceneHandles.material,
+                       BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.pluginParams"), renderResources.sceneHandles.pluginParams,
+                       BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.objects"), renderResources.sceneHandles.object, BufferUsageType::Storage);
+    display.readBuffer(displayLocation("scene.motion"), renderResources.sceneHandles.liveMotion,
+                       BufferUsageType::Storage);
+    display.setPipeline(displayShader);
     displayTimestamp = display.setTimestamp();
 
     // Debug pass — debug view visualization (compute)
     ComputePassBuilder debug = builder.addComputePass("DebugPass");
     debugPassHandle = debug.getHandle();
     debug.setGroup(editorGroupHandle);
-    debug.readBuffer(0, debugUBOHandle, BufferUsageType::Uniform);
-    debug.readBuffer(1, renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    debug.writeImage(2, debugImageHandle, ImageUsageType::Storage);
-    debug.setPipeline(GlslCodegen::loadShader("builtin:/shaders/editor/debug.glsl"));
+    const std::string debugShader = "builtin:/shaders/editor/debug.slang";
+    const auto debugLocation = [&](const std::string& name) {
+        return Core::getEngine().getShaderLocation(debugShader, name);
+    };
+    debug.readBuffer(debugLocation("ubo"), debugUBOHandle, BufferUsageType::Uniform);
+    debug.readBuffer(debugLocation("pixelInfoBuffer"), renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
+    debug.writeImage(debugLocation("debugOut"), debugImageHandle, ImageUsageType::Storage);
+    debug.setPipeline(debugShader);
     debugTimestamp = debug.setTimestamp();
 
     // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers

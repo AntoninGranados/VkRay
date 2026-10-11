@@ -119,7 +119,7 @@ inline const ComponentType CameraLensPlugin = ComponentType::builder("programmab
     .group("camera")
     .needs("camera")
     .slot("lens")
-    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Camera Lens Shader" }} })
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "slang", .name = "Camera Lens Shader" }} })
     .payload<ShaderPlugin>("plugin")
     .build();
 

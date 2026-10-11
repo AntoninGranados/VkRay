@@ -120,7 +120,7 @@ inline const ComponentType MaterialPlugin = ComponentType::builder("programmable
     .group("material")
     .needs("material")
     .slot("bsdf")
-    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "glsl", .name = "Material Shader" }} })
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "slang", .name = "Material Shader" }} })
     .payload<ShaderPlugin>("plugin")
     .build();
 

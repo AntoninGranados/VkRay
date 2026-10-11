@@ -1,6 +1,11 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 #include <glm/glm.hpp>
+
+static constexpr int kMediumStackSize = 16;
 
 enum class RenderMode { Preview, RenderSingle, RenderAnimation };
 
@@ -48,7 +53,7 @@ struct alignas(16) RenderUBO {
     int varianceSampling;
     int varianceWarmupSamples;
     int cameraMediumCount = 0;
-    alignas(16) glm::ivec4 cameraMedia{-1};
+    alignas(16) std::array<int32_t, kMediumStackSize> cameraMedia{};
 };
 
 struct PathtracerUBO {

@@ -49,7 +49,7 @@ std::string ShaderSourceMap::marker(const std::filesystem::path& path, int line)
 }
 
 std::string ShaderSourceMap::remapError(const std::string& message) {
-    static const std::regex pattern(R"((\S+\.glsl):(\d+):)");
+    static const std::regex pattern(R"((\S+\.slang):(\d+):)");
 
     std::string result;
     size_t lastPos = 0;

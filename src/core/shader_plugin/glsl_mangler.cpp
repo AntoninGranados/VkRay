@@ -20,7 +20,7 @@ const std::unordered_set<std::string> kKeywords = {
     "continue", "true", "false", "discard", "switch", "case", "default",
 };
 
-const std::unordered_set<std::string> kQualifiers = {"in", "out", "inout", "const"};
+const std::unordered_set<std::string> kQualifiers = {"in", "out", "inout", "const", "static"};
 
 bool isIdentStart(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_'; }
 bool isIdentChar(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
@@ -133,7 +133,8 @@ private:
         const size_t typePos = p++;
         if (!isIdentTok(p) || kKeywords.contains(tokens[p].text)) return false;
         const size_t namePos = p++;
-        if (!(isSymbol(p, ';') || isSymbol(p, '=') || isSymbol(p, ',') || isSymbol(p, ')'))) return false;
+        if (!(isSymbol(p, ';') || isSymbol(p, '=') || isSymbol(p, ',') || isSymbol(p, ')') || isSymbol(p, '[')))
+            return false;
 
         for (size_t i = pos; i < typePos; i++) resolveIdentifier(i);
         resolveIdentifier(typePos);

@@ -46,7 +46,7 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/external/glm")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 file(GLOB_RECURSE VKRAY_EMBEDDED_FILES CONFIGURE_DEPENDS
-  "${CMAKE_SOURCE_DIR}/src/shaders/*.glsl"
+  "${CMAKE_SOURCE_DIR}/src/shaders/*.slang"
   "${CMAKE_SOURCE_DIR}/assets/fonts/*.ttf"
   "${CMAKE_SOURCE_DIR}/assets/fonts/*.otf"
   "${CMAKE_SOURCE_DIR}/assets/apertures/*.pgm"
@@ -54,7 +54,7 @@ file(GLOB_RECURSE VKRAY_EMBEDDED_FILES CONFIGURE_DEPENDS
 vkray_embed_resources(VKRAY_EMBEDDED_SOURCE
   ${VKRAY_EMBEDDED_FILES}
   "${CMAKE_SOURCE_DIR}/src/config/parameters.json"
-  "${CMAKE_SOURCE_DIR}/assets/camera/tilt_shift.glsl"
+  "${CMAKE_SOURCE_DIR}/assets/camera/tilt_shift.slang"
   "${CMAKE_SOURCE_DIR}/assets/scenes/default.json"
   "${CMAKE_SOURCE_DIR}/assets/noise/blue_noise.bin"
 )

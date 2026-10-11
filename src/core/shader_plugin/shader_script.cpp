@@ -13,11 +13,11 @@
 #include "utils/string_utils.hpp"
 
 const std::vector<GlslTypeInfo> ShaderScript::glslTypes = {
-    {"bool", FieldType::Bool, 1, false, true},   {"float", FieldType::Float, 1, false, false},
-    {"int", FieldType::Int, 1, true, false},     {"vec2", FieldType::Vec2, 2, false, false},
-    {"vec3", FieldType::Vec3, 3, false, false},  {"vec4", FieldType::Vec4, 4, false, false},
-    {"ivec2", FieldType::IVec2, 2, true, false}, {"ivec3", FieldType::IVec3, 3, true, false},
-    {"ivec4", FieldType::IVec4, 4, true, false},
+    {"bool", FieldType::Bool, 1, false, true},    {"float", FieldType::Float, 1, false, false},
+    {"int", FieldType::Int, 1, true, false},      {"float2", FieldType::Vec2, 2, false, false},
+    {"float3", FieldType::Vec3, 3, false, false}, {"float4", FieldType::Vec4, 4, false, false},
+    {"int2", FieldType::IVec2, 2, true, false},   {"int3", FieldType::IVec3, 3, true, false},
+    {"int4", FieldType::IVec4, 4, true, false},
 };
 
 const GlslTypeInfo* ShaderScript::findGlslType(const std::string& name) {

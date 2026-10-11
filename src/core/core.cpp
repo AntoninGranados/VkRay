@@ -1,8 +1,10 @@
 #include "core.hpp"
 
 #include <cassert>
+#include <memory>
 
 #include "core/fields/parameter_serializer.hpp"
+#include "core/render/resource_shader_file_system.hpp"
 
 Core& Core::get() {
     static Core instance;
@@ -13,6 +15,7 @@ void Core::init(Platform& p, uint32_t version) {
     Core& c = get();
     c.platform = &p;
     c.engine.init("VkRay", version, p);
+    c.engine.setShaderFileSystem(std::make_shared<ResourceShaderFileSystem>());
     loadParameters();
     c.coreRenderer.bindParameters();
 }
