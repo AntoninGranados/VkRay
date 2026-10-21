@@ -1,5 +1,6 @@
 #include "offline.hpp"
 
+#include <cstdlib>
 #include <format>
 
 #include "core/core.hpp"
@@ -8,10 +9,11 @@
 #include "utils/log.hpp"
 #include "utils/progress.hpp"
 
-void Offline::run() {
+int Offline::run() {
     JobQueue& queue = Core::getJobQueue();
     const int totalJobs = static_cast<int>(queue.entries().size());
 
+    int failedJobs = 0;
     int jobIndex = 0;
     while (Job* job = queue.nextPending()) {
         jobIndex++;
@@ -22,12 +24,14 @@ void Offline::run() {
             Log::error("Offline",
                        std::format("Failed to load the scene `{}` for the job {}", job->scene.string(), jobIndex));
             queue.fail();
+            failedJobs++;
             continue;
         }
         if (!Core::getScene().getActiveCamera()) {
             Log::error("Offline",
                        std::format("No camera in the scene `{}` for the job {}", job->scene.string(), jobIndex));
             queue.fail();
+            failedJobs++;
             continue;
         }
         Log::success("Offline", std::format("[{}/{}] Loaded: `{}`", jobIndex, totalJobs, job->scene.string()));
@@ -56,6 +60,7 @@ void Offline::run() {
 
         queue.complete();
     }
+    return failedJobs == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 void Offline::initParameters(const std::vector<ParameterOverride>& overrides) {

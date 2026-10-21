@@ -1,5 +1,4 @@
 import "compositing_api.slang";
-import "../generated/compositing_dispatch.slang";
 
 struct PassUBO {
     int slot;
@@ -17,6 +16,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
     int2 pixelCoord = int2(dispatchThreadId.xy);
     if (pixelCoord.x >= texSize.x || pixelCoord.y >= texSize.y) return;
 
-    float4 color = dispatchCompositingPass(passUbo.slot, passUbo.paramsBase, pixelCoord, texSize, passUbo.passId);
-    destinationImage[pixelCoord] = color;
+    ICompositingPass pass = createDynamicObject<ICompositingPass, uint>(uint(passUbo.slot), uint(passUbo.paramsBase));
+    destinationImage[pixelCoord] = pass.evaluate(pixelCoord, texSize, passUbo.passId);
 }

@@ -56,11 +56,12 @@ struct LensPluginInfo {
 };
 
 struct SkyPluginInfo {
-    int32_t paramsBase = -1;
+    int32_t slot = 0;
+    int32_t paramsBase = 0;
 };
 
 struct CompositingPassInfo {
-    int32_t slot = -1;
+    int32_t slot = 0;
     int32_t paramsBase = 0;
     int32_t passId = 0;
 };

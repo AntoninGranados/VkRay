@@ -7,7 +7,7 @@ struct Scene {
     StructuredBuffer<BvhNode> bvhNodes;
     StructuredBuffer<Mesh> meshes;
     StructuredBuffer<Material> materials;
-    StructuredBuffer<float> pluginParams;
+    ByteAddressBuffer pluginParams;
     ByteAddressBuffer objects;
     StructuredBuffer<MotionSample> motion;
 };
@@ -22,13 +22,10 @@ Object loadObject(uint index) {
     return scene.objects.Load<Object>(sizeof(uint) + index * sizeof(Object));
 }
 
-ResolvedMaterial unpackMaterial(in Material mat) {
-    ResolvedMaterial resolved;
-    resolved.type = mat.type;
-    for (int i = 0; i < MATERIAL_PAYLOAD_SIZE; i++) resolved.payload[i] = scene.pluginParams[mat.base + i];
-    return resolved;
+T loadParams<T>(uint index) {
+    return scene.pluginParams.Load<T>(index * sizeof(float));
 }
 
-ResolvedMaterial defaultMaterial() {
-    return unpackMaterial(scene.materials[0]);
+float loadParam(uint index) {
+    return loadParams<float>(index);
 }

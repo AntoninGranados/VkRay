@@ -3,7 +3,7 @@ import "../random/utils.slang";
 
 import "material_utils.slang";
 
-float3 ggxScatter(in ResolvedMaterial mat, in Hit hit, in float3 wo, in float alpha, out float3 h, inout RngState rng) {
+float3 ggxScatter(in Hit hit, in float3 wo, in float alpha, out float3 h, inout RngState rng) {
     float s1 = rand(rng);
     float s2 = rand(rng);
 

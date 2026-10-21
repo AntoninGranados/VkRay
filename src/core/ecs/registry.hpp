@@ -39,6 +39,7 @@ public:
 
     void destroyEntity(const Entity& e) {
         if (!isAlive(e)) return;
+        for (const Entity& child : std::vector<Entity>(getChildren(e))) destroyEntity(child);
         for (auto& [id, storage] : storages) {
             if (!storage.has(e)) continue;
             storage.remove(e);

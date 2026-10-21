@@ -16,6 +16,7 @@ struct ScreenUBO {
 };
 
 struct RenderUBO {
+    int skySlot;
     int skyParamsBase;
     int maxBounces;
     int importanceSampling;
@@ -60,8 +61,8 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         return;
     }
 
-    ResolvedMaterial mat = resolveMaterial(getMaterial(firstHit.object), firstHit, -ray.dir, rng);
-    setAlbedo(mat, mat.albedo * firstHit.vertexColor);
+    IMaterial material = makeMaterial(getMaterial(firstHit.object));
+    BsdfProperties properties = material.evaluate(firstHit, -ray.dir, rng).properties();
     float guideMix = 1.0 / float(pixelInfo.count);
 
     CameraPose pose = sampleCameraPose(ubo.camera.motionOffset);
@@ -70,9 +71,8 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
 
     float3 normalW = normalize(firstHit.normal);
     float3 positionW = firstHit.p;
-    float3 albedo = mat.albedo;
-    float roughness = (mat.type == mat_Metal || mat.type == mat_Glossy || mat.type == mat_Dielectric || mat.type == mat_Principled)
-                      ? mat.payload[3] : 1.0;
+    float3 albedo = properties.albedo;
+    float roughness = properties.roughness;
     float3 hitOff = positionW - pose.eye;
     float3 camDir = pose.dir;
     float2 normal = float2(dot(normalW, right), dot(normalW, up));
@@ -92,7 +92,7 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         pixelInfo.aov.normal    = normal;
         pixelInfo.aov.albedo    = albedo;
         pixelInfo.aov.roughness = roughness;
-        pixelInfo.aov.matType   = uint(mat.type);
+        pixelInfo.aov.matType   = uint(properties.type);
         pixelInfo.aov.hitValid  = 1u;
     }
 }
@@ -109,8 +109,9 @@ void initMediumStack(in Ray ray, inout RngState rng) {
     for (int i = 0; i < ubo.render.cameraMediumCount; i++) {
         Object object = loadObject(ubo.render.cameraMedia[i / 4][i % 4]);
         Hit hit = Hit(ray.origin, float2(0.0), -ray.dir, 0.0, true, object, float3(1.0));
-        ResolvedMaterial mat = resolveMaterial(getMaterial(object), hit, -ray.dir, rng);
-        if (isMediumBoundary(mat)) pushMedium(makeMediumEntry(mat, object));
+        IMaterial material = makeMaterial(getMaterial(object));
+        Optional<MediumEntry> mediumEntry = material.evaluate(hit, -ray.dir, rng).medium(object);
+        if (mediumEntry.hasValue) pushMedium(mediumEntry.value);
     }
 }
 
@@ -129,7 +130,6 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
     int i = 0;
     BSDFSample bsdf;
     LightSample lightSample;
-    ResolvedMaterial mat;
 
     BSDFSample prevBsdf = BSDFSample(
         float3(0.0),
@@ -148,7 +148,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             setRngDimensions(rng, 0u, 0u);
 
         if (!foundIntersection(hit)) {
-            radiance += clampIndirect(throughput * skyColor(ubo.render.skyParamsBase, ray.dir), i - 1);
+            radiance += clampIndirect(throughput * skyColor(ubo.render.skySlot, ubo.render.skyParamsBase, ray.dir), i - 1);
             break;
         }
 
@@ -193,25 +193,27 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             }
         }
 
-        mat = resolveMaterial(getMaterial(hit.object), hit, -ray.dir, rng);
-        setAlbedo(mat, mat.albedo * hit.vertexColor);
+        IMaterial material = makeMaterial(getMaterial(hit.object));
+        IBsdf surface = material.evaluate(hit, -ray.dir, rng);
+        BsdfProperties properties = surface.properties();
 
-        if (isMediumBoundary(mat) && falseInterfaces < MAX_FALSE_INTERFACES && isFalseInterface(mat, hit)) {
+        Optional<MediumEntry> mediumEntry = surface.medium(hit.object);
+        if (mediumEntry.hasValue && falseInterfaces < MAX_FALSE_INTERFACES && isFalseInterface(mediumEntry.value.priority, hit)) {
             falseInterfaces++;
-            crossInterface(mat, hit);
+            crossInterface(mediumEntry.value, hit);
             ray = Ray(hit.p + ray.dir * EPS, ray.dir);
             hit = intersection(ray, false, INFINITY, stats);
             i--;
             continue;
         }
 
-        if (mat.type == mat_Emissive) {
+        if (any(properties.emission > 0.0)) {
             if (i == 0) {
-                radiance = mat.albedo * mat.emissiveEmissionStrength;
+                radiance = properties.emission;
                 break;
             }
 
-            float3 Le = mat.albedo * mat.emissiveEmissionStrength;
+            float3 Le = properties.emission;
             float w = 1.0;
             if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
                 float pdfL = lightPDF(hit.object.lightId, length(hit.p - prevHit.p), hit.normal, ray.dir);
@@ -222,7 +224,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             break;
         }
 
-        bsdf = sampleBSDF(mat, hit, -ray.dir, rng);
+        bsdf = surface.sample(hit, -ray.dir, rng);
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
         }
@@ -231,7 +233,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             lightSample = sampleLight(hit, rng);
             isSkipped = lightSample.skip;
             if (lightSample.pdf > EPS) {
-                BSDFEval eval = evalBSDF(mat, hit, -ray.dir, lightSample.wi, rng);
+                BSDFEval eval = surface.eval(hit, -ray.dir, lightSample.wi);
                 float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
                 float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
                 radiance += clampIndirect(throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf, i);
@@ -246,7 +248,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             if (rand(rng) > p) break;
             throughput /= p;
         }
-        if (mat.type != mat_Volume && !((mat.type == mat_Dielectric || mat.type == mat_Principled) && bsdf.medium.isVolume)) {
+        if (!properties.passThrough && !bsdf.medium.isVolume) {
             prevBsdf = bsdf;
             prevHit = hit;
             prevIsSkipped = isSkipped;

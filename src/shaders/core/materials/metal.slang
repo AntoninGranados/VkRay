@@ -1,33 +1,47 @@
+import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
 
 import "material_utils.slang";
+import "bsdf.slang";
 import "ggx_utils.slang";
 
-BSDFEval evalMetalBSDF(in ResolvedMaterial mat, in Hit hit, in float3 wo, in float3 wi) {
-    float alpha = max(mat.metalRoughness * mat.metalRoughness, EPS_HIGH);
-    float3 h = normalize(wo + wi);
-    GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, h);
-    float3 F = schlickAlbedo(t.VoH, mat.albedo);
-    return BSDFEval(
-        F * ggxBRDF(t),
-        ggxPDF(t)
-    );
+struct MetalBsdf : IBsdf {
+    float3 albedo;
+    float roughness;
+
+    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
+        float alpha = max(roughness * roughness, EPS_HIGH);
+        float3 h = normalize(wo + wi);
+        GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, h);
+        float3 F = schlickAlbedo(t.VoH, albedo);
+        return BSDFEval(
+            F * ggxBRDF(t),
+            ggxPDF(t)
+        );
+    }
+
+    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
+        float alpha = max(roughness * roughness, EPS_HIGH);
+        float3 h;
+        float3 wi = ggxScatter(hit, wo, alpha, h, rng);
+        GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, h);
+        float3 F = schlickAlbedo(t.VoH, albedo);
+
+        return BSDFSample(F * t.G * t.VoH / (t.cosWo * t.NoH), wi, ggxPDF(t), false, NO_MEDIUM);
+    }
+
+    BsdfProperties properties() {
+        return BsdfProperties(mat_Metal, albedo, roughness);
+    }
 }
 
-BSDFSample sampleMetalBSDF(in ResolvedMaterial mat, in Hit hit, in float3 wo, inout RngState rng) {
-    float alpha = max(mat.metalRoughness * mat.metalRoughness, EPS_HIGH);
-    float3 h;
-    float3 wi = ggxScatter(mat, hit, wo, alpha, h, rng);
-    GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, h);
-    float3 F = schlickAlbedo(t.VoH, mat.albedo);
+struct MetalMaterial : IMaterial {
+    uint base;
 
-    BSDFSample bsdf;
-    bsdf.wi      = wi;
-    bsdf.weight  = F * t.G * t.VoH / (t.cosWo * t.NoH);
-    bsdf.pdf     = ggxPDF(t);
-    bsdf.isDelta = false;
-    bsdf.medium.isDielectric = false;
-    bsdf.medium.isVolume = false;
-    return bsdf;
+    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+        MetalBsdf bsdf = loadParams<MetalBsdf>(base);
+        bsdf.albedo *= hit.vertexColor;
+        return bsdf;
+    }
 }

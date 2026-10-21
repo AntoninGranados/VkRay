@@ -1,9 +1,11 @@
-#sky: version(1)
+import "script.slang";
 
-#param float3 zenithColor = float3(0.2, 0.1, 0.4): color
-#param float3 horizonColor = float3(1.0, 0.4, 0.2): color
+struct SunsetSky : ISky {
+    [Color] float3 zenithColor = float3(0.2, 0.1, 0.4);
+    [Color] float3 horizonColor = float3(1.0, 0.4, 0.2);
 
-void main() {
-    float t = clamp(0.5 * (dir.y + 1.0), 0.0, 1.0);
-    result = lerp(horizonColor, zenithColor, t);
+    float3 evaluate(float3 dir) {
+        float t = clamp(0.5 * (dir.y + 1.0), 0.0, 1.0);
+        return lerp(horizonColor, zenithColor, t);
+    }
 }

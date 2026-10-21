@@ -7,10 +7,13 @@ struct Material {
     uint base;
 };
 
-struct ResolvedMaterial {
-    int   type;
-    float payload[12];
-};
+static const int mat_Principled = 0;
+static const int mat_Emissive = 1;
+static const int mat_Diffuse = 2;
+static const int mat_Metal = 3;
+static const int mat_Glossy = 4;
+static const int mat_Dielectric = 5;
+static const int mat_Volume = 6;
 
 struct AOVBuffer {
     uint  hitValid;

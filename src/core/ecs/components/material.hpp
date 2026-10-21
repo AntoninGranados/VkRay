@@ -115,7 +115,7 @@ inline const ComponentType Principled = ComponentType::builder("principled")
     .build();
 
 inline const ComponentType MaterialPlugin = ComponentType::builder("programmable")
-    .description("Programmable custom BSDF, defined by a GLSL shader-definition file.")
+    .description("Programmable custom BSDF, defined by a Slang script implementing IMaterial.")
     .icon(ICON_FA_CODE)
     .group("material")
     .needs("material")

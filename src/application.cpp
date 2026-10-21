@@ -1,6 +1,8 @@
 #include "application.hpp"
 
+#include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <string>
 #include <string_view>
 
@@ -18,8 +20,6 @@
 
 #include "core/core.hpp"
 #include "core/scene/scene_serializer.hpp"
-#include "core/shader_plugin/shader_plugin.hpp"
-#include "core/shader_plugin/shader_source_map.hpp"
 
 #include "editor/ecs/component_ui_registry.hpp"
 #include "editor/editor.hpp"
@@ -38,9 +38,7 @@ Application::Application(int argc, char* argv[]) {
     }
 }
 
-void Application::run() {
-    if (runFn) runFn();
-}
+int Application::run() { return runFn ? runFn() : EXIT_SUCCESS; }
 
 Application::~Application() {
     if (!platform) return;
@@ -78,7 +76,10 @@ void Application::initEditorMode() {
     initScene();
     Editor::loadScene(kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(false); });
-    runFn = Editor::run;
+    runFn = [] {
+        Editor::run();
+        return EXIT_SUCCESS;
+    };
 }
 
 void Application::initOfflineMode(const std::string& jobFile) {
@@ -87,6 +88,7 @@ void Application::initOfflineMode(const std::string& jobFile) {
         queue = JobQueue::fromFile(jobFile);
     } catch (const std::exception& e) {
         Log::error("Application", std::format("Failed to load job queue `{}`: {}", jobFile, e.what()));
+        runFn = [] { return EXIT_FAILURE; };
         return;
     }
     if (queue.isEmpty()) return;
@@ -103,8 +105,6 @@ void Application::initOfflineMode(const std::string& jobFile) {
 }
 
 void Application::buildRenderGraph(bool offline) {
-    ShaderPlugin::regenerateAllDispatch();
-
     RenderGraphBuilder builder;
     RenderResources resources = Core::getCoreRenderer().initGraph(builder);
     RenderResources previewResources;
@@ -114,8 +114,7 @@ void Application::buildRenderGraph(bool offline) {
                                                                   Core::getCoreRenderer().getBlueNoiseBufferHandle());
     }
 
-    for (const std::string& error : Core::getEngine().rebuildGraph(builder))
-        Log::error(ShaderSourceMap::remapError(error));
+    for (const std::string& error : Core::getEngine().rebuildGraph(builder)) Log::error(error);
 
     if (!offline) {
         Editor::getEditorRenderer().registerImGuiTextures();

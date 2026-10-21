@@ -1,9 +1,4 @@
-#compositing: version(1), pass_count(8)
-
-#param float intensity = 1: min(0)
-#param float sigma = 4: min(0), max(10)
-#param float threshold = 0.5: min(0)
-#param int morphoRadius = 1: min(1)
+import "compositing_script.slang";
 
 float3 dilate(int2 pixelCoord, int2 texSize, int radius) {
     for (int dx = -radius; dx <= radius; dx++) {
@@ -48,17 +43,26 @@ float3 blurAlongDir(int2 pixelCoord, int2 texSize, float sigma, int direction) {
     return total / totalW;
 }
 
-void main() {
-    if (passId == 0) { // mask
-        float l = luma(result.rgb);
-        return float4(float3(l > threshold ? 1 : 0), 1);
-    } else if (passId == 1 || passId == 4) {    // erode
-        return float4(erode(pixelCoord, texSize, morphoRadius), 1);
-    } else if (passId == 2 || passId == 3) {    // dilate
-        return float4(dilate(pixelCoord, texSize, morphoRadius), 1);
-    } else if (passId == 5 || passId == 6) {    // blur
-        return float4(blurAlongDir(pixelCoord, texSize, sigma, passId - 5), 1);
-    } else {
-        return float4(sampleOriginal(pixelCoord, texSize).rgb + intensity * sampleSource(pixelCoord, texSize).rgb, 1);
+[PassCount(8)]
+struct Bloom : ICompositingPass {
+    [Min(0)] float intensity = 1;
+    [Range(0, 10)] float sigma = 4;
+    [Min(0)] float threshold = 0.5;
+    [Min(1)] int morphoRadius = 1;
+
+    float4 evaluate(int2 pixelCoord, int2 texSize, int passId) {
+        float4 result = sampleSource(pixelCoord, texSize);
+        if (passId == 0) { // mask
+            float l = luma(result.rgb);
+            return float4(float3(l > threshold ? 1 : 0), 1);
+        } else if (passId == 1 || passId == 4) {    // erode
+            return float4(erode(pixelCoord, texSize, morphoRadius), 1);
+        } else if (passId == 2 || passId == 3) {    // dilate
+            return float4(dilate(pixelCoord, texSize, morphoRadius), 1);
+        } else if (passId == 5 || passId == 6) {    // blur
+            return float4(blurAlongDir(pixelCoord, texSize, sigma, passId - 5), 1);
+        } else {
+            return float4(sampleOriginal(pixelCoord, texSize).rgb + intensity * sampleSource(pixelCoord, texSize).rgb, 1);
+        }
     }
 }

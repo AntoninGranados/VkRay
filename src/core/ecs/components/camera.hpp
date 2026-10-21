@@ -114,7 +114,7 @@ inline const ComponentType ImageAperture = ComponentType::builder("image_apertur
     .build();
 
 inline const ComponentType CameraLensPlugin = ComponentType::builder("programmable_lens")
-    .description("Programmable custom lens, defined by a GLSL shader-definition file.")
+    .description("Programmable custom lens, defined by a Slang script implementing ILens.")
     .icon(ICON_FA_CODE)
     .group("camera")
     .needs("camera")

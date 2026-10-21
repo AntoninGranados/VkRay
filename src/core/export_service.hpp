@@ -14,7 +14,8 @@ public:
 
     void save(VkSmol& engine, Image& image, const std::filesystem::path& path, const AOVFlags& aovFlags = {});
 
-    static void convertFramesToVideo(const std::filesystem::path& output, const std::filesystem::path& framePath);
+    static void convertFramesToVideo(const std::filesystem::path& output, const std::filesystem::path& framePath,
+                                     int fps);
     static std::filesystem::path buildAnimationFramePath(int frame, const std::filesystem::path& dir);
 
 private:

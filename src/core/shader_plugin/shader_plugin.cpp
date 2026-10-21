@@ -1,15 +1,20 @@
 #include "shader_plugin.hpp"
 
+#include <algorithm>
+#include <bit>
 #include <format>
 #include <unordered_map>
+#include <unordered_set>
+
+#include "VkSmol/render/shader.hpp"
 
 #include "core/core.hpp"
 #include "core/fields/field.hpp"
-#include "core/render/compositing_table.hpp"
-#include "core/shader_plugin/glsl_mangler.hpp"
-#include "core/shader_plugin/shader_script.hpp"
+#include "core/render/script_table.hpp"
 
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
+#include "utils/string_utils.hpp"
 
 ShaderPlugin::ShaderPlugin() { registry().push_back(this); }
 
@@ -23,50 +28,117 @@ std::vector<ShaderPlugin*>& ShaderPlugin::registry() {
     return plugins;
 }
 
-namespace {
-std::vector<std::function<void()>>& dispatchGenerators() {
-    static std::vector<std::function<void()>> generators;
-    return generators;
-}
-} // namespace
+void ShaderPlugin::appendConformances(const ScriptKind& kind, std::vector<ShaderConformance>& conformances) {
+    for (size_t i = 0; i < kind.builtins.size(); i++)
+        conformances.push_back({kind.builtins[i], kind.interfaceName, static_cast<int>(i), ""});
 
-void ShaderPlugin::registerDispatchGenerator(std::function<void()> generate) {
-    dispatchGenerators().push_back(std::move(generate));
+    std::unordered_set<int> seenSlots;
+    for (const ShaderPlugin* plugin : registry()) {
+        if (plugin->kind != &kind || plugin->structName.empty()) continue;
+        if (!seenSlots.insert(plugin->slot).second) continue;
+        conformances.push_back({std::format("{}<{}>", kind.wrapperName, plugin->structName), kind.interfaceName,
+                                plugin->slot, plugin->path->string()});
+    }
 }
 
-void ShaderPlugin::regenerateAllDispatch() {
-    for (const std::function<void()>& generate : dispatchGenerators()) generate();
+bool ShaderPlugin::appendFields(const std::vector<ShaderField>& shaderFields, const std::string& group,
+                                std::vector<Field>& fields) {
+    for (const ShaderField& shaderField : shaderFields) {
+        const std::string id = group.empty() ? shaderField.name : std::format("{}/{}", group, shaderField.name);
+        if (shaderField.type == ShaderFieldType::Struct) {
+            if (!appendFields(shaderField.fields, id, fields)) return false;
+            continue;
+        }
+
+        NumericMeta meta{};
+        bool isAnimatable = false;
+        for (const ShaderAttribute& attribute : shaderField.attributes) {
+            const std::vector<float>& arguments = attribute.arguments;
+            if (attribute.name == "Range" && arguments.size() == 2) {
+                meta.min = arguments[0];
+                meta.max = arguments[1];
+            } else if (attribute.name == "Min" && arguments.size() == 1) {
+                meta.min = arguments[0];
+            } else if (attribute.name == "Max" && arguments.size() == 1) {
+                meta.max = arguments[0];
+            } else if (attribute.name == "Color") {
+                meta.color = true;
+            } else if (attribute.name == "Animatable") {
+                isAnimatable = true;
+            } else {
+                error = std::format("{}: unknown attribute '{}' on '{}'", path->string(), attribute.name, id);
+                return false;
+            }
+        }
+
+        const std::string label = camelCaseToLabel(shaderField.name);
+        const bool isInt = shaderField.type == ShaderFieldType::Int || shaderField.type == ShaderFieldType::UInt;
+        const uint32_t componentCount = shaderField.componentCount;
+        if (componentCount < 1 || componentCount > 4 ||
+            (shaderField.type == ShaderFieldType::Bool && componentCount > 1)) {
+            error = std::format("{}: unsupported type for '{}'", path->string(), id);
+            return false;
+        }
+
+        if (shaderField.type == ShaderFieldType::Bool) {
+            fields.push_back(Field::make<bool>(id, label, shaderField.defaultValue[0] != 0));
+        } else {
+            static constexpr FieldType floatTypes[] = {FieldType::Float, FieldType::Vec2, FieldType::Vec3,
+                                                       FieldType::Vec4};
+            static constexpr FieldType intTypes[] = {FieldType::Int, FieldType::IVec2, FieldType::IVec3,
+                                                     FieldType::IVec4};
+            std::vector<float> values;
+            for (const uint32_t word : shaderField.defaultValue)
+                values.push_back(isInt ? static_cast<float>(std::bit_cast<int32_t>(word)) : std::bit_cast<float>(word));
+            fields.push_back(
+                Field::makeNumeric((isInt ? intTypes : floatTypes)[componentCount - 1], id, label, values, meta));
+        }
+        fields.back().setAnimatable(isAnimatable);
+    }
+    return true;
+}
+
+bool ShaderPlugin::reflect(std::vector<Field>& fields) {
+    std::vector<ShaderStruct> structs;
+    try {
+        structs = Core::getEngine().getShaderStructs(path->string(), kind->interfaceName);
+    } catch (const std::exception& exception) {
+        error = exception.what();
+        return false;
+    }
+
+    if (structs.size() != 1) {
+        error = std::format("{}: expected one struct implementing {}, found {}", path->string(), kind->interfaceName,
+                            structs.size());
+        return false;
+    }
+
+    const ShaderStruct& script = structs[0];
+    if (!appendFields(script.fields, "", fields)) return false;
+
+    for (const ShaderAttribute& attribute : script.attributes)
+        if (attribute.name == "PassCount" && attribute.arguments.size() == 1)
+            passCount = std::max(1, static_cast<int>(attribute.arguments[0]));
+
+    structName = script.name;
+    source = Resources::read(*path).value_or("");
+    return true;
 }
 
 void ShaderPlugin::load(bool migrate) {
-    manglePrefix = GlslMangler::makePrefix(type, slot);
-
     error.clear();
-    ShaderScript::ParseResult script = ShaderScript::parse(*path, type, version);
-    if (!script.ok) {
-        error = script.error;
+    source.clear();
+    structName.clear();
+    passCount = 1;
+
+    std::vector<Field> fields;
+    if (!reflect(fields)) {
         Log::error("ShaderPlugin", error);
         return;
     }
-    passCount = script.passCount;
-
-    std::unordered_map<std::string, std::string> seedGlobals;
-    for (const Field& field : script.fields)
-        seedGlobals[field.getId().filename().string()] = GlslMangler::mangleName(
-            manglePrefix, field.getId().parent_path().string(), field.getId().filename().string());
-
-    GlslMangler::MangleResult mangled =
-        GlslMangler::mangle(script.body, manglePrefix, seedGlobals, script.bodyLineMarkers);
-    if (!mangled.ok) {
-        error = std::format("{}: {}", path->string(), mangled.error);
-        Log::error("ShaderPlugin", error);
-        return;
-    }
-    declarations = std::move(mangled.declarations);
-    statements = std::move(mangled.body);
 
     ecs::ComponentType::Builder builder = ecs::ComponentType::builder(path->string());
-    for (Field& field : script.fields) builder.field(field);
+    for (Field& field : fields) builder.field(field);
     schema = builder.buildDetached();
 
     ecs::Component newParams(schema);
@@ -80,17 +152,18 @@ void ShaderPlugin::load(bool migrate) {
     params = std::move(newParams);
 
     Core::requestGraphRebuild();
-    if (type != CompositingTable::kType) Core::markRenderDirty();
+    if (kind != &ScriptTable::kCompositing) Core::markRenderDirty();
 }
 
-bool ShaderPlugin::parse(const std::filesystem::path& newPath, const std::string& newType, int newVersion,
-                         int newSlot) {
+bool ShaderPlugin::parse(const std::filesystem::path& newPath, const ScriptKind& newKind) {
     if (path && newPath == *path) return error.empty();
 
+    static std::unordered_map<std::filesystem::path, int> slots;
+
     path = newPath;
-    type = newType;
-    version = newVersion;
-    slot = newSlot;
+    kind = &newKind;
+    slot = static_cast<int>(kind->builtins.size()) +
+           slots.try_emplace(newPath, static_cast<int>(slots.size())).first->second;
 
     load(false);
     if (watchId) Core::getFileWatcher().unwatch(*watchId);
@@ -104,31 +177,19 @@ std::vector<float> ShaderPlugin::packValues() const {
         field.dispatch([&](auto v) {
             using V = std::decay_t<decltype(v)>;
             if constexpr (std::is_same_v<V, bool>)
-                values.push_back(v ? 1.0f : 0.0f);
+                values.push_back(std::bit_cast<float>(v ? 1 : 0));
             else if constexpr (std::is_same_v<V, float>)
                 values.push_back(v);
             else if constexpr (std::is_same_v<V, int>)
-                values.push_back(static_cast<float>(v));
+                values.push_back(std::bit_cast<float>(v));
             else
-                for (int i = 0; i < v.length(); i++) values.push_back(static_cast<float>(v[i]));
+                for (int i = 0; i < v.length(); i++) {
+                    if constexpr (std::is_integral_v<std::decay_t<decltype(v[i])>>)
+                        values.push_back(std::bit_cast<float>(static_cast<int>(v[i])));
+                    else
+                        values.push_back(static_cast<float>(v[i]));
+                }
         });
     }
     return values;
-}
-
-std::vector<ShaderPlugin::PluginParam> ShaderPlugin::getParameters() const {
-    std::vector<PluginParam> result;
-    for (const Field& field : params.getFields()) {
-        PluginParam p;
-        p.field = &field;
-        p.mangled = GlslMangler::mangleName(manglePrefix, field.getId().parent_path().string(),
-                                            field.getId().filename().string());
-        const GlslTypeInfo& typeInfo = *ShaderScript::findGlslType(field.getType());
-        p.glslType = typeInfo.name.c_str();
-        p.components = typeInfo.components;
-        p.isInt = typeInfo.isInt;
-        p.isBool = typeInfo.isBool;
-        result.push_back(p);
-    }
-    return result;
 }

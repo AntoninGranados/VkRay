@@ -5,8 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-static constexpr int kMaterialPayloadSize = 12;
-
 struct GpuMaterial {
     int type;
     uint32_t base;

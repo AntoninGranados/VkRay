@@ -20,7 +20,7 @@ inline const ComponentType Environment = ComponentType::builder("environment")
     .build();
 
 inline const ComponentType SkyPlugin = ComponentType::builder("programmable_sky")
-    .description("Programmable custom sky, defined by a GLSL shader-definition file.")
+    .description("Programmable custom sky, defined by a Slang script implementing ISky.")
     .icon(ICON_FA_CODE)
     .group("environment")
     .needs("environment")

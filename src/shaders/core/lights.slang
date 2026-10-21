@@ -1,6 +1,7 @@
 import "scene.slang";
 import "global.slang";
 import "random/utils.slang";
+import "materials/materials.slang";
 
 ByteAddressBuffer lightBuffer;
 
@@ -71,8 +72,7 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
     Hit shadowHit = intersection(Ray(shadowOrigin, light.wi), false, dist - EPS, shadowStats);
     if (foundIntersection(shadowHit) &&
         !(shadowHit.object.id == lightObj.id && shadowHit.object.type == lightObj.type)) {
-        Material shadowMat = getMaterial(shadowHit.object);
-        if (shadowMat.type == mat_Volume || isTransmissive(unpackMaterial(shadowMat))) {
+        if (makeMaterial(getMaterial(shadowHit.object)).isMediumBoundary()) {
             light.skip = true;
         }
         light.pdf = -1.0;
@@ -80,7 +80,6 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
     }
 
     light.pdf = lightPDF(lightId, dist, surfaceSample.normal, light.wi);
-    ResolvedMaterial lightMat = unpackMaterial(getMaterial(lightObj));
-    light.Le = lightMat.albedo * lightMat.emissiveEmissionStrength;
+    light.Le = loadParams<EmissiveBsdf>(getMaterial(lightObj).base).properties().emission;
     return light;
 }

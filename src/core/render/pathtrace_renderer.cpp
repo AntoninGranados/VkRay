@@ -10,7 +10,7 @@
 #include "core/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/fields/parameters.hpp"
-#include "core/render/compositing_table.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/gpu_structs.hpp"
 
 RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
@@ -53,8 +53,11 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.setGroup(groupHandle);
     const std::string pathtracingShader = "builtin:/shaders/core/pathtracing.slang";
     const ShaderDefines pathtracingDefines = {{"RANDOM_BLUE_NOISE", "1"}, {"CAMERA_LENS_APERTURE", "1"}};
+    const ShaderConformances pathtracingConformances =
+        ScriptTable::conformances({&ScriptTable::kMaterial, &ScriptTable::kSky, &ScriptTable::kLens});
     const auto pathtracingLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(pathtracingShader, name, pathtracingDefines);
+        return Core::getEngine().getShaderLocation(pathtracingShader, name, pathtracingDefines,
+                                                   pathtracingConformances);
     };
     pathtrace.readBuffer(pathtracingLocation("ubo"), pathtracingUBOHandle, BufferUsageType::Uniform);
     pathtrace.readImage(pathtracingLocation("prevTex"), previousPathtracingImageHandle, ImageUsageType::Sampled);
@@ -75,11 +78,11 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     pathtrace.readBuffer(pathtracingLocation("lightBuffer"), resources.sceneHandles.light, BufferUsageType::Storage);
     pathtrace.readImage(pathtracingLocation("lensSampler"), lensImageHandle, ImageUsageType::Sampled);
     pathtrace.readBuffer(pathtracingLocation("blueNoiseBuffer"), blueNoiseBufferHandle, BufferUsageType::Storage);
-    pathtrace.setPipeline(pathtracingShader, pathtracingDefines);
+    pathtrace.setPipeline(pathtracingShader, pathtracingDefines, pathtracingConformances);
     pathtracingTimestamp = pathtrace.setTimestamp();
 
     // Compositing pass
-    const size_t passCount = std::max<size_t>(1, CompositingTable::totalDispatchCount(scene.getRegistry()));
+    const size_t passCount = std::max<size_t>(1, ScriptTable::compositingDispatchCount(scene.getRegistry()));
 
     for (size_t i = 0; i < compositingPingHandles.size(); i++) {
         compositingPingHandles[i] = builder.createImage(
@@ -92,8 +95,9 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
     compositingPassHandles.clear();
     compositingPassUBOHandles.clear();
     const std::string compositingShader = "builtin:/shaders/core/compositing.slang";
+    const ShaderConformances compositingConformances = ScriptTable::conformances({&ScriptTable::kCompositing});
     const auto compositingLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(compositingShader, name);
+        return Core::getEngine().getShaderLocation(compositingShader, name, {}, compositingConformances);
     };
     for (size_t i = 0; i < passCount; i++) {
         BufferHandle passUboHandle =
@@ -115,7 +119,7 @@ RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExte
         pass.readBuffer(compositingLocation("pluginParams"), resources.sceneHandles.pluginParams,
                         BufferUsageType::Storage);
         pass.readImage(compositingLocation("originalTexture"), currentPathtracingImageHandle, ImageUsageType::Sampled);
-        pass.setPipeline(compositingShader);
+        pass.setPipeline(compositingShader, {}, compositingConformances);
         if (i == 0) compositingTimestamp = pass.setTimestamp();
     }
 
@@ -158,6 +162,7 @@ void PathtraceRenderer::render() {
     pathtracerUBO.screen.size = {static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)};
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
     pathtracerUBO.camera = buildCameraUBO(registry, camera, pathtracerUBO.screen.aspect);
+    pathtracerUBO.render.skySlot = registry.ctx().get<SkyPluginInfo>().slot;
     pathtracerUBO.render.skyParamsBase = registry.ctx().get<SkyPluginInfo>().paramsBase;
     const CameraMediaInfo& cameraMedia = registry.ctx().get<CameraMediaInfo>();
     pathtracerUBO.render.cameraMediumCount = cameraMedia.count;

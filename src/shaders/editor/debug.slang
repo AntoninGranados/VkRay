@@ -1,5 +1,4 @@
 import "../common.slang";
-import "../generated/material_types.slang";
 
 struct DebugUBO {
     int debugView;
@@ -41,7 +40,6 @@ float3 visualizeMatType(uint t) {
     if (t == mat_Glossy)       return float3(0.2, 0.5, 0.9);
     if (t == mat_Dielectric)   return float3(0.2, 0.9, 0.8);
     if (t == mat_Volume)       return float3(0.7, 0.2, 0.9);
-    if (t == mat_Programmable) return float3(0.9, 0.2, 0.7);
     return float3(0.0);
 }
 

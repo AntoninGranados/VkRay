@@ -11,11 +11,11 @@ public:
     Application(int argc, char* argv[]);
     ~Application();
 
-    void run();
+    int run();
 
 private:
     std::unique_ptr<Platform> platform;
-    std::function<void()> runFn;
+    std::function<int()> runFn;
 
     void initEditorMode();
     void initOfflineMode(const std::string& jobFile);

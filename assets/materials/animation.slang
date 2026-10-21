@@ -1,11 +1,4 @@
-#material: version(1)
-
-#param float time = 0.0: min(0), max(1), animatable
-#param float scale = 0.2: min(0)
-#param float3 segmentColor = float3(1): color
-#param float segmentThickness = 0.05: min(0), max(0.1)
-#param float segmentLength = 0.45: min(0), max(0.5)
-#param float segmentHead = 0.1: min(0), max(0.5)
+import "script.slang";
 
 // #define PERLIN_ANIMATION
 #define SIMPLEX_ANIMATION
@@ -31,32 +24,8 @@ float distToSegment(float2 p, float2 P1, float2 P2) {
     return length(p - proj);
 }
 
-bool drawSegment(in float2 p, in float2 P1, in float2 P2, in float t, out float3 color) {
-    float dist = distToSegment(p, P1, P2);
-
-    float2 dir = normalize(P2 - P1);
-    float2 tan = float2(dir.y, -dir.x);
-
-    dist = min(dist, distToSegment(p, P2, P2 - dir*segmentHead*t + tan*segmentHead*0.6*t));
-    dist = min(dist, distToSegment(p, P2, P2 - dir*segmentHead*t - tan*segmentHead*0.6*t));
-
-    float th = segmentThickness * t;
-    if (dist < th) {
-        if (dist < 0.6 * th) color = segmentColor;
-        else color = float3(0);
-        return true;
-    }
-    return false;
-}
-
 float map(float t, float mini, float maxi, float newMini, float newMaxi) {
     return (t - mini) / (maxi - mini) * (newMaxi - newMini) + newMini;
-}
-
-float T(in int sectionIdx) {
-    float t0 = float(sectionIdx) / float(ANIMATION_SECTION_COUNT);
-    float t1 = float(sectionIdx + 1) / float(ANIMATION_SECTION_COUNT);
-    return smoothstep(0, 1, map(time, t0, t1, 0, 1));
 }
 
 struct PerlinAnimationState {
@@ -168,106 +137,140 @@ SimplexAnimationState computeSimplexState(in float2 p) {
 }
 
 
+struct Animation : IMaterial {
+    [Range(0, 1)] [Animatable] float time = 0.0;
+    [Min(0)] float scale = 0.2;
+    [Color] float3 segmentColor = float3(1);
+    [Range(0, 0.1)] float segmentThickness = 0.05;
+    [Range(0, 0.5)] float segmentLength = 0.45;
+    [Range(0, 0.5)] float segmentHead = 0.1;
+
+    bool drawSegment(in float2 p, in float2 P1, in float2 P2, in float t, out float3 color) {
+        float dist = distToSegment(p, P1, P2);
+
+        float2 dir = normalize(P2 - P1);
+        float2 tan = float2(dir.y, -dir.x);
+
+        dist = min(dist, distToSegment(p, P2, P2 - dir*segmentHead*t + tan*segmentHead*0.6*t));
+        dist = min(dist, distToSegment(p, P2, P2 - dir*segmentHead*t - tan*segmentHead*0.6*t));
+
+        float th = segmentThickness * t;
+        if (dist < th) {
+            if (dist < 0.6 * th) color = segmentColor;
+            else color = float3(0);
+            return true;
+        }
+        return false;
+    }
+
+    float T(in int sectionIdx) {
+        float t0 = float(sectionIdx) / float(ANIMATION_SECTION_COUNT);
+        float t1 = float(sectionIdx + 1) / float(ANIMATION_SECTION_COUNT);
+        return smoothstep(0, 1, map(time, t0, t1, 0, 1));
+    }
+
 #ifdef PERLIN_ANIMATION
-ResolvedMaterial anim(in int sectionIdx, in float2 p) {
-    float t = T(sectionIdx);
+    IBsdf anim(in int sectionIdx, in float2 p) {
+        float t = T(sectionIdx);
 
-    if (sectionIdx == 0) {
-        float2 local = frac(lerp(p * scale, p, t));
-        return Diffuse(float3(local, 0.0));
+        if (sectionIdx == 0) {
+            float2 local = frac(lerp(p * scale, p, t));
+            return Diffuse(float3(local, 0.0));
+        }
+
+        PerlinAnimationState state = computePerlinState(p);
+
+        float segmentL = 1.0;
+        float segmentW = 1.0;
+        if (sectionIdx == 1) {
+            segmentL = smoothstep(0.0, 0.2, t);
+            segmentW = pow(segmentL, 0.2);
+        } else if (sectionIdx == 4) {
+            segmentL = 1.0 - smoothstep(0.0, 0.2, t);
+            segmentW = pow(segmentL, 0.2);
+        }
+
+        float2 p0 = floor(p);
+        float2 P1 = p0 + state.nearestCell;
+        float2 P2 = P1 + state.localGradient * segmentLength * segmentL;
+
+        float3 color;
+        if (!drawSegment(p, P1, P2, segmentW, color)) {
+            float3 base = float3(frac(p), 0.0);
+            float3 g = viridis(state.g);
+            float3 r = viridis(state.r);
+
+            if (sectionIdx == 1)
+                color = base;
+            else if (sectionIdx == 2)
+                color = lerp(base, g, t);
+            else if (sectionIdx == 3)
+                color = lerp(g, r, t);
+            else // sectionIdx == 4
+                color = r;
+        }
+
+        return Diffuse(color);
     }
-
-    PerlinAnimationState state = computePerlinState(p);
-
-    float segmentL = 1.0;
-    float segmentW = 1.0;
-    if (sectionIdx == 1) {
-        segmentL = smoothstep(0.0, 0.2, t);
-        segmentW = pow(segmentL, 0.2);
-    } else if (sectionIdx == 4) {
-        segmentL = 1.0 - smoothstep(0.0, 0.2, t);
-        segmentW = pow(segmentL, 0.2);
-    }
-
-    float2 p0 = floor(p);
-    float2 P1 = p0 + state.nearestCell;
-    float2 P2 = P1 + state.localGradient * segmentLength * segmentL;
-
-    float3 color;
-    if (!drawSegment(p, P1, P2, segmentW, color)) {
-        float3 base = float3(frac(p), 0.0);
-        float3 g = viridis(state.g);
-        float3 r = viridis(state.r);
-
-        if (sectionIdx == 1)
-            color = base;
-        else if (sectionIdx == 2)
-            color = lerp(base, g, t);
-        else if (sectionIdx == 3)
-            color = lerp(g, r, t);
-        else // sectionIdx == 4
-            color = r;
-    }
-
-    return Diffuse(color);
-}
 #endif
 
 #ifdef SIMPLEX_ANIMATION
-ResolvedMaterial anim(in int sectionIdx, in float2 p) {
-    float t = T(sectionIdx);
+    IBsdf anim(in int sectionIdx, in float2 p) {
+        float t = T(sectionIdx);
 
-    SimplexAnimationState state = computeSimplexState(p);
+        SimplexAnimationState state = computeSimplexState(p);
 
-    if (sectionIdx == 0) {
-        float2 local = frac(lerp(p * scale, p, t));
-        return Diffuse(float3(local, 0.0));
-    } else if (sectionIdx == 1) {
-        float2 local = frac(p + lerp(float2(0), state.skewOffset, t));
-        return Diffuse(float3(local, 0.0));
+        if (sectionIdx == 0) {
+            float2 local = frac(lerp(p * scale, p, t));
+            return Diffuse(float3(local, 0.0));
+        } else if (sectionIdx == 1) {
+            float2 local = frac(p + lerp(float2(0), state.skewOffset, t));
+            return Diffuse(float3(local, 0.0));
+        }
+
+        float segmentL = 1.0;
+        float segmentW = 1.0;
+        if (sectionIdx == 2) {
+            segmentL = smoothstep(0.0, 0.2, t);
+            segmentW = pow(segmentL, 0.2);
+        } else if (sectionIdx == 5) {
+            segmentL = 1.0 - smoothstep(0.0, 0.2, t);
+            segmentW = pow(segmentL, 0.2);
+        }
+
+        int2 p0 = int2(floor(p));
+        float2 P1 = state.nearestPoint;
+        float2 P2 = P1 + state.localGradient * segmentLength * segmentL;
+
+        float3 color;
+        if (!drawSegment(p, P1, P2, segmentW, color)) {
+            float3 base = float3(frac(p + state.skewOffset), 0.0);
+            float3 g = viridis(state.g);
+            float3 r = viridis(state.r);
+
+            if (sectionIdx == 2)
+                color = base;
+            else if (sectionIdx == 3)
+                color = lerp(base, g, t);
+            else if (sectionIdx == 4)
+                color = lerp(g, r, t);
+            else // sectionIdx == 5
+                color = r;
+        }
+
+        return Diffuse(color);
     }
-
-    float segmentL = 1.0;
-    float segmentW = 1.0;
-    if (sectionIdx == 2) {
-        segmentL = smoothstep(0.0, 0.2, t);
-        segmentW = pow(segmentL, 0.2);
-    } else if (sectionIdx == 5) {
-        segmentL = 1.0 - smoothstep(0.0, 0.2, t);
-        segmentW = pow(segmentL, 0.2);
-    }
-
-    int2 p0 = int2(floor(p));
-    float2 P1 = state.nearestPoint;
-    float2 P2 = P1 + state.localGradient * segmentLength * segmentL;
-
-    float3 color;
-    if (!drawSegment(p, P1, P2, segmentW, color)) {
-        float3 base = float3(frac(p + state.skewOffset), 0.0);
-        float3 g = viridis(state.g);
-        float3 r = viridis(state.r);
-
-        if (sectionIdx == 2)
-            color = base;
-        else if (sectionIdx == 3)
-            color = lerp(base, g, t);
-        else if (sectionIdx == 4)
-            color = lerp(g, r, t);
-        else // sectionIdx == 5
-            color = r;
-    }
-
-    return Diffuse(color);
-}
 #endif
 
-void main() {
-    float2 p = uv / scale;
-    for (int i = 0; i < ANIMATION_SECTION_COUNT; i++) {
-        float tEnd = float(i + 1) / float(ANIMATION_SECTION_COUNT);
-        if (time <= tEnd) {
-            mat = anim(i, p);
-            break;
+    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+        float2 uv = hit.uv;
+        float2 p = uv / scale;
+        for (int i = 0; i < ANIMATION_SECTION_COUNT; i++) {
+            float tEnd = float(i + 1) / float(ANIMATION_SECTION_COUNT);
+            if (time <= tEnd) {
+                return anim(i, p);
+            }
         }
+        return Diffuse(float3(0.0));
     }
 }

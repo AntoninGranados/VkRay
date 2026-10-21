@@ -13,10 +13,7 @@
 #include "core/ecs/components/material.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
-#include "core/render/camera_lens_table.hpp"
-#include "core/render/compositing_table.hpp"
-#include "core/render/material_table.hpp"
-#include "core/render/sky_table.hpp"
+#include "core/render/script_table.hpp"
 #include "scene.hpp"
 #include "utils/log.hpp"
 
@@ -24,12 +21,10 @@ using json = nlohmann::ordered_json;
 
 namespace {
 
-void reparsePlugins(ecs::Registry& registry, const ecs::ComponentType& type, const std::string& tableType,
-                    int tableVersion, int (*slotFor)(const std::filesystem::path&)) {
+void reparsePlugins(ecs::Registry& registry, const ecs::ComponentType& type, const ScriptKind& kind) {
     for (const ecs::Entity entity : registry.storage(type).entities()) {
         ecs::Component& pluginComp = registry.get(entity, type);
-        const std::filesystem::path path = pluginComp.get<std::filesystem::path>("path");
-        pluginComp.payload<ShaderPlugin>("plugin").parse(path, tableType, tableVersion, slotFor(path));
+        pluginComp.payload<ShaderPlugin>("plugin").parse(pluginComp.get<std::filesystem::path>("path"), kind);
     }
 }
 
@@ -45,8 +40,7 @@ void parseCompositingPlugins(ecs::Registry& registry, const std::vector<Deferred
     for (const DeferredCompositingParams& d : deferred) {
         ecs::Component& comp = registry.get(d.entity, ecs::Compositing);
         ecs::CompositingPassEntry& pass = comp.payload<ecs::CompositingPasses>("passes").passes[d.passIndex];
-        pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion,
-                           CompositingTable::slotFor(pass.path));
+        pass.plugin->parse(pass.path, ScriptTable::kCompositing);
 
         std::unordered_set<std::string> knownIds;
         for (Field& f : pass.plugin->getComponent().getFields()) {
@@ -113,11 +107,9 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
 
-    reparsePlugins(spawn.registry, ecs::MaterialPlugin, MaterialTable::kType, MaterialTable::kVersion,
-                   MaterialTable::slotFor);
-    reparsePlugins(spawn.registry, ecs::CameraLensPlugin, CameraLensTable::kType, CameraLensTable::kVersion,
-                   CameraLensTable::slotFor);
-    reparsePlugins(spawn.registry, ecs::SkyPlugin, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor);
+    reparsePlugins(spawn.registry, ecs::MaterialPlugin, ScriptTable::kMaterial);
+    reparsePlugins(spawn.registry, ecs::CameraLensPlugin, ScriptTable::kLens);
+    reparsePlugins(spawn.registry, ecs::SkyPlugin, ScriptTable::kSky);
     applyMeshSimplification(spawn.registry, scene);
     parseCompositingPlugins(spawn.registry, spawn.deferredCompositingParams);
     applyDeferredPluginParams(spawn.registry, spawn.animStore, spawn.deferredPluginParams);

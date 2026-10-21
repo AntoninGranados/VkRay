@@ -1,13 +1,21 @@
 #pragma once
 
 #include <filesystem>
-#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/component_type.hpp"
+
+struct ShaderConformance;
+struct ShaderField;
+
+struct ScriptKind {
+    std::string interfaceName;
+    std::string wrapperName;
+    std::vector<std::string> builtins;
+};
 
 class ShaderPlugin {
 public:
@@ -18,52 +26,38 @@ public:
     ShaderPlugin(ShaderPlugin&&) = delete;
     ShaderPlugin& operator=(ShaderPlugin&&) = delete;
 
-    bool parse(const std::filesystem::path& path, const std::string& type, int version, int slot);
+    bool parse(const std::filesystem::path& path, const ScriptKind& kind);
 
-    static std::vector<ShaderPlugin*>& registry();
-
-    static void registerDispatchGenerator(std::function<void()> generate);
-    static void regenerateAllDispatch();
+    static void appendConformances(const ScriptKind& kind, std::vector<ShaderConformance>& conformances);
 
     const std::string& getError() const { return error; }
     ecs::Component& getComponent() { return params; }
     const ecs::Component& getComponent() const { return params; }
 
-    struct PluginParam {
-        const Field* field;
-        std::string mangled;
-        const char* glslType;
-        int components;
-        bool isInt;
-        bool isBool;
-    };
-    std::vector<PluginParam> getParameters() const;
-
     std::vector<float> packValues() const;
 
-    const std::string& getBody() const { return statements; }
-    const std::string& getDeclarations() const { return declarations; }
-
-    const std::string& getType() const { return type; }
-    const std::string& getPrefix() const { return manglePrefix; }
+    const std::string& getSource() const { return source; }
     int getSlot() const { return slot; }
     int getPassCount() const { return passCount; }
 
 private:
+    static std::vector<ShaderPlugin*>& registry();
+
     void load(bool migrate);
+    bool reflect(std::vector<Field>& fields);
+    bool appendFields(const std::vector<ShaderField>& shaderFields, const std::string& group,
+                      std::vector<Field>& fields);
 
     ecs::ComponentType schema;
     ecs::Component params{schema};
 
     std::optional<std::filesystem::path> path;
-    std::string type;
-    int version = 0;
+    const ScriptKind* kind = nullptr;
     int slot = -1;
     int passCount = 1;
     std::optional<size_t> watchId;
 
     std::string error;
-    std::string manglePrefix;
-    std::string declarations;
-    std::string statements;
+    std::string source;
+    std::string structName;
 };

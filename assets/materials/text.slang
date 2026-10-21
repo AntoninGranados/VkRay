@@ -1,7 +1,4 @@
-#material: version(1)
-
-#param int character = 0: min(0)
-#param int padding = 0: min(0), max(4)
+import "script.slang";
 
 #define CHAR_WIDTH 5
 #define CHAR_HEIGHT CHAR_WIDTH
@@ -56,27 +53,32 @@ static const int CHARACTERS[38] = {
     CHAR_SPACE, CHAR_EMPTY
 };
 
-void main() {
-    float2 local = frac(uv);
+struct Text : IMaterial {
+    [Min(0)] int character = 0;
+    [Range(0, 4)] int padding = 0;
 
-    int2 idx = int2(floor(uv));
-    int2 px;
-    px.x = int(floor(local.x * (CHAR_WIDTH + padding * 2)));
-    px.y = int(floor(local.y * (CHAR_HEIGHT + padding * 2)));
+    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+        float2 uv = hit.uv;
+        float2 local = frac(uv);
 
-    float3 albedo = float3(1);
+        int2 idx = int2(floor(uv));
+        int2 px;
+        px.x = int(floor(local.x * (CHAR_WIDTH + padding * 2)));
+        px.y = int(floor(local.y * (CHAR_HEIGHT + padding * 2)));
 
-    if (
-        px.x >= padding && px.x <= CHAR_WIDTH + padding - 1 &&
-        px.y >= padding && px.y <= CHAR_HEIGHT + padding - 1
-    ){
-        uint x = CHAR_WIDTH - 1 - uint(px.x - padding);
-        uint y = uint(px.y - padding);
-        uint loc = uint(pow(2, y*5 + x));
-        uint val = (CHARACTERS[character] / loc) % 2;
-        if (val == 1u) albedo *= 0.1;
+        float3 albedo = float3(1);
+
+        if (
+            px.x >= padding && px.x <= CHAR_WIDTH + padding - 1 &&
+            px.y >= padding && px.y <= CHAR_HEIGHT + padding - 1
+        ){
+            uint x = CHAR_WIDTH - 1 - uint(px.x - padding);
+            uint y = uint(px.y - padding);
+            uint loc = uint(pow(2, y*5 + x));
+            uint val = (CHARACTERS[character] / loc) % 2;
+            if (val == 1u) albedo *= 0.1;
+        }
+
+        return Diffuse(albedo);
     }
-
-    mat = Diffuse(albedo);
 }
-

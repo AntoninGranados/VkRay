@@ -1,8 +1,4 @@
-#compositing: version(1), pass_count(4)
-
-#param float sigma1 = 2.0: min(0)
-#param float sigma2 = 3.0: min(0)
-#param float threshold = 0.5: min(0)
+import "compositing_script.slang";
 
 float2 blurAlongDir(int2 pixelCoord, int2 texSize, float sigma1, float sigma2, int direction) {
     if (sigma1 < 1e-3 && sigma2 < 1e-3) return sampleSource(pixelCoord, texSize).rg;
@@ -35,11 +31,20 @@ float2 blurAlongDir(int2 pixelCoord, int2 texSize, float sigma1, float sigma2, i
     return total / totalW;
 }
 
-void main() {
-    switch (passId) {
-        case 0: return float4(float3(luma(sampleOriginal(pixelCoord, texSize).rgb)), 1);
-        case 1:
-        case 2: return float4(blurAlongDir(pixelCoord, texSize, sigma1, sigma2, passId-1), 0, 1);
-        case 3: return float4(float3(abs(result.g - result.r)), 1); // float3(abs(result.g - result.r) > threshold ? 1 : 0);
+[PassCount(4)]
+struct Dog : ICompositingPass {
+    [Min(0)] float sigma1 = 2.0;
+    [Min(0)] float sigma2 = 3.0;
+    [Min(0)] float threshold = 0.5;
+
+    float4 evaluate(int2 pixelCoord, int2 texSize, int passId) {
+        float4 result = sampleSource(pixelCoord, texSize);
+        switch (passId) {
+            case 0: return float4(float3(luma(sampleOriginal(pixelCoord, texSize).rgb)), 1);
+            case 1:
+            case 2: return float4(blurAlongDir(pixelCoord, texSize, sigma1, sigma2, passId-1), 0, 1);
+            case 3: return float4(float3(abs(result.g - result.r)), 1); // float3(abs(result.g - result.r) > threshold ? 1 : 0);
+        }
+        return result;
     }
 }

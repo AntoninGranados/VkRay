@@ -1,16 +1,17 @@
 // --------------- INPUTS ---------------
-// float3 pos
-// float2 uv
-// float3 normal
+// Hit hit (p, uv, normal, vertexColor)
 // float3 wo
 // RngState rng
 
 // --------------- OUTPUTS ---------------
-// float3 new_normal = normal
-// Material mat
+// hit.normal
+// IBsdf (return value)
 
-#material: version(1)
+import "script.slang";
 
-void main() {
-    mat = Diffuse(clamp(float3(uv.x, uv.y, 0.0), float3(0), float3(1)));
+struct Uv : IMaterial {
+    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+        float2 uv = hit.uv;
+        return Diffuse(clamp(float3(uv.x, uv.y, 0.0), float3(0), float3(1)));
+    }
 }

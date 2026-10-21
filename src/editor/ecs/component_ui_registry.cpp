@@ -8,10 +8,7 @@
 
 #include "core/core.hpp"
 #include "core/ecs/systems/mesh_system.hpp"
-#include "core/render/camera_lens_table.hpp"
-#include "core/render/compositing_table.hpp"
-#include "core/render/material_table.hpp"
-#include "core/render/sky_table.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/scene.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
@@ -27,16 +24,14 @@ static bool drawPluginErrorAndFields(ShaderPlugin& plugin, const std::string& id
     return ui::drawGroupedFields(plugin.getComponent().getFields(), idSuffix);
 }
 
-static bool drawShaderPluginField(Component& c, const std::string& type, int version,
-                                  int (*slotFor)(const std::filesystem::path&)) {
+static bool drawShaderPluginField(Component& c, const ScriptKind& kind) {
     const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
     if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
     bool update = ui::drawField(c.getField("path"), "##path");
 
     ShaderPlugin& plugin = c.payload<ShaderPlugin>("plugin");
-    const std::filesystem::path path = c.get<std::filesystem::path>("path");
-    plugin.parse(path, type, version, slotFor(path));
+    plugin.parse(c.get<std::filesystem::path>("path"), kind);
 
     update |= drawPluginErrorAndFields(plugin, std::format("##{}", header));
     return update;
@@ -159,9 +154,8 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::TiltShiftLens);
     ui_reg.add(ecs::GeometricAperture);
     ui_reg.add(ecs::ImageAperture);
-    ui_reg.addCustom(ecs::CameraLensPlugin, [](Component& c, Registry&, Entity) {
-        return drawShaderPluginField(c, CameraLensTable::kType, CameraLensTable::kVersion, CameraLensTable::slotFor);
-    });
+    ui_reg.addCustom(ecs::CameraLensPlugin,
+                     [](Component& c, Registry&, Entity) { return drawShaderPluginField(c, ScriptTable::kLens); });
 
     ui_reg.add(ecs::Material, [](Component&, Registry&, Entity e) {
         Editor::getMaterialPreview().drawPreview(e);
@@ -181,9 +175,8 @@ void ComponentUiRegistry::init() {
     ui_reg.add(ecs::Dielectric);
     ui_reg.add(ecs::Volume);
     ui_reg.add(ecs::Principled);
-    ui_reg.addCustom(ecs::MaterialPlugin, [](Component& c, Registry&, Entity) {
-        return drawShaderPluginField(c, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor);
-    });
+    ui_reg.addCustom(ecs::MaterialPlugin,
+                     [](Component& c, Registry&, Entity) { return drawShaderPluginField(c, ScriptTable::kMaterial); });
 
     ui_reg.add(ecs::Environment);
     ui_reg.add(ecs::Physics, [](Component&, Registry&, Entity) {
@@ -198,9 +191,8 @@ void ComponentUiRegistry::init() {
         }
         return false;
     });
-    ui_reg.addCustom(ecs::SkyPlugin, [](Component& c, Registry&, Entity) {
-        return drawShaderPluginField(c, SkyTable::kType, SkyTable::kVersion, SkyTable::slotFor);
-    });
+    ui_reg.addCustom(ecs::SkyPlugin,
+                     [](Component& c, Registry&, Entity) { return drawShaderPluginField(c, ScriptTable::kSky); });
 
     ui_reg.addCustom(ecs::Compositing, [](Component& c, Registry&, Entity) {
         const std::string header = c.getType().getIcon() + " " + c.getType().getLabel();
@@ -271,8 +263,7 @@ void ComponentUiRegistry::init() {
             if (ImGui::Button(ICON_FA_FOLDER_OPEN "##BrowseCompositingPassScript")) {
                 if (auto path = ui::openFileDialog({{"Compositing Pass Shader", "slang"}}, "assets/compositing/")) {
                     pass.path = *path;
-                    pass.plugin->parse(pass.path, CompositingTable::kType, CompositingTable::kVersion,
-                                       CompositingTable::slotFor(pass.path));
+                    pass.plugin->parse(pass.path, ScriptTable::kCompositing);
                     update = true;
                 }
             }

@@ -74,7 +74,7 @@ Custom image mask as aperture shape.
 | `path` | path |  |  | no |
 
 ### Programmable Lens
-Programmable custom lens, defined by a GLSL shader-definition file.
+Programmable custom lens, defined by a Slang script implementing ILens.
 
 **Slot:** `lens` · **Needs:** `camera`
 
@@ -97,7 +97,7 @@ Environment marker.
 **Kind** · **Permanent**
 
 ### Programmable Sky
-Programmable custom sky, defined by a GLSL shader-definition file.
+Programmable custom sky, defined by a Slang script implementing ISky.
 
 **Needs:** `environment`
 
@@ -225,7 +225,7 @@ PBR principled BSDF.
 | `priority` | int | 0 | ≥ 0 | no |
 
 ### Programmable
-Programmable custom BSDF, defined by a GLSL shader-definition file.
+Programmable custom BSDF, defined by a Slang script implementing IMaterial.
 
 **Slot:** `bsdf` · **Needs:** `material`
 

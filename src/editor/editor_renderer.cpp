@@ -19,6 +19,7 @@
 #include "core/ecs/components/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/fields/parameters.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/scene.hpp"
 #include "editor.hpp"
 #include "editor/camera_preview.hpp"
@@ -90,8 +91,9 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     displayPassHandle = display.getHandle();
     display.setGroup(editorGroupHandle);
     const std::string displayShader = "builtin:/shaders/editor/display.slang";
+    const ShaderConformances displayConformances = ScriptTable::conformances({&ScriptTable::kLens});
     const auto displayLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(displayShader, name);
+        return Core::getEngine().getShaderLocation(displayShader, name, {}, displayConformances);
     };
     display.readBuffer(displayLocation("ubo"), displayUBOHandle, BufferUsageType::Uniform);
     display.readImage(displayLocation("outputTex"), renderResources.outputImageHandle, ImageUsageType::Sampled);
@@ -110,7 +112,7 @@ void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& ren
     display.readBuffer(displayLocation("scene.objects"), renderResources.sceneHandles.object, BufferUsageType::Storage);
     display.readBuffer(displayLocation("scene.motion"), renderResources.sceneHandles.liveMotion,
                        BufferUsageType::Storage);
-    display.setPipeline(displayShader);
+    display.setPipeline(displayShader, {}, displayConformances);
     displayTimestamp = display.setTimestamp();
 
     // Debug pass — debug view visualization (compute)

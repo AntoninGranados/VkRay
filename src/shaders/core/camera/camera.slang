@@ -2,13 +2,14 @@ import "../scene.slang";
 import "../motion.slang";
 import "../random/utils.slang";
 import "aperture.slang";
-import "../../generated/camera_lens_dispatch.slang";
+import "lens.slang";
 
 Ray getRay(in CameraUBO camera, float2 ndc_pos, inout RngState rng) {
     CameraPose pose = sampleCameraPose(camera.motionOffset);
 
     if (camera.lensSlot >= 0) {
-        LensSample lensSample = dispatchCameraLens(camera, ndc_pos, pose, rng);
+        ILens lens = createDynamicObject<ILens, uint>(uint(camera.lensSlot), uint(camera.lensParamsBase));
+        LensSample lensSample = lens.evaluate(ndc_pos, pose, camera.U, camera.V, camera.thinLens.lensRadius, camera.thinLens.focusDistance, rng);
         return Ray(lensSample.origin, normalize(lensSample.direction));
     }
 

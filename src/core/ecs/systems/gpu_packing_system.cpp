@@ -17,10 +17,7 @@
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
-#include "core/render/camera_lens_table.hpp"
-#include "core/render/compositing_table.hpp"
-#include "core/render/material_table.hpp"
-#include "core/render/sky_table.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/scene/scene.hpp"
@@ -220,31 +217,27 @@ void materialPackingSystem(Registry& registry) {
 
     for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
-        if (!MaterialTable::pack(registry, entity, gpu, pluginParams) && !gpuMaterials.empty())
+        if (!ScriptTable::packMaterial(registry, entity, gpu, pluginParams) && !gpuMaterials.empty())
             gpu = gpuMaterials.front();
         gpuMaterials.push_back(gpu);
     }
 
-    // Slack so unpackMaterial's fixed-size read past the last material's base never goes out of bounds.
-    pluginParams.resize(pluginParams.size() + kMaterialPayloadSize, 0.0f);
-
     LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
     lensInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
     const std::optional<Entity> lensCamera = *registry.ctx().get<std::optional<Entity>*>();
-    lensInfo.slot = lensCamera ? CameraLensTable::pack(registry, *lensCamera, pluginParams) : -1;
+    lensInfo.slot = lensCamera ? ScriptTable::packLens(registry, *lensCamera, pluginParams) : -1;
 
     SkyPluginInfo& skyInfo = registry.ctx().get<SkyPluginInfo>();
-    const size_t skyBase = pluginParams.size();
-    const bool skyActive = SkyTable::pack(registry, resolveEnvironmentEntity(registry), pluginParams);
-    skyInfo.paramsBase = skyActive ? static_cast<int32_t>(skyBase) : -1;
+    skyInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
+    skyInfo.slot = ScriptTable::packSky(registry, resolveEnvironmentEntity(registry), pluginParams);
 
     CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
     compositingInfo.passes.clear();
-    for (CompositingPassEntry& pass : CompositingTable::passes(registry)) {
+    for (CompositingPassEntry& pass : ScriptTable::compositingPasses(registry)) {
         CompositingPassInfo info;
         info.paramsBase = static_cast<int32_t>(pluginParams.size());
-        info.slot = CompositingTable::pack(pass, pluginParams);
-        for (int p = 0; p < std::max(1, pass.plugin->getPassCount()); p++) {
+        info.slot = ScriptTable::packCompositingPass(pass, pluginParams);
+        for (int p = 0; p < pass.plugin->getPassCount(); p++) {
             info.passId = p;
             compositingInfo.passes.push_back(info);
         }

@@ -42,6 +42,18 @@ TEST_CASE("Registry destroyEntity removes the child from the parent's children")
     CHECK(registry.getChildren(parent).empty());
 }
 
+TEST_CASE("Registry destroyEntity destroys the whole subtree") {
+    ecs::Registry registry;
+    ecs::Entity parent = registry.createEntity();
+    ecs::Entity child = registry.createEntity(parent);
+    ecs::Entity grandchild = registry.createEntity(child);
+    registry.destroyEntity(parent);
+
+    CHECK_FALSE(registry.isAlive(child));
+    CHECK_FALSE(registry.isAlive(grandchild));
+    CHECK_FALSE(registry.getParent(grandchild).has_value());
+}
+
 TEST_CASE("Registry component add/has/get/remove round-trips a default field value") {
     ecs::Registry registry;
     ecs::ComponentType type = ecs::ComponentType::builder("registry_test.value").field<int>("value", 7).buildDetached();

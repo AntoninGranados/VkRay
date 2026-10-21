@@ -4,7 +4,7 @@
 
 class Offline {
 public:
-    static void run();
+    static int run();
 
 private:
     Offline() = default;

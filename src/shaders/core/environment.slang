@@ -1,8 +1,26 @@
 import "utils.slang";
-import "../generated/sky_dispatch.slang";
+import "scene.slang";
 
-float3 skyColor(int skyParamsBase, float3 dir) {
-    if (skyParamsBase >= 0)
-        return dispatchSky(skyParamsBase, dir);
-    return float3(0.1);
+[anyValueSize(4)]
+interface ISky {
+    float3 evaluate(float3 dir);
+}
+
+struct ScriptSky<T : ISky> : ISky {
+    uint base;
+
+    float3 evaluate(float3 dir) {
+        return loadParams<T>(base).evaluate(dir);
+    }
+}
+
+struct DefaultSky : ISky {
+    float3 evaluate(float3 dir) {
+        return float3(0.1);
+    }
+}
+
+float3 skyColor(int skySlot, int skyParamsBase, float3 dir) {
+    ISky sky = createDynamicObject<ISky, uint>(uint(skySlot), uint(skyParamsBase));
+    return sky.evaluate(dir);
 }

@@ -116,7 +116,7 @@ void Editor::handleRenderModeCompletion() {
         Core::saveCapture(ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
         Core::getAnimation().stepFixed();
         if (Core::getAnimation().getFrame() == 0) {
-            ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir);
+            ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir, Core::getAnimation().getFps());
             Core::setRenderMode(RenderMode::Preview);
         }
     } else {

@@ -1,6 +1,7 @@
 #include "export_service.hpp"
 
 #include <array>
+#include <cstdlib>
 #include <format>
 
 #include <glm/glm.hpp>
@@ -231,14 +232,16 @@ void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePa
     }
 }
 
-void ExportService::convertFramesToVideo(const std::filesystem::path& path, const std::filesystem::path& framePath) {
+void ExportService::convertFramesToVideo(const std::filesystem::path& path, const std::filesystem::path& framePath,
+                                         int fps) {
     std::filesystem::path framesPath = framePath / "frame_%05d.png";
 
-    std::string cmd = std::format("ffmpeg -framerate 24 -i {} -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p {}",
-                                  framesPath.c_str(), path.c_str());
+    std::string cmd =
+        std::format("ffmpeg -framerate {} -i \"{}\" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p \"{}\"", fps,
+                    framesPath.string(), path.string());
     int ret = std::system(cmd.c_str());
     if (ret == 0)
-        Log::success("ExportService", std::format("Video saved to {}", path.c_str()));
+        Log::success("ExportService", std::format("Video saved to {}", path.string()));
     else
         Log::error("ExportService", std::format("ffmpeg exited with code {}", ret));
 }

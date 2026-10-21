@@ -3,14 +3,20 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+
+namespace ecs {
+class Entity;
+}
 
 enum class FieldType { Bool, Int, IVec2, IVec3, IVec4, Float, Vec2, Vec3, Vec4, Quat, Entity, String, Enum, Path };
 
@@ -121,17 +127,48 @@ public:
     }
 
 protected:
-    template <typename T> static FieldType typeOf();
+    template <typename T> static constexpr FieldType typeOf() {
+        if constexpr (std::is_same_v<T, bool>)
+            return FieldType::Bool;
+        else if constexpr (std::is_same_v<T, int>)
+            return FieldType::Int;
+        else if constexpr (std::is_same_v<T, glm::ivec2>)
+            return FieldType::IVec2;
+        else if constexpr (std::is_same_v<T, glm::ivec3>)
+            return FieldType::IVec3;
+        else if constexpr (std::is_same_v<T, glm::ivec4>)
+            return FieldType::IVec4;
+        else if constexpr (std::is_same_v<T, float>)
+            return FieldType::Float;
+        else if constexpr (std::is_same_v<T, glm::vec2>)
+            return FieldType::Vec2;
+        else if constexpr (std::is_same_v<T, glm::vec3>)
+            return FieldType::Vec3;
+        else if constexpr (std::is_same_v<T, glm::vec4>)
+            return FieldType::Vec4;
+        else if constexpr (std::is_same_v<T, glm::quat>)
+            return FieldType::Quat;
+        else if constexpr (std::is_same_v<T, ecs::Entity>)
+            return FieldType::Entity;
+        else if constexpr (std::is_same_v<T, std::string>)
+            return FieldType::String;
+        else
+            static_assert(false, "unsupported field type");
+    }
 
     FieldType type = FieldType::Bool;
     size_t size = 0;
     std::vector<std::byte> value;
 
     template <typename T> static T readBlob(const std::vector<std::byte>& buf) {
-        if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::filesystem::path>)
+        if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::filesystem::path>) {
             return T(reinterpret_cast<const char*>(buf.data()));
-        else
-            return *reinterpret_cast<const T*>(buf.data());
+        } else {
+            static_assert(std::is_trivially_copyable_v<T>);
+            T v;
+            std::memcpy(&v, buf.data(), sizeof(T));
+            return v;
+        }
     }
 
     template <typename T> static void writeBlob(std::vector<std::byte>& buf, const T& v) {
@@ -143,7 +180,8 @@ protected:
             std::fill(buf.begin(), buf.end(), std::byte{0});
             std::snprintf(reinterpret_cast<char*>(buf.data()), buf.size(), "%s", v.c_str());
         } else {
-            *reinterpret_cast<T*>(buf.data()) = v;
+            static_assert(std::is_trivially_copyable_v<T>);
+            std::memcpy(buf.data(), &v, sizeof(T));
         }
     }
 };
@@ -263,7 +301,7 @@ protected:
     std::string label;
     FieldMetadata metadata;
     std::vector<std::byte> defaultValue;
-    bool animatable;
+    bool animatable = false;
     bool linked = true;
     std::vector<FieldCondition> conditions;
 };

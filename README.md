@@ -18,7 +18,7 @@ Unidirectional path tracing with next-event estimation and multiple importance s
 
 **Geometry**: Sphere, plane, box, quad primitives; OBJ meshes with smooth shading, mesh simplification, and per-group vertex colors from MTL.
 
-**Programmable shaders**: materials, skies, camera lenses and compositing passes can be written as small GLSL-based scripts (`assets/materials/`, `assets/environment/`, `assets/camera/`, `assets/compositing/`), hot reloaded on save.
+**Programmable shaders**: materials, skies, camera lenses and compositing passes can be written as small Slang scripts, each a struct implementing `IMaterial`, `ISky`, `ILens` or `ICompositingPass` (`assets/materials/`, `assets/environment/`, `assets/camera/`, `assets/compositing/`), hot reloaded on save.
 
 ## Scene Editor
 
@@ -35,9 +35,9 @@ cmake --build build
 ./build/VkRay
 ```
 
-Dependencies are vendored in `external/`: VkSmol (with GLFW, ImGui, shaderc), GLM, nfd, nlohmann/json, stb_image, tinyexr, tinyobjloader, FontAwesome and doctest.
+Dependencies are vendored in `external/`: VkSmol (with GLFW, ImGui, Slang, stb_image), GLM, nfd, nlohmann/json, stb_image_write, tinyexr, tinyobjloader, FontAwesome and doctest.
 
-The executable is self-contained: built-in shaders, parameters, fonts, apertures and the default scene are embedded at build time, and shaders are compiled in memory at runtime via `shaderc`. Scenes, models and programmable shader scripts are loaded from disk. Logs are written to the OS log directory (`~/Library/Logs/VkRay` on macOS).
+The executable is self-contained: built-in shaders, parameters, fonts, apertures and the default scene are embedded at build time, and shaders are compiled in memory at runtime with Slang. Scenes, models and programmable shader scripts are loaded from disk. Logs are written to the OS log directory (`~/Library/Logs/VkRay` on macOS).
 
 ## Usage
 
@@ -59,7 +59,7 @@ src/
   editor/             : editor UI, panels, material preview
   offline/            : headless job queue
   utils/              : logging, file watching, builtin resources
-  shaders/            : path tracing, compositing and editor GLSL
+  shaders/            : path tracing, compositing and editor Slang modules
   config/             : parameter definitions
 assets/
   scenes/             : JSON scene files

@@ -1,7 +1,9 @@
-#sky: version(1)
+import "script.slang";
 
-#param float3 background = float3(0): color
+struct EmptySky : ISky {
+    [Color] float3 background = float3(0);
 
-void main() {
-    result = background;
+    float3 evaluate(float3 dir) {
+        return background;
+    }
 }

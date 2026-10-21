@@ -6,7 +6,7 @@
 
 #include "core/core.hpp"
 #include "core/ecs/components/material.hpp"
-#include "core/render/material_table.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/scene.hpp"
 #include "core/shader_plugin/shader_plugin.hpp"
 #include "editor/ui_utils.hpp"
@@ -91,7 +91,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
         for (const Field& field : component.getFields()) fingerprint.fields.push_back(field);
         if (fingerprint.type == &ecs::MaterialPlugin) {
             const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
-            fingerprint.programmableBody = plugin.getBody();
+            fingerprint.programmableBody = plugin.getSource();
             fingerprint.programmableValues = plugin.packValues();
         }
     }
@@ -126,8 +126,7 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
 
     if (type == ecs::MaterialPlugin) {
         ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
-        const std::filesystem::path path = source.get<std::filesystem::path>("path");
-        previewPlugin.parse(path, MaterialTable::kType, MaterialTable::kVersion, MaterialTable::slotFor(path));
+        previewPlugin.parse(source.get<std::filesystem::path>("path"), ScriptTable::kMaterial);
 
         const ShaderPlugin& sourcePlugin = source.payload<ShaderPlugin>("plugin");
         for (const Field& field : sourcePlugin.getComponent().getFields())

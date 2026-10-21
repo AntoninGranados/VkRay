@@ -45,7 +45,8 @@ struct alignas(16) ScreenUBO {
 };
 
 struct alignas(16) RenderUBO {
-    int32_t skyParamsBase = -1;
+    int32_t skySlot = 0;
+    int32_t skyParamsBase = 0;
     int maxBounces;
     int importanceSampling;
     int clipAccumulation;
@@ -64,7 +65,7 @@ struct PathtracerUBO {
 };
 
 struct alignas(16) CompositingPassUBO {
-    int32_t slot = -1;
+    int32_t slot = 0;
     int32_t paramsBase = 0;
     int32_t passId = 0;
 };

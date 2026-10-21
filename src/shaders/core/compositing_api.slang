@@ -3,7 +3,7 @@ __exported import "../dsl_math_utils.slang";
 Sampler2D sourceTexture;
 Sampler2D originalTexture;
 RWStructuredBuffer<PixelInfo> pixelInfoBuffer;
-StructuredBuffer<float> pluginParams;
+ByteAddressBuffer pluginParams;
 
 PixelInfo fetchPixelInfoOriginal(int2 coord, int2 texSize) {
     int2 c = clamp(coord, int2(0), texSize - int2(1));
@@ -19,4 +19,23 @@ float4 sampleSource(int2 coord, int2 texSize) {
 float4 sampleOriginal(int2 coord, int2 texSize) {
     int2 c = clamp(coord, int2(0), texSize - int2(1));
     return originalTexture.Load(int3(c, 0));
+}
+
+[anyValueSize(4)]
+interface ICompositingPass {
+    float4 evaluate(int2 pixelCoord, int2 texSize, int passId);
+}
+
+struct ScriptPass<T : ICompositingPass> : ICompositingPass {
+    uint base;
+
+    float4 evaluate(int2 pixelCoord, int2 texSize, int passId) {
+        return pluginParams.Load<T>(base * sizeof(float)).evaluate(pixelCoord, texSize, passId);
+    }
+}
+
+struct IdentityPass : ICompositingPass {
+    float4 evaluate(int2 pixelCoord, int2 texSize, int passId) {
+        return sampleSource(pixelCoord, texSize);
+    }
 }

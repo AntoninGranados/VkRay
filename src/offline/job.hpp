@@ -19,7 +19,7 @@ struct ParameterOverride {
 
 struct Job {
     std::filesystem::path scene;
-    uint32_t seed;
+    uint32_t seed = 0;
     std::vector<ParameterOverride> parameterOverrides;
 
     JobStatus status = JobStatus::Pending;
