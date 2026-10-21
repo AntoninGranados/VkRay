@@ -6,6 +6,6 @@ add_executable(VkRayDocs
 target_link_libraries(VkRayDocs PRIVATE VkRayLogic)
 
 add_custom_command(TARGET VkRayDocs POST_BUILD
-  COMMAND VkRayDocs "${CMAKE_SOURCE_DIR}/docs"
+  COMMAND VkRayDocs "${PROJECT_SOURCE_DIR}/docs"
   COMMENT "Generating docs/parameters.md and docs/components.md"
 )

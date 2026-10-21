@@ -26,7 +26,7 @@ Interactive editor with transform gizmos, material and parameter inspector, orbi
 
 ## Build
 
-Requires CMake 3.20+, a C++26 compiler with `#embed` support (Apple Clang 21, Clang 19+, GCC 15+), and the [Vulkan SDK](https://vulkan.lunarg.com/) (set `VULKAN_SDK` to the SDK root).
+Requires CMake 3.25+, a C++26 compiler with `#embed` support (Apple Clang 21, Clang 19+, GCC 15+), and the [Vulkan SDK](https://vulkan.lunarg.com/) (set `VULKAN_SDK` to the SDK root).
 
 ```bash
 git clone --recursive git@github.com:AntoninGranados/VkRay

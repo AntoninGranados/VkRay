@@ -5,7 +5,7 @@ function(vkray_embed_resources VKRAY_EMBEDDED_SOURCE_VARIABLE)
   set(VKRAY_EMBEDDED_ENTRIES "")
   set(VKRAY_EMBEDDED_INDEX 0)
   foreach(VKRAY_EMBEDDED_FILE IN LISTS VKRAY_EMBEDDED_FILES)
-    file(RELATIVE_PATH VKRAY_EMBEDDED_NAME "${CMAKE_SOURCE_DIR}" "${VKRAY_EMBEDDED_FILE}")
+    file(RELATIVE_PATH VKRAY_EMBEDDED_NAME "${PROJECT_SOURCE_DIR}" "${VKRAY_EMBEDDED_FILE}")
     string(REGEX REPLACE "^(src|assets)/" "builtin:/" VKRAY_EMBEDDED_NAME "${VKRAY_EMBEDDED_NAME}")
     string(APPEND VKRAY_EMBEDDED_ARRAYS
       "constexpr unsigned char kResource${VKRAY_EMBEDDED_INDEX}[] = {\n#embed \"${VKRAY_EMBEDDED_FILE}\"\n};\n")
@@ -14,8 +14,8 @@ function(vkray_embed_resources VKRAY_EMBEDDED_SOURCE_VARIABLE)
     math(EXPR VKRAY_EMBEDDED_INDEX "${VKRAY_EMBEDDED_INDEX} + 1")
   endforeach()
 
-  set(VKRAY_EMBEDDED_SOURCE "${CMAKE_BINARY_DIR}/resources.cpp")
-  configure_file("${CMAKE_SOURCE_DIR}/src/utils/resources.cpp.in" "${VKRAY_EMBEDDED_SOURCE}" @ONLY)
+  set(VKRAY_EMBEDDED_SOURCE "${PROJECT_BINARY_DIR}/resources.cpp")
+  configure_file("${PROJECT_SOURCE_DIR}/src/utils/resources.cpp.in" "${VKRAY_EMBEDDED_SOURCE}" @ONLY)
   set_source_files_properties("${VKRAY_EMBEDDED_SOURCE}" PROPERTIES
     COMPILE_OPTIONS "-Wno-c23-extensions"
     OBJECT_DEPENDS "${VKRAY_EMBEDDED_FILES}"
