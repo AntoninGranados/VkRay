@@ -2,8 +2,23 @@
 
 #include <vector>
 
+#include "VkSmol/graph/builder_resource.hpp"
+
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
+
+struct SceneGpuBuffers {
+    BufferHandle vertex;
+    BufferHandle index;
+    BufferHandle bvh;
+    BufferHandle mesh;
+    BufferHandle material;
+    BufferHandle pluginParams;
+    BufferHandle object;
+    BufferHandle light;
+    BufferHandle motion;
+    BufferHandle liveMotion;
+};
 
 namespace ecs {
 

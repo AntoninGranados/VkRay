@@ -195,8 +195,6 @@ struct FieldCondition {
 
 class Field : public FieldValue {
 public:
-    virtual ~Field() = default;
-
     const FieldPath& getId() const { return id; }
     const std::string& getLabel() const { return label; }
     const FieldMetadata& getMetadata() const { return metadata; }

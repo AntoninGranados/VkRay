@@ -12,7 +12,6 @@
 #include "core/fields/parameters.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"
-#include "offline/job_queue.hpp"
 #include "utils/file_watcher.hpp"
 
 class Core {
@@ -28,7 +27,6 @@ public:
     static Scene& getScene() { return get().coreRenderer.getScene(); }
     static CoreRenderer& getCoreRenderer() { return get().coreRenderer; }
     static FileWatcher& getFileWatcher() { return get().fileWatcher; }
-    static JobQueue& getJobQueue() { return get().jobQueue; }
 
     static RenderMode getRenderMode() { return get().renderMode; }
     static void setRenderMode(RenderMode m) { get().renderMode = m; }
@@ -78,7 +76,6 @@ private:
     AnimationClock animation{24 * 5, 24.0f};
     CoreRenderer coreRenderer;
     FileWatcher fileWatcher;
-    JobQueue jobQueue;
     RenderMode renderMode = RenderMode::Preview;
     bool renderDirty = false;
     bool graphRebuildRequested = false;

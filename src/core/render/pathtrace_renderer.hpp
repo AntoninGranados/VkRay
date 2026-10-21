@@ -8,6 +8,7 @@
 #include "VkSmol/graph/builder_resource.hpp"
 
 #include "core/ecs/entity.hpp"
+#include "core/ecs/systems/gpu_packing_system.hpp"
 #include "core/render/sample_accumulator.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"

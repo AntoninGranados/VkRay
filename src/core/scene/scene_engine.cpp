@@ -13,10 +13,16 @@
 
 void Scene::init() {
     initContext();
+    registry.ctx().emplace<SceneGpuBuffers>();
     initSystems();
 }
 
 void Scene::destroy() {}
+
+void Scene::setGpuBufferHandles(const SceneGpuBuffers& handles) {
+    registry.ctx().get<SceneGpuBuffers>() = handles;
+    invalidateGpuData();
+}
 
 void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
     if (newActiveCamera == activeCamera) return;

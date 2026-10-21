@@ -172,7 +172,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
                     if (volLight.pdf > EPS) {
                         float phase = phaseFunctionHG(medium.anisotropic, volLight.wi, ray.dir);
                         float wMIS = powerHeuristic(volLight.pdf, phase);
-                        radiance += clampIndirect(throughput * omega * medium.absorption * phase * volLight.Le * wMIS / volLight.pdf, i);
+                        radiance += clampIndirect(throughput * medium.absorption * phase * volLight.Le * wMIS / volLight.pdf, i);
                     }
                 } else {
                     prevIsSkipped = false;
@@ -180,7 +180,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
 
                 float3 incomingDir = ray.dir;
                 ray.dir = sampleHG(medium.anisotropic, ray.dir, rng);
-                throughput *= omega * medium.absorption;
+                throughput *= medium.absorption;
 
                 prevBsdf.pdf = phaseFunctionHG(medium.anisotropic, ray.dir, incomingDir);
                 prevBsdf.isDelta = false;

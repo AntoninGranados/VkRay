@@ -9,7 +9,6 @@ public:
         fixedDt = 1.0 / fps;
     }
 
-    void reset(double t = 0.0);
     void reset(int frame = 0);
     void step(double dt);
     void stepFixed();

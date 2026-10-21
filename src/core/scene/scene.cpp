@@ -13,7 +13,6 @@
 
 void Scene::initContext() {
     registry.ctx().emplace<SceneRoots>();
-    registry.ctx().emplace<SceneGpuBuffers>();
     registry.ctx().emplace<MeshTemplates>();
     registry.ctx().emplace<ObjectIndices>();
     registry.ctx().emplace<CameraMotionInfo>();
@@ -26,11 +25,6 @@ void Scene::initContext() {
     registry.ctx().emplace<AnimationStore*>(&animationStore);
     registry.ctx().emplace<std::optional<ecs::Entity>*>(&activeCamera);
     addDefaultAssets();
-}
-
-void Scene::setGpuBufferHandles(SceneGpuBuffers handles) {
-    registry.ctx().get<SceneGpuBuffers>() = handles;
-    invalidateGpuData();
 }
 
 void Scene::clear() {

@@ -8,8 +8,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "VkSmol/graph/builder_resource.hpp"
-
 #include "core/animation/animation_store.hpp"
 #include "core/camera/camera.hpp"
 #include "core/ecs/components.hpp"
@@ -20,18 +18,7 @@
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 
-struct SceneGpuBuffers {
-    BufferHandle vertex;
-    BufferHandle index;
-    BufferHandle bvh;
-    BufferHandle mesh;
-    BufferHandle material;
-    BufferHandle pluginParams;
-    BufferHandle object;
-    BufferHandle light;
-    BufferHandle motion;
-    BufferHandle liveMotion;
-};
+struct SceneGpuBuffers;
 
 struct MeshTemplates {
     std::vector<GpuMesh> meshes;
@@ -118,9 +105,7 @@ public:
 
     AnimationStore& getAnimationStore() { return animationStore; }
 
-    SceneGpuBuffers& getBuffers() { return registry.ctx().get<SceneGpuBuffers>(); }
-    const SceneGpuBuffers& getBuffers() const { return registry.ctx().get<SceneGpuBuffers>(); }
-    void setGpuBufferHandles(SceneGpuBuffers handles);
+    void setGpuBufferHandles(const SceneGpuBuffers& handles);
     void invalidateGpuData() { onRenderScheduler.invalidate(); }
 
     MeshAsset* getMeshAsset(ecs::Entity e);

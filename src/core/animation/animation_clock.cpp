@@ -4,11 +4,6 @@
 
 AnimationClock::AnimationClock(int endFrame, double fps) : endFrame(endFrame), fps(fps), fixedDt(1.0 / fps) {}
 
-void AnimationClock::reset(double t) {
-    time = t;
-    frame = static_cast<int>(std::floor(time * fps));
-}
-
 void AnimationClock::reset(int _frame) {
     frame = _frame;
     time = static_cast<double>(_frame) / fps;

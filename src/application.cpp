@@ -96,12 +96,11 @@ void Application::initOfflineMode(const std::string& jobFile) {
     platform = std::make_unique<HeadlessPlatform>(
         1080, 1080); // This size is arbitrary as the buffers will be resized with the first jobs parameters
     Core::init(*platform, VK_RAY_VERSION);
-    Core::getJobQueue() = std::move(queue);
 
     initScene();
     SceneSerializer::load(Core::getScene(), kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
-    runFn = Offline::run;
+    runFn = [queue = std::move(queue)]() mutable { return Offline::run(queue); };
 }
 
 void Application::buildRenderGraph(bool offline) {

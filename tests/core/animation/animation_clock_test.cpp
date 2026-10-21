@@ -8,12 +8,6 @@ TEST_CASE("AnimationClock starts paused at frame zero") {
     CHECK(clock.getFrame() == 0);
 }
 
-TEST_CASE("AnimationClock reset(time) derives frame from fps") {
-    AnimationClock clock(100, 24.0);
-    clock.reset(2.0);
-    CHECK(clock.getFrame() == 48);
-}
-
 TEST_CASE("AnimationClock reset(frame) derives time from fps") {
     AnimationClock clock(100, 24.0);
     clock.reset(48);
