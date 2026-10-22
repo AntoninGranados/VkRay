@@ -11,9 +11,9 @@ namespace ecs {
 void apertureSystem(Registry& registry) {
     ApertureState& state = registry.ctx().get<ApertureState>();
 
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     auto upload = [&](std::vector<uint8_t> data) {
-        engine.fillImage(engine.getImage(Core::getCoreRenderer().getLensImageHandle()), data.data(), data.size());
+        engine.writeImage(Core::getCoreRenderer().getLensImageHandle(), data.data(), data.size());
     };
 
     auto& geometrics = registry.storage(GeometricAperture);

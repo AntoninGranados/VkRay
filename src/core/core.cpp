@@ -6,29 +6,21 @@
 #include "core/fields/parameter_serializer.hpp"
 #include "core/render/resource_shader_file_system.hpp"
 
-Core& Core::get() {
-    static Core instance;
-    return instance;
-}
+Core::Core(const std::optional<std::string>& windowTitle, uint32_t version)
+    : window(windowTitle ? std::optional<VkSmol::Window>(std::in_place, *windowTitle, kWindowWidth, kWindowHeight)
+                         : std::nullopt),
+      engine("VkRay", version, window ? std::optional<VkSmol::Window&>(*window) : std::nullopt), graph(engine) {}
 
-void Core::init(Platform& p, uint32_t version) {
-    Core& c = get();
-    c.platform = &p;
-    c.engine.init("VkRay", version, p);
-    c.engine.setShaderFileSystem(std::make_shared<ResourceShaderFileSystem>());
+void Core::init(const std::optional<std::string>& windowTitle, uint32_t version) {
+    static Core core(windowTitle, version);
+    instance = &core;
+    core.engine.setShaderFileSystem(std::make_shared<ResourceShaderFileSystem>());
     loadParameters();
-    c.coreRenderer.bindParameters();
+    core.coreRenderer.bindParameters();
+    core.coreRenderer.init();
 }
 
 void Core::loadParameters() { get().parameters = ParameterSerializer::load("builtin:/config/parameters.json"); }
-
-void Core::terminate() {
-    Core& c = get();
-    c.engine.waitIdle();
-    c.engine.destroyGraph();
-    c.coreRenderer.getScene().destroy();
-    c.engine.terminate();
-}
 
 void Core::restartAccumulation() {
     Core& c = get();
@@ -74,7 +66,7 @@ void Core::rebuildGraphIfRequested(Core& c) {
     c.graphBuilder();
 }
 
-void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
+void Core::renderFrame(std::function<void()> onPrepare) {
     Core& c = get();
     Scene& scene = c.coreRenderer.getScene();
     c.fileWatcher.poll();
@@ -83,18 +75,11 @@ void Core::renderFrame(std::function<void(FrameContext&)> onRender) {
 
     updateAnimationDirty(c);
     scene.runPreRender();
-
-    auto frameContext = c.engine.beginFrame();
-    if (!frameContext) {
-        c.engine.advanceFrame();
-        return;
-    }
-
     scene.runOnRender();
 
-    c.coreRenderer.render();
-    if (onRender) onRender(*frameContext);
-    c.engine.advanceFrame();
+    c.coreRenderer.prepare();
+    if (onPrepare) onPrepare();
+    c.graph.execute();
 }
 
 void Core::startRender() {

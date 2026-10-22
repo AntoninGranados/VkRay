@@ -66,7 +66,7 @@ void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channe
 
 } // namespace
 
-void ExportService::init(uint32_t _width, uint32_t _height, BufferHandle pixelInfoHandle) {
+void ExportService::init(uint32_t _width, uint32_t _height, VkSmol::BufferHandle pixelInfoHandle) {
     width = _width;
     height = _height;
     pixelInfoBufferHandle = pixelInfoHandle;
@@ -77,7 +77,8 @@ void ExportService::resize(uint32_t _width, uint32_t _height) {
     height = _height;
 }
 
-void ExportService::save(VkSmol& engine, Image& image, const std::filesystem::path& path, const AOVFlags& aovFlags) {
+void ExportService::save(VkSmol::Engine& engine, VkSmol::ImageHandle image, const std::filesystem::path& path,
+                         const AOVFlags& aovFlags) {
     engine.waitIdle();
     std::vector<float> floatPixels(static_cast<size_t>(width) * height * 4);
     engine.readImage(image, floatPixels.data(), floatPixels.size() * sizeof(float));
@@ -157,7 +158,7 @@ void ExportService::saveBufferToEXR(const std::vector<float>& floatPixels, const
     }
 }
 
-void ExportService::saveAOVs(VkSmol& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
+void ExportService::saveAOVs(VkSmol::Engine& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
     bool anyEnabled =
         f.positionW || f.position || f.normalW || f.normal || f.albedo || f.roughness || f.matType || f.skyMask;
     if (!anyEnabled) return;

@@ -11,8 +11,11 @@ namespace ecs {
 class Registry;
 }
 
-struct GpuMaterial;
+namespace VkSmol {
 struct ShaderConformance;
+}
+
+struct GpuMaterial;
 
 namespace ScriptTable {
 extern const ScriptKind kMaterial;
@@ -28,5 +31,5 @@ int packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& par
 std::vector<ecs::CompositingPassEntry>& compositingPasses(ecs::Registry& registry);
 int compositingDispatchCount(ecs::Registry& registry);
 
-std::vector<ShaderConformance> conformances(std::initializer_list<const ScriptKind*> kinds);
+std::vector<VkSmol::ShaderConformance> conformances(std::initializer_list<const ScriptKind*> kinds);
 } // namespace ScriptTable

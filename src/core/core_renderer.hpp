@@ -7,22 +7,20 @@
 
 class CoreRenderer : public PathtraceRenderer {
 public:
-    RenderResources initGraph(RenderGraphBuilder& builder);
+    void init();
 
     void saveCapture(const std::filesystem::path& path);
 
     void bindParameters();
-    ImageHandle getLensImageHandle() const { return lensImageHandle; }
-    BufferHandle getBlueNoiseBufferHandle() const { return blueNoiseBufferHandle; }
+    VkSmol::ImageHandle getLensImageHandle() const { return lensImageHandle; }
+    VkSmol::BufferHandle getBlueNoiseBufferHandle() const { return blueNoiseBufferHandle; }
 
 protected:
-    void onAfterDispatch(CommandBuffer& commandBuffer) override;
     void onResize(uint32_t width, uint32_t height) override;
 
 private:
     ExportService exportService;
-    ImageHandle lensImageHandle;
-    BufferHandle blueNoiseBufferHandle;
+    VkSmol::ImageHandle lensImageHandle;
+    VkSmol::BufferHandle blueNoiseBufferHandle;
     AOVFlags aovFlags = {};
-    PassHandle exportPassHandle;
 };

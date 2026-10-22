@@ -2,12 +2,7 @@
 
 #include <optional>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_internal.h"
 
 #include "core/core.hpp"
@@ -101,25 +96,19 @@ void EditorUi::initStyle() {
     c[ImGuiCol_ModalWindowDimBg] = ImVec4(ui::kDraculaBg.x, ui::kDraculaBg.y, ui::kDraculaBg.z, 0.7f);
 }
 
-void EditorUi::draw(const CommandBuffer& commandBuffer) {
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-
+void EditorUi::draw() {
     const ecs::Registry& registry = Core::getScene().getRegistry();
     const ecs::Entity camera = *Core::getScene().getActiveCamera();
     if (!registry.get(camera, ecs::CameraNavigation).payload<ecs::CameraNavigationState>("state").locked)
         ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 
-    ImGui::NewFrame();
+    Editor::getImGui().newFrame();
     updateState();
 
     if (Core::getRenderMode() != RenderMode::Preview)
         drawRender();
     else
         drawPreview();
-
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer.get());
 }
 
 void EditorUi::updateState() {

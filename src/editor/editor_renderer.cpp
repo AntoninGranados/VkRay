@@ -3,11 +3,9 @@
 #include <unordered_map>
 
 #include "VkSmol/engine.hpp"
-#include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
 #include "VkSmol/graph/pass/graphics_pass_builder.hpp"
-#include "VkSmol/graph/pass/present_pass_builder.hpp"
-#include "VkSmol/graph/render_graph_builder.hpp"
+#include "VkSmol/graph/pass_context.hpp"
 
 #include <glm/gtc/quaternion.hpp>
 
@@ -63,110 +61,90 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
 
 } // namespace
 
-void EditorRenderer::initGraph(RenderGraphBuilder& builder, RenderResources& renderResources) {
-    VkSmol& engine = Core::getEngine();
-    editorGroupHandle = builder.addSubmissionGroup("Editor");
-    uiGroupHandle = builder.addSubmissionGroup("Ui");
-
-    swapchainImageHandle =
-        builder.createImage("SwapchainImage", VK_FORMAT_R32G32B32A32_SFLOAT, engine.getExtent().width,
-                            engine.getExtent().height, 1, VKSMOL_IMAGE_OWNERSHIP_IMPORTED, 0,
-                            ImageAccessInfo{.usage = ImageUsageType::Undefined, .access = AccessType::None},
-                            ImageAccessInfo{.usage = ImageUsageType::Present, .access = AccessType::Read});
-
-    const VkExtent2D displayExtent = viewportExtent.width > 0 ? viewportExtent : engine.getExtent();
-    const VkExtent2D debugExtent = renderExtent.width > 0 ? renderExtent : engine.getExtent();
+void EditorRenderer::init() {
+    VkSmol::Engine& engine = Core::getEngine();
+    viewportExtent = engine.getExtent();
+    renderExtent = Core::getRenderExtent();
 
     displayImageHandle =
-        builder.createImage("DisplayImage", VK_FORMAT_R32G32B32A32_SFLOAT, displayExtent.width, displayExtent.height);
+        engine.createImage("DisplayImage", VK_FORMAT_R32G32B32A32_SFLOAT, viewportExtent.width, viewportExtent.height);
     debugImageHandle =
-        builder.createImage("DebugImage", VK_FORMAT_R32G32B32A32_SFLOAT, debugExtent.width, debugExtent.height);
-    outputImageHandle = renderResources.outputImageHandle;
+        engine.createImage("DebugImage", VK_FORMAT_R32G32B32A32_SFLOAT, renderExtent.width, renderExtent.height);
 
-    debugUBOHandle = builder.createBuffer("DebugUBO", sizeof(DebugUBO));
-    displayUBOHandle = builder.createBuffer("DisplayUBO", sizeof(DisplayUBO));
+    debugUBOHandle = engine.createBuffer("DebugUBO", sizeof(DebugUBO));
+    displayUBOHandle = engine.createBuffer("DisplayUBO", sizeof(DisplayUBO));
 
-    // Display pass — beauty + selection edges + focus plane overlay (compute, at viewport resolution)
-    ComputePassBuilder display = builder.addComputePass("DisplayPass");
-    displayPassHandle = display.getHandle();
-    display.setGroup(editorGroupHandle);
-    const std::string displayShader = "builtin:/shaders/editor/display.slang";
-    const ShaderConformances displayConformances = ScriptTable::conformances({&ScriptTable::kLens});
-    const auto displayLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(displayShader, name, {}, displayConformances);
-    };
-    display.readBuffer(displayLocation("ubo"), displayUBOHandle, BufferUsageType::Uniform);
-    display.readImage(displayLocation("outputTex"), renderResources.outputImageHandle, ImageUsageType::Sampled);
-    display.readBuffer(displayLocation("pixelInfoBuffer"), renderResources.pixelInfoBufferHandle,
-                       BufferUsageType::Storage);
-    display.writeImage(displayLocation("displayOut"), displayImageHandle, ImageUsageType::Storage);
-    display.readBuffer(displayLocation("scene.vertices"), renderResources.sceneHandles.vertex,
-                       BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.indices"), renderResources.sceneHandles.index, BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.bvhNodes"), renderResources.sceneHandles.bvh, BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.meshes"), renderResources.sceneHandles.mesh, BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.materials"), renderResources.sceneHandles.material,
-                       BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.pluginParams"), renderResources.sceneHandles.pluginParams,
-                       BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.objects"), renderResources.sceneHandles.object, BufferUsageType::Storage);
-    display.readBuffer(displayLocation("scene.motion"), renderResources.sceneHandles.liveMotion,
-                       BufferUsageType::Storage);
-    display.setPipeline(displayShader, {}, displayConformances);
-    displayTimestamp = display.setTimestamp();
-
-    // Debug pass — debug view visualization (compute)
-    ComputePassBuilder debug = builder.addComputePass("DebugPass");
-    debugPassHandle = debug.getHandle();
-    debug.setGroup(editorGroupHandle);
-    const std::string debugShader = "builtin:/shaders/editor/debug.slang";
-    const auto debugLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(debugShader, name);
-    };
-    debug.readBuffer(debugLocation("ubo"), debugUBOHandle, BufferUsageType::Uniform);
-    debug.readBuffer(debugLocation("pixelInfoBuffer"), renderResources.pixelInfoBufferHandle, BufferUsageType::Storage);
-    debug.writeImage(debugLocation("debugOut"), debugImageHandle, ImageUsageType::Storage);
-    debug.setPipeline(debugShader);
-    debugTimestamp = debug.setTimestamp();
-
-    // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers
-    GraphicsPassBuilder ui = builder.addGraphicsPass("UiPass");
-    uiPassHandle = ui.getHandle();
-    ui.setGroup(uiGroupHandle);
-    ui.readImage(0, displayImageHandle, ImageUsageType::Sampled);
-    ui.readImage(1, debugImageHandle, ImageUsageType::Sampled);
-    ui.readImage(2, renderResources.outputImageHandle, ImageUsageType::Sampled);
-    ui.writeImage(swapchainImageHandle, ImageUsageType::ColorAttachment, WriteMode::Overwrite, AttachmentLoad::Clear);
-    uiTimestamp = ui.setTimestamp();
-
-    PresentPassBuilder present = builder.addPresentPass("PresentPass");
-    presentPassHandle = present.getHandle();
-    present.setGroup(uiGroupHandle);
-    present.setPresentationImage(swapchainImageHandle);
+    registerImGuiTextures();
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 }
 
-void EditorRenderer::registerImGuiTextures() {
-    VkSmol& engine = Core::getEngine();
+void EditorRenderer::addPasses(VkSmol::RenderGraph& graph) {
+    VkSmol::Engine& engine = Core::getEngine();
+    const RenderResources& renderResources = Core::getCoreRenderer().getResources();
+    const SceneGpuBuffers& sceneHandles = renderResources.sceneHandles;
 
-    outputTex = ui::ImGuiTexture(engine.getSampler(outputImageHandle).get(), engine.getView(outputImageHandle).get(),
+    // Display pass — beauty + selection edges + focus plane overlay (compute, at viewport resolution)
+    graph.addComputePass(kDisplayPassName)
+        .pipeline("builtin:/shaders/editor/display.slang", {}, ScriptTable::conformances({&ScriptTable::kLens}))
+        .read("ubo", displayUBOHandle)
+        .read("outputTex", renderResources.outputImageHandle)
+        .read("pixelInfoBuffer", renderResources.pixelInfoBufferHandle)
+        .write("displayOut", displayImageHandle)
+        .read("scene.vertices", sceneHandles.vertex)
+        .read("scene.indices", sceneHandles.index)
+        .read("scene.bvhNodes", sceneHandles.bvh)
+        .read("scene.meshes", sceneHandles.mesh)
+        .read("scene.materials", sceneHandles.material)
+        .read("scene.pluginParams", sceneHandles.pluginParams)
+        .read("scene.objects", sceneHandles.object)
+        .read("scene.motion", sceneHandles.liveMotion)
+        .execute([this](VkSmol::PassContext& context) {
+            context.dispatchThreads(viewportExtent.width, viewportExtent.height);
+        });
+
+    // Debug pass — debug view visualization (compute)
+    graph.addComputePass(kDebugPassName)
+        .pipeline("builtin:/shaders/editor/debug.slang")
+        .read("ubo", debugUBOHandle)
+        .read("pixelInfoBuffer", renderResources.pixelInfoBufferHandle)
+        .write("debugOut", debugImageHandle)
+        .execute(
+            [this](VkSmol::PassContext& context) { context.dispatchThreads(renderExtent.width, renderExtent.height); });
+
+    // UI pass — ImGui renders over cleared swapchain; declares sampled reads to drive barriers
+    const MaterialPreview& materialPreview = Editor::getMaterialPreview();
+    graph.addGraphicsPass(kUiPassName)
+        .read(displayImageHandle, VkSmol::ImageUsageType::Sampled)
+        .read(debugImageHandle, VkSmol::ImageUsageType::Sampled)
+        .read(renderResources.outputImageHandle, VkSmol::ImageUsageType::Sampled)
+        .read(materialPreview.getOutputImageHandle(), VkSmol::ImageUsageType::Sampled)
+        .read(materialPreview.getThumbnailImageHandle(), VkSmol::ImageUsageType::Sampled)
+        .colorAttachment(engine.getSwapchainImage(), VkSmol::AttachmentLoad::Clear,
+                         {ui::kDraculaBg.x, ui::kDraculaBg.y, ui::kDraculaBg.z, ui::kDraculaBg.w})
+        .execute([](VkSmol::PassContext& context) {
+            Editor::getUi().draw();
+            Editor::getImGui().render(context);
+        });
+
+    graph.present(engine.getSwapchainImage());
+}
+
+void EditorRenderer::registerImGuiTextures() {
+    VkSmol::Engine& engine = Core::getEngine();
+    const VkSmol::ImageHandle outputImageHandle = Core::getCoreRenderer().getOutputImageHandle();
+
+    outputTex = ui::ImGuiTexture(engine.getSampler(outputImageHandle), engine.getImageView(outputImageHandle),
                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    displayTex = ui::ImGuiTexture(engine.getSampler(displayImageHandle).get(), engine.getView(displayImageHandle).get(),
+    displayTex = ui::ImGuiTexture(engine.getSampler(displayImageHandle), engine.getImageView(displayImageHandle),
                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    debugTex = ui::ImGuiTexture(engine.getSampler(debugImageHandle).get(), engine.getView(debugImageHandle).get(),
+    debugTex = ui::ImGuiTexture(engine.getSampler(debugImageHandle), engine.getImageView(debugImageHandle),
                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void EditorRenderer::destroy() {
-    outputTex = ui::ImGuiTexture();
-    displayTex = ui::ImGuiTexture();
-    debugTex = ui::ImGuiTexture();
-}
-
 void EditorRenderer::resize(VkExtent2D renderExt, VkExtent2D viewportExt) {
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     renderExtent = renderExt;
     viewportExtent = viewportExt;
     engine.resizeImage(displayImageHandle, viewportExt.width, viewportExt.height);
@@ -174,10 +152,8 @@ void EditorRenderer::resize(VkExtent2D renderExt, VkExtent2D viewportExt) {
     registerImGuiTextures();
 }
 
-void EditorRenderer::render(const FrameContext& frameContext) {
-    VkSmol& engine = Core::getEngine();
-    const VkExtent2D renderE = renderExtent.width > 0 ? renderExtent : frameContext.extent;
-    const VkExtent2D viewportE = viewportExtent.width > 0 ? viewportExtent : frameContext.extent;
+void EditorRenderer::prepare() {
+    VkSmol::Engine& engine = Core::getEngine();
 
     debugUBO.debugView = Core::getParameters().get<DebugView>("renderer/debug_view");
 
@@ -185,8 +161,9 @@ void EditorRenderer::render(const FrameContext& frameContext) {
     const ecs::Entity camera = *scene.getActiveCamera();
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
     ecs::Registry& reg = scene.getRegistry();
-    const float aspect =
-        viewportE.height > 0 ? static_cast<float>(viewportE.width) / static_cast<float>(viewportE.height) : 1.0f;
+    const float aspect = viewportExtent.height > 0
+                             ? static_cast<float>(viewportExtent.width) / static_cast<float>(viewportExtent.height)
+                             : 1.0f;
     displayUBO.camera = buildCameraUBO(reg, camera, aspect);
     displayUBO.camera.thinLens.lensRadius = 0.0f;
 
@@ -216,31 +193,4 @@ void EditorRenderer::render(const FrameContext& frameContext) {
 
     engine.writeBuffer(debugUBOHandle, debugUBO);
     engine.writeBuffer(displayUBOHandle, displayUBO);
-
-    engine.bindImage(swapchainImageHandle, engine.getSwapchainImage(frameContext.imageIndex).get(),
-                     engine.getSwapchainImageView(frameContext.imageIndex).get());
-
-    {
-        CommandBuffer& cmd = engine.beginRecording(editorGroupHandle);
-
-        engine.dispatch(cmd, displayPassHandle, (viewportE.width + 7) / 8, (viewportE.height + 7) / 8);
-        engine.dispatch(cmd, debugPassHandle, (renderE.width + 7) / 8, (renderE.height + 7) / 8);
-
-        engine.endRecording(editorGroupHandle);
-    }
-
-    {
-        CommandBuffer& commandBuffer = engine.beginRecording(uiGroupHandle);
-
-        engine.beginGraphics(commandBuffer, uiPassHandle, &ui::kDraculaBg.x);
-        Editor::getUi().draw(commandBuffer);
-        engine.endGraphics(commandBuffer, uiPassHandle);
-
-        engine.emitBarriers(commandBuffer, presentPassHandle);
-
-        // @warning this is out of place, but I need a command buffer
-        engine.emitOutputBarriers(commandBuffer);
-
-        engine.endRecording(uiGroupHandle);
-    }
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "VkSmol/command/command_buffer.hpp"
-
 #include "editor/panels/animation_panel.hpp"
 #include "editor/panels/debug_panel.hpp"
 #include "editor/panels/inspector_panel.hpp"
@@ -14,12 +12,11 @@
 #include "editor/panels/viewport_panel.hpp"
 
 class Scene;
-class CommandBuffer;
 
 class EditorUi {
 public:
     EditorUi();
-    void draw(const CommandBuffer& commandBuffer);
+    void draw();
 
     bool isMouseCaptured() { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }

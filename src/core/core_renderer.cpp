@@ -2,56 +2,33 @@
 
 #include <string_view>
 
-#include "VkSmol/graph/pass/transfer_pass_builder.hpp"
-#include "VkSmol/graph/render_graph_builder.hpp"
+#include <glm/glm.hpp>
 
 #include "core/camera/aperture.hpp"
-
 #include "core/core.hpp"
 #include "core/fields/parameters.hpp"
 #include "utils/resources.hpp"
 
-RenderResources CoreRenderer::initGraph(RenderGraphBuilder& builder) {
-    VkSmol& engine = Core::getEngine();
+void CoreRenderer::init() {
+    VkSmol::Engine& engine = Core::getEngine();
 
-    lensImageHandle = builder.createImage(
-        "LensTexture", VK_FORMAT_R8_UNORM, aperture::kSize, aperture::kSize, 1, VKSMOL_IMAGE_OWNERSHIP_MANAGED,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT, ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read},
-        ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read});
+    lensImageHandle = engine.createImage("LensTexture", VK_FORMAT_R8_UNORM, aperture::kSize, aperture::kSize);
 
     const std::string_view blueNoise = Resources::find("builtin:/noise/blue_noise.bin").value();
-    blueNoiseBufferHandle =
-        builder.createBuffer("BlueNoiseBuffer", blueNoise.size(), VKSMOL_BUFFER_OWNERSHIP_MANAGED, 0, blueNoise.data());
+    blueNoiseBufferHandle = engine.createBuffer("BlueNoiseBuffer", blueNoise.size(), blueNoise.data());
 
-    const VkExtent2D renderExtent = getRenderExtent();
-    const VkExtent2D extent = renderExtent.width > 0 ? renderExtent : engine.getExtent();
-    RenderResources resources =
-        PathtraceRenderer::initGraph(builder, extent, "", lensImageHandle, blueNoiseBufferHandle);
+    const glm::ivec2 renderSize = Core::getParameters().get<glm::ivec2>("renderer/output/render_size");
+    const VkExtent2D extent = {static_cast<uint32_t>(renderSize.x), static_cast<uint32_t>(renderSize.y)};
+    PathtraceRenderer::init(extent, "", lensImageHandle, blueNoiseBufferHandle);
 
-    TransferPassBuilder exportPass = builder.addTransferPass("ExportPass");
-    exportPassHandle = exportPass.getHandle();
-    exportPass.setGroup(getGroupHandle());
-    exportPass.copyFrom(resources.outputImageHandle);
-
-    exportService.init(engine.getExtent().width, engine.getExtent().height, resources.pixelInfoBufferHandle);
-
-    return resources;
+    exportService.init(extent.width, extent.height, getResources().pixelInfoBufferHandle);
 }
 
 void CoreRenderer::saveCapture(const std::filesystem::path& path) {
-    VkSmol& engine = Core::getEngine();
-    exportService.save(engine, engine.getImage(getOutputImageHandle()), path, aovFlags);
+    exportService.save(Core::getEngine(), getOutputImageHandle(), path, aovFlags);
 }
 
-void CoreRenderer::onAfterDispatch(CommandBuffer& commandBuffer) {
-    Core::getEngine().emitBarriers(commandBuffer, exportPassHandle);
-}
-
-void CoreRenderer::onResize(uint32_t width, uint32_t height) {
-    VkSmol& engine = Core::getEngine();
-    if (engine.isHeadless()) engine.getExtent() = {width, height};
-    exportService.resize(width, height);
-}
+void CoreRenderer::onResize(uint32_t width, uint32_t height) { exportService.resize(width, height); }
 
 void CoreRenderer::bindParameters() {
     ParameterRegistry& parameters = Core::getParameters();

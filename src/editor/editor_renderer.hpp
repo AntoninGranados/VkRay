@@ -1,51 +1,38 @@
 #pragma once
 
-#include "VkSmol/engine.hpp"
 #include "VkSmol/graph/builder_resource.hpp"
+#include "VkSmol/graph/render_graph.hpp"
 
 #include "core/core_renderer.hpp"
 #include "editor/imgui_texture.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
-struct FrameContext;
-
 class EditorRenderer {
 public:
-    void initGraph(RenderGraphBuilder& builder, RenderResources& renderResources);
+    static constexpr const char* kDisplayPassName = "DisplayPass";
+    static constexpr const char* kDebugPassName = "DebugPass";
+    static constexpr const char* kUiPassName = "UiPass";
+
+    void init();
+    void addPasses(VkSmol::RenderGraph& graph);
     void registerImGuiTextures();
     void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
-    void render(const FrameContext& frameContext);
-    void destroy();
+    void prepare();
 
     ImTextureID getDisplayTexId() const { return displayTex; }
     ImTextureID getDebugTexId() const { return debugTex; }
     ImTextureID getOutputTexId() const { return outputTex; }
 
-    TimestampHandle getDisplayTimestamp() const { return displayTimestamp; }
-    TimestampHandle getDebugTimestamp() const { return debugTimestamp; }
-    TimestampHandle getUiTimestamp() const { return uiTimestamp; }
-
 private:
     DebugUBO debugUBO{};
     DisplayUBO displayUBO{};
 
-    ImageHandle swapchainImageHandle;
-    ImageHandle displayImageHandle;
-    ImageHandle debugImageHandle;
-    ImageHandle outputImageHandle;
+    VkSmol::ImageHandle displayImageHandle;
+    VkSmol::ImageHandle debugImageHandle;
 
-    BufferHandle debugUBOHandle;
-    BufferHandle displayUBOHandle;
-
-    PassHandle displayPassHandle, debugPassHandle, uiPassHandle, presentPassHandle;
-
-    TimestampHandle displayTimestamp;
-    TimestampHandle debugTimestamp;
-    TimestampHandle uiTimestamp;
-
-    SubmissionGroupHandle editorGroupHandle = {};
-    SubmissionGroupHandle uiGroupHandle = {};
+    VkSmol::BufferHandle debugUBOHandle;
+    VkSmol::BufferHandle displayUBOHandle;
 
     VkExtent2D renderExtent = {};
     VkExtent2D viewportExtent = {};

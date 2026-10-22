@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <deque>
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
+#include "VkSmol/graph/builder_resource.hpp"
+#include "VkSmol/graph/render_graph.hpp"
 #include "imgui/imgui.h"
 
 #include "core/ecs/entity.hpp"
@@ -23,31 +26,30 @@ struct MaterialFingerprint {
     bool operator==(const MaterialFingerprint&) const = default;
 };
 
-struct PreviewImage {
-    Image image;
-    ImageView view;
-    ui::ImGuiTexture textureId;
-    MaterialFingerprint fingerprint;
-};
-
 class MaterialPreview {
 public:
     static constexpr int kPreviewSize = 256;
     static constexpr int kPreviewSampleCount = 256;
+    static constexpr uint32_t kThumbnailCapacity = 32;
 
-    RenderResources initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle,
-                              BufferHandle blueNoiseBufferHandle);
-    void onGraphCompiled(const RenderResources& resources);
+    void init();
+    void addPasses(VkSmol::RenderGraph& graph);
     void tick();
-    void destroy();
 
     void drawPreview(ecs::Entity materialEntity);
 
     Scene& getScene() { return renderer.getScene(); }
+    VkSmol::ImageHandle getOutputImageHandle() const { return renderer.getOutputImageHandle(); }
+    VkSmol::ImageHandle getThumbnailImageHandle() const { return thumbnailImageHandle; }
 
 private:
     struct InFlight {
         ecs::Entity entity;
+        MaterialFingerprint fingerprint;
+    };
+
+    struct Thumbnail {
+        uint32_t layer;
         MaterialFingerprint fingerprint;
     };
 
@@ -56,7 +58,7 @@ private:
     ecs::Entity resolveMaterialSource(ecs::Entity entity) const;
     MaterialFingerprint captureFingerprint(ecs::Entity entity) const;
     bool isStale(ecs::Entity entity, const MaterialFingerprint& fingerprint) const;
-    ui::ImGuiTexture registerTexture(VkImageView view) const;
+    ui::ImGuiTexture registerTexture(VkSmol::ImageRange image) const;
 
     void syncPreviewMaterial(const ecs::ComponentType& type, ecs::Entity fieldSource);
     void startGeneration(ecs::Entity materialEntity);
@@ -65,11 +67,16 @@ private:
     void evict(ecs::Entity materialEntity);
 
     PathtraceRenderer renderer;
-    bool sceneInitialized = false;
     ecs::Entity previewMaterialEntity;
     ui::ImGuiTexture liveTexture;
 
+    VkSmol::ImageHandle thumbnailImageHandle;
+    std::vector<ui::ImGuiTexture> thumbnailTextures;
+    std::vector<uint32_t> freeLayers;
+    std::optional<uint32_t> pendingCopyLayer;
+
     std::optional<InFlight> inFlight;
     std::deque<ecs::Entity> pendingMaterials;
-    std::unordered_map<ecs::Entity, PreviewImage> previewImages;
+    std::unordered_map<ecs::Entity, Thumbnail> thumbnails;
+    std::deque<ecs::Entity> thumbnailOrder;
 };

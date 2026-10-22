@@ -4,7 +4,7 @@
 #include <string>
 
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
-#include "VkSmol/graph/render_graph_builder.hpp"
+#include "VkSmol/graph/pass_context.hpp"
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
@@ -13,119 +13,100 @@
 #include "core/render/script_table.hpp"
 #include "core/scene/gpu_structs.hpp"
 
-RenderResources PathtraceRenderer::initGraph(RenderGraphBuilder& builder, VkExtent2D extent, const std::string& tag,
-                                             ImageHandle lensImageHandle, BufferHandle blueNoiseBufferHandle) {
+void PathtraceRenderer::init(VkExtent2D extent, const std::string& passTag, VkSmol::ImageHandle lensImage,
+                             VkSmol::BufferHandle blueNoiseBuffer) {
+    VkSmol::Engine& engine = Core::getEngine();
+    tag = passTag;
     renderExtent = extent;
-    groupHandle = builder.addSubmissionGroup(tag.empty() ? "Core" : tag);
+    lensImageHandle = lensImage;
+    blueNoiseBufferHandle = blueNoiseBuffer;
 
-    previousPathtracingImageHandle =
-        builder.createImage(tag + "PreviousPathtracingImage", VK_FORMAT_R32G32B32A32_SFLOAT, extent.width,
-                            extent.height, 1, VKSMOL_IMAGE_OWNERSHIP_MANAGED, VK_IMAGE_USAGE_STORAGE_BIT,
-                            ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read},
-                            ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read});
-    currentPathtracingImageHandle = builder.createImage(tag + "CurrentPathtracingImage", VK_FORMAT_R32G32B32A32_SFLOAT,
+    scene.init();
+
+    previousPathtracingImageHandle = engine.createImage(tag + "PreviousPathtracingImage", VK_FORMAT_R32G32B32A32_SFLOAT,
                                                         extent.width, extent.height);
+    currentPathtracingImageHandle =
+        engine.createImage(tag + "CurrentPathtracingImage", VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height);
     resources.outputImageHandle =
-        builder.createImage(tag + "OutputImage", VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height);
+        engine.createImage(tag + "OutputImage", VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height);
+    for (size_t i = 0; i < compositingPingHandles.size(); i++)
+        compositingPingHandles[i] = engine.createImage(tag + "CompositingPingImage" + std::to_string(i),
+                                                       VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height);
 
-    pathtracingUBOHandle = builder.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO));
-    resources.pixelInfoBufferHandle = builder.createBuffer(
+    pathtracingUBOHandle = engine.createBuffer(tag + "PathtracingUBO", sizeof(PathtracerUBO));
+    resources.pixelInfoBufferHandle = engine.createBuffer(
         tag + "PixelInfoBuffer", static_cast<size_t>(extent.width) * extent.height * sizeof(PixelInfo));
 
-    // Scene buffers must be created before passes so binding slots can be declared
-    resources.sceneHandles.vertex = builder.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex));
-    resources.sceneHandles.index = builder.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t));
-    resources.sceneHandles.bvh = builder.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode));
-    resources.sceneHandles.mesh = builder.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh));
-    resources.sceneHandles.material = builder.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial));
-    resources.sceneHandles.pluginParams = builder.createBuffer(tag + "ScenePluginParamsBuffer", 16 * sizeof(float));
+    resources.sceneHandles.vertex = engine.createBuffer(tag + "SceneVertexBuffer", 16 * sizeof(Vertex));
+    resources.sceneHandles.index = engine.createBuffer(tag + "SceneIndexBuffer", 16 * sizeof(uint32_t));
+    resources.sceneHandles.bvh = engine.createBuffer(tag + "SceneBvhBuffer", 16 * sizeof(GpuBvhNode));
+    resources.sceneHandles.mesh = engine.createBuffer(tag + "SceneMeshBuffer", 16 * sizeof(GpuMesh));
+    resources.sceneHandles.material = engine.createBuffer(tag + "SceneMaterialBuffer", 16 * sizeof(GpuMaterial));
+    resources.sceneHandles.pluginParams = engine.createBuffer(tag + "ScenePluginParamsBuffer", 16 * sizeof(float));
     resources.sceneHandles.object =
-        builder.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject));
+        engine.createBuffer(tag + "SceneObjectBuffer", sizeof(GpuObjectHeader) + 16 * sizeof(GpuObject));
     resources.sceneHandles.light =
-        builder.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight));
-    resources.sceneHandles.motion = builder.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample));
+        engine.createBuffer(tag + "SceneLightBuffer", sizeof(GpuLightHeader) + 16 * sizeof(GpuLight));
+    resources.sceneHandles.motion = engine.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample));
     resources.sceneHandles.liveMotion =
-        builder.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample));
-
-    // Pathtracing pass
-    ComputePassBuilder pathtrace = builder.addComputePass(tag + "PathtracingPass");
-    pathtracePassHandle = pathtrace.getHandle();
-    pathtrace.setGroup(groupHandle);
-    const std::string pathtracingShader = "builtin:/shaders/core/pathtracing.slang";
-    const ShaderDefines pathtracingDefines = {{"RANDOM_BLUE_NOISE", "1"}, {"CAMERA_LENS_APERTURE", "1"}};
-    const ShaderConformances pathtracingConformances =
-        ScriptTable::conformances({&ScriptTable::kMaterial, &ScriptTable::kSky, &ScriptTable::kLens});
-    const auto pathtracingLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(pathtracingShader, name, pathtracingDefines,
-                                                   pathtracingConformances);
-    };
-    pathtrace.readBuffer(pathtracingLocation("ubo"), pathtracingUBOHandle, BufferUsageType::Uniform);
-    pathtrace.readImage(pathtracingLocation("prevTex"), previousPathtracingImageHandle, ImageUsageType::Sampled);
-    pathtrace.readBuffer(pathtracingLocation("pixelInfoBuffer"), resources.pixelInfoBufferHandle,
-                         BufferUsageType::Storage);
-    pathtrace.writeImage(pathtracingLocation("outputImage"), currentPathtracingImageHandle, ImageUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.vertices"), resources.sceneHandles.vertex,
-                         BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.indices"), resources.sceneHandles.index, BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.bvhNodes"), resources.sceneHandles.bvh, BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.meshes"), resources.sceneHandles.mesh, BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.materials"), resources.sceneHandles.material,
-                         BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.pluginParams"), resources.sceneHandles.pluginParams,
-                         BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.objects"), resources.sceneHandles.object, BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("scene.motion"), resources.sceneHandles.motion, BufferUsageType::Storage);
-    pathtrace.readBuffer(pathtracingLocation("lightBuffer"), resources.sceneHandles.light, BufferUsageType::Storage);
-    pathtrace.readImage(pathtracingLocation("lensSampler"), lensImageHandle, ImageUsageType::Sampled);
-    pathtrace.readBuffer(pathtracingLocation("blueNoiseBuffer"), blueNoiseBufferHandle, BufferUsageType::Storage);
-    pathtrace.setPipeline(pathtracingShader, pathtracingDefines, pathtracingConformances);
-    pathtracingTimestamp = pathtrace.setTimestamp();
-
-    // Compositing pass
-    const size_t passCount = std::max<size_t>(1, ScriptTable::compositingDispatchCount(scene.getRegistry()));
-
-    for (size_t i = 0; i < compositingPingHandles.size(); i++) {
-        compositingPingHandles[i] = builder.createImage(
-            tag + "CompositingPingImage" + std::to_string(i), VK_FORMAT_R32G32B32A32_SFLOAT, extent.width,
-            extent.height, 1, VKSMOL_IMAGE_OWNERSHIP_MANAGED, VK_IMAGE_USAGE_STORAGE_BIT,
-            ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read},
-            ImageAccessInfo{.usage = ImageUsageType::Sampled, .access = AccessType::Read});
-    }
-
-    compositingPassHandles.clear();
-    compositingPassUBOHandles.clear();
-    const std::string compositingShader = "builtin:/shaders/core/compositing.slang";
-    const ShaderConformances compositingConformances = ScriptTable::conformances({&ScriptTable::kCompositing});
-    const auto compositingLocation = [&](const std::string& name) {
-        return Core::getEngine().getShaderLocation(compositingShader, name, {}, compositingConformances);
-    };
-    for (size_t i = 0; i < passCount; i++) {
-        BufferHandle passUboHandle =
-            builder.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO));
-        compositingPassUBOHandles.push_back(passUboHandle);
-
-        const ImageHandle readHandle = i == 0 ? currentPathtracingImageHandle : compositingPingHandles[(i - 1) % 2];
-        const ImageHandle writeHandle =
-            i == passCount - 1 ? resources.outputImageHandle : compositingPingHandles[i % 2];
-
-        ComputePassBuilder pass = builder.addComputePass(tag + "CompositingPass" + std::to_string(i));
-        compositingPassHandles.push_back(pass.getHandle());
-        pass.setGroup(groupHandle);
-        pass.readImage(compositingLocation("sourceTexture"), readHandle, ImageUsageType::Sampled);
-        pass.readBuffer(compositingLocation("passUbo"), passUboHandle, BufferUsageType::Uniform);
-        pass.readBuffer(compositingLocation("pixelInfoBuffer"), resources.pixelInfoBufferHandle,
-                        BufferUsageType::Storage);
-        pass.writeImage(compositingLocation("destinationImage"), writeHandle, ImageUsageType::Storage);
-        pass.readBuffer(compositingLocation("pluginParams"), resources.sceneHandles.pluginParams,
-                        BufferUsageType::Storage);
-        pass.readImage(compositingLocation("originalTexture"), currentPathtracingImageHandle, ImageUsageType::Sampled);
-        pass.setPipeline(compositingShader, {}, compositingConformances);
-        if (i == 0) compositingTimestamp = pass.setTimestamp();
-    }
+        engine.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample));
+    scene.setGpuBufferHandles(resources.sceneHandles);
 
     setDefaultUBOs();
+}
 
-    return resources;
+void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
+    const SceneGpuBuffers& sceneHandles = resources.sceneHandles;
+
+    graph.addComputePass(getPathtracingPassName())
+        .pipeline("builtin:/shaders/core/pathtracing.slang",
+                  {{"RANDOM_BLUE_NOISE", "1"}, {"CAMERA_LENS_APERTURE", "1"}},
+                  ScriptTable::conformances({&ScriptTable::kMaterial, &ScriptTable::kSky, &ScriptTable::kLens}))
+        .read("ubo", pathtracingUBOHandle)
+        .read("prevTex", previousPathtracingImageHandle)
+        .write("pixelInfoBuffer", resources.pixelInfoBufferHandle)
+        .write("outputImage", currentPathtracingImageHandle)
+        .read("scene.vertices", sceneHandles.vertex)
+        .read("scene.indices", sceneHandles.index)
+        .read("scene.bvhNodes", sceneHandles.bvh)
+        .read("scene.meshes", sceneHandles.mesh)
+        .read("scene.materials", sceneHandles.material)
+        .read("scene.pluginParams", sceneHandles.pluginParams)
+        .read("scene.objects", sceneHandles.object)
+        .read("scene.motion", sceneHandles.motion)
+        .read("lightBuffer", sceneHandles.light)
+        .read("lensSampler", lensImageHandle)
+        .read("blueNoiseBuffer", blueNoiseBufferHandle)
+        .execute([this](VkSmol::PassContext& context) {
+            if (dispatchPathtracing) context.dispatchThreads(renderExtent.width, renderExtent.height);
+        });
+
+    const size_t passCount = std::max<size_t>(1, ScriptTable::compositingDispatchCount(scene.getRegistry()));
+    const VkSmol::ShaderConformances compositingConformances = ScriptTable::conformances({&ScriptTable::kCompositing});
+
+    compositingPassUBOHandles.clear();
+    for (size_t i = 0; i < passCount; i++) {
+        const VkSmol::BufferHandle passUboHandle =
+            graph.createBuffer(tag + "CompositingPassUBO" + std::to_string(i), sizeof(CompositingPassUBO));
+        compositingPassUBOHandles.push_back(passUboHandle);
+
+        const VkSmol::ImageHandle readHandle =
+            i == 0 ? currentPathtracingImageHandle : compositingPingHandles[(i - 1) % 2];
+        const VkSmol::ImageHandle writeHandle =
+            i == passCount - 1 ? resources.outputImageHandle : compositingPingHandles[i % 2];
+
+        graph.addComputePass(tag + "CompositingPass" + std::to_string(i))
+            .pipeline("builtin:/shaders/core/compositing.slang", {}, compositingConformances)
+            .read("sourceTexture", readHandle)
+            .read("passUbo", passUboHandle)
+            .read("pixelInfoBuffer", resources.pixelInfoBufferHandle)
+            .write("destinationImage", writeHandle)
+            .read("pluginParams", sceneHandles.pluginParams)
+            .read("originalTexture", currentPathtracingImageHandle)
+            .execute([this](VkSmol::PassContext& context) {
+                context.dispatchThreads(renderExtent.width, renderExtent.height);
+            });
+    }
 }
 
 void PathtraceRenderer::setDefaultUBOs() {
@@ -139,24 +120,23 @@ void PathtraceRenderer::setDefaultUBOs() {
     pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
 }
 
-void PathtraceRenderer::render() {
-    VkSmol& engine = Core::getEngine();
+void PathtraceRenderer::prepare() {
+    VkSmol::Engine& engine = Core::getEngine();
 
     ecs::Registry& registry = scene.getRegistry();
     const ecs::Entity camera = *scene.getActiveCamera();
 
     const CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
-    if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassHandles.size())
+    if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassUBOHandles.size())
         Core::requestGraphRebuild();
 
     if (registry.hasChangedSince(seenChangeTick, {&ecs::Compositing})) accumulator.restart();
     seenChangeTick = registry.getChangeTick();
 
-    const bool converged = isRenderFinished();
-
-    if (!converged) {
+    dispatchPathtracing = !isRenderFinished();
+    if (dispatchPathtracing) {
         pathtracerUBO.sampleCount = accumulator.increment();
-        engine.swapBindings(currentPathtracingImageHandle, previousPathtracingImageHandle);
+        engine.swapImages(currentPathtracingImageHandle, previousPathtracingImageHandle);
     }
 
     pathtracerUBO.screen.size = {static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)};
@@ -179,31 +159,17 @@ void PathtraceRenderer::render() {
         }
         engine.writeBuffer(compositingPassUBOHandles[i], passUbo);
     }
-
-    CommandBuffer& commandBuffer = engine.beginRecording(groupHandle);
-
-    if (!converged)
-        engine.dispatch(commandBuffer, pathtracePassHandle, (renderExtent.width + 7) / 8,
-                        (renderExtent.height + 7) / 8);
-
-    for (size_t i = 0; i < compositingPassHandles.size(); i++)
-        engine.dispatch(commandBuffer, compositingPassHandles[i], (renderExtent.width + 7) / 8,
-                        (renderExtent.height + 7) / 8);
-
-    onAfterDispatch(commandBuffer);
-
-    engine.endRecording(groupHandle);
 }
 
 void PathtraceRenderer::resize(uint32_t width, uint32_t height) {
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     engine.waitIdle();
     renderExtent = {width, height};
 
     engine.resizeImage(previousPathtracingImageHandle, width, height);
     engine.resizeImage(currentPathtracingImageHandle, width, height);
     engine.resizeImage(resources.outputImageHandle, width, height);
-    for (const ImageHandle& pingHandle : compositingPingHandles) engine.resizeImage(pingHandle, width, height);
+    for (const VkSmol::ImageHandle& pingHandle : compositingPingHandles) engine.resizeImage(pingHandle, width, height);
     engine.resizeBuffer(resources.pixelInfoBufferHandle, static_cast<size_t>(width) * height * sizeof(PixelInfo));
 
     onResize(width, height);

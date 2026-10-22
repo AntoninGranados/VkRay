@@ -28,7 +28,7 @@ std::vector<ShaderPlugin*>& ShaderPlugin::registry() {
     return plugins;
 }
 
-void ShaderPlugin::appendConformances(const ScriptKind& kind, std::vector<ShaderConformance>& conformances) {
+void ShaderPlugin::appendConformances(const ScriptKind& kind, std::vector<VkSmol::ShaderConformance>& conformances) {
     for (size_t i = 0; i < kind.builtins.size(); i++)
         conformances.push_back({kind.builtins[i], kind.interfaceName, static_cast<int>(i), ""});
 
@@ -41,18 +41,18 @@ void ShaderPlugin::appendConformances(const ScriptKind& kind, std::vector<Shader
     }
 }
 
-bool ShaderPlugin::appendFields(const std::vector<ShaderField>& shaderFields, const std::string& group,
+bool ShaderPlugin::appendFields(const std::vector<VkSmol::ShaderField>& shaderFields, const std::string& group,
                                 std::vector<Field>& fields) {
-    for (const ShaderField& shaderField : shaderFields) {
+    for (const VkSmol::ShaderField& shaderField : shaderFields) {
         const std::string id = group.empty() ? shaderField.name : std::format("{}/{}", group, shaderField.name);
-        if (shaderField.type == ShaderFieldType::Struct) {
+        if (shaderField.type == VkSmol::ShaderFieldType::Struct) {
             if (!appendFields(shaderField.fields, id, fields)) return false;
             continue;
         }
 
         NumericMeta meta{};
         bool isAnimatable = false;
-        for (const ShaderAttribute& attribute : shaderField.attributes) {
+        for (const VkSmol::ShaderAttribute& attribute : shaderField.attributes) {
             const std::vector<float>& arguments = attribute.arguments;
             if (attribute.name == "Range" && arguments.size() == 2) {
                 meta.min = arguments[0];
@@ -72,15 +72,16 @@ bool ShaderPlugin::appendFields(const std::vector<ShaderField>& shaderFields, co
         }
 
         const std::string label = camelCaseToLabel(shaderField.name);
-        const bool isInt = shaderField.type == ShaderFieldType::Int || shaderField.type == ShaderFieldType::UInt;
+        const bool isInt =
+            shaderField.type == VkSmol::ShaderFieldType::Int || shaderField.type == VkSmol::ShaderFieldType::UInt;
         const uint32_t componentCount = shaderField.componentCount;
         if (componentCount < 1 || componentCount > 4 ||
-            (shaderField.type == ShaderFieldType::Bool && componentCount > 1)) {
+            (shaderField.type == VkSmol::ShaderFieldType::Bool && componentCount > 1)) {
             error = std::format("{}: unsupported type for '{}'", path->string(), id);
             return false;
         }
 
-        if (shaderField.type == ShaderFieldType::Bool) {
+        if (shaderField.type == VkSmol::ShaderFieldType::Bool) {
             fields.push_back(Field::make<bool>(id, label, shaderField.defaultValue[0] != 0));
         } else {
             static constexpr FieldType floatTypes[] = {FieldType::Float, FieldType::Vec2, FieldType::Vec3,
@@ -99,7 +100,7 @@ bool ShaderPlugin::appendFields(const std::vector<ShaderField>& shaderFields, co
 }
 
 bool ShaderPlugin::reflect(std::vector<Field>& fields) {
-    std::vector<ShaderStruct> structs;
+    std::vector<VkSmol::ShaderStruct> structs;
     try {
         structs = Core::getEngine().getShaderStructs(path->string(), kind->interfaceName);
     } catch (const std::exception& exception) {
@@ -113,10 +114,10 @@ bool ShaderPlugin::reflect(std::vector<Field>& fields) {
         return false;
     }
 
-    const ShaderStruct& script = structs[0];
+    const VkSmol::ShaderStruct& script = structs[0];
     if (!appendFields(script.fields, "", fields)) return false;
 
-    for (const ShaderAttribute& attribute : script.attributes)
+    for (const VkSmol::ShaderAttribute& attribute : script.attributes)
         if (attribute.name == "PassCount" && attribute.arguments.size() == 1)
             passCount = std::max(1, static_cast<int>(attribute.arguments[0]));
 

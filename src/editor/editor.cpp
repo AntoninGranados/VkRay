@@ -24,11 +24,8 @@ Editor& Editor::get() {
 void Editor::init() {
     get().inputHandler.initCallbacks();
     EditorCameraPreview::install();
-}
-
-void Editor::terminate() {
-    get().editorRenderer.destroy();
-    get().materialPreview.destroy();
+    get().materialPreview.init();
+    get().editorRenderer.init();
 }
 
 EditorUi& Editor::getUi() { return get().ui; }
@@ -90,7 +87,7 @@ void Editor::stepAnimation(float deltaTime) {
 void Editor::handleViewportResize() {
     ImVec2 vpSize = get().ui.getViewportSize();
     float xscale = 1.0f, yscale = 1.0f;
-    glfwGetWindowContentScale(static_cast<GLFWwindow*>(Core::getPlatform().getNativeWindowHandle()), &xscale, &yscale);
+    glfwGetWindowContentScale(Core::getWindow().getWindow(), &xscale, &yscale);
     VkExtent2D vpExtent = {static_cast<uint32_t>(vpSize.x * xscale), static_cast<uint32_t>(vpSize.y * yscale)};
     if (Core::getRenderMode() == RenderMode::Preview && vpExtent.width > 0 && vpExtent.height > 0) {
         const int pixelScale = std::max(1, Core::getParameters().get<int>("renderer/viewport/pixel_scale"));
@@ -130,7 +127,7 @@ void Editor::handleRenderModeCompletion() {
 void Editor::run() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    while (!Core::getEngine().shouldTerminate()) {
+    while (!Core::getWindow().shouldClose()) {
         auto currentTime = std::chrono::high_resolution_clock::now();
         const float deltaTime =
             std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
@@ -144,10 +141,10 @@ void Editor::run() {
         handleViewportResize();
         handleRenderModeCompletion();
 
-        Core::renderFrame([&](FrameContext& frameContext) {
-            get().editorRenderer.render(frameContext);
+        Core::renderFrame([] {
+            get().editorRenderer.prepare();
             get().materialPreview.tick();
-            Core::getEngine().present();
         });
     }
+    Core::getEngine().waitIdle();
 }

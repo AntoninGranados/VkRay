@@ -6,9 +6,7 @@
 #include <string>
 #include <string_view>
 
-#include "VkSmol/graph/render_graph_builder.hpp"
-#include "VkSmol/platform/glfw_platform.hpp"
-#include "VkSmol/platform/headless_platform.hpp"
+#include "VkSmol/graph/render_graph.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -40,22 +38,15 @@ Application::Application(int argc, char* argv[]) {
 
 int Application::run() { return runFn ? runFn() : EXIT_SUCCESS; }
 
-Application::~Application() {
-    if (!platform) return;
-    if (!platform->isHeadless()) Editor::terminate();
-    Core::terminate();
-}
-
 void Application::initEditorMode() {
-    platform = std::make_unique<GLFWPlatform>(std::format("VkRay [{}]", VK_RAY_VERSION_STRING), 1280, 720);
-    Core::init(*platform, VK_RAY_VERSION);
+    Core::init(std::format("VkRay [{}]", VK_RAY_VERSION_STRING), VK_RAY_VERSION);
 
     Editor::init();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
 
     float xscale, yscale;
-    glfwGetWindowContentScale(static_cast<GLFWwindow*>(platform->getNativeWindowHandle()), &xscale, &yscale);
+    glfwGetWindowContentScale(Core::getWindow().getWindow(), &xscale, &yscale);
 
     const auto addFont = [&](const char* path, ImFontConfig config, const ImWchar* ranges = nullptr) {
         const std::string_view font = Resources::find(path).value();
@@ -73,7 +64,7 @@ void Application::initEditorMode() {
     addFont("builtin:/fonts/fa-solid-900.otf", iconConfig, iconRanges);
     io.FontGlobalScale = 1.0f / xscale;
 
-    initScene();
+    ecs::ComponentUiRegistry::init();
     Editor::loadScene(kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(false); });
     runFn = [] {
@@ -93,37 +84,21 @@ void Application::initOfflineMode(const std::string& jobFile) {
     }
     if (queue.isEmpty()) return;
 
-    platform = std::make_unique<HeadlessPlatform>(
-        1080, 1080); // This size is arbitrary as the buffers will be resized with the first jobs parameters
-    Core::init(*platform, VK_RAY_VERSION);
+    Core::init(std::nullopt, VK_RAY_VERSION);
 
-    initScene();
+    ecs::ComponentUiRegistry::init();
     SceneSerializer::load(Core::getScene(), kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
     runFn = [queue = std::move(queue)]() mutable { return Offline::run(queue); };
 }
 
 void Application::buildRenderGraph(bool offline) {
-    RenderGraphBuilder builder;
-    RenderResources resources = Core::getCoreRenderer().initGraph(builder);
-    RenderResources previewResources;
+    VkSmol::RenderGraph& graph = Core::getGraph();
+    graph.reset();
+    Core::getCoreRenderer().addPasses(graph);
     if (!offline) {
-        Editor::getEditorRenderer().initGraph(builder, resources);
-        previewResources = Editor::getMaterialPreview().initGraph(builder, Core::getCoreRenderer().getLensImageHandle(),
-                                                                  Core::getCoreRenderer().getBlueNoiseBufferHandle());
+        Editor::getMaterialPreview().addPasses(graph);
+        Editor::getEditorRenderer().addPasses(graph);
     }
-
-    for (const std::string& error : Core::getEngine().rebuildGraph(builder)) Log::error(error);
-
-    if (!offline) {
-        Editor::getEditorRenderer().registerImGuiTextures();
-        Editor::getMaterialPreview().onGraphCompiled(previewResources);
-    }
-    Core::getScene().setGpuBufferHandles(resources.sceneHandles);
-}
-
-void Application::initScene() {
-    Core::getScene().init();
-
-    ecs::ComponentUiRegistry::init();
+    graph.bake();
 }

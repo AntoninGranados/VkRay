@@ -8,16 +8,16 @@
 #include "core/ecs/registry.hpp"
 
 struct SceneGpuBuffers {
-    BufferHandle vertex;
-    BufferHandle index;
-    BufferHandle bvh;
-    BufferHandle mesh;
-    BufferHandle material;
-    BufferHandle pluginParams;
-    BufferHandle object;
-    BufferHandle light;
-    BufferHandle motion;
-    BufferHandle liveMotion;
+    VkSmol::BufferHandle vertex;
+    VkSmol::BufferHandle index;
+    VkSmol::BufferHandle bvh;
+    VkSmol::BufferHandle mesh;
+    VkSmol::BufferHandle material;
+    VkSmol::BufferHandle pluginParams;
+    VkSmol::BufferHandle object;
+    VkSmol::BufferHandle light;
+    VkSmol::BufferHandle motion;
+    VkSmol::BufferHandle liveMotion;
 };
 
 namespace ecs {

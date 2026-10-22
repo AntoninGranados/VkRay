@@ -1,8 +1,8 @@
 #pragma once
 
 #include <array>
+#include <string>
 
-#include "VkSmol/graph/builder_resource.hpp"
 #include "imgui/imgui.h"
 
 #include "panel.hpp"
@@ -19,7 +19,7 @@ private:
     struct PassInfo {
         const char* name;
         ImU32 color;
-        TimestampHandle timestamp;
+        std::string passName;
     };
 
     struct FrameSample {

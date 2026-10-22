@@ -129,10 +129,10 @@ int ScriptTable::compositingDispatchCount(ecs::Registry& registry) {
     return total;
 }
 
-std::vector<ShaderConformance> ScriptTable::conformances(std::initializer_list<const ScriptKind*> kinds) {
+std::vector<VkSmol::ShaderConformance> ScriptTable::conformances(std::initializer_list<const ScriptKind*> kinds) {
     tiltShiftPlugin();
 
-    std::vector<ShaderConformance> result;
+    std::vector<VkSmol::ShaderConformance> result;
     for (const ScriptKind* kind : kinds) ShaderPlugin::appendConformances(*kind, result);
     return result;
 }

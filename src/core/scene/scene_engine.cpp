@@ -17,8 +17,6 @@ void Scene::init() {
     initSystems();
 }
 
-void Scene::destroy() {}
-
 void Scene::setGpuBufferHandles(const SceneGpuBuffers& handles) {
     registry.ctx().get<SceneGpuBuffers>() = handles;
     invalidateGpuData();

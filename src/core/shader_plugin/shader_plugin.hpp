@@ -8,8 +8,10 @@
 #include "core/ecs/components/component.hpp"
 #include "core/ecs/components/component_type.hpp"
 
+namespace VkSmol {
 struct ShaderConformance;
 struct ShaderField;
+} // namespace VkSmol
 
 struct ScriptKind {
     std::string interfaceName;
@@ -28,7 +30,7 @@ public:
 
     bool parse(const std::filesystem::path& path, const ScriptKind& kind);
 
-    static void appendConformances(const ScriptKind& kind, std::vector<ShaderConformance>& conformances);
+    static void appendConformances(const ScriptKind& kind, std::vector<VkSmol::ShaderConformance>& conformances);
 
     const std::string& getError() const { return error; }
     ecs::Component& getComponent() { return params; }
@@ -45,7 +47,7 @@ private:
 
     void load(bool migrate);
     bool reflect(std::vector<Field>& fields);
-    bool appendFields(const std::vector<ShaderField>& shaderFields, const std::string& group,
+    bool appendFields(const std::vector<VkSmol::ShaderField>& shaderFields, const std::string& group,
                       std::vector<Field>& fields);
 
     ecs::ComponentType schema;

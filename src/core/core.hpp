@@ -2,10 +2,12 @@
 
 #include <filesystem>
 #include <functional>
+#include <optional>
+#include <string>
 
 #include "VkSmol/engine.hpp"
-#include "VkSmol/frame_context.hpp"
-#include "VkSmol/platform/platform.hpp"
+#include "VkSmol/graph/render_graph.hpp"
+#include "VkSmol/present/window.hpp"
 
 #include "core/animation/animation_clock.hpp"
 #include "core/core_renderer.hpp"
@@ -16,12 +18,12 @@
 
 class Core {
 public:
-    static void init(Platform& platform, uint32_t version);
+    static void init(const std::optional<std::string>& windowTitle, uint32_t version);
     static void loadParameters();
-    static void terminate();
 
-    static VkSmol& getEngine() { return get().engine; }
-    static Platform& getPlatform() { return *get().platform; }
+    static VkSmol::Engine& getEngine() { return get().engine; }
+    static VkSmol::Window& getWindow() { return *get().window; }
+    static VkSmol::RenderGraph& getGraph() { return get().graph; }
     static AnimationClock& getAnimation() { return get().animation; }
     static ParameterRegistry& getParameters() { return get().parameters; }
     static Scene& getScene() { return get().coreRenderer.getScene(); }
@@ -55,7 +57,7 @@ public:
     }
     static bool consumeResize();
 
-    static void renderFrame(std::function<void(FrameContext&)> onRender = {});
+    static void renderFrame(std::function<void()> onPrepare = {});
 
     static const std::filesystem::path& getOutputPath() { return get().outputPath; }
     static void setOutputPath(std::filesystem::path p) { get().outputPath = std::move(p); }
@@ -64,14 +66,20 @@ public:
     static void startRenderAnim();
 
 private:
-    Core() = default;
-    static Core& get();
+    static constexpr uint32_t kWindowWidth = 1280;
+    static constexpr uint32_t kWindowHeight = 720;
+
+    Core(const std::optional<std::string>& windowTitle, uint32_t version);
+    static Core& get() { return *instance; }
 
     static void updateAnimationDirty(Core& c);
     static void rebuildGraphIfRequested(Core& c);
 
-    Platform* platform = nullptr;
-    VkSmol engine;
+    inline static Core* instance = nullptr;
+
+    std::optional<VkSmol::Window> window;
+    VkSmol::Engine engine;
+    VkSmol::RenderGraph graph;
     ParameterRegistry parameters;
     AnimationClock animation{24 * 5, 24.0f};
     CoreRenderer coreRenderer;

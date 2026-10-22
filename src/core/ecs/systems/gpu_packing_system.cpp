@@ -120,6 +120,13 @@ bool isSampledLight(Registry& registry, const ComponentStorage& materialRefs, co
     return getMeshAsset(registry, registry.get(entity, MeshRef).get<Entity>("handle")) != nullptr;
 }
 
+template <typename T>
+void upload(VkSmol::Engine& engine, VkSmol::BufferHandle buffer, const std::vector<T>& values, size_t offset = 0) {
+    const size_t size = offset + values.size() * sizeof(T);
+    if (engine.getBufferSize(buffer) < size) engine.resizeBuffer(buffer, size);
+    engine.writeBuffer(buffer, values, offset);
+}
+
 } // namespace
 
 const std::vector<const ComponentType*>& objectTypeOrder() {
@@ -128,7 +135,7 @@ const std::vector<const ComponentType*>& objectTypeOrder() {
 }
 
 void meshPackingSystem(Registry& registry) {
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
 
     std::vector<GpuMesh>& meshTemplates = registry.ctx().get<MeshTemplates>().meshes;
@@ -185,9 +192,9 @@ void meshPackingSystem(Registry& registry) {
         }
     }
 
-    engine.writeBuffer(buffers.vertex, vertices);
-    engine.writeBuffer(buffers.index, indices);
-    engine.writeBuffer(buffers.bvh, bvhNodes);
+    upload(engine, buffers.vertex, vertices);
+    upload(engine, buffers.index, indices);
+    upload(engine, buffers.bvh, bvhNodes);
 }
 
 void meshInstancePackingSystem(Registry& registry) {
@@ -205,7 +212,7 @@ void meshInstancePackingSystem(Registry& registry) {
         meshes.push_back(meshTemplates[meshSlot]);
     }
 
-    Core::getEngine().writeBuffer(registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
+    upload(Core::getEngine(), registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
 }
 
 void materialPackingSystem(Registry& registry) {
@@ -243,10 +250,10 @@ void materialPackingSystem(Registry& registry) {
         }
     }
 
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
-    engine.writeBuffer(buffers.material, gpuMaterials);
-    engine.writeBuffer(buffers.pluginParams, pluginParams);
+    upload(engine, buffers.material, gpuMaterials);
+    upload(engine, buffers.pluginParams, pluginParams);
 }
 
 void objectPackingSystem(Registry& registry) {
@@ -309,13 +316,13 @@ void objectPackingSystem(Registry& registry) {
         cameraMotion = CameraMotionInfo{};
     }
 
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuObjectHeader header{.objectCount = static_cast<uint32_t>(gpuObjects.size())};
+    upload(engine, buffers.object, gpuObjects, sizeof(GpuObjectHeader));
     engine.writeBuffer(buffers.object, header);
-    engine.writeBuffer(buffers.object, gpuObjects, sizeof(GpuObjectHeader));
-    engine.writeBuffer(buffers.motion, motion);
-    engine.writeBuffer(buffers.liveMotion, liveMotion);
+    upload(engine, buffers.motion, motion);
+    upload(engine, buffers.liveMotion, liveMotion);
 }
 
 void lightPackingSystem(Registry& registry) {
@@ -404,11 +411,11 @@ void lightPackingSystem(Registry& registry) {
     }
     for (size_t i = lastSelectable; i < lights.size() && totalPower > 0.0f; i++) lights[i].cumulativeProbability = 1.0f;
 
-    VkSmol& engine = Core::getEngine();
+    VkSmol::Engine& engine = Core::getEngine();
     const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuLightHeader header{.lightCount = static_cast<uint32_t>(lights.size())};
+    upload(engine, buffers.light, lights, sizeof(GpuLightHeader));
     engine.writeBuffer(buffers.light, header);
-    engine.writeBuffer(buffers.light, lights, sizeof(GpuLightHeader));
 }
 
 } // namespace ecs

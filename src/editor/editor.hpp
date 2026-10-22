@@ -3,6 +3,8 @@
 #include <optional>
 #include <string>
 
+#include "VkSmol/ui/imgui_layer.hpp"
+
 #include "core/core.hpp"
 #include "core/ecs/entity.hpp"
 #include "editor_renderer.hpp"
@@ -14,8 +16,8 @@ class Editor {
 public:
     static void init();
     static void run();
-    static void terminate();
 
+    static VkSmol::ImGuiLayer& getImGui() { return get().imgui; }
     static EditorUi& getUi();
     static EditorRenderer& getEditorRenderer();
     static MaterialPreview& getMaterialPreview();
@@ -46,6 +48,7 @@ private:
     static void handleViewportResize();
     static void handleRenderModeCompletion();
 
+    VkSmol::ImGuiLayer imgui{Core::getEngine(), Core::getWindow()};
     EditorUi ui;
     InputHandler inputHandler;
     EditorRenderer editorRenderer;

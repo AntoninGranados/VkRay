@@ -16,22 +16,21 @@ void StatsPanel::draw() {
     static constexpr float kCanvasH = 90.0f;
     static constexpr float kPaddingTop = 6.0f;
 
-    VkSmol& engine = Core::getEngine();
+    const VkSmol::RenderGraph& graph = Core::getGraph();
     CoreRenderer& coreRenderer = Core::getCoreRenderer();
-    EditorRenderer& editorRenderer = Editor::getEditorRenderer();
 
     const std::array<PassInfo, kNumPasses> passes = {{
-        {"Pathtracing", IM_COL32(255, 70, 70, 255), coreRenderer.getPathtracingTimestamp()},
-        {"Compositing", IM_COL32(70, 170, 255, 255), coreRenderer.getCompositingTimestamp()},
-        {"Display", IM_COL32(50, 220, 80, 255), editorRenderer.getDisplayTimestamp()},
-        {"Debug", IM_COL32(255, 200, 40, 255), editorRenderer.getDebugTimestamp()},
-        {"UI", IM_COL32(220, 80, 255, 255), editorRenderer.getUiTimestamp()},
+        {"Pathtracing", IM_COL32(255, 70, 70, 255), coreRenderer.getPathtracingPassName()},
+        {"Compositing", IM_COL32(70, 170, 255, 255), coreRenderer.getCompositingPassName()},
+        {"Display", IM_COL32(50, 220, 80, 255), EditorRenderer::kDisplayPassName},
+        {"Debug", IM_COL32(255, 200, 40, 255), EditorRenderer::kDebugPassName},
+        {"UI", IM_COL32(220, 80, 255, 255), EditorRenderer::kUiPassName},
     }};
 
     FrameSample sample;
     const bool paused = Core::isRenderFinished();
-    sample.ms[0] = paused ? 0.0f : static_cast<float>(engine.getTimestampMs(passes[0].timestamp));
-    for (int p = 1; p < kNumPasses; ++p) sample.ms[p] = static_cast<float>(engine.getTimestampMs(passes[p].timestamp));
+    sample.ms[0] = paused ? 0.0f : static_cast<float>(graph.getTimestampMs(passes[0].passName));
+    for (int p = 1; p < kNumPasses; ++p) sample.ms[p] = static_cast<float>(graph.getTimestampMs(passes[p].passName));
 
     bool valid = paused || sample.ms[0] >= 0.0f;
     for (int p = 1; p < kNumPasses; ++p)

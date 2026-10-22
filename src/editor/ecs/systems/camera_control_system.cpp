@@ -9,7 +9,6 @@
 
 #include "imgui/imgui.h"
 
-#include "VkSmol/platform/platform.hpp"
 
 #include "core/camera/camera.hpp"
 #include "core/core.hpp"
@@ -33,15 +32,15 @@ void cameraControlSystem(Registry& registry) {
 
     const ecs::Entity camera = *Core::getScene().getActiveCamera();
 
-    Platform& platform = Core::getPlatform();
+    VkSmol::Window& window = Core::getWindow();
     ecs::Component& navigation = registry.get(camera, ecs::CameraNavigation);
     CameraNavigationState& state = navigation.payload<CameraNavigationState>("state");
     ecs::Component& t = registry.get(camera, ecs::Transform);
 
-    const bool rmb = platform.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
-    const bool mmb = platform.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
-    const bool shift = platform.getKey(GLFW_KEY_LEFT_SHIFT) || platform.getKey(GLFW_KEY_RIGHT_SHIFT);
-    const bool ctrl = platform.getKey(GLFW_KEY_LEFT_CONTROL) || platform.getKey(GLFW_KEY_RIGHT_CONTROL);
+    const bool rmb = window.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT);
+    const bool mmb = window.getMouseButton(GLFW_MOUSE_BUTTON_MIDDLE);
+    const bool shift = window.getKey(GLFW_KEY_LEFT_SHIFT) || window.getKey(GLFW_KEY_RIGHT_SHIFT);
+    const bool ctrl = window.getKey(GLFW_KEY_LEFT_CONTROL) || window.getKey(GLFW_KEY_RIGHT_CONTROL);
 
     DragMode newDragMode = DragMode::None;
     if (rmb) {
@@ -71,32 +70,32 @@ void cameraControlSystem(Registry& registry) {
 
         const float speed = Core::getParameters().get<float>("editor/camera/speed");
         float velocity = speed * ImGui::GetIO().DeltaTime;
-        if (platform.getKey(GLFW_KEY_LEFT_CONTROL)) velocity /= 8.0f;
+        if (window.getKey(GLFW_KEY_LEFT_CONTROL)) velocity /= 8.0f;
 
         glm::vec3 position = t.get<glm::vec3>("position");
         bool moved = false;
 
-        if (platform.getKey(GLFW_KEY_W)) {
+        if (window.getKey(GLFW_KEY_W)) {
             position += dir * velocity;
             moved = true;
         }
-        if (platform.getKey(GLFW_KEY_S)) {
+        if (window.getKey(GLFW_KEY_S)) {
             position -= dir * velocity;
             moved = true;
         }
-        if (platform.getKey(GLFW_KEY_A)) {
+        if (window.getKey(GLFW_KEY_A)) {
             position -= right * velocity;
             moved = true;
         }
-        if (platform.getKey(GLFW_KEY_D)) {
+        if (window.getKey(GLFW_KEY_D)) {
             position += right * velocity;
             moved = true;
         }
-        if (platform.getKey(GLFW_KEY_SPACE)) {
+        if (window.getKey(GLFW_KEY_SPACE)) {
             position += glm::vec3(0, 1, 0) * velocity;
             moved = true;
         }
-        if (platform.getKey(GLFW_KEY_LEFT_SHIFT)) {
+        if (window.getKey(GLFW_KEY_LEFT_SHIFT)) {
             position -= glm::vec3(0, 1, 0) * velocity;
             moved = true;
         }

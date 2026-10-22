@@ -69,7 +69,6 @@ class Scene {
 public:
     void init();
     void initContext();
-    void destroy();
     void clear();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});

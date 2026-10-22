@@ -2,7 +2,8 @@
 
 #include <algorithm>
 
-#include "VkSmol/graph/render_graph_builder.hpp"
+#include "VkSmol/graph/pass/transfer_pass_builder.hpp"
+#include "VkSmol/graph/pass_context.hpp"
 
 #include "core/core.hpp"
 #include "core/ecs/components/material.hpp"
@@ -11,57 +12,61 @@
 #include "core/shader_plugin/shader_plugin.hpp"
 #include "editor/ui_utils.hpp"
 
-RenderResources MaterialPreview::initGraph(RenderGraphBuilder& builder, ImageHandle lensImageHandle,
-                                           BufferHandle blueNoiseBufferHandle) {
+void MaterialPreview::init() {
+    CoreRenderer& coreRenderer = Core::getCoreRenderer();
+    renderer.init(VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview", coreRenderer.getLensImageHandle(),
+                  coreRenderer.getBlueNoiseBufferHandle());
+
     Scene& scene = renderer.getScene();
+    ecs::Registry& registry = scene.getRegistry();
+    const ecs::Entity previewCamera = scene.createNamedEntity("Preview Camera", scene.getObjectsRoot());
+    registry.add(previewCamera, ecs::Camera);
+    registry.get(previewCamera, ecs::Camera).set<float>("focal_length", 136.72f);
+    registry.get(previewCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
+    registry.get(previewCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
+    scene.setActiveCamera(previewCamera);
 
-    if (!sceneInitialized) {
-        scene.init();
+    previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
+    registry.add(previewMaterialEntity, ecs::Diffuse);
 
-        ecs::Registry& registry = scene.getRegistry();
-        const ecs::Entity previewCamera = scene.createNamedEntity("Preview Camera", scene.getObjectsRoot());
-        registry.add(previewCamera, ecs::Camera);
-        registry.get(previewCamera, ecs::Camera).set<float>("focal_length", 136.72f);
-        registry.get(previewCamera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
-        registry.get(previewCamera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
-        scene.setActiveCamera(previewCamera);
+    const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
+    registry.add(previewObject, ecs::Sphere);
+    registry.add(previewObject, ecs::MaterialRef);
+    registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
-        previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
-        registry.add(previewMaterialEntity, ecs::Diffuse);
+    const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
+    registry.add(lightMaterialEntity, ecs::Emissive);
+    registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
 
-        const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
-        registry.add(previewObject, ecs::Sphere);
-        registry.add(previewObject, ecs::MaterialRef);
-        registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
+    const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
+    registry.add(lightObject, ecs::Sphere);
+    registry.get(lightObject, ecs::Transform).set<glm::vec3>("scale", glm::vec3(1.5f));
+    registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
+    registry.add(lightObject, ecs::MaterialRef);
+    registry.get(lightObject, ecs::MaterialRef).set<ecs::Entity>("handle", lightMaterialEntity);
 
-        const ecs::Entity lightMaterialEntity =
-            scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
-        registry.add(lightMaterialEntity, ecs::Emissive);
-        registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
-
-        const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
-        registry.add(lightObject, ecs::Sphere);
-        registry.get(lightObject, ecs::Transform).set<glm::vec3>("scale", glm::vec3(1.5f));
-        registry.get(lightObject, ecs::Transform).set<glm::vec3>("position", glm::vec3(10, 8, -14));
-        registry.add(lightObject, ecs::MaterialRef);
-        registry.get(lightObject, ecs::MaterialRef).set<ecs::Entity>("handle", lightMaterialEntity);
-
-        sceneInitialized = true;
-    }
-
-    RenderResources resources = renderer.initGraph(builder, VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview",
-                                                   lensImageHandle, blueNoiseBufferHandle);
     renderer.setTargetSampleCount(0);
-    return resources;
+    liveTexture = registerTexture(renderer.getOutputImageHandle());
+
+    thumbnailImageHandle = Core::getEngine().createImage("MaterialPreviewThumbnails", VK_FORMAT_R32G32B32A32_SFLOAT,
+                                                         kPreviewSize, kPreviewSize, kThumbnailCapacity);
+    for (uint32_t layer = 0; layer < kThumbnailCapacity; layer++) {
+        thumbnailTextures.push_back(registerTexture(thumbnailImageHandle.layer(layer)));
+        freeLayers.push_back(kThumbnailCapacity - 1 - layer);
+    }
 }
 
-void MaterialPreview::onGraphCompiled(const RenderResources& resources) {
-    renderer.getScene().setGpuBufferHandles(resources.sceneHandles);
-    liveTexture = registerTexture(Core::getEngine().getView(renderer.getOutputImageHandle()).get());
+void MaterialPreview::addPasses(VkSmol::RenderGraph& graph) {
+    renderer.addPasses(graph);
 
-    for (auto& entry : previewImages) entry.second.textureId = registerTexture(entry.second.view.get());
-
-    if (inFlight.has_value()) renderer.setTargetSampleCount(kPreviewSampleCount);
+    graph.addTransferPass("MaterialPreviewThumbnailPass")
+        .copyFrom(renderer.getOutputImageHandle())
+        .copyTo(thumbnailImageHandle)
+        .execute([this](VkSmol::PassContext& context) {
+            if (!pendingCopyLayer) return;
+            context.copyImage(renderer.getOutputImageHandle(), thumbnailImageHandle.layer(*pendingCopyLayer));
+            pendingCopyLayer.reset();
+        });
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
@@ -102,9 +107,9 @@ bool MaterialPreview::isStale(ecs::Entity entity, const MaterialFingerprint& fin
     return captureFingerprint(entity) != fingerprint;
 }
 
-ui::ImGuiTexture MaterialPreview::registerTexture(VkImageView view) const {
-    VkSmol& engine = Core::getEngine();
-    return ui::ImGuiTexture(engine.getSampler(renderer.getOutputImageHandle()).get(), view,
+ui::ImGuiTexture MaterialPreview::registerTexture(VkSmol::ImageRange image) const {
+    VkSmol::Engine& engine = Core::getEngine();
+    return ui::ImGuiTexture(engine.getSampler(image.image), engine.getImageView(image, VK_IMAGE_VIEW_TYPE_2D),
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
@@ -147,21 +152,16 @@ void MaterialPreview::startGeneration(ecs::Entity materialEntity) {
 }
 
 void MaterialPreview::finishGeneration() {
-    VkSmol& engine = Core::getEngine();
-    const VkExtent2D extent = renderer.getRenderExtent();
-
-    auto it = previewImages.find(inFlight->entity);
-    if (it == previewImages.end()) {
-        PreviewImage preview;
-        preview.image = engine.createEmptyImage(VK_FORMAT_R32G32B32A32_SFLOAT, extent.width, extent.height,
-                                                "MaterialPreviewThumbnail");
-        preview.view = engine.createImageView(preview.image);
-        preview.textureId = registerTexture(preview.view.get());
-        it = previewImages.emplace(inFlight->entity, std::move(preview)).first;
+    auto it = thumbnails.find(inFlight->entity);
+    if (it == thumbnails.end()) {
+        if (freeLayers.empty()) evict(thumbnailOrder.front());
+        const uint32_t layer = freeLayers.back();
+        freeLayers.pop_back();
+        it = thumbnails.emplace(inFlight->entity, Thumbnail{layer, {}}).first;
+        thumbnailOrder.push_back(inFlight->entity);
     }
 
-    engine.waitIdle();
-    engine.copyImage(engine.getImage(renderer.getOutputImageHandle()), it->second.image);
+    pendingCopyLayer = it->second.layer;
     it->second.fingerprint = inFlight->fingerprint;
 
     inFlight.reset();
@@ -169,19 +169,18 @@ void MaterialPreview::finishGeneration() {
 }
 
 void MaterialPreview::evict(ecs::Entity materialEntity) {
-    auto it = previewImages.find(materialEntity);
-    if (it == previewImages.end()) return;
+    auto it = thumbnails.find(materialEntity);
+    if (it == thumbnails.end()) return;
 
-    VkSmol& engine = Core::getEngine();
-    engine.destroyImageView(it->second.view);
-    engine.destroyImage(it->second.image);
-    previewImages.erase(it);
+    freeLayers.push_back(it->second.layer);
+    thumbnails.erase(it);
+    std::erase(thumbnailOrder, materialEntity);
 }
 
 void MaterialPreview::evictDeadEntries() {
     ecs::Registry& registry = Core::getScene().getRegistry();
 
-    for (auto it = previewImages.begin(); it != previewImages.end();) {
+    for (auto it = thumbnails.begin(); it != thumbnails.end();) {
         ecs::Entity entity = it->first;
         ++it;
         if (!registry.isAlive(entity)) evict(entity);
@@ -193,11 +192,6 @@ void MaterialPreview::evictDeadEntries() {
         inFlight.reset();
         renderer.setTargetSampleCount(0);
     }
-}
-
-void MaterialPreview::destroy() {
-    while (!previewImages.empty()) evict(previewImages.begin()->first);
-    liveTexture = ui::ImGuiTexture();
 }
 
 void MaterialPreview::tick() {
@@ -212,7 +206,7 @@ void MaterialPreview::tick() {
 
     Scene& scene = renderer.getScene();
     scene.runOnRender();
-    renderer.render();
+    renderer.prepare();
 
     if (inFlight.has_value() && renderer.isRenderFinished()) finishGeneration();
 }
@@ -220,9 +214,9 @@ void MaterialPreview::tick() {
 std::optional<ImTextureID> MaterialPreview::getPreview(ecs::Entity materialEntity) {
     if (inFlight.has_value() && inFlight->entity == materialEntity) return liveTexture.get();
 
-    auto it = previewImages.find(materialEntity);
-    if (it != previewImages.end() && !isStale(materialEntity, it->second.fingerprint))
-        return it->second.textureId.get();
+    auto it = thumbnails.find(materialEntity);
+    if (it != thumbnails.end() && !isStale(materialEntity, it->second.fingerprint))
+        return thumbnailTextures[it->second.layer].get();
 
     const bool alreadyQueued =
         std::find(pendingMaterials.begin(), pendingMaterials.end(), materialEntity) != pendingMaterials.end();
