@@ -23,6 +23,7 @@ public:
     ImDrawList* getDrawList() const { return drawList; }
 
     std::string getTitle() const override { return "Viewport"; }
+    DockSlot getDockSlot() const override { return DockSlot::Center; }
     void draw() override;
 
 private:

@@ -6,7 +6,7 @@
             "label": "Debug View",
             "items": [
                 "None", "Position W", "Position", "Normal W", "Normal", "Albedo", "Roughness", "Mat Type", "Bounces",
-                "Hit Checks", "Variance", "Selection Mask", "Sky Mask"
+                "Hit Checks", "Variance", "Sky Mask"
             ],
             "default": "None",
             "restart_accumulation": true

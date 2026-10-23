@@ -53,7 +53,6 @@ struct EnumMeta {
 
 struct EntityMeta {
     std::vector<std::string> needs;
-    std::vector<std::string> conflicts;
 };
 
 using FieldMetadata = std::variant<std::monostate, NumericMeta, PathMeta, EnumMeta, EntityMeta>;
@@ -234,7 +233,6 @@ public:
     }
 
     template <typename T> T getDefault() const { return readBlob<T>(defaultValue); }
-    template <typename T> void setDefault(const T& v) { writeBlob(defaultValue, v); }
 
     static Field makeNumeric(FieldType type, std::string id, std::string label, const std::vector<float>& values,
                              NumericMeta metadata = {}, bool animatable = false);

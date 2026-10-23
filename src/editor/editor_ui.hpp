@@ -1,17 +1,10 @@
 #pragma once
 
-#include "editor/panels/animation_panel.hpp"
-#include "editor/panels/debug_panel.hpp"
-#include "editor/panels/inspector_panel.hpp"
-#include "editor/panels/render_progress_panel.hpp"
-#include "editor/panels/render_viewport_panel.hpp"
-#include "editor/panels/renderer_panel.hpp"
-#include "editor/panels/scene_panel.hpp"
-#include "editor/panels/stats_panel.hpp"
-#include "editor/panels/toast_notifications.hpp"
-#include "editor/panels/viewport_panel.hpp"
+#include <memory>
+#include <vector>
 
-class Scene;
+#include "editor/panels/panel.hpp"
+#include "editor/panels/viewport_panel.hpp"
 
 class EditorUi {
 public:
@@ -21,28 +14,23 @@ public:
     bool isMouseCaptured() { return capturesMouse; }
     bool isKeyboardCaptured() { return capturesKeyboard; }
 
-    ImVec2 getViewportSize() const { return viewportPanel.getSize(); }
-    ImVec2 getViewportPos() const { return viewportPanel.getPos(); }
-    ImDrawList* getViewportDrawList() const { return viewportPanel.getDrawList(); }
+    ImVec2 getViewportSize() const { return viewportPanel->getSize(); }
+    ImVec2 getViewportPos() const { return viewportPanel->getPos(); }
+    ImDrawList* getViewportDrawList() const { return viewportPanel->getDrawList(); }
 
 private:
-    StatsPanel statsPanel;
-    AnimationPanel animationPanel;
-    RenderProgressPanel renderPanel;
-    RendererPanel renderParameterPanel;
-    ScenePanel scenePanel;
-    InspectorPanel inspectorPanel;
-    DebugPanel debugPanel;
-    ViewportPanel viewportPanel;
-    RenderViewportPanel renderViewportPanel;
-    ToastNotifications toastNotifications;
+    std::vector<std::unique_ptr<Panel>> previewPanels;
+    std::vector<std::unique_ptr<Panel>> renderPanels;
+    ViewportPanel* viewportPanel = nullptr;
 
     bool capturesMouse = false;
     bool capturesKeyboard = false;
 
+    template <typename T> T& addPanel(std::vector<std::unique_ptr<Panel>>& panels) {
+        return static_cast<T&>(*panels.emplace_back(std::make_unique<T>()));
+    }
+
     static void initStyle();
     void setupDockspace();
     void updateState();
-    void drawPreview();
-    void drawRender();
 };

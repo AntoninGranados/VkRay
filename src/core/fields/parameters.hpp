@@ -92,7 +92,6 @@ public:
     const std::vector<std::unique_ptr<Parameter>>& getAll() const { return parameters; }
     const std::unordered_map<std::string, std::string>& getNodeLabels() const { return nodeLabels; }
     void resetAll();
-    void syncAll();
 
     template <typename T>
     Parameter& add(const FieldPath& id, const std::string& label, const T& value, FieldMetadata metadata = {},

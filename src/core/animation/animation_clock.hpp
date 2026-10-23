@@ -4,10 +4,6 @@ class AnimationClock {
 public:
     AnimationClock(int endFrame, double fps);
     void setEndFrame(int newEndFrame) { endFrame = newEndFrame; }
-    void setFps(double newFps) {
-        fps = newFps;
-        fixedDt = 1.0 / fps;
-    }
 
     void reset(int frame = 0);
     void step(double dt);
@@ -20,7 +16,6 @@ public:
     int getEndFrame() const { return endFrame; }
     int getFps() const { return static_cast<int>(fps); }
     double getTime() const { return time; }
-    double getDt() const { return dt; }
     double getFixedDt() const { return fixedDt; }
 
     void pause() { paused = true; }
@@ -37,7 +32,7 @@ private:
     double time = 0.0;
 
     double fps;
-    double dt = 0.0, fixedDt;
+    double fixedDt;
 
     bool paused = true;
 };

@@ -86,7 +86,6 @@ void Application::initOfflineMode(const std::string& jobFile) {
 
     Core::init(std::nullopt, VK_RAY_VERSION);
 
-    ecs::ComponentUiRegistry::init();
     SceneSerializer::load(Core::getScene(), kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
     runFn = [queue = std::move(queue)]() mutable { return Offline::run(queue); };

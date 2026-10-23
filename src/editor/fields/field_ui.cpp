@@ -36,17 +36,6 @@ std::vector<ecs::Entity> findEntityCandidates(Scene& scene, ecs::Registry& regis
                 }
                 if (!passes) continue;
             }
-            if (entityMeta && !entityMeta->conflicts.empty()) {
-                bool blocked = false;
-                for (const std::string& conflicted : entityMeta->conflicts) {
-                    const auto found = ecs::ComponentType::find(conflicted);
-                    if (found && registry.has(child, found->get())) {
-                        blocked = true;
-                        break;
-                    }
-                }
-                if (blocked) continue;
-            }
             candidates.push_back(child);
         }
     }

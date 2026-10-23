@@ -9,11 +9,33 @@
 #include "core/scene/scene.hpp"
 #include "editor/ecs/components/camera.hpp"
 #include "editor/editor.hpp"
+#include "editor/panels/animation_panel.hpp"
+#include "editor/panels/debug_panel.hpp"
+#include "editor/panels/inspector_panel.hpp"
+#include "editor/panels/render_progress_panel.hpp"
+#include "editor/panels/render_viewport_panel.hpp"
+#include "editor/panels/renderer_panel.hpp"
+#include "editor/panels/scene_panel.hpp"
+#include "editor/panels/stats_panel.hpp"
+#include "editor/panels/toast_notifications.hpp"
 #include "ui_utils.hpp"
 
 EditorUi::EditorUi() {
     initStyle();
-    viewportPanel.setOnEntitySelectionCallback([](std::optional<ecs::Entity> id) { Editor::selectEntity(id); });
+
+    viewportPanel = &addPanel<ViewportPanel>(previewPanels);
+    addPanel<StatsPanel>(previewPanels);
+    addPanel<AnimationPanel>(previewPanels);
+    addPanel<RendererPanel>(previewPanels);
+    addPanel<ScenePanel>(previewPanels);
+    addPanel<InspectorPanel>(previewPanels);
+    addPanel<ToastNotifications>(previewPanels);
+    addPanel<DebugPanel>(previewPanels);
+
+    addPanel<RenderViewportPanel>(renderPanels);
+    addPanel<RenderProgressPanel>(renderPanels);
+
+    viewportPanel->setOnEntitySelectionCallback([](std::optional<ecs::Entity> id) { Editor::selectEntity(id); });
 }
 
 void EditorUi::initStyle() {
@@ -105,15 +127,14 @@ void EditorUi::draw() {
     Editor::getImGui().newFrame();
     updateState();
 
-    if (Core::getRenderMode() != RenderMode::Preview)
-        drawRender();
-    else
-        drawPreview();
+    const bool preview = Core::getRenderMode() == RenderMode::Preview;
+    if (preview) setupDockspace();
+    for (const std::unique_ptr<Panel>& panel : preview ? previewPanels : renderPanels) panel->draw();
 }
 
 void EditorUi::updateState() {
     ImGuiIO& io = ImGui::GetIO();
-    if (viewportPanel.isHovered() && Core::getRenderMode() == RenderMode::Preview) io.WantCaptureMouse = false;
+    if (viewportPanel->isHovered() && Core::getRenderMode() == RenderMode::Preview) io.WantCaptureMouse = false;
     capturesMouse = io.WantCaptureMouse;
     capturesKeyboard = io.WantCaptureKeyboard;
 }
@@ -134,29 +155,15 @@ void EditorUi::setupDockspace() {
         ImGui::DockBuilderSplitNode(dock_center, ImGuiDir_Left, 0.25f, &dock_left, &dock_center);
         ImGui::DockBuilderSplitNode(dock_center, ImGuiDir_Right, 0.30f, &dock_right, &dock_center);
 
-        ImGui::DockBuilderDockWindow(animationPanel.getTitle().c_str(), dock_bottom);
-        ImGui::DockBuilderDockWindow(renderParameterPanel.getTitle().c_str(), dock_left);
-        ImGui::DockBuilderDockWindow(scenePanel.getTitle().c_str(), dock_left);
-        ImGui::DockBuilderDockWindow(inspectorPanel.getTitle().c_str(), dock_right);
-        ImGui::DockBuilderDockWindow(viewportPanel.getTitle().c_str(), dock_center);
+        for (const std::unique_ptr<Panel>& panel : previewPanels) {
+            const DockSlot slot = panel->getDockSlot();
+            if (slot == DockSlot::None) continue;
+            ImGuiID node = dock_center;
+            if (slot == DockSlot::Left) node = dock_left;
+            if (slot == DockSlot::Right) node = dock_right;
+            if (slot == DockSlot::Bottom) node = dock_bottom;
+            ImGui::DockBuilderDockWindow(panel->getTitle().c_str(), node);
+        }
         ImGui::DockBuilderFinish(dockspace_id);
     }
-}
-
-void EditorUi::drawPreview() {
-    setupDockspace();
-    viewportPanel.draw();
-
-    statsPanel.draw();
-    animationPanel.draw();
-    scenePanel.draw();
-    renderParameterPanel.draw();
-    inspectorPanel.draw();
-    toastNotifications.draw();
-    debugPanel.draw();
-}
-
-void EditorUi::drawRender() {
-    renderViewportPanel.draw();
-    renderPanel.draw();
 }

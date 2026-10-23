@@ -21,19 +21,6 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return tokens;
 }
 
-std::vector<float> parseNumbers(const std::string& expr) {
-    size_t open = expr.find('(');
-    std::string inner = open == std::string::npos ? expr : expr.substr(open + 1, expr.rfind(')') - open - 1);
-    std::vector<float> values;
-    for (const std::string& token : split(inner, ',')) {
-        if (token.empty()) continue;
-        try {
-            values.push_back(std::stof(token));
-        } catch (...) {}
-    }
-    return values;
-}
-
 std::string snakeCaseToLabel(const std::string& id) {
     std::string result;
     bool capitalize = true;
@@ -56,22 +43,6 @@ std::string camelCaseToLabel(const std::string& id) {
     for (size_t i = 0; i < id.size(); i++) {
         if (i > 0 && std::isupper(id[i])) result += ' ';
         result += i == 0 ? static_cast<char>(std::toupper(id[i])) : id[i];
-    }
-    return result;
-}
-
-std::string snakeCaseToPascalCase(const std::string& id) {
-    std::string result;
-    bool capitalize = true;
-    for (const char c : id) {
-        if (c == '_') {
-            capitalize = true;
-        } else if (capitalize) {
-            result += static_cast<char>(std::toupper(c));
-            capitalize = false;
-        } else {
-            result += c;
-        }
     }
     return result;
 }

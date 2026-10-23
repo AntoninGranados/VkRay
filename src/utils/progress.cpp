@@ -40,16 +40,8 @@ ProgressBar::ProgressBar(std::string_view prefix, uint32_t total, std::string_vi
     timer.start();
 }
 
-void ProgressBar::setPrefix(std::string_view p) { prefix = p; }
-void ProgressBar::setPostfix(std::string_view p) { postfix = p; }
-
 void ProgressBar::update(uint32_t n) {
     current = n;
-    redraw();
-}
-
-void ProgressBar::step(uint32_t n) {
-    current += n;
     redraw();
 }
 
@@ -83,7 +75,6 @@ void ProgressBar::close() {
     std::cout << '[' << ProgressTimer::formatTime(stats.elapsed) << ", " << std::fixed << std::setprecision(1)
               << stats.rate << unit << "/s]";
 
-    if (!postfix.empty()) std::cout << ' ' << postfix;
     std::cout << "\033[K\n";
 }
 
@@ -104,7 +95,6 @@ void ProgressBar::redraw() {
     std::cout << '[' << ProgressTimer::formatTime(stats.elapsed) << '<' << ProgressTimer::formatTime(stats.eta) << ", "
               << std::fixed << std::setprecision(1) << stats.rate << unit << "/s]";
 
-    if (!postfix.empty()) std::cout << "  " << postfix;
     std::cout << "\033[K";
     std::cout.flush();
 }

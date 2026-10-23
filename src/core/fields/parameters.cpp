@@ -12,10 +12,6 @@ void ParameterRegistry::resetAll() {
     for (auto& p : parameters) p->reset();
 }
 
-void ParameterRegistry::syncAll() {
-    for (auto& p : parameters) p->sync();
-}
-
 void ParameterRegistry::setEnumByName(const FieldPath& id, const std::string& name) {
     auto& p = getParam(id);
     const auto* enumMeta = std::get_if<EnumMeta>(&p.getMetadata());

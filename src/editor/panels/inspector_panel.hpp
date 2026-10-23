@@ -8,6 +8,7 @@ class Scene;
 class InspectorPanel : public Panel {
 public:
     std::string getTitle() const override { return "Inspector"; }
+    DockSlot getDockSlot() const override { return DockSlot::Right; }
     void draw() override;
 
 private:

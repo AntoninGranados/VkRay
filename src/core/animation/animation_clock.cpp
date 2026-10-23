@@ -10,7 +10,6 @@ void AnimationClock::reset(int _frame) {
 }
 
 void AnimationClock::step(double _dt) {
-    dt = _dt;
     const int newFrame = static_cast<int>(std::floor((time + _dt) * fps));
     if (newFrame >= endFrame) {
         time = _dt;
@@ -22,7 +21,6 @@ void AnimationClock::step(double _dt) {
 }
 
 void AnimationClock::stepFixed() {
-    dt = fixedDt;
     const int newFrame = frame + 1;
     if (newFrame >= endFrame) {
         time = fixedDt;

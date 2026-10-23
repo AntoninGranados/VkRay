@@ -49,8 +49,6 @@ Log& Log::get() {
 
 void Log::setConsumer(std::function<void(const LogEntry&)> fn) { get().consumer = std::move(fn); }
 
-void Log::setLevel(LogLevel level) { get().minLevel = level; }
-
 void Log::info(std::string_view msg) { get().push(LogLevel::Info, {}, msg); }
 void Log::success(std::string_view msg) { get().push(LogLevel::Success, {}, msg); }
 void Log::warn(std::string_view msg) { get().push(LogLevel::Warn, {}, msg); }
@@ -86,11 +84,9 @@ void Log::ensureFile() {
 }
 
 void Log::push(LogLevel level, std::string_view source, std::string_view msg) {
-    if (level < minLevel) return;
     while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) msg.remove_suffix(1);
     const std::string plain = stripAnsiCodes(msg);
-    entries.push_back({level, std::string(source), plain});
-    const LogEntry& entry = entries.back();
+    const LogEntry entry{level, std::string(source), plain};
 
     auto& out = (level == LogLevel::Error || level == LogLevel::Warn) ? std::cerr : std::cout;
     if (source.empty())

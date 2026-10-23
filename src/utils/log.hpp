@@ -5,7 +5,6 @@
 #include <functional>
 #include <string>
 #include <string_view>
-#include <vector>
 
 enum class LogLevel { Debug, Info, Success, Warn, Error };
 
@@ -18,7 +17,6 @@ struct LogEntry {
 class Log {
 public:
     static void setConsumer(std::function<void(const LogEntry&)> fn);
-    static void setLevel(LogLevel level);
 
     static void info(std::string_view msg);
     static void success(std::string_view msg);
@@ -41,8 +39,6 @@ private:
     void push(LogLevel level, std::string_view source, std::string_view msg);
     void ensureFile();
 
-    std::vector<LogEntry> entries;
     std::function<void(const LogEntry&)> consumer;
     std::ofstream file;
-    LogLevel minLevel = LogLevel::Debug;
 };

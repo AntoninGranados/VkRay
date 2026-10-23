@@ -70,14 +70,8 @@ void MaterialPreview::addPasses(VkSmol::RenderGraph& graph) {
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
-    if (registry.has(entity, ecs::Principled)) return &ecs::Principled;
-    if (registry.has(entity, ecs::Emissive)) return &ecs::Emissive;
-    if (registry.has(entity, ecs::Diffuse)) return &ecs::Diffuse;
-    if (registry.has(entity, ecs::Metal)) return &ecs::Metal;
-    if (registry.has(entity, ecs::Glossy)) return &ecs::Glossy;
-    if (registry.has(entity, ecs::Dielectric)) return &ecs::Dielectric;
-    if (registry.has(entity, ecs::Volume)) return &ecs::Volume;
-    if (registry.has(entity, ecs::MaterialPlugin)) return &ecs::MaterialPlugin;
+    for (const ecs::ComponentType& type : ecs::ComponentType::all())
+        if (type.getSlot() == "bsdf" && registry.has(entity, type)) return &type;
     return nullptr;
 }
 
@@ -94,7 +88,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
     if (fingerprint.type) {
         const ecs::Component& component = registry.get(entity, *fingerprint.type);
         for (const Field& field : component.getFields()) fingerprint.fields.push_back(field);
-        if (fingerprint.type == &ecs::MaterialPlugin) {
+        if (*fingerprint.type == ecs::MaterialPlugin) {
             const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
             fingerprint.programmableBody = plugin.getSource();
             fingerprint.programmableValues = plugin.packValues();

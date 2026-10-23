@@ -80,17 +80,6 @@ inline void PushCancelStyleColor() {
 }
 inline void PopCancelStyleColor() { ImGui::PopStyleColor(3); }
 
-// Transparent Button
-inline const ImVec4 kTransparentButtonColor = ImVec4();
-inline const ImVec4 kTransparentButtonHoveredColor = ImVec4();
-inline const ImVec4 kTransparentButtonActiveColor = ImVec4();
-inline void PushTransparentStyleColor() {
-    ImGui::PushStyleColor(ImGuiCol_Button, kTransparentButtonColor);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, kTransparentButtonHoveredColor);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, kTransparentButtonActiveColor);
-}
-inline void PopTransparentStyleColor() { ImGui::PopStyleColor(3); }
-
 // Keyframe
 inline const ImVec4 kKeyframeOnColor = kDraculaOrange;
 
