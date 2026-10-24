@@ -16,7 +16,6 @@ public:
 
     ImVec2 getViewportSize() const { return viewportPanel->getSize(); }
     ImVec2 getViewportPos() const { return viewportPanel->getPos(); }
-    ImDrawList* getViewportDrawList() const { return viewportPanel->getDrawList(); }
 
 private:
     std::vector<std::unique_ptr<Panel>> previewPanels;

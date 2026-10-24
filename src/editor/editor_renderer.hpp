@@ -4,6 +4,7 @@
 #include "VkSmol/graph/render_graph.hpp"
 
 #include "editor/imgui_texture.hpp"
+#include "editor/overlay_drawer.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
@@ -12,6 +13,7 @@ public:
     static constexpr const char* kDisplayPassName = "DisplayPass";
     static constexpr const char* kDebugPassName = "DebugPass";
     static constexpr const char* kUiPassName = "UiPass";
+    static constexpr float kOverlayLineWidth = 2.0f;
 
     void init();
     void addPasses(VkSmol::RenderGraph& graph);
@@ -22,12 +24,15 @@ public:
     ImTextureID getDisplayTexId() const { return displayTex; }
     ImTextureID getDebugTexId() const { return debugTex; }
     ImTextureID getOutputTexId() const { return outputTex; }
+    OverlayDrawer& getOverlayDrawer() { return overlayDrawer; }
 
 private:
     DebugUBO debugUBO{};
     DisplayUBO displayUBO{};
+    OverlayDrawer overlayDrawer;
 
     VkSmol::ImageHandle displayImageHandle;
+    VkSmol::ImageHandle depthImageHandle;
     VkSmol::ImageHandle debugImageHandle;
 
     VkSmol::BufferHandle debugUBOHandle;

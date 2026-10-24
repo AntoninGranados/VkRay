@@ -20,7 +20,6 @@ public:
     ImVec2 getSize() const { return size; }
     ImVec2 getPos() const { return pos; }
     bool isHovered() const { return hovered; }
-    ImDrawList* getDrawList() const { return drawList; }
 
     std::string getTitle() const override { return "Viewport"; }
     DockSlot getDockSlot() const override { return DockSlot::Center; }

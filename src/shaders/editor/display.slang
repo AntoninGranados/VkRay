@@ -7,17 +7,23 @@ struct DisplayUBO {
     int  showFocusPlane;
     int  selectedObjectId;
     int  previewBorderEnabled;
+    float lineWidth;
+    int2 viewportSize;
     float2 previewFrameExtent;
     float4 focusPlane;
+    float4x4 viewProjection;
     CameraUBO camera;
+};
+
+struct DisplayOutput {
+    float4 color : SV_Target;
+    float  depth : SV_Depth;
 };
 
 ConstantBuffer<DisplayUBO> ubo;
 Sampler2D outputTex;
-RWStructuredBuffer<PixelInfo> pixelInfoBuffer;
-[[vk::image_format("rgba32f")]] RWTexture2D<float4> displayOut;
+StructuredBuffer<PixelInfo> pixelInfoBuffer;
 
-static const float outlineWidth = 3.0;
 static const float previewStripeSpacing = 64.0;
 static const float feather      = 0.4;
 static const float3  edgeColor    = float3(1.0, 0.5, 0.062);
@@ -34,17 +40,23 @@ Ray viewportRay(int2 coord, int2 viewportSize) {
     return getRay(ubo.camera, ndc, rng);
 }
 
-[shader("compute")]
-[numthreads(8, 8, 1)]
-void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
-    int2 coord        = int2(dispatchThreadId.xy);
-    int2 viewportSize = imageSize(displayOut);
-    if (coord.x >= viewportSize.x || coord.y >= viewportSize.y) return;
+[shader("vertex")]
+float4 vertexMain(uint vertexId : SV_VertexID) : SV_Position {
+    float2 uv = float2((vertexId << 1) & 2, vertexId & 2);
+    return float4(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+[shader("fragment")]
+DisplayOutput fragmentMain(float4 position : SV_Position) {
+    int2 coord        = int2(position.xy);
+    int2 viewportSize = ubo.viewportSize;
+    float halfLineWidth = ubo.lineWidth * 0.5;
 
     int2 renderSize  = textureSize(outputTex);
     int2 renderCoord = clamp(coord * renderSize / viewportSize, int2(0), renderSize - int2(1));
 
     float3 color = outputTex.Load(int3(renderCoord, 0)).rgb;
+    PixelInfo pix = samplePixelInfo(coord, viewportSize, renderSize);
 
     bool isSelected = false;
     if (ubo.selectedObjectId >= 0) {
@@ -55,7 +67,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
     }
 
     uint centerMask = isSelected ? 1u : 0u;
-    int stepPx = int(outlineWidth);
+    int stepPx = max(1, int(round(halfLineWidth)));
     float neighborMask = 0.0;
     int count = 0;
     for (int i = -1; i <= 1; i++) {
@@ -79,7 +91,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
 
     if (ubo.showFocusPlane != 0) {
         float t;
-        PixelInfo pix = samplePixelInfo(coord, viewportSize, renderSize);
         if (pix.aov.hitValid != 0u) {
             float signedDist = dot(pix.aov.positionW, ubo.focusPlane.xyz) + ubo.focusPlane.w;
             t = signedDist > 0.0 ? 1.0 : 0.0;
@@ -106,9 +117,14 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
             if (frac((pixelCoord.x + pixelCoord.y) / previewStripeSpacing) < 0.5) color *= 0.6;
         }
 
-        float edgeMask = 1.0 - smoothstep(outlineWidth - feather, outlineWidth + feather, abs(outsideDist));
+        float edgeMask = 1.0 - smoothstep(halfLineWidth - feather, halfLineWidth + feather, abs(outsideDist));
         color = lerp(color, edgeColor, edgeMask);
     }
 
-    displayOut[coord] = float4(color, 1.0);
+    float depth = 0.0;
+    if (pix.aov.hitValid != 0u) {
+        float4 clip = mul(float4(pix.aov.positionW, 1.0), ubo.viewProjection);
+        depth = saturate(clip.z / clip.w);
+    }
+    return DisplayOutput(float4(color, 1.0), depth);
 }

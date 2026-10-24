@@ -68,11 +68,14 @@ void EditorRenderer::init() {
 
     displayImageHandle =
         engine.createImage("DisplayImage", VK_FORMAT_R32G32B32A32_SFLOAT, viewportExtent.width, viewportExtent.height);
+    depthImageHandle =
+        engine.createImage("DepthImage", VK_FORMAT_D32_SFLOAT, viewportExtent.width, viewportExtent.height);
     debugImageHandle =
         engine.createImage("DebugImage", VK_FORMAT_R32G32B32A32_SFLOAT, renderExtent.width, renderExtent.height);
 
     debugUBOHandle = engine.createBuffer("DebugUBO", sizeof(DebugUBO));
     displayUBOHandle = engine.createBuffer("DisplayUBO", sizeof(DisplayUBO));
+    overlayDrawer.init();
 
     registerImGuiTextures();
 
@@ -85,13 +88,18 @@ void EditorRenderer::addPasses(VkSmol::RenderGraph& graph) {
     const RenderResources& renderResources = Core::getCoreRenderer().getResources();
     const SceneGpuBuffers& sceneHandles = renderResources.sceneHandles;
 
-    // Display pass — beauty + selection edges + focus plane overlay (compute, at viewport resolution)
-    graph.addComputePass(kDisplayPassName)
-        .pipeline("builtin:/shaders/editor/display.slang", {}, ScriptTable::conformances({&ScriptTable::kLens}))
+    // Display pass — beauty + selection edges + focus plane overlay (fullscreen graphics, at viewport resolution)
+    graph.addGraphicsPass(kDisplayPassName)
+        .pipeline("builtin:/shaders/editor/display.slang", "builtin:/shaders/editor/display.slang", {},
+                  {.primitive = {.cullMode = VK_CULL_MODE_NONE},
+                   .depth = VkSmol::DepthState{.compare = VK_COMPARE_OP_ALWAYS},
+                   .blend = {VkSmol::BlendState::opaque()}},
+                  ScriptTable::conformances({&ScriptTable::kLens}))
         .read("ubo", displayUBOHandle)
         .read("outputTex", renderResources.outputImageHandle)
         .read("pixelInfoBuffer", renderResources.pixelInfoBufferHandle)
-        .write("displayOut", displayImageHandle)
+        .colorAttachment(displayImageHandle, VkSmol::AttachmentLoad::DontCare)
+        .depthAttachment(depthImageHandle, VkSmol::AttachmentLoad::DontCare)
         .read("scene.vertices", sceneHandles.vertex)
         .read("scene.indices", sceneHandles.index)
         .read("scene.bvhNodes", sceneHandles.bvh)
@@ -100,9 +108,9 @@ void EditorRenderer::addPasses(VkSmol::RenderGraph& graph) {
         .read("scene.pluginParams", sceneHandles.pluginParams)
         .read("scene.objects", sceneHandles.object)
         .read("scene.motion", sceneHandles.liveMotion)
-        .execute([this](VkSmol::PassContext& context) {
-            context.dispatchThreads(viewportExtent.width, viewportExtent.height);
-        });
+        .execute([](VkSmol::PassContext& context) { context.draw(3); });
+
+    overlayDrawer.addPasses(graph, displayImageHandle, depthImageHandle);
 
     // Debug pass — debug view visualization (compute)
     graph.addComputePass(kDebugPassName)
@@ -148,6 +156,7 @@ void EditorRenderer::resize(VkExtent2D renderExt, VkExtent2D viewportExt) {
     renderExtent = renderExt;
     viewportExtent = viewportExt;
     engine.resizeImage(displayImageHandle, viewportExt.width, viewportExt.height);
+    engine.resizeImage(depthImageHandle, viewportExt.width, viewportExt.height);
     engine.resizeImage(debugImageHandle, renderExt.width, renderExt.height);
     registerImGuiTextures();
 }
@@ -167,6 +176,12 @@ void EditorRenderer::prepare() {
     const float frustumScale = Core::getCoreRenderer().getFrustumScale();
     displayUBO.camera = buildCameraUBO(scene, camera, aspect, frustumScale);
     displayUBO.camera.thinLens.lensRadius = 0.0f;
+
+    glm::mat4 projection = getProjection(reg, camera, aspect, frustumScale);
+    projection[1][1] = -projection[1][1];
+    displayUBO.viewProjection = projection * getView(reg, camera);
+    displayUBO.viewportSize = glm::ivec2(viewportExtent.width, viewportExtent.height);
+    displayUBO.lineWidth = kOverlayLineWidth * ImGui::GetIO().DisplayFramebufferScale.x;
 
     displayUBO.selectedObjectId = -1;
     displayUBO.showFocusPlane = 0;
@@ -194,4 +209,5 @@ void EditorRenderer::prepare() {
 
     engine.writeBuffer(debugUBOHandle, debugUBO);
     engine.writeBuffer(displayUBOHandle, displayUBO);
+    overlayDrawer.upload(displayUBO.viewProjection, viewportExtent, displayUBO.lineWidth);
 }

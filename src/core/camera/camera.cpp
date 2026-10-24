@@ -46,9 +46,9 @@ glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
 
 glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect, float frustumScale) {
     const CameraFrustum f = computeFrustum(registry, camera, aspect, frustumScale);
-    if (f.orthographic) return glm::ortho(-f.half.x, f.half.x, -f.half.y, f.half.y, 1e-4f, 1e4f);
+    if (f.orthographic) return glm::orthoRH_ZO(-f.half.x, f.half.x, -f.half.y, f.half.y, 1e4f, 1e-4f);
     const float fovY = 2.0f * glm::atan(f.half.y);
-    return glm::perspective(fovY, aspect, 1e-4f, 1e4f);
+    return glm::perspectiveRH_ZO(fovY, aspect, 1e4f, 1e-4f);
 }
 
 float fovFromFocalLength(float normalizedFocalLength) {
