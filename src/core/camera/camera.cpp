@@ -23,30 +23,19 @@ glm::vec2 applySensorFit(ecs::CameraSensorFit fit, float aspect, float sensorAxi
                       : glm::vec2(sensorAxisValue * aspect, sensorAxisValue);
 }
 
-namespace {
-FrustumHook& frustumHook() {
-    static FrustumHook hook;
-    return hook;
-}
-} // namespace
-
-void setFrustumHook(FrustumHook hook) { frustumHook() = std::move(hook); }
-
-CameraFrustum computeFrustum(const ecs::Registry& registry, ecs::Entity camera, float aspect, bool applyHook) {
+CameraFrustum computeFrustum(const ecs::Registry& registry, ecs::Entity camera, float aspect, float frustumScale) {
     const ecs::Component& c = registry.get(camera, ecs::Camera);
     const ecs::CameraSensorFit fit = static_cast<ecs::CameraSensorFit>(c.get<int>("sensor_fit"));
     const bool orthographic =
         static_cast<ecs::CameraProjection>(c.get<int>("projection")) == ecs::CameraProjection::Orthographic;
 
-    float trueValue =
+    const float trueValue =
         orthographic
             ? c.get<float>("sensor_width") / 1000.0f * 0.5f
             : glm::tan(glm::radians(fovFromFocalLength(c.get<float>("focal_length") / c.get<float>("sensor_width"))) *
                        0.5f);
 
-    if (applyHook && frustumHook()) trueValue = frustumHook()(registry, camera, aspect, trueValue);
-
-    return {applySensorFit(fit, aspect, trueValue), orthographic};
+    return {applySensorFit(fit, aspect, trueValue * frustumScale), orthographic};
 }
 
 glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
@@ -55,8 +44,8 @@ glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera) {
     return glm::lookAt(position, position + directionFromRotation(t.get<glm::vec3>("rotation")), glm::vec3(0, 1, 0));
 }
 
-glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect) {
-    const CameraFrustum f = computeFrustum(registry, camera, aspect);
+glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect, float frustumScale) {
+    const CameraFrustum f = computeFrustum(registry, camera, aspect, frustumScale);
     if (f.orthographic) return glm::ortho(-f.half.x, f.half.x, -f.half.y, f.half.y, 1e-4f, 1e4f);
     const float fovY = 2.0f * glm::atan(f.half.y);
     return glm::perspective(fovY, aspect, 1e-4f, 1e4f);
@@ -85,13 +74,14 @@ float resolveFocusDistance(const ecs::Registry& registry, ecs::Entity camera) {
     return glm::max(glm::dot(offset, forward), 0.01f);
 }
 
-CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspect) {
+CameraUBO buildCameraUBO(const Scene& scene, ecs::Entity camera, float aspect, float frustumScale) {
+    const ecs::Registry& registry = scene.getRegistry();
     const ecs::Component& c = registry.get(camera, ecs::Camera);
-    const CameraFrustum f = computeFrustum(registry, camera, aspect);
+    const CameraFrustum f = computeFrustum(registry, camera, aspect, frustumScale);
 
     CameraUBO ubo{};
     ubo.projection = std::to_underlying(static_cast<ecs::CameraProjection>(c.get<int>("projection")));
-    ubo.motionOffset = registry.ctx().get<CameraMotionInfo>().motionOffset;
+    ubo.motionOffset = scene.getPackingInfo().cameraMotionOffset;
     ubo.thinLens.focusDistance = resolveFocusDistance(registry, camera);
     ubo.U = f.half.x;
     ubo.V = f.half.y;
@@ -100,7 +90,7 @@ CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspe
             ? 0.0f
             : lensRadiusFromFStop(c.get<float>("focal_length") / c.get<float>("sensor_width"), c.get<float>("f_stop"));
 
-    const LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
+    const LensPluginInfo& lensInfo = scene.getPackingInfo().lens;
     ubo.lensSlot = lensInfo.slot;
     ubo.lensParamsBase = lensInfo.paramsBase;
 

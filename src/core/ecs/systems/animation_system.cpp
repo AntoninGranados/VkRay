@@ -2,19 +2,20 @@
 
 #include "core/animation/animation_store.hpp"
 #include "core/core.hpp"
+#include "core/scene/scene.hpp"
 
 namespace ecs {
 
-void evaluateAnimation(Registry& registry) {
-    AnimationStore& store = *registry.ctx().get<AnimationStore*>();
+void evaluateAnimation(Scene& scene) {
+    AnimationStore& store = scene.getAnimationStore();
     if (store.isEmpty()) return;
 
-    registry.markChanged(store.evaluate(static_cast<float>(Core::getAnimation().getFrame())));
+    scene.getRegistry().markChanged(store.evaluate(static_cast<float>(Core::getAnimation().getFrame())));
 }
 
-void animationSystem(Registry& registry) {
+void animationSystem(Scene& scene) {
     if (!Core::getAnimation().didFrameChange()) return;
-    evaluateAnimation(registry);
+    evaluateAnimation(scene);
 }
 
 } // namespace ecs

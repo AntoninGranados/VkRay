@@ -1,8 +1,10 @@
 #include "export_service.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <format>
+#include <string>
 
 #include <glm/glm.hpp>
 
@@ -12,6 +14,9 @@
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr/tinyexr.h"
 
+#include "core/core.hpp"
+#include "core/fields/parameters.hpp"
+#include "core/render/pathtrace_renderer.hpp"
 #include "core/render_structures.hpp"
 #include "utils/log.hpp"
 
@@ -66,35 +71,26 @@ void pushChannel(std::vector<std::pair<std::string, std::vector<float>>>& channe
 
 } // namespace
 
-void ExportService::init(uint32_t _width, uint32_t _height, VkSmol::BufferHandle pixelInfoHandle) {
-    width = _width;
-    height = _height;
-    pixelInfoBufferHandle = pixelInfoHandle;
-}
-
-void ExportService::resize(uint32_t _width, uint32_t _height) {
-    width = _width;
-    height = _height;
-}
-
-void ExportService::save(VkSmol::Engine& engine, VkSmol::ImageHandle image, const std::filesystem::path& path,
-                         const AOVFlags& aovFlags) {
+void ExportService::save(const PathtraceRenderer& renderer, const std::filesystem::path& path) {
+    VkSmol::Engine& engine = Core::getEngine();
+    const VkExtent2D extent = renderer.getRenderExtent();
     engine.waitIdle();
-    std::vector<float> floatPixels(static_cast<size_t>(width) * height * 4);
-    engine.readImage(image, floatPixels.data(), floatPixels.size() * sizeof(float));
+    std::vector<float> floatPixels(static_cast<size_t>(extent.width) * extent.height * 4);
+    engine.readImage(renderer.getOutputImageHandle(), floatPixels.data(), floatPixels.size() * sizeof(float));
     if (path.extension() == ".exr") {
-        saveBufferToEXR(floatPixels, path);
+        saveBufferToEXR(floatPixels, extent.width, extent.height, path);
     } else {
-        saveBufferToPNG(floatPixels, path);
+        saveBufferToPNG(floatPixels, extent.width, extent.height, path);
     }
-    saveAOVs(engine, path, aovFlags);
+    saveAOVs(engine, renderer.getResources().pixelInfoBufferHandle, extent.width, extent.height, path);
 }
 
 std::filesystem::path ExportService::buildAnimationFramePath(int frame, const std::filesystem::path& dir) {
     return dir / std::format("frame_{:05d}.png", frame);
 }
 
-void ExportService::saveBufferToPNG(const std::vector<float>& floatPixels, const std::filesystem::path& path) {
+void ExportService::saveBufferToPNG(const std::vector<float>& floatPixels, uint32_t width, uint32_t height,
+                                    const std::filesystem::path& path) {
     const size_t floatCount = floatPixels.size();
 
     std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * 4);
@@ -118,7 +114,8 @@ void ExportService::saveBufferToPNG(const std::vector<float>& floatPixels, const
     }
 }
 
-void ExportService::saveBufferToEXR(const std::vector<float>& floatPixels, const std::filesystem::path& path) {
+void ExportService::saveBufferToEXR(const std::vector<float>& floatPixels, uint32_t width, uint32_t height,
+                                    const std::filesystem::path& path) {
     std::vector<float> images[4];
     images[0].resize(width * height);
     images[1].resize(width * height);
@@ -158,10 +155,11 @@ void ExportService::saveBufferToEXR(const std::vector<float>& floatPixels, const
     }
 }
 
-void ExportService::saveAOVs(VkSmol::Engine& engine, const std::filesystem::path& basePath, const AOVFlags& f) {
-    bool anyEnabled =
-        f.positionW || f.position || f.normalW || f.normal || f.albedo || f.roughness || f.matType || f.skyMask;
-    if (!anyEnabled) return;
+void ExportService::saveAOVs(VkSmol::Engine& engine, VkSmol::BufferHandle pixelInfoBufferHandle, uint32_t width,
+                             uint32_t height, const std::filesystem::path& basePath) {
+    ParameterRegistry& parameters = Core::getParameters();
+    const auto enabled = [&](const char* name) { return parameters.get<bool>(std::string("renderer/aov/") + name); };
+    if (std::ranges::none_of(kAOVNames, enabled)) return;
 
     size_t pixelCount = static_cast<size_t>(width) * height;
     std::vector<PixelInfo> pixels(pixelCount);
@@ -169,36 +167,36 @@ void ExportService::saveAOVs(VkSmol::Engine& engine, const std::filesystem::path
 
     std::vector<std::pair<std::string, std::vector<float>>> channels;
 
-    if (f.positionW)
+    if (enabled("position_w"))
         pushChannel<3>(channels, pixelCount, "position_w", {"X", "Y", "Z"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.positionW : glm::vec3(0.0f); });
 
-    if (f.position)
+    if (enabled("position"))
         pushChannel<3>(channels, pixelCount, "position", {"X", "Y", "Z"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.position : glm::vec3(0.0f); });
 
-    if (f.normalW)
+    if (enabled("normal_w"))
         pushChannel<3>(channels, pixelCount, "normal_w", {"X", "Y", "Z"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normalW : glm::vec3(0.0f); });
 
-    if (f.normal)
+    if (enabled("normal"))
         pushChannel<2>(channels, pixelCount, "normal", {"X", "Y"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.normal : glm::vec2(0.0f); });
 
-    if (f.albedo)
+    if (enabled("albedo"))
         pushChannel<3>(channels, pixelCount, "albedo", {"R", "G", "B"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.albedo : glm::vec3(0.0f); });
 
-    if (f.roughness)
+    if (enabled("roughness"))
         pushChannel<1>(channels, pixelCount, "roughness", {"V"},
                        [&](size_t i) { return pixels[i].aov.hitValid ? pixels[i].aov.roughness : 0.0f; });
 
-    if (f.matType)
+    if (enabled("mat_type"))
         pushChannel<1>(channels, pixelCount, "mat_type", {"V"}, [&](size_t i) {
             return pixels[i].aov.hitValid ? static_cast<float>(pixels[i].aov.matType) : -1.0f;
         });
 
-    if (f.skyMask)
+    if (enabled("sky_mask"))
         pushChannel<1>(channels, pixelCount, "sky_mask", {"V"}, [&](size_t i) {
             int c = pixels[i].count;
             return c > 0 ? static_cast<float>(pixels[i].aov.skyMask) / static_cast<float>(c) : 0.0f;

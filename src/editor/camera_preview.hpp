@@ -10,8 +10,9 @@ class Registry;
 
 namespace EditorCameraPreview {
 
-void install();
+float computeFrustumScale(const ecs::Registry& registry, ecs::Entity camera, float viewportAspect);
 
-glm::vec2 frameExtent(const ecs::Registry& registry, ecs::Entity camera, float viewportAspect, float renderAspect);
+glm::vec2 frameExtent(const ecs::Registry& registry, ecs::Entity camera, float viewportAspect, float renderAspect,
+                      float frustumScale);
 
 } // namespace EditorCameraPreview

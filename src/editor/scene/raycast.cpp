@@ -23,7 +23,7 @@ Ray getRay(const glm::vec2& mousePos, const glm::vec2& screenSize, const ecs::En
     const float ndcY = 1.0f - mousePos.y * 2.0f * invHeight;
     const float aspect = screenSize.x * invHeight;
 
-    const CameraFrustum f = computeFrustum(registry, camera, aspect);
+    const CameraFrustum f = computeFrustum(registry, camera, aspect, Core::getCoreRenderer().getFrustumScale());
 
     if (f.orthographic) {
         const glm::vec3 origin = t.get<glm::vec3>("position") + ndcX * f.half.x * right + ndcY * f.half.y * up;

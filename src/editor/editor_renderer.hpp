@@ -3,7 +3,6 @@
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/render_graph.hpp"
 
-#include "core/core_renderer.hpp"
 #include "editor/imgui_texture.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"

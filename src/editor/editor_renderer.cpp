@@ -25,8 +25,8 @@
 
 namespace {
 
-int resolveSelectedObjectIndex(const ecs::Registry& reg, ecs::Entity selected) {
-    const std::unordered_map<ecs::Entity, int>& objectIndices = reg.ctx().get<ObjectIndices>().byEntity;
+int resolveSelectedObjectIndex(const Scene& scene, ecs::Entity selected) {
+    const std::unordered_map<ecs::Entity, int>& objectIndices = scene.getPackingInfo().objectIndices;
     const auto it = objectIndices.find(selected);
     return it != objectIndices.end() ? it->second : -1;
 }
@@ -64,7 +64,7 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
 void EditorRenderer::init() {
     VkSmol::Engine& engine = Core::getEngine();
     viewportExtent = engine.getExtent();
-    renderExtent = Core::getRenderExtent();
+    renderExtent = Core::getCoreRenderer().getRenderExtent();
 
     displayImageHandle =
         engine.createImage("DisplayImage", VK_FORMAT_R32G32B32A32_SFLOAT, viewportExtent.width, viewportExtent.height);
@@ -164,7 +164,8 @@ void EditorRenderer::prepare() {
     const float aspect = viewportExtent.height > 0
                              ? static_cast<float>(viewportExtent.width) / static_cast<float>(viewportExtent.height)
                              : 1.0f;
-    displayUBO.camera = buildCameraUBO(reg, camera, aspect);
+    const float frustumScale = Core::getCoreRenderer().getFrustumScale();
+    displayUBO.camera = buildCameraUBO(scene, camera, aspect, frustumScale);
     displayUBO.camera.thinLens.lensRadius = 0.0f;
 
     displayUBO.selectedObjectId = -1;
@@ -176,11 +177,11 @@ void EditorRenderer::prepare() {
     const float outputAspect = outputRenderSize.y > 0
                                    ? static_cast<float>(outputRenderSize.x) / static_cast<float>(outputRenderSize.y)
                                    : aspect;
-    displayUBO.previewFrameExtent = EditorCameraPreview::frameExtent(reg, camera, aspect, outputAspect);
+    displayUBO.previewFrameExtent = EditorCameraPreview::frameExtent(reg, camera, aspect, outputAspect, frustumScale);
 
     if (selectedEntity.has_value()) {
         const ecs::Entity e = *selectedEntity;
-        displayUBO.selectedObjectId = resolveSelectedObjectIndex(reg, e);
+        displayUBO.selectedObjectId = resolveSelectedObjectIndex(scene, e);
 
         if (Editor::isUsingSceneCamera()) {
             const FocusPlane focus = resolveFocusPlane(reg, e, camera);

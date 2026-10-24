@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "core/ecs/entity.hpp"
-#include "core/ecs/registry.hpp"
 
+class Scene;
 struct GpuMotionSample;
 namespace ecs {
 class Component;
@@ -13,11 +13,10 @@ class Component;
 
 namespace ecs {
 
-uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform,
-                           std::vector<GpuMotionSample>& outMotion);
+uint32_t bakeMotionSamples(Scene& scene, Entity entity, Component& transform, std::vector<GpuMotionSample>& outMotion);
 
 void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMotion);
 
-bool isMotionBlurActive(Registry& registry);
+bool isMotionBlurActive(Scene& scene);
 
 } // namespace ecs

@@ -70,27 +70,8 @@ struct alignas(16) CompositingPassUBO {
     int32_t passId = 0;
 };
 
-struct AOVFlags {
-    bool positionW = false;
-    bool position = false;
-    bool normalW = false;
-    bool normal = false;
-    bool albedo = false;
-    bool roughness = false;
-    bool matType = false;
-    bool skyMask = false;
-};
-
-struct AOVChannel {
-    const char* name;
-    bool AOVFlags::* flag;
-};
-
-inline constexpr AOVChannel kAOVChannels[] = {
-    {"position_w", &AOVFlags::positionW}, {"position", &AOVFlags::position}, {"normal_w", &AOVFlags::normalW},
-    {"normal", &AOVFlags::normal},        {"albedo", &AOVFlags::albedo},     {"roughness", &AOVFlags::roughness},
-    {"mat_type", &AOVFlags::matType},     {"sky_mask", &AOVFlags::skyMask},
-};
+inline constexpr const char* kAOVNames[] = {"position_w", "position",  "normal_w", "normal",
+                                            "albedo",     "roughness", "mat_type", "sky_mask"};
 
 struct alignas(16) AOVBuffer {
     alignas(16) uint32_t hitValid;

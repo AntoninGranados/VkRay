@@ -94,6 +94,6 @@ Runs the job multiple times, each with a different random seed (affecting [`rand
 }
 ```
 
-Keys are parameter paths. Values can be booleans, integers, floats, strings (enum parameters, by item name), or arrays of 2 to 4 numbers (vector parameters). The JSON type must match the parameter type, so write float values with a decimal point. All parameters are reset to their defaults before each job, so settings do not leak between jobs.
+Keys are parameter paths. Values are read like scene field values: booleans, numbers, strings (path parameters, or enum parameters by item name), or arrays of 2 to 4 numbers (vector parameters). All parameters are reset to their defaults before each job, so settings do not leak between jobs.
 
 See [parameters.md](parameters.md) for the full list of available paths, types, and default values.

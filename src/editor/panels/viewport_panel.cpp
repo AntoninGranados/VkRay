@@ -85,7 +85,8 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     const ecs::Entity camera = *scene.getActiveCamera();
     const float aspect = size.y > 0.0f ? size.x / size.y : 1.0f;
     const glm::mat4 view = getView(scene.getRegistry(), camera);
-    const glm::mat4 proj = getProjection(scene.getRegistry(), camera, aspect);
+    const glm::mat4 proj =
+        getProjection(scene.getRegistry(), camera, aspect, Core::getCoreRenderer().getFrustumScale());
 
     // Keep gizmo orientation in world space: avoid mixing scale with other ops.
     const int opFlags = ImGuizmo::OPERATION::TRANSLATE | ImGuizmo::OPERATION::ROTATE;

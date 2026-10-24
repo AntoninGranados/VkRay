@@ -6,24 +6,8 @@
 
 #include <glm/glm.hpp>
 
-#include "utils/log.hpp"
-
 void ParameterRegistry::resetAll() {
     for (auto& p : parameters) p->reset();
-}
-
-void ParameterRegistry::setEnumByName(const FieldPath& id, const std::string& name) {
-    auto& p = getParam(id);
-    const auto* enumMeta = std::get_if<EnumMeta>(&p.getMetadata());
-    if (!enumMeta) return;
-    const auto& items = enumMeta->items;
-    for (size_t i = 0; i < items.size(); i++) {
-        if (items[i] == name) {
-            p.set(static_cast<int>(i));
-            return;
-        }
-    }
-    Log::error("Parameters", std::format("Unknown enum value '{}' for: {}", name, id.string()));
 }
 
 Parameter& ParameterRegistry::getParam(const FieldPath& id) {

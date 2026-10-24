@@ -5,6 +5,7 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "VkSmol/graph/render_graph.hpp"
 
@@ -19,10 +20,8 @@
 #include "core/core.hpp"
 #include "core/scene/scene_serializer.hpp"
 
-#include "editor/ecs/component_ui_registry.hpp"
 #include "editor/editor.hpp"
 
-#include "offline/job_queue.hpp"
 #include "offline/offline.hpp"
 
 #include "utils/log.hpp"
@@ -64,7 +63,6 @@ void Application::initEditorMode() {
     addFont("builtin:/fonts/fa-solid-900.otf", iconConfig, iconRanges);
     io.FontGlobalScale = 1.0f / xscale;
 
-    ecs::ComponentUiRegistry::init();
     Editor::loadScene(kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(false); });
     runFn = [] {
@@ -74,21 +72,21 @@ void Application::initEditorMode() {
 }
 
 void Application::initOfflineMode(const std::string& jobFile) {
-    JobQueue queue;
+    std::vector<Job> jobs;
     try {
-        queue = JobQueue::fromFile(jobFile);
+        jobs = Offline::loadJobs(jobFile);
     } catch (const std::exception& e) {
-        Log::error("Application", std::format("Failed to load job queue `{}`: {}", jobFile, e.what()));
+        Log::error("Application", std::format("Failed to load job file `{}`: {}", jobFile, e.what()));
         runFn = [] { return EXIT_FAILURE; };
         return;
     }
-    if (queue.isEmpty()) return;
+    if (jobs.empty()) return;
 
     Core::init(std::nullopt, VK_RAY_VERSION);
 
     SceneSerializer::load(Core::getScene(), kDefaultScene);
     Core::installGraphBuilder([this] { buildRenderGraph(true); });
-    runFn = [queue = std::move(queue)]() mutable { return Offline::run(queue); };
+    runFn = [jobs = std::move(jobs)] { return Offline::run(jobs); };
 }
 
 void Application::buildRenderGraph(bool offline) {

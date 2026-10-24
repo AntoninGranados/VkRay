@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -13,6 +11,8 @@ namespace ecs {
 class Registry;
 }
 
+class Scene;
+
 glm::vec3 directionFromRotation(const glm::vec3& rotationEuler);
 
 glm::vec2 applySensorFit(ecs::CameraSensorFit fit, float aspect, float sensorAxisValue);
@@ -22,14 +22,12 @@ struct CameraFrustum {
     bool orthographic;
 };
 
-using FrustumHook = std::function<float(const ecs::Registry&, ecs::Entity, float aspect, float trueValue)>;
-void setFrustumHook(FrustumHook hook);
-
-CameraFrustum computeFrustum(const ecs::Registry& registry, ecs::Entity camera, float aspect, bool applyHook = true);
+CameraFrustum computeFrustum(const ecs::Registry& registry, ecs::Entity camera, float aspect,
+                             float frustumScale = 1.0f);
 
 glm::mat4 getView(const ecs::Registry& registry, ecs::Entity camera);
-glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect);
-CameraUBO buildCameraUBO(ecs::Registry& registry, ecs::Entity camera, float aspect);
+glm::mat4 getProjection(const ecs::Registry& registry, ecs::Entity camera, float aspect, float frustumScale);
+CameraUBO buildCameraUBO(const Scene& scene, ecs::Entity camera, float aspect, float frustumScale);
 
 float resolveFocusDistance(const ecs::Registry& registry, ecs::Entity camera);
 

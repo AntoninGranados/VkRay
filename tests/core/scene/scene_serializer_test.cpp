@@ -37,7 +37,6 @@ TEST_CASE("SceneSerializer loadCore rejects a version mismatch") {
     const std::filesystem::path path = writeSceneFile(R"({ "version": 2, "Objects": [] })");
 
     Scene scene;
-    scene.initContext();
     CHECK_FALSE(SceneSerializer::loadCore(scene, path.string()));
 }
 
@@ -52,7 +51,6 @@ TEST_CASE("SceneSerializer loadCore builds entity naming and hierarchy") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     const auto parent = findChildByName(scene, scene.getObjectsRoot(), "Parent");
@@ -70,7 +68,6 @@ TEST_CASE("SceneSerializer loadCore expands a repeat expression") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     CHECK(findChildByName(scene, scene.getObjectsRoot(), "Sphere_0").has_value());
@@ -87,7 +84,6 @@ TEST_CASE("SceneSerializer loadCore expands a grid expression") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     CHECK(findChildByName(scene, scene.getObjectsRoot(), "Cell_0_0").has_value());
@@ -105,7 +101,6 @@ TEST_CASE("SceneSerializer loadCore places a spherical node") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     const auto entity = findChildByName(scene, scene.getObjectsRoot(), "OrbitCam");
@@ -126,7 +121,6 @@ TEST_CASE("SceneSerializer loadCore aims a spherical node at its target") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     const auto entity = findChildByName(scene, scene.getObjectsRoot(), "OrbitCam");
@@ -153,7 +147,6 @@ TEST_CASE("SceneSerializer loadCore applies keyframes at frame zero") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     const auto entity = findChildByName(scene, scene.getObjectsRoot(), "Anim");
@@ -176,7 +169,6 @@ TEST_CASE("SceneSerializer loadCore resolves a cross-entity name reference") {
     })");
 
     Scene scene;
-    scene.initContext();
     REQUIRE(SceneSerializer::loadCore(scene, path.string()));
 
     const auto material = findChildByName(scene, scene.getMaterialsRoot(), "Material_A");
@@ -197,12 +189,10 @@ TEST_CASE("SceneSerializer save round-trips the golden scene") {
         std::filesystem::temp_directory_path() / "vkray_scene_serializer_roundtrip_b.json";
 
     Scene sceneA;
-    sceneA.initContext();
     REQUIRE(SceneSerializer::loadCore(sceneA, originalPath.string()));
     REQUIRE(SceneSerializer::save(sceneA, savedPathA.string()));
 
     Scene sceneB;
-    sceneB.initContext();
     REQUIRE(SceneSerializer::loadCore(sceneB, savedPathA.string()));
     REQUIRE(SceneSerializer::save(sceneB, savedPathB.string()));
 

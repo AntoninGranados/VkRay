@@ -1,10 +1,10 @@
 #pragma once
 
-#include "core/ecs/registry.hpp"
+class Scene;
 
 namespace ecs {
 
-void animationSystem(Registry& registry);
-void evaluateAnimation(Registry& registry);
+void animationSystem(Scene& scene);
+void evaluateAnimation(Scene& scene);
 
 } // namespace ecs

@@ -61,7 +61,6 @@ set(VKRAY_LOGIC_SOURCES
   "${PROJECT_SOURCE_DIR}/src/core/animation/animation_clock.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/animation/animation_store.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/animation/keyframe.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/animation/track.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/ecs/components/component_serializer.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/ecs/components/component_type.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/ecs/systems/physics/physics_solver.cpp"

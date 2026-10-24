@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/ecs/registry.hpp"
+class Scene;
 
 namespace ecs {
 
@@ -13,11 +13,8 @@ struct PhysicsBakeState {
     bool wasPaused = true;
 };
 
-void physicsSolverSystem(Registry& registry);
-void bakePhysicsSimulation(Registry& registry);
-bool isPhysicsBakeInProgress(const Registry& registry);
-int getPhysicsBakeCurrentFrame(const Registry& registry);
-int getPhysicsBakeTotalFrames(const Registry& registry);
-void physicsSystem(Registry& registry);
+void physicsSolverSystem(Scene& scene);
+void bakePhysicsSimulation(Scene& scene);
+void physicsSystem(Scene& scene);
 
 } // namespace ecs

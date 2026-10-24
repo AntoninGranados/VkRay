@@ -2,9 +2,14 @@
 
 #include <cassert>
 #include <memory>
+#include <string_view>
 
+#include <glm/glm.hpp>
+
+#include "core/camera/aperture.hpp"
 #include "core/fields/parameter_serializer.hpp"
 #include "core/render/resource_shader_file_system.hpp"
+#include "utils/resources.hpp"
 
 Core::Core(const std::optional<std::string>& windowTitle, uint32_t version)
     : window(windowTitle ? std::optional<VkSmol::Window>(std::in_place, *windowTitle, kWindowWidth, kWindowHeight)
@@ -16,31 +21,25 @@ void Core::init(const std::optional<std::string>& windowTitle, uint32_t version)
     instance = &core;
     core.engine.setShaderFileSystem(std::make_shared<ResourceShaderFileSystem>());
     loadParameters();
-    core.coreRenderer.bindParameters();
-    core.coreRenderer.init();
+
+    core.lensImageHandle = core.engine.createImage("LensTexture", VK_FORMAT_R8_UNORM, aperture::kSize, aperture::kSize);
+
+    const std::string_view blueNoise = Resources::find("builtin:/noise/blue_noise.bin").value();
+    core.blueNoiseBufferHandle = core.engine.createBuffer("BlueNoiseBuffer", blueNoise.size(), blueNoise.data());
+
+    const glm::ivec2 renderSize = core.parameters.get<glm::ivec2>("renderer/output/render_size");
+    const VkExtent2D extent = {static_cast<uint32_t>(renderSize.x), static_cast<uint32_t>(renderSize.y)};
+    core.coreRenderer.init(extent, "", core.lensImageHandle, core.blueNoiseBufferHandle);
 }
 
 void Core::loadParameters() { get().parameters = ParameterSerializer::load("builtin:/config/parameters.json"); }
-
-void Core::restartAccumulation() {
-    Core& c = get();
-    c.coreRenderer.restartAccumulation();
-    if (c.renderMode == RenderMode::Preview) {
-        const int n = c.parameters.get<int>("renderer/viewport/max_samples");
-        c.coreRenderer.setTargetSampleCount(n > 0 ? n : SampleAccumulator::kUnboundedSamples);
-    }
-}
 
 bool Core::consumeRenderDirty() {
     Core& c = get();
     if (!c.renderDirty) return false;
     c.renderDirty = false;
-    c.restartAccumulation();
+    c.coreRenderer.restartAccumulation();
     return true;
-}
-
-void Core::resize(int width, int height) {
-    get().coreRenderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 }
 
 bool Core::consumeResize() {
@@ -48,7 +47,7 @@ bool Core::consumeResize() {
     if (c.targetExtent.width == 0) return false;
     VkExtent2D current = c.coreRenderer.getRenderExtent();
     if (c.targetExtent.width == current.width && c.targetExtent.height == current.height) return false;
-    resize(c.targetExtent.width, c.targetExtent.height);
+    c.coreRenderer.resize(c.targetExtent.width, c.targetExtent.height);
     return true;
 }
 
@@ -66,6 +65,12 @@ void Core::rebuildGraphIfRequested(Core& c) {
     c.graphBuilder();
 }
 
+int Core::getTargetSampleCount(Core& c) {
+    if (c.renderMode != RenderMode::Preview) return c.parameters.get<int>("renderer/sampling/render_samples");
+    const int maxSamples = c.parameters.get<int>("renderer/viewport/max_samples");
+    return maxSamples > 0 ? maxSamples : SampleAccumulator::kUnboundedSamples;
+}
+
 void Core::renderFrame(std::function<void()> onPrepare) {
     Core& c = get();
     Scene& scene = c.coreRenderer.getScene();
@@ -77,6 +82,7 @@ void Core::renderFrame(std::function<void()> onPrepare) {
     scene.runPreRender();
     scene.runOnRender();
 
+    c.coreRenderer.setTargetSampleCount(getTargetSampleCount(c));
     c.coreRenderer.prepare();
     if (onPrepare) onPrepare();
     c.graph.execute();
@@ -86,7 +92,6 @@ void Core::startRender() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderSingle;
-    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
     markRenderDirty();
@@ -96,7 +101,6 @@ void Core::startRenderAnim() {
     Core& c = get();
     if (c.renderMode != RenderMode::Preview) return;
     c.renderMode = RenderMode::RenderAnimation;
-    c.coreRenderer.setTargetSampleCount(c.parameters.get<int>("renderer/sampling/render_samples"));
     auto renderSize = c.parameters.get<glm::ivec2>("renderer/output/render_size");
     requestResize(renderSize.x, renderSize.y);
     markRenderDirty();

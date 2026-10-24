@@ -23,7 +23,6 @@ Editor& Editor::get() {
 
 void Editor::init() {
     get().inputHandler.initCallbacks();
-    EditorCameraPreview::install();
     get().materialPreview.init();
     get().editorRenderer.init();
 }
@@ -96,7 +95,7 @@ void Editor::handleViewportResize() {
 
     if (Core::consumeResize()) {
         if (Core::getRenderMode() == RenderMode::Preview) {
-            get().editorRenderer.resize(Core::getRenderExtent(), vpExtent);
+            get().editorRenderer.resize(Core::getCoreRenderer().getRenderExtent(), vpExtent);
         } else {
             get().editorRenderer.registerImGuiTextures();
         }
@@ -106,22 +105,31 @@ void Editor::handleViewportResize() {
 
 void Editor::handleRenderModeCompletion() {
     if (Core::getRenderMode() == RenderMode::Preview || Core::isRenderDirty()) return;
-    if (!Core::isRenderFinished()) return;
+    if (!Core::getCoreRenderer().isRenderFinished()) return;
 
     if (Core::getRenderMode() == RenderMode::RenderAnimation) {
         const auto cacheDir = Core::getParameters().get<std::filesystem::path>("renderer/output/frame_cache");
-        Core::saveCapture(ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
+        ExportService::save(Core::getCoreRenderer(),
+                            ExportService::buildAnimationFramePath(Core::getAnimation().getFrame(), cacheDir));
         Core::getAnimation().stepFixed();
         if (Core::getAnimation().getFrame() == 0) {
             ExportService::convertFramesToVideo(Core::getOutputPath(), cacheDir, Core::getAnimation().getFps());
             Core::setRenderMode(RenderMode::Preview);
         }
     } else {
-        Core::saveCapture(Core::getOutputPath());
+        ExportService::save(Core::getCoreRenderer(), Core::getOutputPath());
         Core::setRenderMode(RenderMode::Preview);
     }
 
     Core::markRenderDirty();
+}
+
+void Editor::updateFrustumScale() {
+    const ImVec2 viewportSize = get().ui.getViewportSize();
+    const float viewportAspect = viewportSize.y > 0.0f ? viewportSize.x / viewportSize.y : 1.0f;
+    Scene& scene = Core::getScene();
+    Core::getCoreRenderer().setFrustumScale(
+        EditorCameraPreview::computeFrustumScale(scene.getRegistry(), *scene.getActiveCamera(), viewportAspect));
 }
 
 void Editor::run() {
@@ -140,6 +148,7 @@ void Editor::run() {
 
         handleViewportResize();
         handleRenderModeCompletion();
+        updateFrustumScale();
 
         Core::renderFrame([] {
             get().editorRenderer.prepare();

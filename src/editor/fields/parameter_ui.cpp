@@ -27,7 +27,6 @@ bool drawParameter(Parameter& p) {
         ImGui::SetTooltip("%s", p.getDescription()->c_str());
     ImGui::PopID();
 
-    if (changed) p.sync();
     return changed;
 }
 

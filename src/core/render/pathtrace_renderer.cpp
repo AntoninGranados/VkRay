@@ -21,8 +21,6 @@ void PathtraceRenderer::init(VkExtent2D extent, const std::string& passTag, VkSm
     lensImageHandle = lensImage;
     blueNoiseBufferHandle = blueNoiseBuffer;
 
-    scene.init();
-
     previousPathtracingImageHandle = engine.createImage(tag + "PreviousPathtracingImage", VK_FORMAT_R32G32B32A32_SFLOAT,
                                                         extent.width, extent.height);
     currentPathtracingImageHandle =
@@ -50,9 +48,7 @@ void PathtraceRenderer::init(VkExtent2D extent, const std::string& passTag, VkSm
     resources.sceneHandles.motion = engine.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample));
     resources.sceneHandles.liveMotion =
         engine.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample));
-    scene.setGpuBufferHandles(resources.sceneHandles);
-
-    setDefaultUBOs();
+    scene.init(resources.sceneHandles);
 }
 
 void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
@@ -81,7 +77,7 @@ void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
             if (dispatchPathtracing) context.dispatchThreads(renderExtent.width, renderExtent.height);
         });
 
-    const size_t passCount = std::max<size_t>(1, ScriptTable::compositingDispatchCount(scene.getRegistry()));
+    const size_t passCount = std::max<size_t>(1, ScriptTable::compositingDispatchCount(scene));
     const VkSmol::ShaderConformances compositingConformances = ScriptTable::conformances({&ScriptTable::kCompositing});
 
     compositingPassUBOHandles.clear();
@@ -109,25 +105,14 @@ void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
     }
 }
 
-void PathtraceRenderer::setDefaultUBOs() {
-    ParameterRegistry& parameters = Core::getParameters();
-
-    pathtracerUBO.render.maxBounces = parameters.get<int>("renderer/sampling/max_bounces");
-    pathtracerUBO.render.importanceSampling = parameters.get<bool>("renderer/sampling/importance_sampling");
-    pathtracerUBO.render.clipAccumulation = parameters.get<bool>("renderer/sampling/clamp");
-    pathtracerUBO.render.clipThreshold = parameters.get<float>("renderer/sampling/clamp_threshold");
-    pathtracerUBO.render.varianceSampling = parameters.get<bool>("renderer/sampling/adaptive_sampling");
-    pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
-}
-
 void PathtraceRenderer::prepare() {
     VkSmol::Engine& engine = Core::getEngine();
 
     ecs::Registry& registry = scene.getRegistry();
     const ecs::Entity camera = *scene.getActiveCamera();
 
-    const CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
-    if (std::max<size_t>(1, compositingInfo.passes.size()) != compositingPassUBOHandles.size())
+    const PackingInfo& packingInfo = scene.getPackingInfo();
+    if (std::max<size_t>(1, packingInfo.compositingPasses.size()) != compositingPassUBOHandles.size())
         Core::requestGraphRebuild();
 
     if (registry.hasChangedSince(seenChangeTick, {&ecs::Compositing})) accumulator.restart();
@@ -141,21 +126,28 @@ void PathtraceRenderer::prepare() {
 
     pathtracerUBO.screen.size = {static_cast<float>(renderExtent.width), static_cast<float>(renderExtent.height)};
     pathtracerUBO.screen.aspect = pathtracerUBO.screen.size.x / pathtracerUBO.screen.size.y;
-    pathtracerUBO.camera = buildCameraUBO(registry, camera, pathtracerUBO.screen.aspect);
-    pathtracerUBO.render.skySlot = registry.ctx().get<SkyPluginInfo>().slot;
-    pathtracerUBO.render.skyParamsBase = registry.ctx().get<SkyPluginInfo>().paramsBase;
-    const CameraMediaInfo& cameraMedia = registry.ctx().get<CameraMediaInfo>();
-    pathtracerUBO.render.cameraMediumCount = cameraMedia.count;
-    pathtracerUBO.render.cameraMedia = cameraMedia.objects;
+    pathtracerUBO.camera = buildCameraUBO(scene, camera, pathtracerUBO.screen.aspect, frustumScale);
+    pathtracerUBO.render.skySlot = packingInfo.sky.slot;
+    pathtracerUBO.render.skyParamsBase = packingInfo.sky.paramsBase;
+    pathtracerUBO.render.cameraMediumCount = packingInfo.cameraMedia.count;
+    pathtracerUBO.render.cameraMedia = packingInfo.cameraMedia.objects;
+
+    ParameterRegistry& parameters = Core::getParameters();
+    pathtracerUBO.render.maxBounces = parameters.get<int>("renderer/sampling/max_bounces");
+    pathtracerUBO.render.importanceSampling = parameters.get<bool>("renderer/sampling/importance_sampling");
+    pathtracerUBO.render.clipAccumulation = parameters.get<bool>("renderer/sampling/clamp");
+    pathtracerUBO.render.clipThreshold = parameters.get<float>("renderer/sampling/clamp_threshold");
+    pathtracerUBO.render.varianceSampling = parameters.get<bool>("renderer/sampling/adaptive_sampling");
+    pathtracerUBO.render.varianceWarmupSamples = parameters.get<int>("renderer/sampling/adaptive_warmup");
 
     engine.writeBuffer(pathtracingUBOHandle, pathtracerUBO);
 
     for (size_t i = 0; i < compositingPassUBOHandles.size(); i++) {
         CompositingPassUBO passUbo{};
-        if (i < compositingInfo.passes.size()) {
-            passUbo.slot = compositingInfo.passes[i].slot;
-            passUbo.paramsBase = compositingInfo.passes[i].paramsBase;
-            passUbo.passId = compositingInfo.passes[i].passId;
+        if (i < packingInfo.compositingPasses.size()) {
+            passUbo.slot = packingInfo.compositingPasses[i].slot;
+            passUbo.paramsBase = packingInfo.compositingPasses[i].paramsBase;
+            passUbo.passId = packingInfo.compositingPasses[i].passId;
         }
         engine.writeBuffer(compositingPassUBOHandles[i], passUbo);
     }
@@ -171,6 +163,4 @@ void PathtraceRenderer::resize(uint32_t width, uint32_t height) {
     engine.resizeImage(resources.outputImageHandle, width, height);
     for (const VkSmol::ImageHandle& pingHandle : compositingPingHandles) engine.resizeImage(pingHandle, width, height);
     engine.resizeBuffer(resources.pixelInfoBufferHandle, static_cast<size_t>(width) * height * sizeof(PixelInfo));
-
-    onResize(width, height);
 }

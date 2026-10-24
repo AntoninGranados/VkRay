@@ -11,36 +11,11 @@
 #include "core/ecs/systems/motion_sampling.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 
-void Scene::init() {
-    initContext();
-    registry.ctx().emplace<SceneGpuBuffers>();
-    initSystems();
-}
-
-void Scene::setGpuBufferHandles(const SceneGpuBuffers& handles) {
-    registry.ctx().get<SceneGpuBuffers>() = handles;
-    invalidateGpuData();
-}
-
-void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
-    if (newActiveCamera == activeCamera) return;
-    activeCamera = newActiveCamera;
-    registry.markChanged(ecs::Camera);
-}
-
-void Scene::bakePhysics() { ecs::bakePhysicsSimulation(registry); }
-
-bool Scene::isPhysicsBakeInProgress() const { return ecs::isPhysicsBakeInProgress(registry); }
-
-int Scene::getPhysicsBakeCurrentFrame() const { return ecs::getPhysicsBakeCurrentFrame(registry); }
-
-int Scene::getPhysicsBakeTotalFrames() const { return ecs::getPhysicsBakeTotalFrames(registry); }
-
-void Scene::initSystems() {
+void Scene::init(const SceneGpuBuffers& buffers) {
     preUpdateScheduler.clear();
-    preUpdateScheduler.add(ecs::animationSystem);
-    preUpdateScheduler.add(ecs::physicsSystem);
-    preUpdateScheduler.add(ecs::apertureSystem);
+    preUpdateScheduler.add([this](ecs::Registry&) { ecs::animationSystem(*this); });
+    preUpdateScheduler.add([this](ecs::Registry&) { ecs::physicsSystem(*this); });
+    preUpdateScheduler.add([this](ecs::Registry&) { ecs::apertureSystem(registry, apertureState); });
     preUpdateScheduler.add(ecs::cameraFocusSystem);
 
     using Types = std::vector<const ecs::ComponentType*>;
@@ -55,11 +30,20 @@ void Scene::initSystems() {
     const Types environments = ecs::ComponentType::inGroup("environment");
 
     onRenderScheduler.clear();
-    onRenderScheduler.add(ecs::materialPackingSystem, join({materials, cameras, environments, {&ecs::Compositing}}));
-    onRenderScheduler.add(ecs::meshPackingSystem, {&ecs::Mesh});
-    onRenderScheduler.add(ecs::meshInstancePackingSystem, {&ecs::Mesh, &ecs::MeshRef, &ecs::Transform});
-    onRenderScheduler.add(ecs::objectPackingSystem,
+    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::materialPackingSystem(*this, buffers); },
+                          join({materials, cameras, environments, {&ecs::Compositing}}));
+    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::meshPackingSystem(*this, buffers); }, {&ecs::Mesh});
+    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::meshInstancePackingSystem(*this, buffers); },
+                          {&ecs::Mesh, &ecs::MeshRef, &ecs::Transform});
+    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::objectPackingSystem(*this, buffers); },
                           join({objects, materials, {&ecs::Transform, &ecs::Camera, &ecs::RigidBody, &ecs::Mesh}}),
-                          ecs::isMotionBlurActive);
-    onRenderScheduler.add(ecs::lightPackingSystem, join({objects, materials, {&ecs::Transform, &ecs::Mesh}}));
+                          [this](ecs::Registry&) { return ecs::isMotionBlurActive(*this); });
+    onRenderScheduler.add([buffers](ecs::Registry& registry) { ecs::lightPackingSystem(registry, buffers); },
+                          join({objects, materials, {&ecs::Transform, &ecs::Mesh}}));
+}
+
+void Scene::setActiveCamera(ecs::Entity newActiveCamera) {
+    if (newActiveCamera == activeCamera) return;
+    activeCamera = newActiveCamera;
+    registry.markChanged(ecs::Camera);
 }

@@ -16,14 +16,15 @@
 #include "core/ecs/components/physics.hpp"
 #include "core/ecs/systems/physics/physics_solver.hpp"
 #include "core/scene/gpu_structs.hpp"
+#include "core/scene/scene.hpp"
 
 namespace ecs {
 
 namespace {
 
-bool isEntityInMotion(Registry& registry, Entity entity, Component& transform) {
-    if (registry.has(entity, RigidBody)) return true;
-    AnimationStore& store = *registry.ctx().get<AnimationStore*>();
+bool isEntityInMotion(Scene& scene, Entity entity, Component& transform) {
+    if (scene.getRegistry().has(entity, RigidBody)) return true;
+    AnimationStore& store = scene.getAnimationStore();
     return !store.keyframes(transform.getField("position")).empty() ||
            !store.keyframes(transform.getField("rotation")).empty() ||
            !store.keyframes(transform.getField("scale")).empty();
@@ -107,21 +108,22 @@ void bakeLiveTransform(Component& transform, std::vector<GpuMotionSample>& outMo
     outMotion.push_back(sampleLiveTransform(transform));
 }
 
-bool isMotionBlurActive(Registry& registry) {
-    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+bool isMotionBlurActive(Scene& scene) {
+    Registry& registry = scene.getRegistry();
+    const std::optional<Entity> cameraEntity = scene.getActiveCamera();
     if (!cameraEntity || !registry.has(*cameraEntity, Camera) ||
         registry.get(*cameraEntity, Camera).get<float>("shutter_speed") <= 0.0f)
         return false;
-    return registry.storage(RigidBody).size() > 0 || !registry.ctx().get<AnimationStore*>()->isEmpty();
+    return registry.storage(RigidBody).size() > 0 || !scene.getAnimationStore().isEmpty();
 }
 
-uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transform,
-                           std::vector<GpuMotionSample>& outMotion) {
+uint32_t bakeMotionSamples(Scene& scene, Entity entity, Component& transform, std::vector<GpuMotionSample>& outMotion) {
+    Registry& registry = scene.getRegistry();
     const uint32_t offset = static_cast<uint32_t>(outMotion.size());
 
-    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+    const std::optional<Entity> cameraEntity = scene.getActiveCamera();
     const float shutterSpeed = cameraEntity ? registry.get(*cameraEntity, Camera).get<float>("shutter_speed") : 0.0f;
-    const bool inMotion = isEntityInMotion(registry, entity, transform);
+    const bool inMotion = isEntityInMotion(scene, entity, transform);
 
     if (shutterSpeed <= 0.0f || !inMotion) {
         outMotion.push_back(sampleLiveTransform(transform));
@@ -135,10 +137,9 @@ uint32_t bakeMotionSamples(Registry& registry, Entity entity, Component& transfo
     std::uniform_real_distribution<float> dist(-halfBlur, halfBlur);
     const float sampleFrame = static_cast<float>(frame) + dist(rng);
 
-    outMotion.push_back(
-        registry.has(entity, RigidBody)
-            ? sampleRigidBodyAt(registry, entity, transform, sampleFrame)
-            : sampleTrackAt(*registry.ctx().get<AnimationStore*>(), transform, sampleFrame, static_cast<float>(frame)));
+    outMotion.push_back(registry.has(entity, RigidBody) ? sampleRigidBodyAt(registry, entity, transform, sampleFrame)
+                                                        : sampleTrackAt(scene.getAnimationStore(), transform,
+                                                                        sampleFrame, static_cast<float>(frame)));
     return offset;
 }
 

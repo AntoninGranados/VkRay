@@ -1,9 +1,12 @@
 #include "field_serializer.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <format>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "utils/log.hpp"
 
@@ -92,8 +95,19 @@ void applyField(const json& j, Field& f, const ResolveCtx& ctx) {
     case FieldType::Bool:
         f.set<bool>(j.get<bool>());
         break;
-    case FieldType::Int:
     case FieldType::Enum:
+        if (j.is_string()) {
+            const std::vector<std::string>& items = std::get<EnumMeta>(f.getMetadata()).items;
+            const auto item = std::ranges::find(items, j.get<std::string>());
+            if (item == items.end())
+                Log::error("FieldSerializer",
+                           std::format("Unknown enum value '{}' for: {}", j.get<std::string>(), f.getId().string()));
+            else
+                f.set<int>(static_cast<int>(item - items.begin()));
+            break;
+        }
+        [[fallthrough]];
+    case FieldType::Int:
         f.set<int>(j.is_number_integer() ? j.get<int>() : static_cast<int>(std::round(resolveFloat(j, ctx))));
         break;
     case FieldType::IVec2:
@@ -132,23 +146,4 @@ void applyField(const json& j, Field& f, const ResolveCtx& ctx) {
         f.set<std::filesystem::path>(j.get<std::string>());
         break;
     }
-}
-
-std::optional<FieldValue> inferFieldValueFromJson(const json& v) {
-    if (v.is_boolean()) return FieldValue::make(v.get<bool>());
-    if (v.is_number_integer()) return FieldValue::make(v.get<int>());
-    if (v.is_number_float()) return FieldValue::make(v.get<float>());
-    if (v.is_string()) return FieldValue::make(v.get<std::string>());
-    if (v.is_array() && (v.size() == 2 || v.size() == 3 || v.size() == 4)) {
-        const bool isFloat = v[0].is_number_float();
-        switch (v.size()) {
-        case 2:
-            return fieldValueFromJson(v, isFloat ? FieldType::Vec2 : FieldType::IVec2);
-        case 3:
-            return fieldValueFromJson(v, isFloat ? FieldType::Vec3 : FieldType::IVec3);
-        default:
-            return fieldValueFromJson(v, isFloat ? FieldType::Vec4 : FieldType::IVec4);
-        }
-    }
-    return std::nullopt;
 }

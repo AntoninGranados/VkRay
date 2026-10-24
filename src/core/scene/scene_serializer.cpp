@@ -52,8 +52,8 @@ json serializeKeyframes(const std::map<int, Keyframe>& kfs) {
     for (const auto& [frame, kf] : kfs) {
         json kfj;
         kfj["frame"] = frame;
-        kfj["value"] = fieldValueToJson(kf.getValue());
-        if (kf.getInterpolation() != Interpolation::Linear) kfj["ease"] = toStr(kInterpolations, kf.getInterpolation());
+        kfj["value"] = fieldValueToJson(kf.value);
+        if (kf.interpolation != Interpolation::Linear) kfj["ease"] = toStr(kInterpolations, kf.interpolation);
         arr.push_back(kfj);
     }
     return arr;

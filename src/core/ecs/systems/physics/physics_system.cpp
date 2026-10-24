@@ -8,6 +8,7 @@
 #include "core/core.hpp"
 #include "core/ecs/systems/animation_system.hpp"
 #include "core/scene/asset/mesh.hpp"
+#include "core/scene/scene.hpp"
 #include "physics_solver.hpp"
 
 namespace ecs {
@@ -83,10 +84,11 @@ glm::vec3 gravityFor(Registry& registry, const ecs::Component& rb) {
 
 } // namespace physics_detail
 
-void physicsSolverSystem(Registry& registry) {
+void physicsSolverSystem(Scene& scene) {
     using namespace ecs::physics_detail;
 
-    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
+    Registry& registry = scene.getRegistry();
+    const PhysicsBakeState& bakeState = scene.getPhysicsBakeState();
 
     auto& rigidBodies = registry.storage(RigidBody);
     auto& transforms = registry.storage(Transform);
@@ -231,8 +233,9 @@ void physicsSolverSystem(Registry& registry) {
     }
 }
 
-void bakePhysicsSimulation(Registry& registry) {
-    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
+void bakePhysicsSimulation(Scene& scene) {
+    Registry& registry = scene.getRegistry();
+    PhysicsBakeState& bakeState = scene.getPhysicsBakeState();
     if (bakeState.inProgress) return;
 
     AnimationClock& animation = Core::getAnimation();
@@ -257,22 +260,17 @@ void bakePhysicsSimulation(Registry& registry) {
     registry.markChanged(Transform);
 }
 
-bool isPhysicsBakeInProgress(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().inProgress; }
-
-int getPhysicsBakeCurrentFrame(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().nextFrame; }
-
-int getPhysicsBakeTotalFrames(const Registry& registry) { return registry.ctx().get<PhysicsBakeState>().totalFrames; }
-
-void physicsSystem(Registry& registry) {
+void physicsSystem(Scene& scene) {
     using namespace ecs::physics_detail;
 
-    PhysicsBakeState& bakeState = registry.ctx().get<PhysicsBakeState>();
+    Registry& registry = scene.getRegistry();
+    PhysicsBakeState& bakeState = scene.getPhysicsBakeState();
 
     if (bakeState.inProgress) {
         Core::getAnimation().reset(bakeState.nextFrame);
         Core::getAnimation().sample();
-        evaluateAnimation(registry);
-        physicsSolverSystem(registry);
+        evaluateAnimation(scene);
+        physicsSolverSystem(scene);
         registry.markChanged(Transform);
 
         bakeState.nextFrame++;

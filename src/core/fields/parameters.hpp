@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -23,52 +22,6 @@ public:
         return *this;
     }
 
-    template <typename T>
-    Parameter& bind(T* ptr)
-        requires(!std::is_enum_v<T>)
-    {
-        onSync = [ptr, this]() { *ptr = get<T>(); };
-        onSync();
-        return *this;
-    }
-    template <typename T>
-    Parameter& bind(T* ptr)
-        requires(std::is_enum_v<T>)
-    {
-        onSync = [ptr, this]() { *ptr = static_cast<T>(get<int>()); };
-        onSync();
-        return *this;
-    }
-    template <typename T>
-    Parameter& bind(std::function<void(T)> cb)
-        requires(!std::is_enum_v<T>)
-    {
-        onSync = [cb = std::move(cb), this]() { cb(get<T>()); };
-        onSync();
-        return *this;
-    }
-    template <typename T>
-    Parameter& bind(std::function<void(T)> cb)
-        requires(std::is_enum_v<T>)
-    {
-        onSync = [cb = std::move(cb), this]() { cb(static_cast<T>(get<int>())); };
-        onSync();
-        return *this;
-    }
-
-    template <typename T> void set(const T& v) {
-        Field::set(v);
-        sync();
-    }
-
-    void reset() {
-        Field::reset();
-        sync();
-    }
-    void sync() {
-        if (onSync) onSync();
-    }
-
     std::string print() const;
 
     template <typename T>
@@ -83,7 +36,6 @@ public:
 private:
     std::optional<std::string> description;
     bool restartAccumulation = false;
-    std::function<void()> onSync;
 };
 
 class ParameterRegistry {
@@ -116,33 +68,10 @@ public:
         return static_cast<T>(getParam(id).get<int>());
     }
 
-    template <typename T>
-    void set(const FieldPath& id, const T& value)
-        requires(!std::is_enum_v<T>)
-    {
-        Parameter& parameter = getParam(id);
-        if constexpr (std::is_same_v<T, int>)
-            if (parameter.getType() == FieldType::Float) return parameter.set(static_cast<float>(value));
-        parameter.set(value);
-    }
-    template <typename T>
-    void set(const FieldPath& id, T value)
-        requires(std::is_enum_v<T>)
-    {
-        getParam(id).set(std::to_underlying(value));
-    }
-
-    template <typename T> void bind(const FieldPath& id, T* ptr) { getParam(id).bind<T>(ptr); }
-    template <typename T> void bind(const FieldPath& id, std::function<void(T)> cb) {
-        getParam(id).bind<T>(std::move(cb));
-    }
-
-    void setEnumByName(const FieldPath& id, const std::string& name);
+    Parameter& getParam(const FieldPath& id);
 
 private:
     std::vector<std::unique_ptr<Parameter>> parameters;
     std::unordered_map<std::string, Parameter*> index;
     std::unordered_map<std::string, std::string> nodeLabels;
-
-    Parameter& getParam(const FieldPath& id);
 };

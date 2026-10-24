@@ -33,11 +33,11 @@ void drawCameraGizmo(Registry& registry, Entity e, Entity activeCamera, ImDrawLi
 
     const float aspect = windowSize.y > 0.0f ? (windowSize.x / windowSize.y) : 1.0f;
     const float sensorWidth = c.get<float>("sensor_width");
-    const CameraFrustum frustum = computeFrustum(registry, e, aspect, false);
+    const CameraFrustum frustum = computeFrustum(registry, e, aspect);
     const bool orthographic = frustum.orthographic;
 
     const glm::mat4 view = getView(registry, activeCamera);
-    const glm::mat4 proj = getProjection(registry, activeCamera, aspect);
+    const glm::mat4 proj = getProjection(registry, activeCamera, aspect, Core::getCoreRenderer().getFrustumScale());
     const glm::mat4 viewProj = proj * view;
 
     const glm::vec3 camPos = t.get<glm::vec3>("position");

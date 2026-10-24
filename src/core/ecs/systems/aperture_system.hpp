@@ -13,6 +13,6 @@ struct ApertureState {
     bool defaultUploaded = false;
 };
 
-void apertureSystem(Registry& registry);
+void apertureSystem(Registry& registry, ApertureState& state);
 
 } // namespace ecs

@@ -13,9 +13,8 @@
 #include "editor/ui_utils.hpp"
 
 void MaterialPreview::init() {
-    CoreRenderer& coreRenderer = Core::getCoreRenderer();
-    renderer.init(VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview", coreRenderer.getLensImageHandle(),
-                  coreRenderer.getBlueNoiseBufferHandle());
+    renderer.init(VkExtent2D{kPreviewSize, kPreviewSize}, "MaterialPreview", Core::getLensImageHandle(),
+                  Core::getBlueNoiseBufferHandle());
 
     Scene& scene = renderer.getScene();
     ecs::Registry& registry = scene.getRegistry();

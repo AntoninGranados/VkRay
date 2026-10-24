@@ -20,8 +20,6 @@ struct RenderResources {
 
 class PathtraceRenderer {
 public:
-    virtual ~PathtraceRenderer() = default;
-
     void init(VkExtent2D extent, const std::string& passTag, VkSmol::ImageHandle lensImageHandle,
               VkSmol::BufferHandle blueNoiseBufferHandle);
     void addPasses(VkSmol::RenderGraph& graph);
@@ -39,16 +37,12 @@ public:
     VkSmol::ImageHandle getOutputImageHandle() const { return resources.outputImageHandle; }
     const RenderResources& getResources() const { return resources; }
 
+    float getFrustumScale() const { return frustumScale; }
+    void setFrustumScale(float scale) { frustumScale = scale; }
+
     Scene& getScene() { return scene; }
 
-protected:
-    PathtracerUBO pathtracerUBO;
-
-    virtual void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) {}
-
 private:
-    void setDefaultUBOs();
-
     Scene scene;
     std::string tag;
 
@@ -59,10 +53,12 @@ private:
     VkSmol::ImageHandle previousPathtracingImageHandle, currentPathtracingImageHandle;
     std::array<VkSmol::ImageHandle, 2> compositingPingHandles;
 
+    PathtracerUBO pathtracerUBO;
     VkSmol::BufferHandle pathtracingUBOHandle;
     std::vector<VkSmol::BufferHandle> compositingPassUBOHandles;
 
     VkExtent2D renderExtent = {};
+    float frustumScale = 1.0f;
     bool dispatchPathtracing = false;
 
     SampleAccumulator accumulator;

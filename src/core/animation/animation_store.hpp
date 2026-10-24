@@ -1,11 +1,11 @@
 #pragma once
 
+#include <iterator>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "core/animation/keyframe.hpp"
-#include "core/animation/track.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/fields/field.hpp"
@@ -25,10 +25,19 @@ public:
 
     template <typename T> T sampleAt(Field& field, float frame) const {
         const auto it = tracks.find(&field);
-        if (it == tracks.end() || it->second.isEmpty()) return field.get<T>();
-        return it->second.sample<T>(frame);
+        if (it == tracks.end() || it->second.empty()) return field.get<T>();
+        return sample<T>(it->second, frame);
     }
 
 private:
-    std::unordered_map<Field*, Track> tracks;
+    std::unordered_map<Field*, std::map<int, Keyframe>> tracks;
+
+    template <typename T> static T sample(const std::map<int, Keyframe>& track, float frame) {
+        if (frame <= float(track.begin()->first)) return track.begin()->second.value.get<T>();
+        if (frame >= float(track.rbegin()->first)) return track.rbegin()->second.value.get<T>();
+        const auto next = track.upper_bound(static_cast<int>(frame));
+        const auto prev = std::prev(next);
+        const float t = (frame - float(prev->first)) / float(next->first - prev->first);
+        return Keyframe::interpolate<T>(prev->second, next->second, t);
+    }
 };

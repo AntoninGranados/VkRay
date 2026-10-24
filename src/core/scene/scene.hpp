@@ -14,23 +14,13 @@
 #include "core/ecs/entity.hpp"
 #include "core/ecs/registry.hpp"
 #include "core/ecs/system_scheduler.hpp"
+#include "core/ecs/systems/aperture_system.hpp"
+#include "core/ecs/systems/physics/physics_system.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 
 struct SceneGpuBuffers;
-
-struct MeshTemplates {
-    std::vector<GpuMesh> meshes;
-};
-
-struct ObjectIndices {
-    std::unordered_map<ecs::Entity, int> byEntity;
-};
-
-struct CameraMotionInfo {
-    uint32_t motionOffset = 0;
-};
 
 struct CameraMediaInfo {
     int count = 0;
@@ -53,8 +43,14 @@ struct CompositingPassInfo {
     int32_t passId = 0;
 };
 
-struct CompositingChainInfo {
-    std::vector<CompositingPassInfo> passes;
+struct PackingInfo {
+    std::vector<GpuMesh> meshTemplates;
+    std::unordered_map<ecs::Entity, int> objectIndices;
+    uint32_t cameraMotionOffset = 0;
+    CameraMediaInfo cameraMedia;
+    LensPluginInfo lens;
+    SkyPluginInfo sky;
+    std::vector<CompositingPassInfo> compositingPasses;
 };
 
 struct SceneRoots {
@@ -67,8 +63,11 @@ struct SceneRoots {
 
 class Scene {
 public:
-    void init();
-    void initContext();
+    Scene() { addDefaultAssets(); }
+    Scene(const Scene&) = delete;
+    Scene& operator=(const Scene&) = delete;
+
+    void init(const SceneGpuBuffers& buffers);
     void clear();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
@@ -76,25 +75,18 @@ public:
 
     const std::vector<ecs::Entity>& getChildren(ecs::Entity parent) const;
 
-    ecs::Entity getMaterialsRoot() const { return registry.ctx().get<SceneRoots>().materialsRoot; }
-    ecs::Entity getAssetsRoot() const { return registry.ctx().get<SceneRoots>().assetsRoot; }
-    ecs::Entity getObjectsRoot() const { return registry.ctx().get<SceneRoots>().objectsRoot; }
-    ecs::Entity getSceneRoot() const { return registry.ctx().get<SceneRoots>().sceneRoot; }
-    ecs::Entity getInternalsRoot() const { return registry.ctx().get<SceneRoots>().internalsRoot; }
+    ecs::Entity getMaterialsRoot() const { return roots.materialsRoot; }
+    ecs::Entity getAssetsRoot() const { return roots.assetsRoot; }
+    ecs::Entity getObjectsRoot() const { return roots.objectsRoot; }
+    ecs::Entity getSceneRoot() const { return roots.sceneRoot; }
+    ecs::Entity getInternalsRoot() const { return roots.internalsRoot; }
     ecs::Entity getDefaultMaterial() const { return defaultMaterial; }
     ecs::Entity getDefaultMesh() const { return defaultMesh; }
     ecs::Entity getEnvironment() const;
     ecs::Entity getCompositing() const;
 
-    static ecs::Entity findSceneRootChild(const ecs::Registry& registry, const ecs::ComponentType& type);
-
     std::optional<ecs::Entity> getActiveCamera() const { return activeCamera; }
     void setActiveCamera(ecs::Entity newActiveCamera);
-
-    void bakePhysics();
-    bool isPhysicsBakeInProgress() const;
-    int getPhysicsBakeCurrentFrame() const;
-    int getPhysicsBakeTotalFrames() const;
 
     void runPreRender() { preUpdateScheduler.run(registry); }
     void runOnRender() { onRenderScheduler.run(registry); }
@@ -103,9 +95,10 @@ public:
     const ecs::Registry& getRegistry() const { return registry; }
 
     AnimationStore& getAnimationStore() { return animationStore; }
-
-    void setGpuBufferHandles(const SceneGpuBuffers& handles);
-    void invalidateGpuData() { onRenderScheduler.invalidate(); }
+    PackingInfo& getPackingInfo() { return packingInfo; }
+    const PackingInfo& getPackingInfo() const { return packingInfo; }
+    ecs::PhysicsBakeState& getPhysicsBakeState() { return physicsBakeState; }
+    const ecs::PhysicsBakeState& getPhysicsBakeState() const { return physicsBakeState; }
 
     MeshAsset* getMeshAsset(ecs::Entity e);
     const MeshAsset* getMeshAsset(ecs::Entity e) const;
@@ -115,16 +108,18 @@ private:
     ecs::SystemScheduler preUpdateScheduler;
     ecs::SystemScheduler onRenderScheduler;
 
+    SceneRoots roots;
     ecs::Entity defaultMaterial;
     ecs::Entity defaultMesh;
 
     std::optional<ecs::Entity> activeCamera;
 
     AnimationStore animationStore;
+    PackingInfo packingInfo;
+    ecs::ApertureState apertureState;
+    ecs::PhysicsBakeState physicsBakeState;
 
-    void initSystems();
-
-    SceneRoots& roots() { return registry.ctx().get<SceneRoots>(); }
+    ecs::Entity findSceneRootChild(const ecs::ComponentType& type) const;
 
     void resetSceneState();
     void addDefaultAssets();

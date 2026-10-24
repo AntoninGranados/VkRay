@@ -10,7 +10,7 @@
 #include "core/core.hpp"
 #include "core/ecs/components/compositing.hpp"
 #include "core/scene/scene.hpp"
-#include "editor/ecs/component_ui_registry.hpp"
+#include "editor/ecs/component_ui.hpp"
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
 
@@ -31,7 +31,7 @@ void InspectorPanel::draw() {
         ImGui::SameLine();
         if (ui::plusButton("AddComponent")) openNewComponentPopup = true;
 
-        ecs::ComponentUiRegistry::get().draw(scene.getRegistry(), entity);
+        ecs::ComponentUi::draw(scene.getRegistry(), entity);
     });
 
     if (!selectedEntity.has_value()) return;

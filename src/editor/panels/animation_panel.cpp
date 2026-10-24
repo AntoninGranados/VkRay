@@ -1,6 +1,8 @@
 #include "animation_panel.hpp"
 
 #include <algorithm>
+#include <iterator>
+#include <map>
 #include <vector>
 
 #include "FontAwesome/IconsFontAwesome7.h"
@@ -28,7 +30,7 @@ template <> std::vector<float> AnimationPanel::decompose(glm::quat v) { return {
 
 std::vector<float> AnimationPanel::decomposeInterpolation(const Keyframe& from, const Keyframe& to, float t) {
     std::vector<float> result;
-    from.getValue().dispatch([&]<typename T>(T) { result = decompose(Keyframe::interpolate<T>(from, to, t)); });
+    from.value.dispatch([&]<typename T>(T) { result = decompose(Keyframe::interpolate<T>(from, to, t)); });
     return result;
 }
 
@@ -98,9 +100,8 @@ struct RowContext {
     ImU32 tickSecond;
 };
 
-std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowContext& ctx, const char* label,
-                                                                     const char* id,
-                                                                     const std::map<int, Keyframe>& keyframes) {
+std::optional<int> AnimationPanel::drawRow(const RowContext& ctx, const char* label, const char* id,
+                                           const std::map<int, Keyframe>& keyframes) {
     const ImVec2 rowStart = ImGui::GetCursorScreenPos();
     const float textY = rowStart.y + (ctx.rowHeight - ImGui::GetTextLineHeight()) * 0.5f;
     ctx.dl->AddText(ImVec2(rowStart.x, textY), ctx.labelColor, label);
@@ -151,7 +152,7 @@ std::optional<std::pair<Keyframe, Keyframe>> AnimationPanel::drawRow(const RowCo
             if (next == keyframes.end()) break;
             const float x0 = barMin.x + (float(it->first) / span) * ctx.timelineWidth;
             const float x1 = barMin.x + (float(next->first) / span) * ctx.timelineWidth;
-            if (mouseX >= x0 && mouseX <= x1) return std::make_pair(it->second, next->second);
+            if (mouseX >= x0 && mouseX <= x1) return it->first;
         }
     }
     return std::nullopt;
@@ -248,8 +249,9 @@ void AnimationPanel::draw() {
                     ImGui::TextDisabled("%s", ct.getLabel().c_str());
 
                     for (Field* f : animatable) {
-                        if (auto seg = drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(*f))) {
-                            pendingSegment = {f->getLabel(), seg->first, seg->second, f};
+                        if (auto fromFrame =
+                                drawRow(ctx, f->getLabel().c_str(), f->getId().c_str(), store.keyframes(*f))) {
+                            pendingSegment = {f->getLabel(), f, *fromFrame};
                             ImGui::OpenPopup("##segment_interp");
                         }
                     }
@@ -259,14 +261,16 @@ void AnimationPanel::draw() {
                                                             "Ease In", "Ease Out", "Ease In-Out"};
                 ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Always);
                 if (pendingSegment && ImGui::BeginPopup("##segment_interp")) {
-                    int current = static_cast<int>(pendingSegment->from.getInterpolation());
-                    if (ImGui::Combo("##interp_mode", &current, kInterpolationNames,
-                                     IM_ARRAYSIZE(kInterpolationNames))) {
-                        const Interpolation interpolation = static_cast<Interpolation>(current);
-                        pendingSegment->from.setInterpolation(interpolation);
-                        store.setInterpolation(*pendingSegment->field, pendingSegment->from.getFrame(), interpolation);
+                    const std::map<int, Keyframe>& keyframes = store.keyframes(*pendingSegment->field);
+                    const auto from = keyframes.find(pendingSegment->fromFrame);
+                    if (from != keyframes.end() && std::next(from) != keyframes.end()) {
+                        int current = static_cast<int>(from->second.interpolation);
+                        if (ImGui::Combo("##interp_mode", &current, kInterpolationNames,
+                                         IM_ARRAYSIZE(kInterpolationNames)))
+                            store.setInterpolation(*pendingSegment->field, pendingSegment->fromFrame,
+                                                   static_cast<Interpolation>(current));
+                        drawSegmentGraph(pendingSegment->label, from->second, std::next(from)->second);
                     }
-                    drawSegmentGraph(pendingSegment->label, pendingSegment->from, pendingSegment->to);
                     ImGui::EndPopup();
                 }
             }

@@ -111,18 +111,18 @@ int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, std::vecto
     return packScript(*pass.plugin, pass.path, kCompositing, 0, params);
 }
 
-std::vector<ecs::CompositingPassEntry>& ScriptTable::compositingPasses(ecs::Registry& registry) {
-    const ecs::Entity compositing = Scene::findSceneRootChild(registry, ecs::Compositing);
+std::vector<ecs::CompositingPassEntry>& ScriptTable::compositingPasses(Scene& scene) {
+    const ecs::Entity compositing = scene.getCompositing();
     if (compositing == ecs::Entity{}) {
         static std::vector<ecs::CompositingPassEntry> empty;
         return empty;
     }
-    return registry.get(compositing, ecs::Compositing).payload<ecs::CompositingPasses>("passes").passes;
+    return scene.getRegistry().get(compositing, ecs::Compositing).payload<ecs::CompositingPasses>("passes").passes;
 }
 
-int ScriptTable::compositingDispatchCount(ecs::Registry& registry) {
+int ScriptTable::compositingDispatchCount(Scene& scene) {
     int total = 0;
-    for (ecs::CompositingPassEntry& pass : compositingPasses(registry)) {
+    for (ecs::CompositingPassEntry& pass : compositingPasses(scene)) {
         pass.plugin->parse(pass.path, kCompositing);
         total += pass.plugin->getPassCount();
     }

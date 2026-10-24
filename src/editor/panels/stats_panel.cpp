@@ -17,7 +17,7 @@ void StatsPanel::draw() {
     static constexpr float kPaddingTop = 6.0f;
 
     const VkSmol::RenderGraph& graph = Core::getGraph();
-    CoreRenderer& coreRenderer = Core::getCoreRenderer();
+    PathtraceRenderer& coreRenderer = Core::getCoreRenderer();
 
     const std::array<PassInfo, kNumPasses> passes = {{
         {"Pathtracing", IM_COL32(255, 70, 70, 255), coreRenderer.getPathtracingPassName()},
@@ -28,7 +28,7 @@ void StatsPanel::draw() {
     }};
 
     FrameSample sample;
-    const bool paused = Core::isRenderFinished();
+    const bool paused = coreRenderer.isRenderFinished();
     sample.ms[0] = paused ? 0.0f : static_cast<float>(graph.getTimestampMs(passes[0].passName));
     for (int p = 1; p < kNumPasses; ++p) sample.ms[p] = static_cast<float>(graph.getTimestampMs(passes[p].passName));
 

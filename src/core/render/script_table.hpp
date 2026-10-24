@@ -11,6 +11,8 @@ namespace ecs {
 class Registry;
 }
 
+class Scene;
+
 namespace VkSmol {
 struct ShaderConformance;
 }
@@ -28,8 +30,8 @@ int packSky(ecs::Registry& registry, ecs::Entity environment, std::vector<float>
 int packLens(ecs::Registry& registry, ecs::Entity camera, std::vector<float>& params);
 int packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params);
 
-std::vector<ecs::CompositingPassEntry>& compositingPasses(ecs::Registry& registry);
-int compositingDispatchCount(ecs::Registry& registry);
+std::vector<ecs::CompositingPassEntry>& compositingPasses(Scene& scene);
+int compositingDispatchCount(Scene& scene);
 
 std::vector<VkSmol::ShaderConformance> conformances(std::initializer_list<const ScriptKind*> kinds);
 } // namespace ScriptTable

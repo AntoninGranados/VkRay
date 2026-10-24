@@ -14,7 +14,6 @@
 #include <glm/gtx/intersect.hpp>
 
 #include "core/core.hpp"
-#include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
 #include "core/render/script_table.hpp"
@@ -53,12 +52,6 @@ uint32_t resolveMeshSlot(const EntitySlots& meshSlots, const ComponentStorage& m
 
 const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
     return registry.has(e, Mesh) ? &registry.get(e, Mesh).payload<MeshAsset>("geometry") : nullptr;
-}
-
-Entity resolveEnvironmentEntity(Registry& registry) {
-    for (const Entity& e : registry.getChildren(registry.ctx().get<SceneRoots>().sceneRoot))
-        if (registry.has(e, Environment)) return e;
-    return {};
 }
 
 bool isMediumCandidate(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {
@@ -134,17 +127,17 @@ const std::vector<const ComponentType*>& objectTypeOrder() {
     return order;
 }
 
-void meshPackingSystem(Registry& registry) {
+void meshPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
+    Registry& registry = scene.getRegistry();
     VkSmol::Engine& engine = Core::getEngine();
-    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
 
-    std::vector<GpuMesh>& meshTemplates = registry.ctx().get<MeshTemplates>().meshes;
+    std::vector<GpuMesh>& meshTemplates = scene.getPackingInfo().meshTemplates;
     meshTemplates.clear();
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<GpuBvhNode> bvhNodes;
 
-    const auto& assetEntities = registry.getChildren(registry.ctx().get<SceneRoots>().assetsRoot);
+    const auto& assetEntities = registry.getChildren(scene.getAssetsRoot());
     for (const ecs::Entity& assetEntity : assetEntities) {
         const MeshAsset* mesh = getMeshAsset(registry, assetEntity);
         static const MeshAsset kEmptyMeshAsset;
@@ -197,13 +190,14 @@ void meshPackingSystem(Registry& registry) {
     upload(engine, buffers.bvh, bvhNodes);
 }
 
-void meshInstancePackingSystem(Registry& registry) {
-    const std::vector<GpuMesh>& meshTemplates = registry.ctx().get<MeshTemplates>().meshes;
+void meshInstancePackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
+    Registry& registry = scene.getRegistry();
+    const std::vector<GpuMesh>& meshTemplates = scene.getPackingInfo().meshTemplates;
     auto& meshRefs = registry.storage(MeshRef);
     auto& transforms = registry.storage(Transform);
 
     std::vector<GpuMesh> meshes;
-    const EntitySlots meshSlots = buildEntitySlots(registry.getChildren(registry.ctx().get<SceneRoots>().assetsRoot));
+    const EntitySlots meshSlots = buildEntitySlots(registry.getChildren(scene.getAssetsRoot()));
 
     for (const auto& entity : meshRefs.entities()) {
         if (!transforms.has(entity)) continue;
@@ -212,11 +206,12 @@ void meshInstancePackingSystem(Registry& registry) {
         meshes.push_back(meshTemplates[meshSlot]);
     }
 
-    upload(Core::getEngine(), registry.ctx().get<SceneGpuBuffers>().mesh, meshes);
+    upload(Core::getEngine(), buffers.mesh, meshes);
 }
 
-void materialPackingSystem(Registry& registry) {
-    const auto& materialEntities = registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot);
+void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
+    Registry& registry = scene.getRegistry();
+    const auto& materialEntities = registry.getChildren(scene.getMaterialsRoot());
 
     std::vector<GpuMaterial> gpuMaterials;
     std::vector<float> pluginParams;
@@ -229,46 +224,44 @@ void materialPackingSystem(Registry& registry) {
         gpuMaterials.push_back(gpu);
     }
 
-    LensPluginInfo& lensInfo = registry.ctx().get<LensPluginInfo>();
-    lensInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
-    const std::optional<Entity> lensCamera = *registry.ctx().get<std::optional<Entity>*>();
-    lensInfo.slot = lensCamera ? ScriptTable::packLens(registry, *lensCamera, pluginParams) : -1;
+    PackingInfo& packingInfo = scene.getPackingInfo();
+    packingInfo.lens.paramsBase = static_cast<int32_t>(pluginParams.size());
+    const std::optional<Entity> lensCamera = scene.getActiveCamera();
+    packingInfo.lens.slot = lensCamera ? ScriptTable::packLens(registry, *lensCamera, pluginParams) : -1;
 
-    SkyPluginInfo& skyInfo = registry.ctx().get<SkyPluginInfo>();
-    skyInfo.paramsBase = static_cast<int32_t>(pluginParams.size());
-    skyInfo.slot = ScriptTable::packSky(registry, resolveEnvironmentEntity(registry), pluginParams);
+    packingInfo.sky.paramsBase = static_cast<int32_t>(pluginParams.size());
+    packingInfo.sky.slot = ScriptTable::packSky(registry, scene.getEnvironment(), pluginParams);
 
-    CompositingChainInfo& compositingInfo = registry.ctx().get<CompositingChainInfo>();
-    compositingInfo.passes.clear();
-    for (CompositingPassEntry& pass : ScriptTable::compositingPasses(registry)) {
+    packingInfo.compositingPasses.clear();
+    for (CompositingPassEntry& pass : ScriptTable::compositingPasses(scene)) {
         CompositingPassInfo info;
         info.paramsBase = static_cast<int32_t>(pluginParams.size());
         info.slot = ScriptTable::packCompositingPass(pass, pluginParams);
         for (int p = 0; p < pass.plugin->getPassCount(); p++) {
             info.passId = p;
-            compositingInfo.passes.push_back(info);
+            packingInfo.compositingPasses.push_back(info);
         }
     }
 
     VkSmol::Engine& engine = Core::getEngine();
-    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     upload(engine, buffers.material, gpuMaterials);
     upload(engine, buffers.pluginParams, pluginParams);
 }
 
-void objectPackingSystem(Registry& registry) {
+void objectPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
+    Registry& registry = scene.getRegistry();
+    PackingInfo& packingInfo = scene.getPackingInfo();
     auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
 
     std::vector<GpuObject> gpuObjects;
     std::vector<GpuMotionSample> motion;
     std::vector<GpuMotionSample> liveMotion;
-    std::unordered_map<Entity, int>& objectIndices = registry.ctx().get<ObjectIndices>().byEntity;
+    std::unordered_map<Entity, int>& objectIndices = packingInfo.objectIndices;
     objectIndices.clear();
-    const EntitySlots materialSlots =
-        buildEntitySlots(registry.getChildren(registry.ctx().get<SceneRoots>().materialsRoot));
+    const EntitySlots materialSlots = buildEntitySlots(registry.getChildren(scene.getMaterialsRoot()));
 
-    const std::optional<Entity> cameraEntity = *registry.ctx().get<std::optional<Entity>*>();
+    const std::optional<Entity> cameraEntity = scene.getActiveCamera();
     const bool hasCamera = cameraEntity && transforms.has(*cameraEntity);
     const glm::vec3 cameraPosition =
         hasCamera ? transforms.get(*cameraEntity).get<glm::vec3>("position") : glm::vec3(0.0f);
@@ -281,7 +274,7 @@ void objectPackingSystem(Registry& registry) {
         uint32_t idx = 0;
         for (const auto& entity : registry.storage(*order[i]).entities()) {
             if (!transforms.has(entity)) continue;
-            const uint32_t motionOffset = bakeMotionSamples(registry, entity, transforms.get(entity), motion);
+            const uint32_t motionOffset = bakeMotionSamples(scene, entity, transforms.get(entity), motion);
             bakeLiveTransform(transforms.get(entity), liveMotion);
             if (hasCamera && isMediumCandidate(registry, materialRefs, entity)) {
                 const float volume = containingVolume(registry, *order[i], entity,
@@ -302,22 +295,18 @@ void objectPackingSystem(Registry& registry) {
 
     std::ranges::sort(cameraMedia, std::ranges::greater{});
     const size_t firstMedium = cameraMedia.size() > kMediumStackSize ? cameraMedia.size() - kMediumStackSize : 0;
-    CameraMediaInfo& cameraMediaInfo = registry.ctx().get<CameraMediaInfo>();
+    CameraMediaInfo& cameraMediaInfo = packingInfo.cameraMedia;
     cameraMediaInfo = CameraMediaInfo{};
     for (size_t i = firstMedium; i < cameraMedia.size(); i++)
         cameraMediaInfo.objects[cameraMediaInfo.count++] = cameraMedia[i].second;
 
-    CameraMotionInfo& cameraMotion = registry.ctx().get<CameraMotionInfo>();
+    packingInfo.cameraMotionOffset = 0;
     if (hasCamera) {
-        const uint32_t motionOffset = bakeMotionSamples(registry, *cameraEntity, transforms.get(*cameraEntity), motion);
+        packingInfo.cameraMotionOffset = bakeMotionSamples(scene, *cameraEntity, transforms.get(*cameraEntity), motion);
         bakeLiveTransform(transforms.get(*cameraEntity), liveMotion);
-        cameraMotion = CameraMotionInfo{motionOffset};
-    } else {
-        cameraMotion = CameraMotionInfo{};
     }
 
     VkSmol::Engine& engine = Core::getEngine();
-    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuObjectHeader header{.objectCount = static_cast<uint32_t>(gpuObjects.size())};
     upload(engine, buffers.object, gpuObjects, sizeof(GpuObjectHeader));
     engine.writeBuffer(buffers.object, header);
@@ -325,7 +314,7 @@ void objectPackingSystem(Registry& registry) {
     upload(engine, buffers.liveMotion, liveMotion);
 }
 
-void lightPackingSystem(Registry& registry) {
+void lightPackingSystem(Registry& registry, const SceneGpuBuffers& buffers) {
     auto& meshes = registry.storage(MeshRef);
     const auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
@@ -412,7 +401,6 @@ void lightPackingSystem(Registry& registry) {
     for (size_t i = lastSelectable; i < lights.size() && totalPower > 0.0f; i++) lights[i].cumulativeProbability = 1.0f;
 
     VkSmol::Engine& engine = Core::getEngine();
-    const SceneGpuBuffers& buffers = registry.ctx().get<SceneGpuBuffers>();
     const GpuLightHeader header{.lightCount = static_cast<uint32_t>(lights.size())};
     upload(engine, buffers.light, lights, sizeof(GpuLightHeader));
     engine.writeBuffer(buffers.light, header);

@@ -10,8 +10,8 @@
 #include "VkSmol/present/window.hpp"
 
 #include "core/animation/animation_clock.hpp"
-#include "core/core_renderer.hpp"
 #include "core/fields/parameters.hpp"
+#include "core/render/pathtrace_renderer.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"
 #include "utils/file_watcher.hpp"
@@ -27,22 +27,17 @@ public:
     static AnimationClock& getAnimation() { return get().animation; }
     static ParameterRegistry& getParameters() { return get().parameters; }
     static Scene& getScene() { return get().coreRenderer.getScene(); }
-    static CoreRenderer& getCoreRenderer() { return get().coreRenderer; }
+    static PathtraceRenderer& getCoreRenderer() { return get().coreRenderer; }
+    static VkSmol::ImageHandle getLensImageHandle() { return get().lensImageHandle; }
+    static VkSmol::BufferHandle getBlueNoiseBufferHandle() { return get().blueNoiseBufferHandle; }
     static FileWatcher& getFileWatcher() { return get().fileWatcher; }
 
     static RenderMode getRenderMode() { return get().renderMode; }
     static void setRenderMode(RenderMode m) { get().renderMode = m; }
 
     static void markRenderDirty() { get().renderDirty = true; }
-    static void restartAccumulation();
     static bool isRenderDirty() { return get().renderDirty; }
     static bool consumeRenderDirty();
-
-    static void setTargetSampleCount(int count) { get().coreRenderer.setTargetSampleCount(count); }
-    static uint32_t getSampleCount() { return get().coreRenderer.getSampleCount(); }
-    static bool isRenderFinished() { return get().coreRenderer.isRenderFinished(); }
-    static VkExtent2D getRenderExtent() { return get().coreRenderer.getRenderExtent(); }
-    static void saveCapture(const std::filesystem::path& path) { get().coreRenderer.saveCapture(path); }
 
     static void installGraphBuilder(std::function<void()> fn) {
         Core& c = get();
@@ -51,7 +46,6 @@ public:
     }
     static void requestGraphRebuild() { get().graphRebuildRequested = true; }
 
-    static void resize(int width, int height);
     static void requestResize(int width, int height) {
         get().targetExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
     }
@@ -74,6 +68,7 @@ private:
 
     static void updateAnimationDirty(Core& c);
     static void rebuildGraphIfRequested(Core& c);
+    static int getTargetSampleCount(Core& c);
 
     inline static Core* instance = nullptr;
 
@@ -82,7 +77,9 @@ private:
     VkSmol::RenderGraph graph;
     ParameterRegistry parameters;
     AnimationClock animation{24 * 5, 24.0f};
-    CoreRenderer coreRenderer;
+    VkSmol::ImageHandle lensImageHandle;
+    VkSmol::BufferHandle blueNoiseBufferHandle;
+    PathtraceRenderer coreRenderer;
     FileWatcher fileWatcher;
     RenderMode renderMode = RenderMode::Preview;
     bool renderDirty = false;

@@ -47,6 +47,7 @@ private:
     static void stepAnimation(float deltaTime);
     static void handleViewportResize();
     static void handleRenderModeCompletion();
+    static void updateFrustumScale();
 
     VkSmol::ImGuiLayer imgui{Core::getEngine(), Core::getWindow()};
     EditorUi ui;

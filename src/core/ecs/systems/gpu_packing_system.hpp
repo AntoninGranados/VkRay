@@ -7,6 +7,8 @@
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/registry.hpp"
 
+class Scene;
+
 struct SceneGpuBuffers {
     VkSmol::BufferHandle vertex;
     VkSmol::BufferHandle index;
@@ -24,10 +26,10 @@ namespace ecs {
 
 const std::vector<const ComponentType*>& objectTypeOrder();
 
-void meshPackingSystem(Registry& registry);
-void meshInstancePackingSystem(Registry& registry);
-void materialPackingSystem(Registry& registry);
-void objectPackingSystem(Registry& registry);
-void lightPackingSystem(Registry& registry);
+void meshPackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
+void meshInstancePackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
+void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
+void objectPackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
+void lightPackingSystem(Registry& registry, const SceneGpuBuffers& buffers);
 
 } // namespace ecs
