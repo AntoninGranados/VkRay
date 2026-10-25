@@ -6,7 +6,6 @@
 #include <random>
 #include <unordered_set>
 
-#include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/components/compositing.hpp"
 #include "core/ecs/components/environment.hpp"
@@ -80,7 +79,6 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     if (!parsed) return false;
     const json& j = *parsed;
 
-    Core::getEngine().waitIdle();
     scene.clear();
 
     const int version = j.value("version", -1);

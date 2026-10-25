@@ -45,6 +45,8 @@ struct CompositingPassInfo {
 
 struct PackingInfo {
     std::vector<GpuMesh> meshTemplates;
+    std::vector<GpuMesh> meshInstances;
+    std::vector<GpuObject> objects;
     std::unordered_map<ecs::Entity, int> objectIndices;
     uint32_t cameraMotionOffset = 0;
     CameraMediaInfo cameraMedia;

@@ -7,8 +7,8 @@ struct Voronoi : IMaterial {
     [Color] float3 borderColor;
     [Range(0, 0)] float borderSize = 0.01;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         float2 local = uv / scale;
 
         rng = initRngState(uint(seed));

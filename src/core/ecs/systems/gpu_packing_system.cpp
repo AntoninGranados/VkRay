@@ -196,7 +196,8 @@ void meshInstancePackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
     auto& meshRefs = registry.storage(MeshRef);
     auto& transforms = registry.storage(Transform);
 
-    std::vector<GpuMesh> meshes;
+    std::vector<GpuMesh>& meshes = scene.getPackingInfo().meshInstances;
+    meshes.clear();
     const EntitySlots meshSlots = buildEntitySlots(registry.getChildren(scene.getAssetsRoot()));
 
     for (const auto& entity : meshRefs.entities()) {
@@ -254,7 +255,8 @@ void objectPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
     auto& transforms = registry.storage(Transform);
     const auto& materialRefs = registry.storage(MaterialRef);
 
-    std::vector<GpuObject> gpuObjects;
+    std::vector<GpuObject>& gpuObjects = packingInfo.objects;
+    gpuObjects.clear();
     std::vector<GpuMotionSample> motion;
     std::vector<GpuMotionSample> liveMotion;
     std::unordered_map<Entity, int>& objectIndices = packingInfo.objectIndices;

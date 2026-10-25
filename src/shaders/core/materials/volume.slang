@@ -50,15 +50,15 @@ struct VolumeBsdf : IBsdf {
         return MediumEntry(mediumObjectKey(object), priority, activeIor(-1), albedo, density, 1.0, anisotropic);
     }
 
-    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
+    BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         return BSDFEval(
             float3(1.0),
             0.0
         );
     }
 
-    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
-        crossInterface(mediumEntry(hit.object), hit);
+    BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
+        crossInterface(mediumEntry(surface.object), surface);
 
         BSDFSample bsdf;
         bsdf.wi      = -wo;
@@ -66,7 +66,7 @@ struct VolumeBsdf : IBsdf {
         bsdf.pdf     = 0.0;
         bsdf.isDelta = true;
         bsdf.medium.isDielectric  = false;
-        bsdf.medium.isVolume      = hit.frontFace;
+        bsdf.medium.isVolume      = surface.frontFace;
         bsdf.medium.absorption    = albedo;
         bsdf.medium.density       = density;
         bsdf.medium.scatterAlbedo = 1.0;
@@ -86,9 +86,9 @@ struct VolumeBsdf : IBsdf {
 struct VolumeMaterial : IMaterial {
     uint base;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         VolumeBsdf bsdf = loadParams<VolumeBsdf>(base);
-        bsdf.albedo *= hit.vertexColor;
+        bsdf.albedo *= surface.vertexColor;
         return bsdf;
     }
 

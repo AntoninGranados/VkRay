@@ -133,8 +133,8 @@ struct Brick : IMaterial {
     BorderParams border;
     TagParams tag;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         int2 idx;
         float2 local;
         float brickWidth;

@@ -206,6 +206,19 @@ bool foundIntersection(Hit hit) {
     return hit.object.type != obj_None;
 }
 
+struct SurfacePoint {
+    Object object;
+    float3 position;
+    float3 normal;
+    float2 uv;
+    bool frontFace;
+    float3 vertexColor;
+};
+
+SurfacePoint makeSurfacePoint(Hit hit) {
+    return SurfacePoint(hit.object, hit.p, hit.normal, hit.uv, hit.frontFace, hit.vertexColor);
+}
+
 // ============== LIGHTS ==============
 struct Light {
     int objectId;

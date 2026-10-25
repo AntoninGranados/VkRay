@@ -3,7 +3,7 @@ import "../random/utils.slang";
 
 import "material_utils.slang";
 
-float3 ggxScatter(in Hit hit, in float3 wo, in float alpha, out float3 h, inout RngState rng) {
+float3 ggxScatter(in SurfacePoint surface, in float3 wo, in float alpha, out float3 h, inout RngState rng) {
     float s1 = rand(rng);
     float s2 = rand(rng);
 
@@ -18,14 +18,14 @@ float3 ggxScatter(in Hit hit, in float3 wo, in float alpha, out float3 h, inout 
 
     // Build tangent basis
     float3 t;
-    if (abs(hit.normal.z) < 1 - EPS) {
-        t = normalize(cross(float3(0.0, 0.0, 1.0), hit.normal));
+    if (abs(surface.normal.z) < 1 - EPS) {
+        t = normalize(cross(float3(0.0, 0.0, 1.0), surface.normal));
     } else {
-        t = normalize(cross(float3(0.0, 1.0, 0.0), hit.normal));
+        t = normalize(cross(float3(0.0, 1.0, 0.0), surface.normal));
     }
-    float3 b = cross(hit.normal, t);
+    float3 b = cross(surface.normal, t);
 
-    h = normalize(local.x * t + local.y * b + local.z * hit.normal);
+    h = normalize(local.x * t + local.y * b + local.z * surface.normal);
     return reflect(-wo, h);
 }
 
@@ -56,13 +56,13 @@ struct GgxTerms {
     float cosWi;
 };
 
-GgxTerms computeGgxTerms(float alpha, in Hit hit, in float3 wo, in float3 wi, in float3 h) {
+GgxTerms computeGgxTerms(float alpha, in SurfacePoint surface, in float3 wo, in float3 wi, in float3 h) {
     GgxTerms t;
 
-    float NoH   = dot(hit.normal, h);
+    float NoH   = dot(surface.normal, h);
     float VoH   = dot(wo, h);
-    float NoV   = dot(hit.normal, wo);
-    float NoL   = dot(hit.normal, wi);
+    float NoV   = dot(surface.normal, wo);
+    float NoL   = dot(surface.normal, wi);
 
     if (NoH <= EPS || VoH <= EPS || NoV <= EPS || NoL <= EPS) {
         t.D = 0.0;
@@ -78,8 +78,8 @@ GgxTerms computeGgxTerms(float alpha, in Hit hit, in float3 wo, in float3 wi, in
     t.VoH   = VoH;
     t.cosWo = NoV;
     t.cosWi = NoL;
-    t.D     = D_ggx(alpha, hit.normal, h);
-    t.G     = G1_ggx(alpha, hit.normal, wo) * G1_ggx(alpha, hit.normal, wi);
+    t.D     = D_ggx(alpha, surface.normal, h);
+    t.G     = G1_ggx(alpha, surface.normal, wo) * G1_ggx(alpha, surface.normal, wi);
     return t;
 }
 

@@ -262,8 +262,8 @@ struct Animation : IMaterial {
     }
 #endif
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         float2 p = uv / scale;
         for (int i = 0; i < ANIMATION_SECTION_COUNT; i++) {
             float tEnd = float(i + 1) / float(ANIMATION_SECTION_COUNT);

@@ -57,8 +57,8 @@ struct Text : IMaterial {
     [Min(0)] int character = 0;
     [Range(0, 4)] int padding = 0;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         float2 local = frac(uv);
 
         int2 idx = int2(floor(uv));

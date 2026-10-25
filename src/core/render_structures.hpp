@@ -24,6 +24,8 @@ enum class DebugView : int {
     SkyMask,
 };
 
+enum class ViewportShading : int { Rasterized = 0, PathTraced };
+
 struct alignas(16) ThinLensUBO {
     float lensRadius;
     float focusDistance;

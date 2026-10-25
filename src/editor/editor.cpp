@@ -149,6 +149,9 @@ void Editor::run() {
         handleViewportResize();
         handleRenderModeCompletion();
         updateFrustumScale();
+        if (Core::getParameters().get<ViewportShading>("renderer/viewport/shading") !=
+            get().editorRenderer.getShading())
+            Core::requestGraphRebuild();
 
         Core::renderFrame([] {
             get().editorRenderer.prepare();

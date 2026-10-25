@@ -12,12 +12,12 @@ struct GlossyBsdf : IBsdf {
     float roughness;
     float ior;
 
-    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
-        if (dot(hit.normal, wi) <= 0.0) return BSDFEval(float3(0.0), 0.0);
+    BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
+        if (dot(surface.normal, wi) <= 0.0) return BSDFEval(float3(0.0), 0.0);
 
         float alpha = max(roughness * roughness, EPS_HIGH);
         float3 m = normalize(wo + wi);
-        GgxTerms t = computeGgxTerms(alpha, hit, wo, wi, m);
+        GgxTerms t = computeGgxTerms(alpha, surface, wo, wi, m);
 
         float F_VoH = fresnelDielectric(t.VoH,  1.0, ior);
         float F_NoL = fresnelDielectric(t.cosWi, 1.0, ior);
@@ -32,10 +32,10 @@ struct GlossyBsdf : IBsdf {
         );
     }
 
-    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
+    BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
         float alpha = max(roughness * roughness, EPS_HIGH);
 
-        float NoV = max(dot(hit.normal, wo), 0.0);
+        float NoV = max(dot(surface.normal, wo), 0.0);
         float pSpec = fresnelDielectric(NoV, 1.0, ior);
 
         float xi = rand(rng);
@@ -43,14 +43,14 @@ struct GlossyBsdf : IBsdf {
         float3 wi;
         if (xi < pSpec) {
             float3 v;
-            wi = ggxScatter(hit, wo, alpha, v, rng);
+            wi = ggxScatter(surface, wo, alpha, v, rng);
         } else {
-            wi = cosineScatter(hit.normal, rng);
+            wi = cosineScatter(surface.normal, rng);
         }
 
-        BSDFEval eval = this.eval(hit, wo, wi);
+        BSDFEval eval = this.eval(surface, wo, wi);
 
-        float cosB = abs(dot(hit.normal, wi));
+        float cosB = abs(dot(surface.normal, wi));
         return BSDFSample(eval.f * cosB / max(eval.pdf, EPS), wi, eval.pdf, false, NO_MEDIUM);
     }
 
@@ -62,9 +62,9 @@ struct GlossyBsdf : IBsdf {
 struct GlossyMaterial : IMaterial {
     uint base;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         GlossyBsdf bsdf = loadParams<GlossyBsdf>(base);
-        bsdf.albedo *= hit.vertexColor;
+        bsdf.albedo *= surface.vertexColor;
         return bsdf;
     }
 }

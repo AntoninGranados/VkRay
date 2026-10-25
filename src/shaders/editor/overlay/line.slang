@@ -2,6 +2,7 @@ struct OverlayLine {
     float3 start;
     float3 end;
     float3 color;
+    uint   onTop;
 };
 
 struct OverlayConstants {
@@ -14,10 +15,12 @@ struct LineVertex {
     float4 position : SV_Position;
     float3 color : COLOR0;
     noperspective float edgeDistance : TEXCOORD0;
+    nointerpolation uint onTop : TEXCOORD1;
 };
 
 [vk::push_constant] ConstantBuffer<OverlayConstants> constants;
 StructuredBuffer<OverlayLine> lines;
+Sampler2D<float> depthTex;
 
 static const float antialiasingWidth = 1.0;
 static const float2 quadCorners[6] = {
@@ -31,6 +34,7 @@ LineVertex vertexMain(uint vertexId : SV_VertexID) {
 
     LineVertex output;
     output.color = line.color;
+    output.onTop = line.onTop;
     output.edgeDistance = 0.0;
 
     float4 start = mul(float4(line.start, 1.0), constants.viewProjection);
@@ -61,6 +65,7 @@ LineVertex vertexMain(uint vertexId : SV_VertexID) {
 
 [shader("fragment")]
 float4 fragmentMain(LineVertex input) : SV_Target {
+    if (input.onTop == 0u && input.position.z < depthTex.Load(int3(int2(input.position.xy), 0))) discard;
     float coverage = saturate(constants.lineWidth * 0.5 + 0.5 - abs(input.edgeDistance));
     return float4(input.color, coverage);
 }

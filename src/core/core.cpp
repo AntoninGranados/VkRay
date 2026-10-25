@@ -67,6 +67,7 @@ void Core::rebuildGraphIfRequested(Core& c) {
 
 int Core::getTargetSampleCount(Core& c) {
     if (c.renderMode != RenderMode::Preview) return c.parameters.get<int>("renderer/sampling/render_samples");
+    if (c.parameters.get<ViewportShading>("renderer/viewport/shading") == ViewportShading::Rasterized) return 0;
     const int maxSamples = c.parameters.get<int>("renderer/viewport/max_samples");
     return maxSamples > 0 ? maxSamples : SampleAccumulator::kUnboundedSamples;
 }

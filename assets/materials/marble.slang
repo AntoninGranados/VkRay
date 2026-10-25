@@ -15,8 +15,8 @@ struct Marble : IMaterial {
     [Color] float3 veinColor = float3(0.16, 0.15, 0.17);
     [Range(0, 1)] float veinRoughness = 0.95;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float3 pos = hit.p;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float3 pos = surface.position;
         float3 p = pos * scale * stretch;
 
         float bend = fractalNoise(p * bendFreq, 6, 2.0, 0.5) * noiseNorm;

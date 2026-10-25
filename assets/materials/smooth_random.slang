@@ -1,8 +1,8 @@
 import "script.slang";
 
 struct SmoothRandom : IMaterial {
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float3 pos = hit.p;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float3 pos = surface.position;
         int octave = 10;
         float lacunarity = 2.0;
         float gain = 0.5;

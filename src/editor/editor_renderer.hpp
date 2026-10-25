@@ -5,6 +5,7 @@
 
 #include "editor/imgui_texture.hpp"
 #include "editor/overlay_drawer.hpp"
+#include "editor/raster_renderer.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
@@ -25,13 +26,17 @@ public:
     ImTextureID getDebugTexId() const { return debugTex; }
     ImTextureID getOutputTexId() const { return outputTex; }
     OverlayDrawer& getOverlayDrawer() { return overlayDrawer; }
+    ViewportShading getShading() const { return shading; }
 
 private:
     DebugUBO debugUBO{};
     DisplayUBO displayUBO{};
     OverlayDrawer overlayDrawer;
+    RasterRenderer rasterRenderer;
+    ViewportShading shading = ViewportShading::PathTraced;
 
     VkSmol::ImageHandle displayImageHandle;
+    VkSmol::ImageHandle rasterImageHandle;
     VkSmol::ImageHandle depthImageHandle;
     VkSmol::ImageHandle debugImageHandle;
 

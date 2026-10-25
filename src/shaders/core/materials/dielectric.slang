@@ -18,19 +18,19 @@ struct DielectricBsdf : IBsdf {
         return MediumEntry(mediumObjectKey(object), priority, ior, albedo, density, transmission, anisotropic);
     }
 
-    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
+    BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         return BSDFEval(
             float3(0.0),
             -1.0
         );
     }
 
-    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
+    BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
         float etaI, etaT;
-        interfaceIors(hit, ior, etaI, etaT);
+        interfaceIors(surface, ior, etaI, etaT);
 
-        float3 normal = hit.normal + randomOnSphere(rng) * roughness;
-        if (length(normal) < EPS) normal = hit.normal;
+        float3 normal = surface.normal + randomOnSphere(rng) * roughness;
+        if (length(normal) < EPS) normal = surface.normal;
         else normal = normalize(normal);
 
         float eta = etaI / etaT;
@@ -53,10 +53,10 @@ struct DielectricBsdf : IBsdf {
             pdf = max(1.0 - F, EPS);
             weight = float3(etaFactor);
 
-            crossInterface(mediumEntry(hit.object), hit);
+            crossInterface(mediumEntry(surface.object), surface);
         }
 
-        bool entering = (dot(wi, hit.normal) < 0.0) == hit.frontFace;
+        bool entering = (dot(wi, surface.normal) < 0.0) == surface.frontFace;
 
         BSDFSample bsdf;
         bsdf.wi                   = wi;
@@ -84,9 +84,9 @@ struct DielectricBsdf : IBsdf {
 struct DielectricMaterial : IMaterial {
     uint base;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         DielectricBsdf bsdf = loadParams<DielectricBsdf>(base);
-        bsdf.albedo *= hit.vertexColor;
+        bsdf.albedo *= surface.vertexColor;
         return bsdf;
     }
 

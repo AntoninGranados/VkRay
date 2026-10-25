@@ -35,13 +35,13 @@ struct PrincipledBsdf : IBsdf {
         return (1.0 - metalness) * transmission > EPS;
     }
 
-    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
+    BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         float pMetal  = metalness;
         float pTrans  = (1.0 - pMetal) * transmission;
         float pGlossy = 1.0 - pMetal - pTrans;
 
-        BSDFEval eMetal  = metalProxy().eval(hit, wo, wi);
-        BSDFEval eGlossy = glossyProxy().eval(hit, wo, wi);
+        BSDFEval eMetal  = metalProxy().eval(surface, wo, wi);
+        BSDFEval eGlossy = glossyProxy().eval(surface, wo, wi);
 
         return BSDFEval(
             pMetal * eMetal.f + pGlossy * eGlossy.f,
@@ -49,7 +49,7 @@ struct PrincipledBsdf : IBsdf {
         );
     }
 
-    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
+    BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
         if (alpha < rand(rng)) return BSDFSample(float3(1.0), -wo, 1.0, true, NO_MEDIUM);
 
         float pMetal  = metalness;
@@ -59,22 +59,22 @@ struct PrincipledBsdf : IBsdf {
         float r = rand(rng);
         BSDFSample bsdf;
         if (r < pMetal) {
-            bsdf = metalProxy().sample(hit, wo, rng);
+            bsdf = metalProxy().sample(surface, wo, rng);
             bsdf.medium.isDielectric = false;
             bsdf.medium.isVolume     = false;
         } else if (r < pMetal + pTrans) {
-            bsdf = dielectricProxy().sample(hit, wo, rng);
+            bsdf = dielectricProxy().sample(surface, wo, rng);
             bsdf.medium.absorption    = albedo;
             bsdf.medium.density       = density;
             bsdf.medium.scatterAlbedo = 0.0;
             bsdf.medium.anisotropic   = anisotropic;
         } else {
-            bsdf = glossyProxy().sample(hit, wo, rng);
+            bsdf = glossyProxy().sample(surface, wo, rng);
         }
 
         if (!bsdf.isDelta) {
-            BSDFEval eval = this.eval(hit, wo, bsdf.wi);
-            float cosB = abs(dot(hit.normal, bsdf.wi));
+            BSDFEval eval = this.eval(surface, wo, bsdf.wi);
+            float cosB = abs(dot(surface.normal, bsdf.wi));
             bsdf.pdf    = eval.pdf;
             bsdf.weight = eval.f * cosB / max(eval.pdf, EPS);
         }
@@ -95,9 +95,9 @@ struct PrincipledBsdf : IBsdf {
 struct PrincipledMaterial : IMaterial {
     uint base;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         PrincipledBsdf bsdf = loadParams<PrincipledBsdf>(base);
-        bsdf.albedo *= hit.vertexColor;
+        bsdf.albedo *= surface.vertexColor;
         return bsdf;
     }
 

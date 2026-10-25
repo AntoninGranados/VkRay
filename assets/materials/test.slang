@@ -101,8 +101,8 @@ struct Test : IMaterial {
     [Range(1, 10)] int padding = 4;
     bool coloredCheckerboard = false;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         const float3 COLORS[COLOR_COUNT] = {
             pow(float3(255,  85,  85) / 255, float3(2.2)),
             pow(float3(255, 184, 108) / 255, float3(2.2)),

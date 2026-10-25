@@ -16,18 +16,18 @@ float3 cosineScatter(in float3 normal, inout RngState rng) {
 struct DiffuseBsdf : IBsdf {
     float3 albedo;
 
-    BSDFEval eval(Hit hit, float3 wo, float3 wi) {
+    BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         return BSDFEval(
             albedo / PI,
-            max(dot(hit.normal, wi), 0.0) / PI
+            max(dot(surface.normal, wi), 0.0) / PI
         );
     }
 
-    BSDFSample sample(Hit hit, float3 wo, inout RngState rng) {
-        float3 wi = cosineScatter(hit.normal, rng);
-        BSDFEval eval = this.eval(hit, wo, wi);
+    BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
+        float3 wi = cosineScatter(surface.normal, rng);
+        BSDFEval eval = this.eval(surface, wo, wi);
 
-        float cosB = abs(dot(hit.normal, wi));
+        float cosB = abs(dot(surface.normal, wi));
         return BSDFSample(eval.f * cosB / eval.pdf, wi, eval.pdf, false, NO_MEDIUM);
     }
 
@@ -39,9 +39,9 @@ struct DiffuseBsdf : IBsdf {
 struct DiffuseMaterial : IMaterial {
     uint base;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         DiffuseBsdf bsdf = loadParams<DiffuseBsdf>(base);
-        bsdf.albedo *= hit.vertexColor;
+        bsdf.albedo *= surface.vertexColor;
         return bsdf;
     }
 }

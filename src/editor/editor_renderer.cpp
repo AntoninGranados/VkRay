@@ -68,6 +68,8 @@ void EditorRenderer::init() {
 
     displayImageHandle =
         engine.createImage("DisplayImage", VK_FORMAT_R32G32B32A32_SFLOAT, viewportExtent.width, viewportExtent.height);
+    rasterImageHandle =
+        engine.createImage("RasterImage", VK_FORMAT_R32G32B32A32_SFLOAT, viewportExtent.width, viewportExtent.height);
     depthImageHandle =
         engine.createImage("DepthImage", VK_FORMAT_D32_SFLOAT, viewportExtent.width, viewportExtent.height);
     debugImageHandle =
@@ -76,6 +78,7 @@ void EditorRenderer::init() {
     debugUBOHandle = engine.createBuffer("DebugUBO", sizeof(DebugUBO));
     displayUBOHandle = engine.createBuffer("DisplayUBO", sizeof(DisplayUBO));
     overlayDrawer.init();
+    rasterRenderer.init();
 
     registerImGuiTextures();
 
@@ -87,19 +90,22 @@ void EditorRenderer::addPasses(VkSmol::RenderGraph& graph) {
     VkSmol::Engine& engine = Core::getEngine();
     const RenderResources& renderResources = Core::getCoreRenderer().getResources();
     const SceneGpuBuffers& sceneHandles = renderResources.sceneHandles;
+    shading = Core::getParameters().get<ViewportShading>("renderer/viewport/shading");
+    const bool rasterized = shading == ViewportShading::Rasterized;
+
+    rasterRenderer.addPasses(graph, sceneHandles, rasterImageHandle, depthImageHandle, rasterized);
 
     // Display pass — beauty + selection edges + focus plane overlay (fullscreen graphics, at viewport resolution)
     graph.addGraphicsPass(kDisplayPassName)
         .pipeline("builtin:/shaders/editor/display.slang", "builtin:/shaders/editor/display.slang", {},
                   {.primitive = {.cullMode = VK_CULL_MODE_NONE},
-                   .depth = VkSmol::DepthState{.compare = VK_COMPARE_OP_ALWAYS},
+                   .depth = std::nullopt,
                    .blend = {VkSmol::BlendState::opaque()}},
                   ScriptTable::conformances({&ScriptTable::kLens}))
         .read("ubo", displayUBOHandle)
-        .read("outputTex", renderResources.outputImageHandle)
-        .read("pixelInfoBuffer", renderResources.pixelInfoBufferHandle)
+        .read("outputTex", rasterized ? rasterImageHandle : renderResources.outputImageHandle)
+        .read("depthTex", depthImageHandle)
         .colorAttachment(displayImageHandle, VkSmol::AttachmentLoad::DontCare)
-        .depthAttachment(depthImageHandle, VkSmol::AttachmentLoad::DontCare)
         .read("scene.vertices", sceneHandles.vertex)
         .read("scene.indices", sceneHandles.index)
         .read("scene.bvhNodes", sceneHandles.bvh)
@@ -156,6 +162,7 @@ void EditorRenderer::resize(VkExtent2D renderExt, VkExtent2D viewportExt) {
     renderExtent = renderExt;
     viewportExtent = viewportExt;
     engine.resizeImage(displayImageHandle, viewportExt.width, viewportExt.height);
+    engine.resizeImage(rasterImageHandle, viewportExt.width, viewportExt.height);
     engine.resizeImage(depthImageHandle, viewportExt.width, viewportExt.height);
     engine.resizeImage(debugImageHandle, renderExt.width, renderExt.height);
     registerImGuiTextures();
@@ -179,7 +186,8 @@ void EditorRenderer::prepare() {
 
     glm::mat4 projection = getProjection(reg, camera, aspect, frustumScale);
     projection[1][1] = -projection[1][1];
-    displayUBO.viewProjection = projection * getView(reg, camera);
+    const glm::mat4 viewProjection = projection * getView(reg, camera);
+    displayUBO.inverseViewProjection = glm::inverse(viewProjection);
     displayUBO.viewportSize = glm::ivec2(viewportExtent.width, viewportExtent.height);
     displayUBO.lineWidth = kOverlayLineWidth * ImGui::GetIO().DisplayFramebufferScale.x;
 
@@ -209,5 +217,6 @@ void EditorRenderer::prepare() {
 
     engine.writeBuffer(debugUBOHandle, debugUBO);
     engine.writeBuffer(displayUBOHandle, displayUBO);
-    overlayDrawer.upload(displayUBO.viewProjection, viewportExtent, displayUBO.lineWidth);
+    overlayDrawer.upload(viewProjection, viewportExtent, displayUBO.lineWidth);
+    rasterRenderer.prepare(scene, viewProjection, reg.get(camera, ecs::Transform).get<glm::vec3>("position"));
 }

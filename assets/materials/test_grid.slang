@@ -6,8 +6,8 @@ struct TestGrid : IMaterial {
     [Min(0)] [Animatable] float feather = 0.02;
     [Range(0, 1)] [Animatable] float darkening = 0.8;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         const float small_feather = feather * 0.5;
 
         if (abs(uv.x - round(uv.x / scale) * scale) < feather || abs(uv.y - round(uv.y / scale) * scale) < feather) {

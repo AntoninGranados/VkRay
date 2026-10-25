@@ -18,7 +18,7 @@ public:
     void addPasses(VkSmol::RenderGraph& graph, VkSmol::ImageHandle colorImage, VkSmol::ImageHandle depthImage);
     void upload(const glm::mat4& viewProjection, VkExtent2D viewportExtent, float lineWidth);
 
-    void line(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color);
+    void line(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color, bool onTop = false);
 
 private:
     std::vector<OverlayLine> lines;

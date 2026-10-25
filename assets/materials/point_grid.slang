@@ -5,8 +5,8 @@ struct PointGrid : IMaterial {
     [Color] float3 albedo = float3(1.0);
     [Min(0)] float radius = 0.08;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         float x = abs(uv.x - round(uv.x / scale) * scale);
         float y = abs(uv.y - round(uv.y / scale) * scale);
         if (x * x + y * y < radius * radius) {

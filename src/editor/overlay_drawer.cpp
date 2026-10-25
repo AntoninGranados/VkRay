@@ -13,11 +13,11 @@ void OverlayDrawer::addPasses(VkSmol::RenderGraph& graph, VkSmol::ImageHandle co
     graph.addGraphicsPass(kLinesPassName)
         .pipeline("builtin:/shaders/editor/overlay/line.slang", "builtin:/shaders/editor/overlay/line.slang", {},
                   {.primitive = {.cullMode = VK_CULL_MODE_NONE},
-                   .depth = VkSmol::DepthState{.write = false, .compare = VK_COMPARE_OP_GREATER},
+                   .depth = std::nullopt,
                    .blend = {VkSmol::BlendState::alpha()}})
         .read("lines", linesHandle)
+        .read("depthTex", depthImage)
         .colorAttachment(colorImage, VkSmol::AttachmentLoad::Load)
-        .readOnlyDepthAttachment(depthImage)
         .execute([this](VkSmol::PassContext& context) {
             if (lineCount == 0) return;
             context.pushConstants(constants);
@@ -36,6 +36,6 @@ void OverlayDrawer::upload(const glm::mat4& viewProjection, VkExtent2D viewportE
     lines.clear();
 }
 
-void OverlayDrawer::line(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color) {
-    lines.push_back({start, end, color});
+void OverlayDrawer::line(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color, bool onTop) {
+    lines.push_back({start, end, color, onTop ? 1u : 0u});
 }

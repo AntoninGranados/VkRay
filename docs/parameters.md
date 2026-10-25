@@ -83,6 +83,7 @@ Parameters can be disabled in the UI, this is defined using a `"condition"` obje
 ### Viewport
 | Path | Label | Description | Type | Default | Constraints | Restart |
 |------|-------|-------------|------|---------|-------------|---------|
+| `renderer/viewport/shading` | Shading | - | Enumeration | `Path Traced` | `Rasterized` • `Path Traced` | yes |
 | `renderer/viewport/max_samples` | Max Samples | - | Integer | 0 | 0 ... 4096 | no |
 | `renderer/viewport/pixel_scale` | Pixel Scale | Render at reduced resolution per axis. | Integer | 2 | 1 ... 8 | no |
 

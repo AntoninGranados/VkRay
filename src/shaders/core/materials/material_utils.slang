@@ -118,43 +118,43 @@ BSDFMediumInfo activeMedium() {
     );
 }
 
-bool isFalseInterface(int priority, Hit hit) {
-    if (hit.frontFace) {
+bool isFalseInterface(int priority, SurfacePoint surface) {
+    if (surface.frontFace) {
         int index = activeMediumIndex(-1);
         return index >= 0 && priority < mediumStack[index].priority;
     }
-    int index = findMedium(hit.object);
+    int index = findMedium(surface.object);
     return index >= 0 && index != activeMediumIndex(-1);
 }
 
-void interfaceIors(Hit hit, float ior, out float etaI, out float etaT) {
-    if (hit.frontFace) {
+void interfaceIors(SurfacePoint surface, float ior, out float etaI, out float etaT) {
+    if (surface.frontFace) {
         etaI = activeIor(-1);
         etaT = ior;
     } else {
         etaI = ior;
-        etaT = activeIor(findMedium(hit.object));
+        etaT = activeIor(findMedium(surface.object));
     }
 }
 
-void crossInterface(MediumEntry entry, Hit hit) {
-    if (hit.frontFace) pushMedium(entry);
-    else removeMedium(hit.object);
+void crossInterface(MediumEntry entry, SurfacePoint surface) {
+    if (surface.frontFace) pushMedium(entry);
+    else removeMedium(surface.object);
 }
 
 // ============== MIRROR ==============
-BSDFEval evalMirrorBSDF(in float3 albedo, in Hit hit, in float3 wo, in float3 wi) {
-    float VoN = max(dot(wo, hit.normal), 0.0);
+BSDFEval evalMirrorBSDF(in float3 albedo, in SurfacePoint surface, in float3 wo, in float3 wi) {
+    float VoN = max(dot(wo, surface.normal), 0.0);
     return BSDFEval(
         albedo * schlickIoR(VoN, 0.0) / VoN,
         0.0
     );
 }
 
-BSDFSample sampleMirrorBSDF(in float3 albedo, in Hit hit, in float3 wo) {
-    float3 wi = reflect(-wo, hit.normal);
-    float cosB = abs(dot(hit.normal, wi));
-    BSDFEval eval = evalMirrorBSDF(albedo, hit, wo, wi);
+BSDFSample sampleMirrorBSDF(in float3 albedo, in SurfacePoint surface, in float3 wo) {
+    float3 wi = reflect(-wo, surface.normal);
+    float cosB = abs(dot(surface.normal, wi));
+    BSDFEval eval = evalMirrorBSDF(albedo, surface, wo, wi);
     
     BSDFSample bsdf;
     bsdf.wi = wi;

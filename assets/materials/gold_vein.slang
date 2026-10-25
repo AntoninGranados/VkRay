@@ -8,9 +8,9 @@ struct GoldVein : IMaterial {
     [Range(0, 1)] float goldRoughness = 0.1;
     [Range(0, 0.1)] float veinRecessDepth = 0.03;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float3 pos = hit.p;
-        float3 normal = hit.normal;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float3 pos = surface.position;
+        float3 normal = surface.normal;
         float3 p = pos * scale;
         float h = 0.0001;
 
@@ -32,7 +32,7 @@ struct GoldVein : IMaterial {
         float bumpStrength = rockRoughness + step(0.5, veinMask) * (goldRoughness - rockRoughness);
         float3 grad = rockGradient * bumpStrength + veinGradient * veinRecessDepth;
         float3 tangentGrad = grad - dot(grad, normal) * normal;
-        hit.normal = normalize(normal - tangentGrad);
+        surface.normal = normalize(normal - tangentGrad);
 
         if (veinMask > 0.5) {
             return Metal(goldColor, goldRoughness);

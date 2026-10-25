@@ -71,6 +71,12 @@
 
         "viewport": {
             "label": "Viewport",
+            "shading": {
+                "label": "Shading",
+                "items": ["Rasterized", "Path Traced"],
+                "default": "Path Traced",
+                "restart_accumulation": true
+            },
             "max_samples": {
                 "label": "Max Samples",
                 "default": 0,

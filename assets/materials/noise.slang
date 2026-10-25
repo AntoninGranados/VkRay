@@ -5,8 +5,8 @@ struct Noise : IMaterial {
     [Min(0)] int type;
     [Min(0)] float scale = 1;
 
-    IBsdf evaluate(inout Hit hit, float3 wo, inout RngState rng) {
-        float2 uv = hit.uv;
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        float2 uv = surface.uv;
         RngState localRng = initRngState(uint(seed));
         float2 local = uv / scale;
 

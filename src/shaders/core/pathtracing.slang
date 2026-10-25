@@ -61,15 +61,16 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         return;
     }
 
+    SurfacePoint surfacePoint = makeSurfacePoint(firstHit);
     IMaterial material = makeMaterial(getMaterial(firstHit.object));
-    BsdfProperties properties = material.evaluate(firstHit, -ray.dir, rng).properties();
+    BsdfProperties properties = material.evaluate(surfacePoint, -ray.dir, rng).properties();
     float guideMix = 1.0 / float(pixelInfo.count);
 
     CameraPose pose = sampleCameraPose(ubo.camera.motionOffset);
     float3 right = pose.right;
     float3 up    = pose.up;
 
-    float3 normalW = normalize(firstHit.normal);
+    float3 normalW = normalize(surfacePoint.normal);
     float3 positionW = firstHit.p;
     float3 albedo = properties.albedo;
     float roughness = properties.roughness;
@@ -108,9 +109,9 @@ void initMediumStack(in Ray ray, inout RngState rng) {
     resetMediumStack();
     for (int i = 0; i < ubo.render.cameraMediumCount; i++) {
         Object object = loadObject(ubo.render.cameraMedia[i / 4][i % 4]);
-        Hit hit = Hit(ray.origin, float2(0.0), -ray.dir, 0.0, true, object, float3(1.0));
+        SurfacePoint surfacePoint = SurfacePoint(object, ray.origin, -ray.dir, float2(0.0), true, float3(1.0));
         IMaterial material = makeMaterial(getMaterial(object));
-        Optional<MediumEntry> mediumEntry = material.evaluate(hit, -ray.dir, rng).medium(object);
+        Optional<MediumEntry> mediumEntry = material.evaluate(surfacePoint, -ray.dir, rng).medium(object);
         if (mediumEntry.hasValue) pushMedium(mediumEntry.value);
     }
 }
@@ -193,14 +194,16 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             }
         }
 
+        SurfacePoint surfacePoint = makeSurfacePoint(hit);
         IMaterial material = makeMaterial(getMaterial(hit.object));
-        IBsdf surface = material.evaluate(hit, -ray.dir, rng);
+        IBsdf surface = material.evaluate(surfacePoint, -ray.dir, rng);
+        hit.normal = surfacePoint.normal;
         BsdfProperties properties = surface.properties();
 
         Optional<MediumEntry> mediumEntry = surface.medium(hit.object);
-        if (mediumEntry.hasValue && falseInterfaces < MAX_FALSE_INTERFACES && isFalseInterface(mediumEntry.value.priority, hit)) {
+        if (mediumEntry.hasValue && falseInterfaces < MAX_FALSE_INTERFACES && isFalseInterface(mediumEntry.value.priority, surfacePoint)) {
             falseInterfaces++;
-            crossInterface(mediumEntry.value, hit);
+            crossInterface(mediumEntry.value, surfacePoint);
             ray = Ray(hit.p + ray.dir * EPS, ray.dir);
             hit = intersection(ray, false, INFINITY, stats);
             i--;
@@ -224,7 +227,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             break;
         }
 
-        bsdf = surface.sample(hit, -ray.dir, rng);
+        bsdf = surface.sample(surfacePoint, -ray.dir, rng);
         if (bsdf.pdf < EPS && !bsdf.isDelta) {
             break;
         }
@@ -233,7 +236,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
             lightSample = sampleLight(hit, rng);
             isSkipped = lightSample.skip;
             if (lightSample.pdf > EPS) {
-                BSDFEval eval = surface.eval(hit, -ray.dir, lightSample.wi);
+                BSDFEval eval = surface.eval(surfacePoint, -ray.dir, lightSample.wi);
                 float cosTheta = max(dot(hit.normal, lightSample.wi), 0.0);
                 float wMIS = powerHeuristic(lightSample.pdf, eval.pdf);
                 radiance += clampIndirect(throughput * eval.f * cosTheta * lightSample.Le * wMIS / lightSample.pdf, i);

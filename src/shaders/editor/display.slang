@@ -11,28 +11,18 @@ struct DisplayUBO {
     int2 viewportSize;
     float2 previewFrameExtent;
     float4 focusPlane;
-    float4x4 viewProjection;
+    float4x4 inverseViewProjection;
     CameraUBO camera;
-};
-
-struct DisplayOutput {
-    float4 color : SV_Target;
-    float  depth : SV_Depth;
 };
 
 ConstantBuffer<DisplayUBO> ubo;
 Sampler2D outputTex;
-StructuredBuffer<PixelInfo> pixelInfoBuffer;
+Sampler2D<float> depthTex;
 
 static const float previewStripeSpacing = 64.0;
 static const float feather      = 0.4;
 static const float3  edgeColor    = float3(1.0, 0.5, 0.062);
 static const float3  focusColor   = float3(1.0, 0.3, 1.0);
-
-PixelInfo samplePixelInfo(int2 vpCoord, int2 vpSize, int2 renderSize) {
-    int2 rc = clamp(vpCoord * renderSize / vpSize, int2(0), renderSize - int2(1));
-    return pixelInfoBuffer[uint(rc.y * renderSize.x + rc.x)];
-}
 
 Ray viewportRay(int2 coord, int2 viewportSize) {
     float2 ndc = (float2(coord) + 0.5) / float2(viewportSize) * 2.0 - 1.0;
@@ -47,7 +37,7 @@ float4 vertexMain(uint vertexId : SV_VertexID) : SV_Position {
 }
 
 [shader("fragment")]
-DisplayOutput fragmentMain(float4 position : SV_Position) {
+float4 fragmentMain(float4 position : SV_Position) : SV_Target {
     int2 coord        = int2(position.xy);
     int2 viewportSize = ubo.viewportSize;
     float halfLineWidth = ubo.lineWidth * 0.5;
@@ -56,7 +46,6 @@ DisplayOutput fragmentMain(float4 position : SV_Position) {
     int2 renderCoord = clamp(coord * renderSize / viewportSize, int2(0), renderSize - int2(1));
 
     float3 color = outputTex.Load(int3(renderCoord, 0)).rgb;
-    PixelInfo pix = samplePixelInfo(coord, viewportSize, renderSize);
 
     bool isSelected = false;
     if (ubo.selectedObjectId >= 0) {
@@ -91,8 +80,11 @@ DisplayOutput fragmentMain(float4 position : SV_Position) {
 
     if (ubo.showFocusPlane != 0) {
         float t;
-        if (pix.aov.hitValid != 0u) {
-            float signedDist = dot(pix.aov.positionW, ubo.focusPlane.xyz) + ubo.focusPlane.w;
+        float depth = depthTex.Load(int3(coord, 0));
+        if (depth > 0.0) {
+            float2 ndc = (float2(coord) + 0.5) / float2(viewportSize) * 2.0 - 1.0;
+            float4 world = mul(float4(ndc, depth, 1.0), ubo.inverseViewProjection);
+            float signedDist = dot(world.xyz / world.w, ubo.focusPlane.xyz) + ubo.focusPlane.w;
             t = signedDist > 0.0 ? 1.0 : 0.0;
         } else {
             Ray skyRay = viewportRay(coord, viewportSize);
@@ -121,10 +113,5 @@ DisplayOutput fragmentMain(float4 position : SV_Position) {
         color = lerp(color, edgeColor, edgeMask);
     }
 
-    float depth = 0.0;
-    if (pix.aov.hitValid != 0u) {
-        float4 clip = mul(float4(pix.aov.positionW, 1.0), ubo.viewProjection);
-        depth = saturate(clip.z / clip.w);
-    }
-    return DisplayOutput(float4(color, 1.0), depth);
+    return float4(color, 1.0);
 }
