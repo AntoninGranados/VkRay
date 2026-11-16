@@ -19,7 +19,7 @@ struct Vertex {
 class MeshAsset {
 public:
     MeshAsset() = default;
-    MeshAsset(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+    MeshAsset(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool vertexColors = false);
 
     static std::optional<MeshAsset> load(const std::string& path);
 

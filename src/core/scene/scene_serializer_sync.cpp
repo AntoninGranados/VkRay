@@ -13,6 +13,7 @@
 #include "core/ecs/systems/mesh_system.hpp"
 #include "core/fields/field_serializer.hpp"
 #include "core/render/script_table.hpp"
+#include "gltf_loader.hpp"
 #include "scene.hpp"
 #include "utils/log.hpp"
 
@@ -79,6 +80,13 @@ void activateFirstCamera(ecs::Registry& registry, Scene& scene) {
 } // namespace
 
 bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<uint32_t> forceSeed) {
+    if (GltfLoader::handles(path)) {
+        if (!GltfLoader::load(scene, path)) return false;
+        reparseScripts(scene.getRegistry());
+        activateFirstCamera(scene.getRegistry(), scene);
+        return true;
+    }
+
     std::optional<json> parsed = parseSceneFile(path);
     if (!parsed) return false;
     const json& j = *parsed;

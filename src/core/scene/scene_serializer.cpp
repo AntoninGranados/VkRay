@@ -20,6 +20,7 @@
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/physics.hpp"
 #include "core/fields/field_serializer.hpp"
+#include "gltf_loader.hpp"
 #include "scene.hpp"
 #include "scene_serializer_internal.hpp"
 #include "utils/json_dsl.hpp"
@@ -389,6 +390,8 @@ void ensureSceneDefaults(Scene& scene) {
 }
 
 bool SceneSerializer::loadCore(Scene& scene, const std::string& path, std::optional<uint32_t> forceSeed) {
+    if (GltfLoader::handles(path)) return GltfLoader::load(scene, path);
+
     std::optional<json> parsed = parseSceneFile(path);
     if (!parsed) return false;
     const json& j = *parsed;

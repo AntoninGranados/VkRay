@@ -30,8 +30,8 @@ MeshAsset makeDefaultMeshAsset() {
         });
 }
 
-MeshAsset::MeshAsset(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
-    : vertices(std::move(vertices)), indices(std::move(indices)) {
+MeshAsset::MeshAsset(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool vertexColors)
+    : vertexColorLoaded(vertexColors), vertices(std::move(vertices)), indices(std::move(indices)) {
     buildBvh();
 }
 

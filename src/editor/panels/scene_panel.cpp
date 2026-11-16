@@ -22,7 +22,7 @@ void ScenePanel::draw() {
     ui::setNextWindowFixed();
     ui::drawWindow(getTitle(), ImGuiWindowFlags_AlwaysAutoResize, [&] {
         if (ImGui::Button(ICON_FA_UPLOAD " Load Scene", {-FLT_MIN, 0})) {
-            if (auto path = ui::openFileDialog({{"Scene", "json"}}, "assets/scenes/")) {
+            if (auto path = ui::openFileDialog({{"Scene", "json,gltf,glb"}}, "assets/scenes/")) {
                 if (Editor::loadScene(path->string())) {
                     Editor::selectEntity(Editor::isUsingSceneCamera() ? scene.getActiveCamera()
                                                                       : std::optional<ecs::Entity>{});

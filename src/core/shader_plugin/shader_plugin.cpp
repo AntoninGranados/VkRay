@@ -156,6 +156,14 @@ void ShaderPlugin::load(bool migrate) {
                     oldField.dispatch([&](auto v) { newField.set(v); });
                     break;
                 }
+    for (Field& newField : newParams.getFields()) {
+        const auto pendingValues = pending.find(newField.getId().generic_string());
+        if (pendingValues == pending.end()) continue;
+        Field::makeNumeric(newField.getType(), "", "", pendingValues->second).dispatch([&](auto v) {
+            newField.set(v);
+        });
+    }
+    pending.clear();
     params = std::move(newParams);
 
     Core::requestGraphRebuild();

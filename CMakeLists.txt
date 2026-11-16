@@ -40,6 +40,10 @@ set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
 set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory("${PROJECT_SOURCE_DIR}/external/glm")
 
+# ── fastgltf ──────────────────────────────────────────────────────────────────
+set(FASTGLTF_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory("${PROJECT_SOURCE_DIR}/external/fastgltf")
+
 # ── Sources ───────────────────────────────────────────────────────────────────
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
@@ -69,11 +73,13 @@ set(VKRAY_LOGIC_SOURCES
   "${PROJECT_SOURCE_DIR}/src/core/fields/parameter_serializer.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/fields/parameters.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/scene/asset/mesh.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/scene/gltf_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/scene/scene.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/scene/scene_serializer.cpp"
   "${PROJECT_SOURCE_DIR}/src/utils/json_dsl.cpp"
   "${PROJECT_SOURCE_DIR}/src/utils/log.cpp"
   "${PROJECT_SOURCE_DIR}/src/utils/string_utils.cpp"
+  "${PROJECT_SOURCE_DIR}/src/utils/transform_utils.cpp"
 )
 
 add_library(VkRayLogic STATIC ${VKRAY_LOGIC_SOURCES} "${VKRAY_EMBEDDED_SOURCE}")
@@ -84,7 +90,7 @@ target_include_directories(VkRayLogic PUBLIC
   "${PROJECT_BINARY_DIR}"
 )
 
-target_link_libraries(VkRayLogic PUBLIC glm::glm Vulkan::Headers)
+target_link_libraries(VkRayLogic PUBLIC glm::glm Vulkan::Headers fastgltf::fastgltf)
 target_compile_options(VkRayLogic PRIVATE -Wall -Wextra)
 
 file(GLOB_RECURSE VKRAY_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.cpp")

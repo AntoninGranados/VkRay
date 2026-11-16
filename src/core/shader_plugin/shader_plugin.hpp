@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "core/ecs/components/component.hpp"
@@ -43,6 +44,7 @@ public:
     const std::string& getSource() const { return source; }
     int getSlot() const { return slot; }
     int getPassCount() const { return passCount; }
+    void setParameter(const std::string& id, std::vector<float> values) { pending[id] = std::move(values); }
     bool hasAttribute(const std::string& name) const { return std::ranges::contains(attributes, name); }
 
 private:
@@ -59,6 +61,7 @@ private:
     std::optional<std::filesystem::path> path;
     const ScriptKind* kind = nullptr;
     std::vector<std::string> attributes;
+    std::unordered_map<std::string, std::vector<float>> pending;
     int slot = -1;
     int passCount = 1;
     std::optional<size_t> watchId;
