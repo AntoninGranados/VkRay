@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -7,8 +8,8 @@ import "bsdf.slang";
 import "ggx_utils.slang";
 
 struct MetalBsdf : IBsdf {
-    float3 albedo;
-    float roughness;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
+    [Range(0, 1)] [Animatable] float roughness = 0.5;
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         float alpha = max(roughness * roughness, EPS_HIGH);
@@ -33,15 +34,5 @@ struct MetalBsdf : IBsdf {
 
     BsdfProperties properties() {
         return BsdfProperties(mat_Metal, albedo, roughness);
-    }
-}
-
-struct MetalMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        MetalBsdf bsdf = loadParams<MetalBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
     }
 }

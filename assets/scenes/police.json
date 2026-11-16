@@ -19,7 +19,7 @@
             "name": "Sun",
             "emissive": {
                 "albedo": [0.95, 0.3, 0.035],
-                "emission_strength": 2000.0
+                "emissionStrength": 2000.0
             }
         }
     ],

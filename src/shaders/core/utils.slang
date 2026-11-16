@@ -7,6 +7,10 @@ struct Material {
     uint base;
 };
 
+struct Script<T> {
+    uint base;
+};
+
 static const int mat_Principled = 0;
 static const int mat_Emissive = 1;
 static const int mat_Diffuse = 2;

@@ -18,6 +18,8 @@ interface IBsdf {
     BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng);
     BsdfProperties properties();
     Optional<MediumEntry> medium(Object object) { return none; }
+    bool isMediumBoundary() { return false; }
+    property float3 albedo { get; set; }
 }
 
 [anyValueSize(4)]
@@ -26,11 +28,21 @@ interface IMaterial {
     bool isMediumBoundary() { return false; }
 }
 
-struct ScriptMaterial<T : IMaterial> : IMaterial {
-    uint base;
-
+extension<T : IMaterial> Script<T> : IMaterial {
     IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         RngState scriptRng = rng;
         return loadParams<T>(base).evaluate(surface, wo, scriptRng);
+    }
+}
+
+extension<T : IBsdf> Script<T> : IMaterial {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        T bsdf = loadParams<T>(base);
+        bsdf.albedo *= surface.vertexColor;
+        return bsdf;
+    }
+
+    override bool isMediumBoundary() {
+        return loadParams<T>(base).isMediumBoundary();
     }
 }

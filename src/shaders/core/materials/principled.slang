@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -8,16 +9,17 @@ import "metal.slang";
 import "glossy.slang";
 import "dielectric.slang";
 
+[Medium]
 struct PrincipledBsdf : IBsdf {
-    float3 albedo;
-    float roughness;
-    float metalness;
-    float ior;
-    float transmission;
-    float density;
-    float anisotropic;
-    float alpha;
-    int priority;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
+    [Range(0, 1)] [Animatable] float roughness = 0.5;
+    [Range(0, 1)] [Animatable] float metalness = 0.0;
+    [Range(1, 3)] [Animatable] float ior = 1.5;
+    [Range(0, 1)] [Animatable] float transmission = 0.0;
+    [Min(0)] [Animatable] float density = 0.0;
+    [Range(-1, 1)] [Animatable] float anisotropic = 0.0;
+    [Range(0, 1)] [Animatable] float alpha = 1.0;
+    [Min(0)] int priority = 0;
 
     MetalBsdf metalProxy() {
         return MetalBsdf(albedo, roughness);
@@ -33,6 +35,10 @@ struct PrincipledBsdf : IBsdf {
 
     bool isTransmissive() {
         return (1.0 - metalness) * transmission > EPS;
+    }
+
+    override bool isMediumBoundary() {
+        return isTransmissive();
     }
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
@@ -89,19 +95,5 @@ struct PrincipledBsdf : IBsdf {
     override Optional<MediumEntry> medium(Object object) {
         if (!isTransmissive()) return none;
         return dielectricProxy().mediumEntry(object);
-    }
-}
-
-struct PrincipledMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        PrincipledBsdf bsdf = loadParams<PrincipledBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
-    }
-
-    override bool isMediumBoundary() {
-        return loadParams<PrincipledBsdf>(base).isTransmissive();
     }
 }

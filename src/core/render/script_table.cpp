@@ -1,9 +1,8 @@
 #include "script_table.hpp"
 
-#include <bit>
+#include <array>
 #include <filesystem>
-
-#include <glm/glm.hpp>
+#include <utility>
 
 #include "VkSmol/render/shader.hpp"
 
@@ -12,47 +11,17 @@
 #include "core/ecs/components/environment.hpp"
 #include "core/ecs/components/material.hpp"
 #include "core/ecs/registry.hpp"
-#include "core/scene/gpu_structs.hpp"
 #include "core/scene/scene.hpp"
 
 const ScriptKind ScriptTable::kMaterial = {
-    "IMaterial",
-    "ScriptMaterial",
-    {"PrincipledMaterial", "EmissiveMaterial", "DiffuseMaterial", "MetalMaterial", "GlossyMaterial",
-     "DielectricMaterial", "VolumeMaterial"},
-};
-const ScriptKind ScriptTable::kSky = {"ISky", "ScriptSky", {"DefaultSky"}};
-const ScriptKind ScriptTable::kLens = {"ILens", "ScriptLens", {}};
-const ScriptKind ScriptTable::kCompositing = {"ICompositingPass", "ScriptPass", {"IdentityPass"}};
+    "IMaterial", {"IBsdf", "IMaterial"}, {"DefaultMaterial"}, &ecs::MaterialPlugin};
+const ScriptKind ScriptTable::kSky = {"ISky", {"ISky"}, {"DefaultSky"}, &ecs::SkyPlugin};
+const ScriptKind ScriptTable::kLens = {"ILens", {"ILens"}, {"DefaultLens"}, &ecs::CameraLensPlugin};
+const ScriptKind ScriptTable::kCompositing = {"ICompositingPass", {"ICompositingPass"}, {"IdentityPass"}};
 
 namespace {
 
-const ecs::ComponentType* const kMaterialComponents[] = {
-    &ecs::Principled, &ecs::Emissive, &ecs::Diffuse, &ecs::Metal, &ecs::Glossy, &ecs::Dielectric, &ecs::Volume,
-};
-
-constexpr const char* kTiltShiftPath = "builtin:/camera/tilt_shift.slang";
-
-ShaderPlugin& tiltShiftPlugin() {
-    static ShaderPlugin plugin;
-    plugin.parse(kTiltShiftPath, ScriptTable::kLens);
-    return plugin;
-}
-
-void packFields(const ecs::Component& c, std::vector<float>& params) {
-    for (const Field& field : c.getFields()) {
-        if (field.getType() == FieldType::Vec3) {
-            const glm::vec3 value = field.get<glm::vec3>();
-            params.insert(params.end(), {value.x, value.y, value.z});
-        } else if (field.getType() == FieldType::Int) {
-            params.push_back(std::bit_cast<float>(field.get<int>()));
-        } else if (field.getType() == FieldType::Float) {
-            params.push_back(field.get<float>());
-        }
-    }
-}
-
-int packScript(ShaderPlugin& plugin, const std::filesystem::path& path, const ScriptKind& kind, int fallback,
+int packPlugin(ShaderPlugin& plugin, const std::filesystem::path& path, const ScriptKind& kind, int fallback,
                std::vector<float>& params) {
     if (!plugin.parse(path, kind)) return fallback;
 
@@ -63,52 +32,38 @@ int packScript(ShaderPlugin& plugin, const std::filesystem::path& path, const Sc
 
 } // namespace
 
-bool ScriptTable::packMaterial(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu,
-                               std::vector<float>& params) {
-    gpu.base = static_cast<uint32_t>(params.size());
-
-    for (int i = 0; i < static_cast<int>(std::size(kMaterialComponents)); i++) {
-        if (!registry.has(entity, *kMaterialComponents[i])) continue;
-
-        gpu.type = i;
-        packFields(registry.get(entity, *kMaterialComponents[i]), params);
-        return true;
-    }
-
-    if (!registry.has(entity, ecs::MaterialPlugin)) return false;
-
-    ecs::Component& c = registry.get(entity, ecs::MaterialPlugin);
-    gpu.type =
-        packScript(c.payload<ShaderPlugin>("plugin"), c.get<std::filesystem::path>("path"), kMaterial, -1, params);
-    return gpu.type >= 0;
+const std::array<const ScriptKind*, 3>& ScriptTable::componentKinds() {
+    static const std::array<const ScriptKind*, 3> kinds = {&kMaterial, &kSky, &kLens};
+    return kinds;
 }
 
-int ScriptTable::packSky(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params) {
-    if (environment == ecs::Entity{} || !registry.has(environment, ecs::SkyPlugin)) return 0;
+int ScriptTable::packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
+                            std::vector<float>& params) {
+    if (entity == ecs::Entity{} || !registry.has(entity, *kind.component)) return fallback;
 
-    ecs::Component& c = registry.get(environment, ecs::SkyPlugin);
-    return packScript(c.payload<ShaderPlugin>("plugin"), c.get<std::filesystem::path>("path"), kSky, 0, params);
-}
-
-int ScriptTable::packLens(ecs::Registry& registry, ecs::Entity camera, std::vector<float>& params) {
-    if (registry.has(camera, ecs::CameraLensPlugin)) {
-        ecs::Component& c = registry.get(camera, ecs::CameraLensPlugin);
-        return packScript(c.payload<ShaderPlugin>("plugin"), c.get<std::filesystem::path>("path"), kLens, -1, params);
-    }
-
-    if (registry.has(camera, ecs::TiltShiftLens)) {
-        ShaderPlugin& plugin = tiltShiftPlugin();
-        if (!plugin.getError().empty()) return -1;
-
-        packFields(registry.get(camera, ecs::TiltShiftLens), params);
-        return plugin.getSlot();
-    }
-
-    return -1;
+    ecs::Component& c = registry.get(entity, *kind.component);
+    return packPlugin(c.payload<ShaderPlugin>("plugin"), c.get<std::filesystem::path>("path"), kind, fallback, params);
 }
 
 int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params) {
-    return packScript(*pass.plugin, pass.path, kCompositing, 0, params);
+    return packPlugin(*pass.plugin, pass.path, kCompositing, 0, params);
+}
+
+const ShaderPlugin* ScriptTable::materialPlugin(const ecs::Registry& registry, ecs::Entity material) {
+    if (!registry.has(material, ecs::MaterialPlugin)) return nullptr;
+    return &registry.get(material, ecs::MaterialPlugin).payload<ShaderPlugin>("plugin");
+}
+
+const ecs::Component* ScriptTable::tiltShift(const ecs::Registry& registry, ecs::Entity camera) {
+    if (!registry.has(camera, ecs::CameraLensPlugin)) return nullptr;
+
+    const ecs::Component& lens = registry.get(camera, ecs::CameraLensPlugin);
+    if (lens.get<std::filesystem::path>("path") != ecs::kTiltShiftPath) return nullptr;
+    return &lens.payload<ShaderPlugin>("plugin").getComponent();
+}
+
+ecs::Component* ScriptTable::tiltShift(ecs::Registry& registry, ecs::Entity camera) {
+    return const_cast<ecs::Component*>(tiltShift(std::as_const(registry), camera));
 }
 
 std::vector<ecs::CompositingPassEntry>& ScriptTable::compositingPasses(Scene& scene) {
@@ -130,8 +85,6 @@ int ScriptTable::compositingDispatchCount(Scene& scene) {
 }
 
 std::vector<VkSmol::ShaderConformance> ScriptTable::conformances(std::initializer_list<const ScriptKind*> kinds) {
-    tiltShiftPlugin();
-
     std::vector<VkSmol::ShaderConformance> result;
     for (const ScriptKind* kind : kinds) ShaderPlugin::appendConformances(*kind, result);
     return result;

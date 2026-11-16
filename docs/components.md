@@ -42,18 +42,6 @@ Perspective or orthographic camera with native depth of field.
 | `show_focus_plane` | bool | false |  | no |
 | `shutter_speed` | float | 0 | ≥ 0 | no |
 
-### Tilt Shift Lens
-Tilted focal plane and lens shift (Scheimpflug principle).
-
-**Slot:** `lens` · **Needs:** `camera`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `plane_position` | vec3 | [0, 0, 0] |  | yes |
-| `plane_rotation` | vec3 | [0, 0, 0] |  | yes |
-| `shift_x` | float | 0 |  | yes |
-| `shift_y` | float | 0 |  | yes |
-
 ### Geometric Aperture
 Polygon aperture blade shape.
 
@@ -140,92 +128,8 @@ Material reference.
 |-------|------|---------|-------------|------------|
 | `handle` | entity |  |  | no |
 
-### Diffuse
-Diffuse BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
-
-### Emissive
-Emissive light source BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [1, 1, 1] | 0 ... 1 | yes |
-| `emission_strength` | float | 1 | ≥ 0 | yes |
-
-### Metal
-GGX metallic BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
-| `roughness` | float | 0.5 | 0 ... 1 | yes |
-
-### Glossy
-GGX glossy dielectric BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
-| `roughness` | float | 0.5 | 0 ... 1 | yes |
-| `ior` | float | 1.5 | 1 ... 3 | yes |
-
-### Dielectric
-Dielectric refractive BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [1, 1, 1] | 0 ... 1 | yes |
-| `roughness` | float | 0 | 0 ... 1 | yes |
-| `ior` | float | 1.5 | 1 ... 3 | yes |
-| `density` | float | 0 | ≥ 0 | yes |
-| `transmission` | float | 1 | 0 ... 1 | yes |
-| `anisotropic` | float | 0 | -1 ... 1 | yes |
-| `priority` | int | 0 | ≥ 0 | no |
-
-### Volume
-Homogeneous participating media BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
-| `density` | float | 1 | ≥ 0 | yes |
-| `anisotropic` | float | 0 | -1 ... 1 | yes |
-| `priority` | int | 0 | ≥ 0 | no |
-
-### Principled
-PBR principled BSDF.
-
-**Slot:** `bsdf` · **Needs:** `material`
-
-| Field | Type | Default | Constraints | Animatable |
-|-------|------|---------|-------------|------------|
-| `albedo` | vec3 | [0.8, 0.8, 0.8] | 0 ... 1 | yes |
-| `roughness` | float | 0.5 | 0 ... 1 | yes |
-| `metalness` | float | 0 | 0 ... 1 | yes |
-| `ior` | float | 1.5 | 1 ... 3 | yes |
-| `transmission` | float | 0 | 0 ... 1 | yes |
-| `density` | float | 0 | ≥ 0 | yes |
-| `anisotropic` | float | 0 | -1 ... 1 | yes |
-| `alpha` | float | 1 | 0 ... 1 | yes |
-| `priority` | int | 0 | ≥ 0 | no |
-
 ### Programmable
-Programmable custom BSDF, defined by a Slang script implementing IMaterial.
+Programmable material, defined by a Slang script implementing IBsdf or IMaterial.
 
 **Slot:** `bsdf` · **Needs:** `material`
 

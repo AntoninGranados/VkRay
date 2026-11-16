@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -5,14 +6,19 @@ import "../random/utils.slang";
 import "material_utils.slang";
 import "bsdf.slang";
 
+[Medium]
 struct DielectricBsdf : IBsdf {
-    float3 albedo;
-    float roughness;
-    float ior;
-    float density;
-    float transmission;
-    float anisotropic;
-    int priority;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(1.0, 1.0, 1.0);
+    [Range(0, 1)] [Animatable] float roughness = 0.0;
+    [Range(1, 3)] [Animatable] float ior = 1.5;
+    [Min(0)] [Animatable] float density = 0.0;
+    [Range(0, 1)] [Animatable] float transmission = 1.0;
+    [Range(-1, 1)] [Animatable] float anisotropic = 0.0;
+    [Min(0)] int priority = 0;
+
+    override bool isMediumBoundary() {
+        return true;
+    }
 
     MediumEntry mediumEntry(Object object) {
         return MediumEntry(mediumObjectKey(object), priority, ior, albedo, density, transmission, anisotropic);
@@ -78,19 +84,5 @@ struct DielectricBsdf : IBsdf {
 
     override Optional<MediumEntry> medium(Object object) {
         return mediumEntry(object);
-    }
-}
-
-struct DielectricMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        DielectricBsdf bsdf = loadParams<DielectricBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
-    }
-
-    override bool isMediumBoundary() {
-        return true;
     }
 }

@@ -26,9 +26,7 @@ interface ICompositingPass {
     float4 evaluate(int2 pixelCoord, int2 texSize, int passId);
 }
 
-struct ScriptPass<T : ICompositingPass> : ICompositingPass {
-    uint base;
-
+extension<T : ICompositingPass> Script<T> : ICompositingPass {
     float4 evaluate(int2 pixelCoord, int2 texSize, int passId) {
         return pluginParams.Load<T>(base * sizeof(float)).evaluate(pixelCoord, texSize, passId);
     }

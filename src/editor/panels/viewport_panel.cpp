@@ -11,6 +11,7 @@
 #include "core/core.hpp"
 #include "core/ecs/components/camera.hpp"
 #include "core/ecs/entity.hpp"
+#include "core/render/script_table.hpp"
 #include "core/scene/gpu_structs.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/ecs/systems/camera_drawing_system.hpp"
@@ -107,11 +108,12 @@ void ViewportPanel::drawGizmo(Scene& scene) {
     }
     ImGuizmo::PopID();
 
-    if (!scene.getRegistry().has(e, ecs::TiltShiftLens)) return;
-    ecs::Component& ts = scene.getRegistry().get(e, ecs::TiltShiftLens);
+    ecs::Component* tiltShift = ScriptTable::tiltShift(scene.getRegistry(), e);
+    if (!tiltShift) return;
+    ecs::Component& ts = *tiltShift;
 
-    glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("plane_position")) *
-                        glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))));
+    glm::mat4 tsModel = glm::translate(glm::mat4(1.0f), ts.get<glm::vec3>("planePosition")) *
+                        glm::mat4_cast(glm::quat(glm::radians(ts.get<glm::vec3>("planeRotation"))));
 
     ImGuizmo::PushID(static_cast<int>(e.getId()) * 2 + 1);
     if (ImGuizmo::Manipulate(
@@ -122,9 +124,9 @@ void ViewportPanel::drawGizmo(Scene& scene) {
             glm::vec3 translation, rotationEuler, scale;
             ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(tsModel), glm::value_ptr(translation),
                                                   glm::value_ptr(rotationEuler), glm::value_ptr(scale));
-            ts.set<glm::vec3>("plane_position", translation);
-            ts.set<glm::vec3>("plane_rotation", rotationEuler);
-            scene.getRegistry().markChanged(ecs::TiltShiftLens);
+            ts.set<glm::vec3>("planePosition", translation);
+            ts.set<glm::vec3>("planeRotation", rotationEuler);
+            scene.getRegistry().markChanged(ecs::CameraLensPlugin);
         }
     }
     ImGuizmo::PopID();

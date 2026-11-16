@@ -20,21 +20,28 @@
 namespace ecs {
 
 void ComponentUi::draw(Registry& registry, Entity entity) {
-    static const ComponentType* const kOrder[] = {&Name,          &Transform,
-                                                  &Sphere,        &Plane,
-                                                  &Box,           &Quad,
-                                                  &Mesh,          &MeshSimplify,
-                                                  &MeshRef,       &Collider,
-                                                  &RigidBody,     &Camera,
-                                                  &TiltShiftLens, &GeometricAperture,
-                                                  &ImageAperture, &CameraLensPlugin,
-                                                  &Material,      &MaterialRef,
-                                                  &Diffuse,       &Emissive,
-                                                  &Metal,         &Glossy,
-                                                  &Dielectric,    &Volume,
-                                                  &Principled,    &MaterialPlugin,
-                                                  &Environment,   &Physics,
-                                                  &SkyPlugin,     &Compositing};
+    static const ComponentType* const kOrder[] = {&Name,
+                                                  &Transform,
+                                                  &Sphere,
+                                                  &Plane,
+                                                  &Box,
+                                                  &Quad,
+                                                  &Mesh,
+                                                  &MeshSimplify,
+                                                  &MeshRef,
+                                                  &Collider,
+                                                  &RigidBody,
+                                                  &Camera,
+                                                  &GeometricAperture,
+                                                  &ImageAperture,
+                                                  &CameraLensPlugin,
+                                                  &Material,
+                                                  &MaterialRef,
+                                                  &MaterialPlugin,
+                                                  &Environment,
+                                                  &Physics,
+                                                  &SkyPlugin,
+                                                  &Compositing};
 
     for (const ComponentType* type : kOrder) {
         if (!registry.has(entity, *type)) continue;
@@ -67,9 +74,8 @@ bool ComponentUi::drawComponent(Component& component, Registry& registry, Entity
     const ComponentType& type = component.getType();
     if (type == MeshSimplify) return drawMeshSimplify(component, registry, entity);
     if (type == Compositing) return drawCompositing(component);
-    if (type == CameraLensPlugin) return drawShaderPluginField(component, ScriptTable::kLens);
-    if (type == MaterialPlugin) return drawShaderPluginField(component, ScriptTable::kMaterial);
-    if (type == SkyPlugin) return drawShaderPluginField(component, ScriptTable::kSky);
+    for (const ScriptKind* kind : ScriptTable::componentKinds())
+        if (type == *kind->component) return drawShaderPluginField(component, *kind);
 
     const std::string header = std::format("{} {}", type.getIcon(), type.getLabel());
     const bool hasExtra = type == Mesh || type == Material || type == MaterialRef || type == Physics;

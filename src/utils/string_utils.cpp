@@ -2,25 +2,6 @@
 
 #include <cctype>
 
-std::string trim(const std::string& s) {
-    size_t begin = s.find_first_not_of(" \t\r\n");
-    if (begin == std::string::npos) return "";
-    size_t end = s.find_last_not_of(" \t\r\n");
-    return s.substr(begin, end - begin + 1);
-}
-
-std::vector<std::string> split(const std::string& s, char delim) {
-    std::vector<std::string> tokens;
-    size_t pos = 0;
-    while (pos <= s.size()) {
-        size_t next = s.find(delim, pos);
-        tokens.push_back(trim(s.substr(pos, next == std::string::npos ? std::string::npos : next - pos)));
-        if (next == std::string::npos) break;
-        pos = next + 1;
-    }
-    return tokens;
-}
-
 std::string snakeCaseToLabel(const std::string& id) {
     std::string result;
     bool capitalize = true;

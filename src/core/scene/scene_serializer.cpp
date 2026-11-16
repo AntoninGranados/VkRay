@@ -169,9 +169,34 @@ bool hasPluginPayload(const ecs::ComponentType& type) {
     return false;
 }
 
+std::optional<std::pair<std::string, std::string>> findBuiltinScript(const std::string& key) {
+    static const std::pair<const char*, const char*> directories[] = {
+        {"programmable", "builtin:/shaders/core/materials/"},
+        {"programmable_lens", "builtin:/camera/"},
+    };
+    for (const auto& [component, directory] : directories) {
+        const std::string path = std::format("{}{}.slang", directory, key);
+        if (Resources::find(path)) return std::pair{std::string(component), path};
+    }
+    return std::nullopt;
+}
+
 void spawnComponents(const json& node, ecs::Entity e, const ResolveCtx& resolveCtx, SpawnContext& spawn) {
-    for (const auto& [key, value] : node.items()) {
-        if (key == "name" || key == "children" || key == "repeat" || key == "grid" || key == "spherical") continue;
+    for (const auto& [nodeKey, nodeValue] : node.items()) {
+        if (nodeKey == "name" || nodeKey == "children" || nodeKey == "repeat" || nodeKey == "grid" ||
+            nodeKey == "spherical")
+            continue;
+
+        std::string key = nodeKey;
+        json value = nodeValue;
+        if (!ecs::ComponentType::find(key)) {
+            if (const auto builtin = findBuiltinScript(key)) {
+                key = builtin->first;
+                if (!value.is_object()) value = json::object();
+                value["path"] = builtin->second;
+            }
+        }
+
         auto type = ecs::ComponentType::find(key);
         if (!type) {
             Log::warn("SceneSerializer", std::format("Unknown component '{}'", key));

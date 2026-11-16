@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -14,7 +15,7 @@ float3 cosineScatter(in float3 normal, inout RngState rng) {
 }
 
 struct DiffuseBsdf : IBsdf {
-    float3 albedo;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         return BSDFEval(
@@ -33,15 +34,5 @@ struct DiffuseBsdf : IBsdf {
 
     BsdfProperties properties() {
         return BsdfProperties(mat_Diffuse, albedo, 1.0);
-    }
-}
-
-struct DiffuseMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        DiffuseBsdf bsdf = loadParams<DiffuseBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
     }
 }

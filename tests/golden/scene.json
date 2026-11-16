@@ -47,7 +47,7 @@
             "name": "Light",
             "emissive": {
                 "albedo": [1.0, 0.72, 0.38],
-                "emission_strength": 400
+                "emissionStrength": 400
             }
         },
         {

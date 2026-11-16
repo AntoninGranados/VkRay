@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -14,9 +15,10 @@ struct ShaderField;
 } // namespace VkSmol
 
 struct ScriptKind {
-    std::string interfaceName;
-    std::string wrapperName;
-    std::vector<std::string> builtins;
+    std::string dispatchInterface;
+    std::vector<std::string> interfaces;
+    std::vector<std::string> defaults;
+    const ecs::ComponentType* component = nullptr;
 };
 
 class ShaderPlugin {
@@ -41,6 +43,7 @@ public:
     const std::string& getSource() const { return source; }
     int getSlot() const { return slot; }
     int getPassCount() const { return passCount; }
+    bool hasAttribute(const std::string& name) const { return std::ranges::contains(attributes, name); }
 
 private:
     static std::vector<ShaderPlugin*>& registry();
@@ -55,6 +58,7 @@ private:
 
     std::optional<std::filesystem::path> path;
     const ScriptKind* kind = nullptr;
+    std::vector<std::string> attributes;
     int slot = -1;
     int passCount = 1;
     std::optional<size_t> watchId;

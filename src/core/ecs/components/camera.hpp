@@ -17,6 +17,8 @@ enum class CameraProjection { Perspective, Orthographic };
 
 enum class CameraSensorFit { Horizontal, Vertical, Auto };
 
+inline constexpr const char* kTiltShiftPath = "builtin:/camera/tilt_shift.slang";
+
 // clang-format off
 
 inline const ComponentType Camera = ComponentType::builder("camera")
@@ -77,18 +79,6 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     } })
     .build();
 
-inline const ComponentType TiltShiftLens = ComponentType::builder("tilt_shift_lens")
-    .description("Tilted focal plane and lens shift (Scheimpflug principle).")
-    .icon(ICON_FA_EXPAND)
-    .group("camera")
-    .needs("camera")
-    .slot("lens")
-    .field<glm::vec3>("plane_position", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 0.1f }, true)
-    .field<glm::vec3>("plane_rotation", glm::vec3(0.0f, 0.0f, 0.0f), NumericMeta{ .step = 1.0f }, true)
-    .field<float>("shift_x", 0.0f, NumericMeta{ .step = 0.01f }, true)
-    .field<float>("shift_y", 0.0f, NumericMeta{ .step = 0.01f }, true)
-    .build();
-
 inline const ComponentType GeometricAperture = ComponentType::builder("geometric_aperture")
     .description("Polygon aperture blade shape.")
     .icon(ICON_FA_STAR)
@@ -119,7 +109,9 @@ inline const ComponentType CameraLensPlugin = ComponentType::builder("programmab
     .group("camera")
     .needs("camera")
     .slot("lens")
-    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "slang", .name = "Camera Lens Shader" }} })
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "slang", .name = "Camera Lens Shader" }}, .presets = {
+        {"tilt shift", kTiltShiftPath}
+    } })
     .payload<ShaderPlugin>("plugin")
     .build();
 

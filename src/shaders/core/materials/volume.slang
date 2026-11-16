@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -40,11 +41,16 @@ float3 sampleHG(float g, float3 wi, inout RngState rng) {
     );
 }
 
+[Medium]
 struct VolumeBsdf : IBsdf {
-    float3 albedo;
-    float density;
-    float anisotropic;
-    int priority;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
+    [Min(0)] [Animatable] float density = 1.0;
+    [Range(-1, 1)] [Animatable] float anisotropic = 0.0;
+    [Min(0)] int priority = 0;
+
+    override bool isMediumBoundary() {
+        return true;
+    }
 
     MediumEntry mediumEntry(Object object) {
         return MediumEntry(mediumObjectKey(object), priority, activeIor(-1), albedo, density, 1.0, anisotropic);
@@ -80,19 +86,5 @@ struct VolumeBsdf : IBsdf {
 
     override Optional<MediumEntry> medium(Object object) {
         return mediumEntry(object);
-    }
-}
-
-struct VolumeMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        VolumeBsdf bsdf = loadParams<VolumeBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
-    }
-
-    override bool isMediumBoundary() {
-        return true;
     }
 }

@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -5,9 +6,10 @@ import "../random/utils.slang";
 import "material_utils.slang";
 import "bsdf.slang";
 
+[Emissive]
 struct EmissiveBsdf : IBsdf {
-    float3 albedo;
-    float strength;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(1.0, 1.0, 1.0);
+    [Min(0)] [Animatable] float emissionStrength = 1.0;
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         return BSDFEval(float3(0.0), 0.0);
@@ -18,16 +20,6 @@ struct EmissiveBsdf : IBsdf {
     }
 
     BsdfProperties properties() {
-        return BsdfProperties(mat_Emissive, albedo, 1.0, albedo * strength);
-    }
-}
-
-struct EmissiveMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        EmissiveBsdf bsdf = loadParams<EmissiveBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
+        return BsdfProperties(mat_Emissive, albedo, 1.0, albedo * emissionStrength);
     }
 }

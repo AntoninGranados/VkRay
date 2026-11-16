@@ -21,14 +21,14 @@
             "name": "Light",
             "emissive": {
                 "albedo": [1, 1, 1],
-                "emission_strength": 50
+                "emissionStrength": 50
             }
         },
         {
             "name": "Large Light",
             "emissive": {
                 "albedo": [0.6, 0.6, 0.9],
-                "emission_strength": 5
+                "emissionStrength": 5
             }
         },
         {

@@ -26,7 +26,8 @@ void MaterialPreview::init() {
     scene.setActiveCamera(previewCamera);
 
     previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
-    registry.add(previewMaterialEntity, ecs::Diffuse);
+    registry.add(previewMaterialEntity, ecs::MaterialPlugin);
+    registry.get(previewMaterialEntity, ecs::MaterialPlugin).set<std::filesystem::path>("path", ecs::kDiffusePath);
 
     const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
     registry.add(previewObject, ecs::Sphere);
@@ -34,8 +35,12 @@ void MaterialPreview::init() {
     registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
     const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
-    registry.add(lightMaterialEntity, ecs::Emissive);
-    registry.get(lightMaterialEntity, ecs::Emissive).set<float>("emission_strength", 50.0f);
+    registry.add(lightMaterialEntity, ecs::MaterialPlugin);
+    ecs::Component& lightMaterial = registry.get(lightMaterialEntity, ecs::MaterialPlugin);
+    lightMaterial.set<std::filesystem::path>("path", ecs::kEmissivePath);
+    ShaderPlugin& lightPlugin = lightMaterial.payload<ShaderPlugin>("plugin");
+    lightPlugin.parse(ecs::kEmissivePath, ScriptTable::kMaterial);
+    lightPlugin.getComponent().set<float>("emissionStrength", 50.0f);
 
     const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
     registry.add(lightObject, ecs::Sphere);
@@ -69,9 +74,7 @@ void MaterialPreview::addPasses(VkSmol::RenderGraph& graph) {
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
-    for (const ecs::ComponentType& type : ecs::ComponentType::all())
-        if (type.getSlot() == "bsdf" && registry.has(entity, type)) return &type;
-    return nullptr;
+    return registry.has(entity, ecs::MaterialPlugin) ? &ecs::MaterialPlugin : nullptr;
 }
 
 ecs::Entity MaterialPreview::resolveMaterialSource(ecs::Entity entity) const {

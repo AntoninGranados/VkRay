@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <initializer_list>
 #include <vector>
 
@@ -17,18 +18,21 @@ namespace VkSmol {
 struct ShaderConformance;
 }
 
-struct GpuMaterial;
-
 namespace ScriptTable {
 extern const ScriptKind kMaterial;
 extern const ScriptKind kSky;
 extern const ScriptKind kLens;
 extern const ScriptKind kCompositing;
 
-bool packMaterial(ecs::Registry& registry, ecs::Entity entity, GpuMaterial& gpu, std::vector<float>& params);
-int packSky(ecs::Registry& registry, ecs::Entity environment, std::vector<float>& params);
-int packLens(ecs::Registry& registry, ecs::Entity camera, std::vector<float>& params);
+const std::array<const ScriptKind*, 3>& componentKinds();
+
+int packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
+               std::vector<float>& params);
 int packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params);
+
+const ShaderPlugin* materialPlugin(const ecs::Registry& registry, ecs::Entity material);
+const ecs::Component* tiltShift(const ecs::Registry& registry, ecs::Entity camera);
+ecs::Component* tiltShift(ecs::Registry& registry, ecs::Entity camera);
 
 std::vector<ecs::CompositingPassEntry>& compositingPasses(Scene& scene);
 int compositingDispatchCount(Scene& scene);

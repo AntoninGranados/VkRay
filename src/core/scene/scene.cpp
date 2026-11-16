@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "core/ecs/components/core.hpp"
+#include "core/ecs/components/material.hpp"
 #include "core/ecs/entity.hpp"
 #include "utils/log.hpp"
 
@@ -61,8 +62,8 @@ void Scene::addDefaultAssets() {
     roots.internalsRoot = createNamedEntity("Internals");
 
     defaultMaterial = createNamedEntity("Default Material", roots.materialsRoot);
-    registry.add(defaultMaterial, ecs::Diffuse);
-    registry.get(defaultMaterial, ecs::Diffuse).set<glm::vec3>("albedo", glm::vec3(0.5f, 0.0f, 0.5f));
+    registry.add(defaultMaterial, ecs::MaterialPlugin);
+    registry.get(defaultMaterial, ecs::MaterialPlugin).set<std::filesystem::path>("path", ecs::kDiffusePath);
 
     defaultMesh = createNamedEntity("Default Cube", roots.assetsRoot);
     registry.add(defaultMesh, ecs::Mesh);

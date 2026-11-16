@@ -6,9 +6,7 @@ interface ISky {
     float3 evaluate(float3 dir);
 }
 
-struct ScriptSky<T : ISky> : ISky {
-    uint base;
-
+extension<T : ISky> Script<T> : ISky {
     float3 evaluate(float3 dir) {
         return loadParams<T>(base).evaluate(dir);
     }

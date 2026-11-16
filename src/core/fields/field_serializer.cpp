@@ -52,7 +52,7 @@ json fieldValueToJson(const FieldValue& f) {
     case FieldType::Entity:
         return nullptr;
     case FieldType::String:
-        return trimmed(f.get<std::string>());
+        return f.get<std::string>();
     case FieldType::Path:
         return f.get<std::filesystem::path>().string();
     }

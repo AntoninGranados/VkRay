@@ -57,8 +57,8 @@ const MeshAsset* getMeshAsset(Registry& registry, Entity e) {
 bool isMediumCandidate(Registry& registry, const ComponentStorage& materialRefs, const Entity& entity) {
     if (!materialRefs.has(entity)) return false;
     const Entity material = materialRefs.get(entity).get<Entity>("handle");
-    return registry.has(material, Dielectric) || registry.has(material, Volume) || registry.has(material, Principled) ||
-           registry.has(material, MaterialPlugin);
+    const ShaderPlugin* plugin = ScriptTable::materialPlugin(registry, material);
+    return plugin && plugin->hasAttribute("Medium");
 }
 
 bool meshContains(const MeshAsset& mesh, const glm::vec3& point) {
@@ -97,8 +97,8 @@ float containingVolume(Registry& registry, const ComponentType& type, const Enti
 }
 
 float emittedLuminance(Registry& registry, const Entity& materialEntity) {
-    const Component& emissive = registry.get(materialEntity, Emissive);
-    return luminance(emissive.get<glm::vec3>("albedo") * emissive.get<float>("emission_strength"));
+    const Component& emissive = ScriptTable::materialPlugin(registry, materialEntity)->getComponent();
+    return luminance(emissive.get<glm::vec3>("albedo") * emissive.get<float>("emissionStrength"));
 }
 
 bool isSampledLight(Registry& registry, const ComponentStorage& materialRefs, const ComponentType& type,
@@ -107,7 +107,9 @@ bool isSampledLight(Registry& registry, const ComponentStorage& materialRefs, co
     if (type == Plane || !materialRefs.has(entity)) return false;
 
     const Entity materialEntity = materialRefs.get(entity).get<Entity>("handle");
-    if (!registry.has(materialEntity, Emissive) || emittedLuminance(registry, materialEntity) <= 0.0f) return false;
+    const ShaderPlugin* plugin = ScriptTable::materialPlugin(registry, materialEntity);
+    if (!plugin || !plugin->hasAttribute("Emissive") || emittedLuminance(registry, materialEntity) <= 0.0f)
+        return false;
 
     if (type != MeshRef) return true;
     return getMeshAsset(registry, registry.get(entity, MeshRef).get<Entity>("handle")) != nullptr;
@@ -220,18 +222,20 @@ void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
 
     for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
-        if (!ScriptTable::packMaterial(registry, entity, gpu, pluginParams) && !gpuMaterials.empty())
-            gpu = gpuMaterials.front();
+        gpu.base = static_cast<uint32_t>(pluginParams.size());
+        gpu.type = ScriptTable::packScript(registry, entity, ScriptTable::kMaterial, 0, pluginParams);
         gpuMaterials.push_back(gpu);
     }
 
     PackingInfo& packingInfo = scene.getPackingInfo();
     packingInfo.lens.paramsBase = static_cast<int32_t>(pluginParams.size());
     const std::optional<Entity> lensCamera = scene.getActiveCamera();
-    packingInfo.lens.slot = lensCamera ? ScriptTable::packLens(registry, *lensCamera, pluginParams) : -1;
+    packingInfo.lens.slot =
+        lensCamera ? ScriptTable::packScript(registry, *lensCamera, ScriptTable::kLens, -1, pluginParams) : -1;
 
     packingInfo.sky.paramsBase = static_cast<int32_t>(pluginParams.size());
-    packingInfo.sky.slot = ScriptTable::packSky(registry, scene.getEnvironment(), pluginParams);
+    packingInfo.sky.slot =
+        ScriptTable::packScript(registry, scene.getEnvironment(), ScriptTable::kSky, 0, pluginParams);
 
     packingInfo.compositingPasses.clear();
     for (CompositingPassEntry& pass : ScriptTable::compositingPasses(scene)) {

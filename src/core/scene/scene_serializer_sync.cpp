@@ -20,10 +20,12 @@ using json = nlohmann::ordered_json;
 
 namespace {
 
-void reparsePlugins(ecs::Registry& registry, const ecs::ComponentType& type, const ScriptKind& kind) {
-    for (const ecs::Entity entity : registry.storage(type).entities()) {
-        ecs::Component& pluginComp = registry.get(entity, type);
-        pluginComp.payload<ShaderPlugin>("plugin").parse(pluginComp.get<std::filesystem::path>("path"), kind);
+void reparseScripts(ecs::Registry& registry) {
+    for (const ScriptKind* kind : ScriptTable::componentKinds()) {
+        for (const ecs::Entity entity : registry.storage(*kind->component).entities()) {
+            ecs::Component& script = registry.get(entity, *kind->component);
+            script.payload<ShaderPlugin>("plugin").parse(script.get<std::filesystem::path>("path"), *kind);
+        }
     }
 }
 
@@ -105,9 +107,7 @@ bool SceneSerializer::load(Scene& scene, const std::string& path, std::optional<
     resolveDeferredEntityFields(spawn.registry, spawn.deferredEntityFields, buildEntityNameMap(scene, spawn.registry));
     reloadMeshAssets(spawn.registry, scene);
 
-    reparsePlugins(spawn.registry, ecs::MaterialPlugin, ScriptTable::kMaterial);
-    reparsePlugins(spawn.registry, ecs::CameraLensPlugin, ScriptTable::kLens);
-    reparsePlugins(spawn.registry, ecs::SkyPlugin, ScriptTable::kSky);
+    reparseScripts(spawn.registry);
     applyMeshSimplification(spawn.registry, scene);
     parseCompositingPlugins(spawn.registry, spawn.deferredCompositingParams);
     applyDeferredPluginParams(spawn.registry, spawn.animStore, spawn.deferredPluginParams);

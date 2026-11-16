@@ -24,3 +24,9 @@ struct AnimatableAttribute {};
 struct PassCountAttribute {
     int count;
 };
+
+[__AttributeUsage(_AttributeTargets.Struct)]
+struct EmissiveAttribute {};
+
+[__AttributeUsage(_AttributeTargets.Struct)]
+struct MediumAttribute {};

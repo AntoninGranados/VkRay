@@ -13,7 +13,7 @@
             "name": "Light",
             "emissive": {
                 "albedo": [1.0, 1.0, 1.0],
-                "emission_strength": 400.0,
+                "emissionStrength": 400.0,
                 "alpha": 1.0
             }
         },
@@ -62,9 +62,9 @@
                 "focal_distance": 15.0,
                 "f_stop": 1.4
             },
-            "tilt_shift_lens": {
-                "plane_position": [0.0, 0.0, 0.0],
-                "plane_rotation": [35.0, -45.0, 0.0]
+            "tilt_shift": {
+                "planePosition": [0.0, 0.0, 0.0],
+                "planeRotation": [35.0, -45.0, 0.0]
             },
             "name": "Camera",
             "transform": {

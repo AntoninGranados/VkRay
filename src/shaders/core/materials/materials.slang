@@ -1,4 +1,5 @@
 import "../scene.slang";
+import "../random/utils.slang";
 
 __exported import "bsdf.slang";
 __exported import "principled.slang";
@@ -32,6 +33,12 @@ DielectricBsdf Dielectric(float3 albedo, float roughness, float ior, float trans
 // TODO: implement all parameters
 PrincipledBsdf Principled(float3 albedo, float roughness, float metalness, float ior, float alpha) {
     return PrincipledBsdf(albedo, roughness, metalness, ior, 0.0, 0.0, 0.0, alpha, 0);
+}
+
+struct DefaultMaterial : IMaterial {
+    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
+        return DiffuseBsdf(float3(0.5, 0.0, 0.5));
+    }
 }
 
 IMaterial makeMaterial(in Material mat) {

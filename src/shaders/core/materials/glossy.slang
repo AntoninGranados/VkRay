@@ -1,3 +1,4 @@
+import "../attributes.slang";
 import "../scene.slang";
 import "../utils.slang";
 import "../random/utils.slang";
@@ -8,9 +9,9 @@ import "diffuse.slang";
 import "ggx_utils.slang";
 
 struct GlossyBsdf : IBsdf {
-    float3 albedo;
-    float roughness;
-    float ior;
+    [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
+    [Range(0, 1)] [Animatable] float roughness = 0.5;
+    [Range(1, 3)] [Animatable] float ior = 1.5;
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
         if (dot(surface.normal, wi) <= 0.0) return BSDFEval(float3(0.0), 0.0);
@@ -56,15 +57,5 @@ struct GlossyBsdf : IBsdf {
 
     BsdfProperties properties() {
         return BsdfProperties(mat_Glossy, albedo, roughness);
-    }
-}
-
-struct GlossyMaterial : IMaterial {
-    uint base;
-
-    IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
-        GlossyBsdf bsdf = loadParams<GlossyBsdf>(base);
-        bsdf.albedo *= surface.vertexColor;
-        return bsdf;
     }
 }

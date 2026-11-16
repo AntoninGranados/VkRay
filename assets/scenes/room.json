@@ -21,7 +21,7 @@
             "name": "Sun",
             "emissive": {
                 "albedo": [1, 0.9, 0.9],
-                "emission_strength": 5000
+                "emissionStrength": 5000
             }
         },
         {

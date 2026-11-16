@@ -42,11 +42,10 @@ FocusPlane resolveFocusPlane(const ecs::Registry& reg, ecs::Entity selected, con
     const ecs::Component& t = reg.get(camera, ecs::Transform);
 
     glm::vec3 normal, point;
-    if (reg.has(selected, ecs::TiltShiftLens)) {
-        const ecs::Component& ts = reg.get(selected, ecs::TiltShiftLens);
+    if (const ecs::Component* ts = ScriptTable::tiltShift(reg, selected)) {
         normal =
-            glm::normalize(glm::quat(glm::radians(ts.get<glm::vec3>("plane_rotation"))) * glm::vec3(0.0f, 0.0f, 1.0f));
-        point = ts.get<glm::vec3>("plane_position");
+            glm::normalize(glm::quat(glm::radians(ts->get<glm::vec3>("planeRotation"))) * glm::vec3(0.0f, 0.0f, 1.0f));
+        point = ts->get<glm::vec3>("planePosition");
     } else {
         normal = directionFromRotation(t.get<glm::vec3>("rotation"));
         point = t.get<glm::vec3>("position") + normal * resolveFocusDistance(reg, selected);

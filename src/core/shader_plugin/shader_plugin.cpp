@@ -29,15 +29,15 @@ std::vector<ShaderPlugin*>& ShaderPlugin::registry() {
 }
 
 void ShaderPlugin::appendConformances(const ScriptKind& kind, std::vector<VkSmol::ShaderConformance>& conformances) {
-    for (size_t i = 0; i < kind.builtins.size(); i++)
-        conformances.push_back({kind.builtins[i], kind.interfaceName, static_cast<int>(i), ""});
+    for (size_t i = 0; i < kind.defaults.size(); i++)
+        conformances.push_back({kind.defaults[i], kind.dispatchInterface, static_cast<int>(i), ""});
 
     std::unordered_set<int> seenSlots;
     for (const ShaderPlugin* plugin : registry()) {
         if (plugin->kind != &kind || plugin->structName.empty()) continue;
         if (!seenSlots.insert(plugin->slot).second) continue;
-        conformances.push_back({std::format("{}<{}>", kind.wrapperName, plugin->structName), kind.interfaceName,
-                                plugin->slot, plugin->path->string()});
+        conformances.push_back({std::format("Script<{}>", plugin->structName), kind.dispatchInterface, plugin->slot,
+                                plugin->path->string()});
     }
 }
 
@@ -101,25 +101,30 @@ bool ShaderPlugin::appendFields(const std::vector<VkSmol::ShaderField>& shaderFi
 
 bool ShaderPlugin::reflect(std::vector<Field>& fields) {
     std::vector<VkSmol::ShaderStruct> structs;
-    try {
-        structs = Core::getEngine().getShaderStructs(path->string(), kind->interfaceName);
-    } catch (const std::exception& exception) {
-        error = exception.what();
-        return false;
+    for (const std::string& interfaceName : kind->interfaces) {
+        try {
+            structs = Core::getEngine().getShaderStructs(path->string(), interfaceName);
+        } catch (const std::exception& exception) {
+            error = exception.what();
+            return false;
+        }
+        if (!structs.empty()) break;
     }
 
     if (structs.size() != 1) {
-        error = std::format("{}: expected one struct implementing {}, found {}", path->string(), kind->interfaceName,
-                            structs.size());
+        error = std::format("{}: expected one struct implementing {}, found {}", path->string(),
+                            kind->dispatchInterface, structs.size());
         return false;
     }
 
     const VkSmol::ShaderStruct& script = structs[0];
     if (!appendFields(script.fields, "", fields)) return false;
 
-    for (const VkSmol::ShaderAttribute& attribute : script.attributes)
+    for (const VkSmol::ShaderAttribute& attribute : script.attributes) {
+        attributes.push_back(attribute.name);
         if (attribute.name == "PassCount" && attribute.arguments.size() == 1)
             passCount = std::max(1, static_cast<int>(attribute.arguments[0]));
+    }
 
     structName = script.name;
     source = Resources::read(*path).value_or("");
@@ -130,6 +135,7 @@ void ShaderPlugin::load(bool migrate) {
     error.clear();
     source.clear();
     structName.clear();
+    attributes.clear();
     passCount = 1;
 
     std::vector<Field> fields;
@@ -163,7 +169,7 @@ bool ShaderPlugin::parse(const std::filesystem::path& newPath, const ScriptKind&
 
     path = newPath;
     kind = &newKind;
-    slot = static_cast<int>(kind->builtins.size()) +
+    slot = static_cast<int>(kind->defaults.size()) +
            slots.try_emplace(newPath, static_cast<int>(slots.size())).first->second;
 
     load(false);

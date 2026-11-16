@@ -124,11 +124,6 @@ std::string resolveTemplate(std::string tmpl, const ResolveCtx& ctx) {
     return tmpl;
 }
 
-std::string trimmed(const std::string& s) {
-    const auto pos = s.find('\0');
-    return pos != std::string::npos ? s.substr(0, pos) : s;
-}
-
 static std::string inlineJson(const json& j) {
     if (j.is_object()) {
         std::string s = "{ ";
