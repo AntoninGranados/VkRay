@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <filesystem>
 #include <initializer_list>
 #include <vector>
 
@@ -25,6 +26,11 @@ extern const ScriptKind kLens;
 extern const ScriptKind kCompositing;
 
 const std::array<const ScriptKind*, 3>& componentKinds();
+const ScriptKind* kindOf(const ecs::ComponentType& type);
+
+ecs::Component* findScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind);
+const ecs::Component* findScript(const ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind);
+std::filesystem::path scriptPath(const ecs::Component& script);
 
 int packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
                std::vector<float>& params);

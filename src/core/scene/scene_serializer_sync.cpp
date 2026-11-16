@@ -22,9 +22,11 @@ namespace {
 
 void reparseScripts(ecs::Registry& registry) {
     for (const ScriptKind* kind : ScriptTable::componentKinds()) {
-        for (const ecs::Entity entity : registry.storage(*kind->component).entities()) {
-            ecs::Component& script = registry.get(entity, *kind->component);
-            script.payload<ShaderPlugin>("plugin").parse(script.get<std::filesystem::path>("path"), *kind);
+        for (const ecs::ComponentType* type : kind->components) {
+            for (const ecs::Entity entity : registry.storage(*type).entities()) {
+                ecs::Component& script = registry.get(entity, *type);
+                script.payload<ShaderPlugin>("plugin").parse(ScriptTable::scriptPath(script), *kind);
+            }
         }
     }
 }

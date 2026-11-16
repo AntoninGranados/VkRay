@@ -88,7 +88,7 @@ Relative file paths (meshes, shader scripts, aperture images, compositing passes
 ]
 ```
 
-The built-in BSDFs are scripts too (`builtin:/shaders/core/materials/*.slang`, and `builtin:/camera/tilt_shift.slang` for the lens). Their file name works as a component key, so `"diffuse": { "albedo": [1, 0, 0] }` is the same as `"programmable": { "path": "builtin:/shaders/core/materials/diffuse.slang", "albedo": [1, 0, 0] }`. A material script implements `IBsdf` (a BSDF whose fields are its parameters) or `IMaterial` (composes BSDFs). Struct attributes `[Emissive]` (needs `albedo` and `emissionStrength` fields) and `[Medium]` tell the renderer to sample the material as a light or track it as a medium.
+The built-in BSDFs (`diffuse`, `emissive`, `metal`, `glossy`, `dielectric`, `volume`, `principled`) are their own components, e.g. `"diffuse": { "albedo": [1, 0, 0] }`. They are implemented by Slang structs in `builtin:/shaders/core/materials/` like any script, but have a fixed shader and no `path`. The tilt-shift lens is `builtin:/camera/tilt_shift.slang`, and its file name works as a component key. A material script implements `IBsdf` (a BSDF whose fields are its parameters) or `IMaterial` (composes BSDFs). Struct attributes `[Emissive]` (needs `albedo` and `emissionStrength` fields) and `[Medium]` tell the renderer to sample the material as a light or track it as a medium.
 
 The compositing chain is an ordered list of passes, each with its own script and parameters:
 

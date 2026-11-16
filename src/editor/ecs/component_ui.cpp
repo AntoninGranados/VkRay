@@ -37,6 +37,13 @@ void ComponentUi::draw(Registry& registry, Entity entity) {
                                                   &CameraLensPlugin,
                                                   &Material,
                                                   &MaterialRef,
+                                                  &Diffuse,
+                                                  &Emissive,
+                                                  &Metal,
+                                                  &Glossy,
+                                                  &Dielectric,
+                                                  &Volume,
+                                                  &Principled,
                                                   &MaterialPlugin,
                                                   &Environment,
                                                   &Physics,
@@ -74,8 +81,7 @@ bool ComponentUi::drawComponent(Component& component, Registry& registry, Entity
     const ComponentType& type = component.getType();
     if (type == MeshSimplify) return drawMeshSimplify(component, registry, entity);
     if (type == Compositing) return drawCompositing(component);
-    for (const ScriptKind* kind : ScriptTable::componentKinds())
-        if (type == *kind->component) return drawShaderPluginField(component, *kind);
+    if (const ScriptKind* kind = ScriptTable::kindOf(type)) return drawShaderPluginField(component, *kind);
 
     const std::string header = std::format("{} {}", type.getIcon(), type.getLabel());
     const bool hasExtra = type == Mesh || type == Material || type == MaterialRef || type == Physics;
@@ -228,10 +234,11 @@ bool ComponentUi::drawShaderPluginField(Component& component, const ScriptKind& 
     const std::string header = component.getType().getIcon() + " " + component.getType().getLabel();
     if (!ImGui::CollapsingHeader(header.c_str())) return false;
 
-    bool update = ui::drawField(component.getField("path"), "##path");
+    bool update = false;
+    if (component.getType().getScript().empty()) update = ui::drawField(component.getField("path"), "##path");
 
     ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
-    plugin.parse(component.get<std::filesystem::path>("path"), kind);
+    plugin.parse(ScriptTable::scriptPath(component), kind);
 
     update |= drawPluginErrorAndFields(plugin, std::format("##{}", header));
     return update;

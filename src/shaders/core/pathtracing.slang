@@ -58,6 +58,7 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         pixelInfo.aov.normal    = float2(0.0);
         pixelInfo.aov.albedo    = float3(0.0);
         pixelInfo.aov.roughness = 0.0;
+        pixelInfo.aov.uv        = float2(0.0);
         return;
     }
 
@@ -86,6 +87,7 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         pixelInfo.aov.normal    = lerp(pixelInfo.aov.normal,    normal,    guideMix);
         pixelInfo.aov.albedo    = lerp(pixelInfo.aov.albedo,    albedo,    guideMix);
         pixelInfo.aov.roughness = lerp(pixelInfo.aov.roughness, roughness, guideMix);
+        pixelInfo.aov.uv        = lerp(pixelInfo.aov.uv,        surfacePoint.uv, guideMix);
     } else {
         pixelInfo.aov.positionW = positionW;
         pixelInfo.aov.position  = position;
@@ -93,7 +95,8 @@ void collectGBuffer(in Ray ray, inout PixelInfo pixelInfo, inout RngState rng) {
         pixelInfo.aov.normal    = normal;
         pixelInfo.aov.albedo    = albedo;
         pixelInfo.aov.roughness = roughness;
-        pixelInfo.aov.matType   = uint(properties.type);
+        pixelInfo.aov.uv        = surfacePoint.uv;
+        pixelInfo.aov.matType  = uint(properties.type);
         pixelInfo.aov.hitValid  = 1u;
     }
 }

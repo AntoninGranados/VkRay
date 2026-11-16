@@ -26,8 +26,7 @@ void MaterialPreview::init() {
     scene.setActiveCamera(previewCamera);
 
     previewMaterialEntity = scene.createNamedEntity("Preview Material", scene.getMaterialsRoot());
-    registry.add(previewMaterialEntity, ecs::MaterialPlugin);
-    registry.get(previewMaterialEntity, ecs::MaterialPlugin).set<std::filesystem::path>("path", ecs::kDiffusePath);
+    registry.add(previewMaterialEntity, ecs::Diffuse);
 
     const ecs::Entity previewObject = scene.createNamedEntity("Preview Sphere", scene.getObjectsRoot());
     registry.add(previewObject, ecs::Sphere);
@@ -35,11 +34,10 @@ void MaterialPreview::init() {
     registry.get(previewObject, ecs::MaterialRef).set<ecs::Entity>("handle", previewMaterialEntity);
 
     const ecs::Entity lightMaterialEntity = scene.createNamedEntity("Preview Light Material", scene.getMaterialsRoot());
-    registry.add(lightMaterialEntity, ecs::MaterialPlugin);
-    ecs::Component& lightMaterial = registry.get(lightMaterialEntity, ecs::MaterialPlugin);
-    lightMaterial.set<std::filesystem::path>("path", ecs::kEmissivePath);
-    ShaderPlugin& lightPlugin = lightMaterial.payload<ShaderPlugin>("plugin");
-    lightPlugin.parse(ecs::kEmissivePath, ScriptTable::kMaterial);
+    registry.add(lightMaterialEntity, ecs::Emissive);
+    ShaderPlugin& lightPlugin = registry.get(lightMaterialEntity, ecs::Emissive).payload<ShaderPlugin>("plugin");
+    lightPlugin.parse(ScriptTable::scriptPath(registry.get(lightMaterialEntity, ecs::Emissive)),
+                      ScriptTable::kMaterial);
     lightPlugin.getComponent().set<float>("emissionStrength", 50.0f);
 
     const ecs::Entity lightObject = scene.createNamedEntity("Preview Light", scene.getObjectsRoot());
@@ -74,7 +72,8 @@ void MaterialPreview::addPasses(VkSmol::RenderGraph& graph) {
 }
 
 const ecs::ComponentType* MaterialPreview::resolveBsdfType(ecs::Registry& registry, ecs::Entity entity) const {
-    return registry.has(entity, ecs::MaterialPlugin) ? &ecs::MaterialPlugin : nullptr;
+    const ecs::Component* script = ScriptTable::findScript(registry, entity, ScriptTable::kMaterial);
+    return script ? &script->getType() : nullptr;
 }
 
 ecs::Entity MaterialPreview::resolveMaterialSource(ecs::Entity entity) const {
@@ -90,11 +89,9 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
     if (fingerprint.type) {
         const ecs::Component& component = registry.get(entity, *fingerprint.type);
         for (const Field& field : component.getFields()) fingerprint.fields.push_back(field);
-        if (*fingerprint.type == ecs::MaterialPlugin) {
-            const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
-            fingerprint.programmableBody = plugin.getSource();
-            fingerprint.programmableValues = plugin.packValues();
-        }
+        const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
+        fingerprint.programmableBody = plugin.getSource();
+        fingerprint.programmableValues = plugin.packValues();
     }
     return fingerprint;
 }
@@ -125,14 +122,12 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
 
     for (const Field& field : source.getFields()) preview.getField(field.getId()) = field;
 
-    if (type == ecs::MaterialPlugin) {
-        ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
-        previewPlugin.parse(source.get<std::filesystem::path>("path"), ScriptTable::kMaterial);
+    ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
+    previewPlugin.parse(ScriptTable::scriptPath(source), ScriptTable::kMaterial);
 
-        const ShaderPlugin& sourcePlugin = source.payload<ShaderPlugin>("plugin");
-        for (const Field& field : sourcePlugin.getComponent().getFields())
-            previewPlugin.getComponent().getField(field.getId()) = field;
-    }
+    const ShaderPlugin& sourcePlugin = source.payload<ShaderPlugin>("plugin");
+    for (const Field& field : sourcePlugin.getComponent().getFields())
+        previewPlugin.getComponent().getField(field.getId()) = field;
 
     previewRegistry.markChanged(type);
 }

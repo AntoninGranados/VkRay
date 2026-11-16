@@ -170,14 +170,8 @@ bool hasPluginPayload(const ecs::ComponentType& type) {
 }
 
 std::optional<std::pair<std::string, std::string>> findBuiltinScript(const std::string& key) {
-    static const std::pair<const char*, const char*> directories[] = {
-        {"programmable", "builtin:/shaders/core/materials/"},
-        {"programmable_lens", "builtin:/camera/"},
-    };
-    for (const auto& [component, directory] : directories) {
-        const std::string path = std::format("{}{}.slang", directory, key);
-        if (Resources::find(path)) return std::pair{std::string(component), path};
-    }
+    const std::string path = std::format("builtin:/camera/{}.slang", key);
+    if (Resources::find(path)) return std::pair{std::string("programmable_lens"), path};
     return std::nullopt;
 }
 

@@ -29,6 +29,7 @@ struct AOVBuffer {
     float roughness;
     uint  matType;
     uint  skyMask;
+    float2  uv;
 };
 
 struct PixelInfo {
@@ -54,6 +55,7 @@ static const int debug_Bounces = 8;
 static const int debug_HitChecks = 9;
 static const int debug_Variance = 10;
 static const int debug_SkyMask = 11;
+static const int debug_Uv = 12;
 
 static const float TRI_EPS = 1e-8;
 static const float EPS = 1e-4;
@@ -120,6 +122,7 @@ struct Vertex {
     float3 position;
     float3 normal;
     float3 color;
+    float2 uv;
 };
 
 struct BvhChild {

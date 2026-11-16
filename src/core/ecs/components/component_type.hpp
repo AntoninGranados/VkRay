@@ -41,6 +41,7 @@ public:
     const std::vector<std::string>& getNeeds() const { return needs; }
     bool isKind() const { return kind; }
     const std::string& getSlot() const { return slot; }
+    const std::string& getScript() const { return script; }
     bool isPermanent() const { return permanent; }
 
     const std::vector<Field>& getFields() const { return fields; }
@@ -71,6 +72,7 @@ private:
     std::string group;
     bool kind = false;
     std::string slot;
+    std::string script;
     bool permanent = false;
 
     std::vector<std::string> needs;
@@ -93,6 +95,10 @@ public:
     }
     Builder& slot(std::string slot) {
         type.slot = std::move(slot);
+        return *this;
+    }
+    Builder& script(std::string script) {
+        type.script = std::move(script);
         return *this;
     }
     Builder& permanent() {

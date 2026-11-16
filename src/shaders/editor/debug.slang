@@ -52,6 +52,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
     else if (ubo.debugView == debug_HitChecks)     { float bvh = float(pix.bvhChecks) / 256.0; float tri = float(pix.triangleChecks) / 256.0; color = max(bvh, tri) > 1.0 ? float3(1.0) : float3(tri, 0.0, bvh); }
     else if (ubo.debugView == debug_Variance)      { color = visualize(pix.varianceProba); }
     else if (ubo.debugView == debug_SkyMask)       { color = visualize(pix.aov.skyMask); }
+    else if (ubo.debugView == debug_Uv)            { color = HIT(float3(frac(pix.aov.uv), 0.0)); }
 
     debugOut[coord] = float4(color, 1.0);
 }

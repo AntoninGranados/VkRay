@@ -128,6 +128,41 @@ Material reference.
 |-------|------|---------|-------------|------------|
 | `handle` | entity |  |  | no |
 
+### Diffuse
+Diffuse BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Emissive
+Emissive light source BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Metal
+GGX metallic BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Glossy
+GGX glossy dielectric BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Dielectric
+Dielectric refractive BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Volume
+Homogeneous participating media BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
+### Principled
+PBR principled BSDF.
+
+**Slot:** `bsdf` · **Needs:** `material`
+
 ### Programmable
 Programmable material, defined by a Slang script implementing IBsdf or IMaterial.
 

@@ -62,8 +62,7 @@ void Scene::addDefaultAssets() {
     roots.internalsRoot = createNamedEntity("Internals");
 
     defaultMaterial = createNamedEntity("Default Material", roots.materialsRoot);
-    registry.add(defaultMaterial, ecs::MaterialPlugin);
-    registry.get(defaultMaterial, ecs::MaterialPlugin).set<std::filesystem::path>("path", ecs::kDiffusePath);
+    registry.add(defaultMaterial, ecs::Diffuse);
 
     defaultMesh = createNamedEntity("Default Cube", roots.assetsRoot);
     registry.add(defaultMesh, ecs::Mesh);

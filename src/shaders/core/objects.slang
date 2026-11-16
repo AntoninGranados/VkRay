@@ -235,7 +235,10 @@ Hit rayMeshIntersection(in Ray ray, in Mesh mesh, bool anyHit, float tMax, inout
         normal = normalize(cross(v1 - v0, v2 - v0));
     }
 
-    Hit meshHit = makeHit(ray, OBJECT_AABB, tClosest, float2(0), normal);
+    float2 uv0 = scene.vertices[bestI0].uv;
+    float2 uv1 = scene.vertices[bestI1].uv;
+    float2 uv2 = scene.vertices[bestI2].uv;
+    Hit meshHit = makeHit(ray, OBJECT_AABB, tClosest, (1.0 - bestU - bestV) * uv0 + bestU * uv1 + bestV * uv2, normal);
     if (mesh.hasVertexColor == 1u) {
         float3 c0 = scene.vertices[bestI0].color;
         float3 c1 = scene.vertices[bestI1].color;

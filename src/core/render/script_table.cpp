@@ -1,5 +1,6 @@
 #include "script_table.hpp"
 
+#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <utility>
@@ -13,11 +14,14 @@
 #include "core/ecs/registry.hpp"
 #include "core/scene/scene.hpp"
 
-const ScriptKind ScriptTable::kMaterial = {
-    "IMaterial", {"IBsdf", "IMaterial"}, {"DefaultMaterial"}, &ecs::MaterialPlugin};
-const ScriptKind ScriptTable::kSky = {"ISky", {"ISky"}, {"DefaultSky"}, &ecs::SkyPlugin};
-const ScriptKind ScriptTable::kLens = {"ILens", {"ILens"}, {"DefaultLens"}, &ecs::CameraLensPlugin};
-const ScriptKind ScriptTable::kCompositing = {"ICompositingPass", {"ICompositingPass"}, {"IdentityPass"}};
+const ScriptKind ScriptTable::kMaterial = {"IMaterial",
+                                           {"IBsdf", "IMaterial"},
+                                           {"DefaultMaterial"},
+                                           {&ecs::MaterialPlugin, &ecs::Diffuse, &ecs::Emissive, &ecs::Metal,
+                                            &ecs::Glossy, &ecs::Dielectric, &ecs::Volume, &ecs::Principled}};
+const ScriptKind ScriptTable::kSky = {"ISky", {"ISky"}, {"DefaultSky"}, {&ecs::SkyPlugin}};
+const ScriptKind ScriptTable::kLens = {"ILens", {"ILens"}, {"DefaultLens"}, {&ecs::CameraLensPlugin}};
+const ScriptKind ScriptTable::kCompositing = {"ICompositingPass", {"ICompositingPass"}, {"IdentityPass"}, {}};
 
 namespace {
 
@@ -37,12 +41,36 @@ const std::array<const ScriptKind*, 3>& ScriptTable::componentKinds() {
     return kinds;
 }
 
+const ScriptKind* ScriptTable::kindOf(const ecs::ComponentType& type) {
+    for (const ScriptKind* kind : componentKinds())
+        if (std::ranges::any_of(kind->components,
+                                [&](const ecs::ComponentType* component) { return *component == type; }))
+            return kind;
+    return nullptr;
+}
+
+const ecs::Component* ScriptTable::findScript(const ecs::Registry& registry, ecs::Entity entity,
+                                              const ScriptKind& kind) {
+    if (entity == ecs::Entity{}) return nullptr;
+    for (const ecs::ComponentType* type : kind.components)
+        if (registry.has(entity, *type)) return &registry.get(entity, *type);
+    return nullptr;
+}
+
+ecs::Component* ScriptTable::findScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind) {
+    return const_cast<ecs::Component*>(findScript(std::as_const(registry), entity, kind));
+}
+
+std::filesystem::path ScriptTable::scriptPath(const ecs::Component& script) {
+    const std::string& builtin = script.getType().getScript();
+    return builtin.empty() ? script.get<std::filesystem::path>("path") : std::filesystem::path(builtin);
+}
+
 int ScriptTable::packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
                             std::vector<float>& params) {
-    if (entity == ecs::Entity{} || !registry.has(entity, *kind.component)) return fallback;
-
-    ecs::Component& c = registry.get(entity, *kind.component);
-    return packPlugin(c.payload<ShaderPlugin>("plugin"), c.get<std::filesystem::path>("path"), kind, fallback, params);
+    ecs::Component* script = findScript(registry, entity, kind);
+    if (!script) return fallback;
+    return packPlugin(script->payload<ShaderPlugin>("plugin"), scriptPath(*script), kind, fallback, params);
 }
 
 int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params) {
@@ -50,8 +78,8 @@ int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, std::vecto
 }
 
 const ShaderPlugin* ScriptTable::materialPlugin(const ecs::Registry& registry, ecs::Entity material) {
-    if (!registry.has(material, ecs::MaterialPlugin)) return nullptr;
-    return &registry.get(material, ecs::MaterialPlugin).payload<ShaderPlugin>("plugin");
+    const ecs::Component* script = findScript(registry, material, kMaterial);
+    return script ? &script->payload<ShaderPlugin>("plugin") : nullptr;
 }
 
 const ecs::Component* ScriptTable::tiltShift(const ecs::Registry& registry, ecs::Entity camera) {

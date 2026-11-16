@@ -18,7 +18,7 @@ struct ScriptKind {
     std::string dispatchInterface;
     std::vector<std::string> interfaces;
     std::vector<std::string> defaults;
-    const ecs::ComponentType* component = nullptr;
+    std::vector<const ecs::ComponentType*> components;
 };
 
 class ShaderPlugin {

@@ -22,6 +22,7 @@ enum class DebugView : int {
     HitChecks,
     Variance,
     SkyMask,
+    Uv,
 };
 
 enum class ViewportShading : int { Rasterized = 0, PathTraced };
@@ -85,6 +86,7 @@ struct alignas(16) AOVBuffer {
     float roughness;
     uint32_t matType;
     uint32_t skyMask;
+    alignas(8) glm::vec2 uv;
 };
 
 struct PixelInfo {
