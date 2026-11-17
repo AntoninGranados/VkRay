@@ -36,6 +36,10 @@ public:
     std::string getCompositingPassName() const { return tag + "CompositingPass0"; }
     VkSmol::ImageHandle getOutputImageHandle() const { return resources.outputImageHandle; }
     const RenderResources& getResources() const { return resources; }
+    void shareTextures(const SceneGpuBuffers& source) {
+        resources.sceneHandles.textures = source.textures;
+        resources.sceneHandles.sharesTextures = true;
+    }
 
     float getFrustumScale() const { return frustumScale; }
     void setFrustumScale(float scale) { frustumScale = scale; }

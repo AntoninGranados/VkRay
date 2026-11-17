@@ -11,6 +11,7 @@
 #include "editor_ui.hpp"
 #include "input_handler.hpp"
 #include "material_preview.hpp"
+#include "texture_preview.hpp"
 
 class Editor {
 public:
@@ -21,6 +22,7 @@ public:
     static EditorUi& getUi();
     static EditorRenderer& getEditorRenderer();
     static MaterialPreview& getMaterialPreview();
+    static TexturePreview& getTexturePreview();
 
     static std::optional<ecs::Entity> getSelectedEntity();
     static void selectEntity(std::optional<ecs::Entity> entity);
@@ -50,6 +52,7 @@ private:
     InputHandler inputHandler;
     EditorRenderer editorRenderer;
     MaterialPreview materialPreview;
+    TexturePreview texturePreview;
 
     std::optional<ecs::Entity> selectedEntity;
     ecs::Entity viewportCamera;

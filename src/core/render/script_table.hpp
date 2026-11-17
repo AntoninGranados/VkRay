@@ -33,8 +33,8 @@ const ecs::Component* findScript(const ecs::Registry& registry, ecs::Entity enti
 std::filesystem::path scriptPath(const ecs::Component& script);
 
 int packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
-               std::vector<float>& params);
-int packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params);
+               const TextureSlots& textureSlots, std::vector<float>& params);
+int packCompositingPass(ecs::CompositingPassEntry& pass, const TextureSlots& textureSlots, std::vector<float>& params);
 
 const ShaderPlugin* materialPlugin(const ecs::Registry& registry, ecs::Entity material);
 const ecs::Component* tiltShift(const ecs::Registry& registry, ecs::Entity camera);

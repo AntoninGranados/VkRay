@@ -20,35 +20,23 @@
 namespace ecs {
 
 void ComponentUi::draw(Registry& registry, Entity entity) {
-    static const ComponentType* const kOrder[] = {&Name,
-                                                  &Transform,
-                                                  &Sphere,
-                                                  &Plane,
-                                                  &Box,
-                                                  &Quad,
-                                                  &Mesh,
-                                                  &MeshSimplify,
-                                                  &MeshRef,
-                                                  &Collider,
-                                                  &RigidBody,
-                                                  &Camera,
-                                                  &GeometricAperture,
-                                                  &ImageAperture,
-                                                  &CameraLensPlugin,
-                                                  &Material,
-                                                  &MaterialRef,
-                                                  &Diffuse,
-                                                  &Emissive,
-                                                  &Metal,
-                                                  &Glossy,
-                                                  &Dielectric,
-                                                  &Volume,
-                                                  &Principled,
-                                                  &MaterialPlugin,
-                                                  &Environment,
-                                                  &Physics,
-                                                  &SkyPlugin,
-                                                  &Compositing};
+    static const ComponentType* const kOrder[] = {
+        &Name,          &Transform,
+        &Sphere,        &Plane,
+        &Box,           &Quad,
+        &Mesh,          &Texture,
+        &MeshSimplify,  &MeshRef,
+        &Collider,      &RigidBody,
+        &Camera,        &GeometricAperture,
+        &ImageAperture, &CameraLensPlugin,
+        &Material,      &MaterialRef,
+        &Diffuse,       &Emissive,
+        &Metal,         &Glossy,
+        &Dielectric,    &Volume,
+        &Principled,    &MaterialPlugin,
+        &Environment,   &Physics,
+        &SkyPlugin,     &Compositing,
+    };
 
     for (const ComponentType* type : kOrder) {
         if (!registry.has(entity, *type)) continue;
@@ -99,6 +87,9 @@ bool ComponentUi::drawComponent(Component& component, Registry& registry, Entity
             ImGui::Text("Faces:    %zu", mesh->getIndices().size() / 3);
             ImGui::EndChild();
         }
+    } else if (type == Texture) {
+        if (const auto preview = Editor::getTexturePreview().get(entity))
+            ui::drawResizableImage("##TexturePreview", *preview);
     } else if (type == Material) {
         Editor::getMaterialPreview().drawPreview(entity);
     } else if (type == MaterialRef) {

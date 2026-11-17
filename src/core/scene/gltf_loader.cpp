@@ -14,6 +14,7 @@
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer_internal.hpp"
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
 #include "utils/transform_utils.hpp"
 
 bool GltfLoader::load(Scene& scene, const std::filesystem::path& path) {
@@ -43,7 +44,8 @@ bool GltfLoader::load(Scene& scene, const std::filesystem::path& path) {
     scene.clear();
     ensureSceneDefaults(scene);
 
-    GltfLoader loader(scene, std::move(parsed.get()));
+    GltfLoader loader(scene, std::move(parsed.get()), std::filesystem::absolute(path).parent_path());
+    loader.loadTextures();
     loader.loadMaterials();
     for (const size_t node : loader.asset.scenes[loader.asset.defaultScene.value_or(0)].nodeIndices)
         loader.loadNode(node, glm::mat4(1.0f));
@@ -57,6 +59,54 @@ void GltfLoader::setScript(ecs::Entity material, const ecs::ComponentType& type,
     registry.add(material, type);
     ShaderPlugin& plugin = registry.get(material, type).payload<ShaderPlugin>("plugin");
     for (const auto& [id, values] : parameters) plugin.setParameter(id, values);
+}
+
+std::vector<uint8_t> GltfLoader::readImage(const fastgltf::Image& image) const {
+    const auto copy = [](const std::byte* data, size_t size) {
+        return std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(data),
+                                    reinterpret_cast<const uint8_t*>(data) + size);
+    };
+    return std::visit(
+        fastgltf::visitor{
+            [&](const fastgltf::sources::Array& source) { return copy(source.bytes.data(), source.bytes.size()); },
+            [&](const fastgltf::sources::BufferView& source) {
+                const fastgltf::BufferView& view = asset.bufferViews[source.bufferViewIndex];
+                const auto* buffer = std::get_if<fastgltf::sources::Array>(&asset.buffers[view.bufferIndex].data);
+                return buffer ? copy(buffer->bytes.data() + view.byteOffset, view.byteLength) : std::vector<uint8_t>{};
+            },
+            [](const auto&) { return std::vector<uint8_t>{}; },
+        },
+        image.data);
+}
+
+void GltfLoader::loadTextures() {
+    ecs::Registry& registry = scene.getRegistry();
+    for (size_t i = 0; i < asset.images.size(); i++) {
+        const fastgltf::Image& image = asset.images[i];
+        const auto* uri = std::get_if<fastgltf::sources::URI>(&image.data);
+        const std::filesystem::path file = uri ? directory / uri->uri->fspath() : std::filesystem::path();
+        const std::string name = !file.empty()         ? file.filename().string()
+                                 : !image.name.empty() ? image.name
+                                                       : std::format("Texture {}", i);
+
+        const ecs::Entity entity = scene.createNamedEntity(name, scene.getAssetsRoot());
+        registry.add(entity, ecs::Texture);
+        ecs::Component& texture = registry.get(entity, ecs::Texture);
+        texture.set<bool>("srgb", false);
+        texture.set<std::filesystem::path>("path", file);
+        texture.payload<TextureAsset>("data").encoded = readImage(image);
+        images.push_back(entity);
+    }
+}
+
+ecs::Entity GltfLoader::textureEntity(const fastgltf::optional<fastgltf::TextureInfo>& info, bool srgb) {
+    if (!info) return {};
+    if (info->texCoordIndex != 0) Log::warn("GltfLoader", "Only TEXCOORD_0 is supported for textures");
+
+    const auto image = asset.textures[info->textureIndex].imageIndex;
+    if (!image) return {};
+    if (srgb) scene.getRegistry().get(images[*image], ecs::Texture).set<bool>("srgb", true);
+    return images[*image];
 }
 
 void GltfLoader::loadMaterials() {
@@ -82,6 +132,12 @@ void GltfLoader::loadMaterials() {
                    {"metalness", {material.pbrData.metallicFactor}},
                    {"ior", {material.ior}},
                    {"transmission", {material.transmission ? material.transmission->transmissionFactor : 0.0f}}});
+
+        ShaderPlugin& plugin = scene.getRegistry().get(entity, ecs::Principled).payload<ShaderPlugin>("plugin");
+        const ecs::Entity metallicRoughness = textureEntity(material.pbrData.metallicRoughnessTexture, false);
+        plugin.setParameter("albedoTexture", textureEntity(material.pbrData.baseColorTexture, true));
+        plugin.setParameter("roughnessTexture", metallicRoughness);
+        plugin.setParameter("metalnessTexture", metallicRoughness);
     }
 }
 

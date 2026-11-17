@@ -26,10 +26,10 @@ const ScriptKind ScriptTable::kCompositing = {"ICompositingPass", {"ICompositing
 namespace {
 
 int packPlugin(ShaderPlugin& plugin, const std::filesystem::path& path, const ScriptKind& kind, int fallback,
-               std::vector<float>& params) {
+               const TextureSlots& textureSlots, std::vector<float>& params) {
     if (!plugin.parse(path, kind)) return fallback;
 
-    const std::vector<float> values = plugin.packValues();
+    const std::vector<float> values = plugin.packValues(textureSlots);
     params.insert(params.end(), values.begin(), values.end());
     return plugin.getSlot();
 }
@@ -67,14 +67,16 @@ std::filesystem::path ScriptTable::scriptPath(const ecs::Component& script) {
 }
 
 int ScriptTable::packScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind, int fallback,
-                            std::vector<float>& params) {
+                            const TextureSlots& textureSlots, std::vector<float>& params) {
     ecs::Component* script = findScript(registry, entity, kind);
     if (!script) return fallback;
-    return packPlugin(script->payload<ShaderPlugin>("plugin"), scriptPath(*script), kind, fallback, params);
+    return packPlugin(script->payload<ShaderPlugin>("plugin"), scriptPath(*script), kind, fallback, textureSlots,
+                      params);
 }
 
-int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, std::vector<float>& params) {
-    return packPlugin(*pass.plugin, pass.path, kCompositing, 0, params);
+int ScriptTable::packCompositingPass(ecs::CompositingPassEntry& pass, const TextureSlots& textureSlots,
+                                     std::vector<float>& params) {
+    return packPlugin(*pass.plugin, pass.path, kCompositing, 0, textureSlots, params);
 }
 
 const ShaderPlugin* ScriptTable::materialPlugin(const ecs::Registry& registry, ecs::Entity material) {

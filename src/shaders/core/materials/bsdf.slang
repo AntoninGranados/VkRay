@@ -12,8 +12,9 @@ struct BsdfProperties {
     bool passThrough = false;
 };
 
-[anyValueSize(44)]
+[anyValueSize(56)]
 interface IBsdf {
+    [mutating] void shade(SurfacePoint surface) {}
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi);
     BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng);
     BsdfProperties properties();
@@ -39,6 +40,7 @@ extension<T : IBsdf> Script<T> : IMaterial {
     IBsdf evaluate(inout SurfacePoint surface, float3 wo, inout RngState rng) {
         T bsdf = loadParams<T>(base);
         bsdf.albedo *= surface.vertexColor;
+        bsdf.shade(surface);
         return bsdf;
     }
 

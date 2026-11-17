@@ -12,6 +12,7 @@
 #include "core/ecs/components/component_type.hpp"
 #include "core/ecs/entity.hpp"
 #include "core/scene/asset/mesh.hpp"
+#include "core/scene/asset/texture.hpp"
 
 namespace ecs {
 
@@ -65,6 +66,17 @@ inline const ComponentType Mesh = ComponentType::builder("mesh")
     .field<std::filesystem::path>("path", {})
     .field<bool>("smooth", false)
     .payload<MeshAsset>("geometry")
+    .build();
+
+inline const ComponentType Texture = ComponentType::builder("texture")
+    .description("Image texture asset sampled by materials.")
+    .icon(ICON_FA_IMAGE)
+    .group("asset")
+    .kind()
+    .permanent()
+    .field<std::filesystem::path>("path", {}, PathMeta{ .extensions = {{ .ext = "png,jpg,jpeg,tga,bmp", .name = "Image" }} })
+    .field<bool>("srgb", true)
+    .payload<TextureAsset>("data")
     .build();
 
 inline const ComponentType MeshSimplify = ComponentType::builder("mesh_simplify")

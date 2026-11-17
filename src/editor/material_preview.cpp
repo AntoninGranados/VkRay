@@ -59,6 +59,7 @@ void MaterialPreview::init() {
 }
 
 void MaterialPreview::addPasses(VkSmol::RenderGraph& graph) {
+    renderer.shareTextures(Core::getCoreRenderer().getResources().sceneHandles);
     renderer.addPasses(graph);
 
     graph.addTransferPass("MaterialPreviewThumbnailPass")
@@ -91,7 +92,7 @@ MaterialFingerprint MaterialPreview::captureFingerprint(ecs::Entity entity) cons
         for (const Field& field : component.getFields()) fingerprint.fields.push_back(field);
         const ShaderPlugin& plugin = component.payload<ShaderPlugin>("plugin");
         fingerprint.programmableBody = plugin.getSource();
-        fingerprint.programmableValues = plugin.packValues();
+        fingerprint.programmableValues = plugin.packValues(Core::getScene().getPackingInfo().textureSlots);
     }
     return fingerprint;
 }
@@ -121,6 +122,7 @@ void MaterialPreview::syncPreviewMaterial(const ecs::ComponentType& type, ecs::E
     ecs::Component& preview = previewRegistry.get(previewMaterialEntity, type);
 
     for (const Field& field : source.getFields()) preview.getField(field.getId()) = field;
+    renderer.getScene().getPackingInfo().textureSlots = Core::getScene().getPackingInfo().textureSlots;
 
     ShaderPlugin& previewPlugin = preview.payload<ShaderPlugin>("plugin");
     previewPlugin.parse(ScriptTable::scriptPath(source), ScriptTable::kMaterial);

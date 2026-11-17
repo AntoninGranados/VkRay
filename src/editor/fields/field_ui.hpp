@@ -14,6 +14,7 @@ struct FieldGroup {
     FieldPath id;
     bool showHeader = true;
     std::function<bool()> disabledWhen;
+    std::function<bool()> hiddenWhen;
     std::vector<FieldGroup> children;
 };
 

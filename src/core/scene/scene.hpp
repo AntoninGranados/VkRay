@@ -53,6 +53,8 @@ struct PackingInfo {
     LensPluginInfo lens;
     SkyPluginInfo sky;
     std::vector<CompositingPassInfo> compositingPasses;
+    TextureSlots textureSlots;
+    uint32_t textureGeneration = 0;
 };
 
 struct SceneRoots {
@@ -69,7 +71,7 @@ public:
     Scene(const Scene&) = delete;
     Scene& operator=(const Scene&) = delete;
 
-    void init(const SceneGpuBuffers& buffers);
+    void init(SceneGpuBuffers& buffers);
     void clear();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});

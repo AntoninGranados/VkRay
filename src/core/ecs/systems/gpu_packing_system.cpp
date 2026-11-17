@@ -1,6 +1,7 @@
 #include "gpu_packing_system.hpp"
 
 #include <algorithm>
+#include <format>
 #include <optional>
 #include <unordered_map>
 #include <utility>
@@ -13,6 +14,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/intersect.hpp>
 
+#include "stb_image/stb_image.h"
+
 #include "core/core.hpp"
 #include "core/ecs/components/geometry.hpp"
 #include "core/ecs/systems/motion_sampling.hpp"
@@ -23,6 +26,7 @@
 
 #include "utils/color_utils.hpp"
 #include "utils/log.hpp"
+#include "utils/resources.hpp"
 #include "utils/transform_utils.hpp"
 
 namespace ecs {
@@ -129,6 +133,58 @@ const std::vector<const ComponentType*>& objectTypeOrder() {
     return order;
 }
 
+void texturePackingSystem(Scene& scene, SceneGpuBuffers& buffers) {
+    if (buffers.sharesTextures) return;
+
+    Registry& registry = scene.getRegistry();
+    VkSmol::Engine& engine = Core::getEngine();
+
+    const VkSmol::ImageHandle blankTexture = buffers.textures.front();
+    for (const VkSmol::ImageHandle texture : buffers.textures)
+        if (texture != blankTexture) buffers.retiredTextures.push_back(texture);
+    buffers.textures.assign(kMaxTextures, blankTexture);
+
+    PackingInfo& packingInfo = scene.getPackingInfo();
+    packingInfo.textureSlots.clear();
+    packingInfo.textureGeneration++;
+
+    uint32_t slot = 0;
+    for (const Entity& entity : registry.getChildren(scene.getAssetsRoot())) {
+        if (!registry.has(entity, Texture)) continue;
+        slot++;
+        if (slot >= kMaxTextures) {
+            Log::warn("TexturePacking", std::format("More than {} textures, the rest are ignored", kMaxTextures - 1));
+            break;
+        }
+
+        Component& texture = registry.get(entity, Texture);
+        TextureAsset& asset = texture.payload<TextureAsset>("data");
+        const std::filesystem::path path = texture.get<std::filesystem::path>("path");
+        if (!path.empty()) {
+            const std::string file = Resources::read(path).value_or("");
+            asset.encoded.assign(file.begin(), file.end());
+        }
+
+        int width, height, channels;
+        stbi_uc* pixels = stbi_load_from_memory(asset.encoded.data(), static_cast<int>(asset.encoded.size()), &width,
+                                                &height, &channels, STBI_rgb_alpha);
+        if (!pixels) {
+            Log::error("TexturePacking", std::format("Cannot decode texture {}", slot));
+            continue;
+        }
+
+        const VkFormat format = texture.get<bool>("srgb") ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+        const VkSmol::ImageHandle image = engine.createImage(
+            std::format("SceneTexture{}", slot), format, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        engine.writeImage(image, pixels, static_cast<size_t>(width) * height * 4);
+        stbi_image_free(pixels);
+        buffers.textures[slot] = image;
+        packingInfo.textureSlots[entity] = static_cast<int>(slot);
+    }
+
+    Core::requestGraphRebuild();
+}
+
 void meshPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
     Registry& registry = scene.getRegistry();
     VkSmol::Engine& engine = Core::getEngine();
@@ -216,6 +272,9 @@ void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
     Registry& registry = scene.getRegistry();
     const auto& materialEntities = registry.getChildren(scene.getMaterialsRoot());
 
+    PackingInfo& packingInfo = scene.getPackingInfo();
+    const TextureSlots& textureSlots = packingInfo.textureSlots;
+
     std::vector<GpuMaterial> gpuMaterials;
     std::vector<float> pluginParams;
     gpuMaterials.reserve(materialEntities.size());
@@ -223,25 +282,25 @@ void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers) {
     for (const ecs::Entity& entity : materialEntities) {
         GpuMaterial gpu{};
         gpu.base = static_cast<uint32_t>(pluginParams.size());
-        gpu.type = ScriptTable::packScript(registry, entity, ScriptTable::kMaterial, 0, pluginParams);
+        gpu.type = ScriptTable::packScript(registry, entity, ScriptTable::kMaterial, 0, textureSlots, pluginParams);
         gpuMaterials.push_back(gpu);
     }
 
-    PackingInfo& packingInfo = scene.getPackingInfo();
     packingInfo.lens.paramsBase = static_cast<int32_t>(pluginParams.size());
     const std::optional<Entity> lensCamera = scene.getActiveCamera();
     packingInfo.lens.slot =
-        lensCamera ? ScriptTable::packScript(registry, *lensCamera, ScriptTable::kLens, -1, pluginParams) : -1;
+        lensCamera ? ScriptTable::packScript(registry, *lensCamera, ScriptTable::kLens, -1, textureSlots, pluginParams)
+                   : -1;
 
     packingInfo.sky.paramsBase = static_cast<int32_t>(pluginParams.size());
     packingInfo.sky.slot =
-        ScriptTable::packScript(registry, scene.getEnvironment(), ScriptTable::kSky, 0, pluginParams);
+        ScriptTable::packScript(registry, scene.getEnvironment(), ScriptTable::kSky, 0, textureSlots, pluginParams);
 
     packingInfo.compositingPasses.clear();
     for (CompositingPassEntry& pass : ScriptTable::compositingPasses(scene)) {
         CompositingPassInfo info;
         info.paramsBase = static_cast<int32_t>(pluginParams.size());
-        info.slot = ScriptTable::packCompositingPass(pass, pluginParams);
+        info.slot = ScriptTable::packCompositingPass(pass, textureSlots, pluginParams);
         for (int p = 0; p < pass.plugin->getPassCount(); p++) {
             info.passId = p;
             packingInfo.compositingPasses.push_back(info);

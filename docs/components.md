@@ -14,6 +14,16 @@ Mesh geometry asset loaded from file.
 | `path` | path |  |  | no |
 | `smooth` | bool | false |  | no |
 
+### Texture
+Image texture asset sampled by materials.
+
+**Kind** · **Permanent**
+
+| Field | Type | Default | Constraints | Animatable |
+|-------|------|---------|-------------|------------|
+| `path` | path |  |  | no |
+| `srgb` | bool | true |  | no |
+
 ### Mesh Simplify
 Simplifies the mesh asset to a target ratio.
 

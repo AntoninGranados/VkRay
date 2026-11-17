@@ -402,6 +402,11 @@ bool drawFieldGroups(std::vector<FieldGroup>& groups, const std::string& widgetI
             continue;
         }
 
+        if (item.hiddenWhen) {
+            if (!item.hiddenWhen()) changed |= drawFieldGroups(item.children, widgetId, drawLeaf, label);
+            continue;
+        }
+
         if (item.showHeader) {
             const std::string text = label ? label(item.id) : item.id.filename().string();
             ImGui::SeparatorText(text.c_str());
@@ -435,16 +440,17 @@ void clusterByCondition(std::vector<FieldGroup>& groups, const ConditionResolver
         }
 
         const FieldCondition& cond = item.field->getConditions()[depth];
-        const std::string key = cond.param.string() + "=" + std::to_string(cond.when);
+        const std::string key = cond.param.string() + "=" + std::to_string(cond.when) + (cond.hide ? "h" : "");
 
         if (!conditionGroups.contains(key)) {
             conditionGroups[key] = result.size();
             FieldGroup group;
             group.showHeader = false;
-            group.disabledWhen = [cond, resolve] {
+            const auto unmet = [cond, resolve] {
                 const std::optional<int> value = resolve(cond.param);
                 return value.has_value() && *value != cond.when;
             };
+            (cond.hide ? group.hiddenWhen : group.disabledWhen) = unmet;
             result.push_back(std::move(group));
         }
         result[conditionGroups.at(key)].children.push_back(std::move(item));

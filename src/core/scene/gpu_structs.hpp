@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+inline constexpr uint32_t kMaxTextures = 256;
+
 struct GpuMaterial {
     int type;
     uint32_t base;

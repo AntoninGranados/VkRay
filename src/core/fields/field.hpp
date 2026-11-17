@@ -190,6 +190,7 @@ using FieldPath = std::filesystem::path;
 struct FieldCondition {
     FieldPath param;
     int when = 1;
+    bool hide = false;
 };
 
 class Field : public FieldValue {

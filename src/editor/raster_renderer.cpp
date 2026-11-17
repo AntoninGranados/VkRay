@@ -52,6 +52,7 @@ void RasterRenderer::addPasses(VkSmol::RenderGraph& graph, const SceneGpuBuffers
         .read("scene.pluginParams", sceneHandles.pluginParams)
         .read("scene.objects", sceneHandles.object)
         .read("scene.motion", sceneHandles.liveMotion)
+        .read("scene.textures", sceneHandles.textures)
         .depthAttachment(depthImage, VkSmol::AttachmentLoad::Clear, 0.0f)
         .execute([this](VkSmol::PassContext& context) {
             for (const Draw& draw : draws) {

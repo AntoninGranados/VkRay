@@ -20,6 +20,9 @@ struct ColorAttribute {};
 [__AttributeUsage(_AttributeTargets.Var)]
 struct AnimatableAttribute {};
 
+[__AttributeUsage(_AttributeTargets.Var)]
+struct TextureAttribute {};
+
 [__AttributeUsage(_AttributeTargets.Struct)]
 struct PassCountAttribute {
     int count;

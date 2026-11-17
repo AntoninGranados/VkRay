@@ -30,6 +30,7 @@ void Editor::init() {
 EditorUi& Editor::getUi() { return get().ui; }
 EditorRenderer& Editor::getEditorRenderer() { return get().editorRenderer; }
 MaterialPreview& Editor::getMaterialPreview() { return get().materialPreview; }
+TexturePreview& Editor::getTexturePreview() { return get().texturePreview; }
 
 std::optional<ecs::Entity> Editor::getSelectedEntity() { return get().selectedEntity; }
 void Editor::setSelectedEntity(ecs::Entity entity) { get().selectedEntity = entity; }

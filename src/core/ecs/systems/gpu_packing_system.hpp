@@ -20,12 +20,16 @@ struct SceneGpuBuffers {
     VkSmol::BufferHandle light;
     VkSmol::BufferHandle motion;
     VkSmol::BufferHandle liveMotion;
+    std::vector<VkSmol::ImageHandle> textures;
+    std::vector<VkSmol::ImageHandle> retiredTextures;
+    bool sharesTextures = false;
 };
 
 namespace ecs {
 
 const std::vector<const ComponentType*>& objectTypeOrder();
 
+void texturePackingSystem(Scene& scene, SceneGpuBuffers& buffers);
 void meshPackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
 void meshInstancePackingSystem(Scene& scene, const SceneGpuBuffers& buffers);
 void materialPackingSystem(Scene& scene, const SceneGpuBuffers& buffers);

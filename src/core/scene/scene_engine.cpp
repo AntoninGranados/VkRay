@@ -11,7 +11,7 @@
 #include "core/ecs/systems/motion_sampling.hpp"
 #include "core/ecs/systems/physics/physics_system.hpp"
 
-void Scene::init(const SceneGpuBuffers& buffers) {
+void Scene::init(SceneGpuBuffers& buffers) {
     preUpdateScheduler.clear();
     preUpdateScheduler.add([this](ecs::Registry&) { ecs::animationSystem(*this); });
     preUpdateScheduler.add([this](ecs::Registry&) { ecs::physicsSystem(*this); });
@@ -30,15 +30,17 @@ void Scene::init(const SceneGpuBuffers& buffers) {
     const Types environments = ecs::ComponentType::inGroup("environment");
 
     onRenderScheduler.clear();
-    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::materialPackingSystem(*this, buffers); },
-                          join({materials, cameras, environments, {&ecs::Compositing}}));
-    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::meshPackingSystem(*this, buffers); }, {&ecs::Mesh});
-    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::meshInstancePackingSystem(*this, buffers); },
+    onRenderScheduler.add([this, &buffers](ecs::Registry&) { ecs::texturePackingSystem(*this, buffers); },
+                          {&ecs::Texture});
+    onRenderScheduler.add([this, &buffers](ecs::Registry&) { ecs::materialPackingSystem(*this, buffers); },
+                          join({materials, cameras, environments, {&ecs::Compositing, &ecs::Texture}}));
+    onRenderScheduler.add([this, &buffers](ecs::Registry&) { ecs::meshPackingSystem(*this, buffers); }, {&ecs::Mesh});
+    onRenderScheduler.add([this, &buffers](ecs::Registry&) { ecs::meshInstancePackingSystem(*this, buffers); },
                           {&ecs::Mesh, &ecs::MeshRef, &ecs::Transform});
-    onRenderScheduler.add([this, buffers](ecs::Registry&) { ecs::objectPackingSystem(*this, buffers); },
+    onRenderScheduler.add([this, &buffers](ecs::Registry&) { ecs::objectPackingSystem(*this, buffers); },
                           join({objects, materials, {&ecs::Transform, &ecs::Camera, &ecs::RigidBody, &ecs::Mesh}}),
                           [this](ecs::Registry&) { return ecs::isMotionBlurActive(*this); });
-    onRenderScheduler.add([buffers](ecs::Registry& registry) { ecs::lightPackingSystem(registry, buffers); },
+    onRenderScheduler.add([&buffers](ecs::Registry& registry) { ecs::lightPackingSystem(registry, buffers); },
                           join({objects, materials, {&ecs::Transform, &ecs::Mesh}}));
 }
 

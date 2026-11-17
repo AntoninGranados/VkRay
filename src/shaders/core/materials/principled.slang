@@ -12,14 +12,27 @@ import "dielectric.slang";
 [Medium]
 struct PrincipledBsdf : IBsdf {
     [Range(0, 1)] [Color] [Animatable] float3 albedo = float3(0.8, 0.8, 0.8);
+    [Texture] int albedoTexture = 0;
     [Range(0, 1)] [Animatable] float roughness = 0.5;
+    [Texture] int roughnessTexture = 0;
     [Range(0, 1)] [Animatable] float metalness = 0.0;
+    [Texture] int metalnessTexture = 0;
     [Range(1, 3)] [Animatable] float ior = 1.5;
     [Range(0, 1)] [Animatable] float transmission = 0.0;
     [Min(0)] [Animatable] float density = 0.0;
     [Range(-1, 1)] [Animatable] float anisotropic = 0.0;
     [Range(0, 1)] [Animatable] float alpha = 1.0;
     [Min(0)] int priority = 0;
+
+    [mutating] override void shade(SurfacePoint surface) {
+        if (albedoTexture != 0) {
+            float4 base = sampleTexture(albedoTexture, surface.uv);
+            albedo = base.rgb;
+            alpha *= base.a;
+        }
+        if (roughnessTexture != 0) roughness = sampleTexture(roughnessTexture, surface.uv).g;
+        if (metalnessTexture != 0) metalness = sampleTexture(metalnessTexture, surface.uv).b;
+    }
 
     MetalBsdf metalProxy() {
         return MetalBsdf(albedo, roughness);

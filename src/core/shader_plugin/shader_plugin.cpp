@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <format>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -52,9 +53,12 @@ bool ShaderPlugin::appendFields(const std::vector<VkSmol::ShaderField>& shaderFi
 
         NumericMeta meta{};
         bool isAnimatable = false;
+        bool isTexture = false;
         for (const VkSmol::ShaderAttribute& attribute : shaderField.attributes) {
             const std::vector<float>& arguments = attribute.arguments;
-            if (attribute.name == "Range" && arguments.size() == 2) {
+            if (attribute.name == "Texture") {
+                isTexture = true;
+            } else if (attribute.name == "Range" && arguments.size() == 2) {
                 meta.min = arguments[0];
                 meta.max = arguments[1];
             } else if (attribute.name == "Min" && arguments.size() == 1) {
@@ -74,6 +78,14 @@ bool ShaderPlugin::appendFields(const std::vector<VkSmol::ShaderField>& shaderFi
         const std::string label = camelCaseToLabel(shaderField.name);
         const bool isInt =
             shaderField.type == VkSmol::ShaderFieldType::Int || shaderField.type == VkSmol::ShaderFieldType::UInt;
+        if (isTexture) {
+            if (shaderField.type != VkSmol::ShaderFieldType::Int || shaderField.componentCount != 1) {
+                error = std::format("{}: [Texture] needs an int field, '{}' is not", path->string(), id);
+                return false;
+            }
+            fields.push_back(Field::make<ecs::Entity>(id, label, ecs::Entity{}, EntityMeta{.needs = {"texture"}}));
+            continue;
+        }
         const uint32_t componentCount = shaderField.componentCount;
         if (componentCount < 1 || componentCount > 4 ||
             (shaderField.type == VkSmol::ShaderFieldType::Bool && componentCount > 1)) {
@@ -120,6 +132,15 @@ bool ShaderPlugin::reflect(std::vector<Field>& fields) {
     const VkSmol::ShaderStruct& script = structs[0];
     if (!appendFields(script.fields, "", fields)) return false;
 
+    constexpr std::string_view kTextureSuffix = "Texture";
+    for (const Field& texture : fields) {
+        const std::string textureId = texture.getId().generic_string();
+        if (texture.getType() != FieldType::Entity || !textureId.ends_with(kTextureSuffix)) continue;
+        const std::string valueId = textureId.substr(0, textureId.size() - kTextureSuffix.size());
+        for (Field& value : fields)
+            if (value.getId().generic_string() == valueId) value.addCondition({textureId, 0, true});
+    }
+
     for (const VkSmol::ShaderAttribute& attribute : script.attributes) {
         attributes.push_back(attribute.name);
         if (attribute.name == "PassCount" && attribute.arguments.size() == 1)
@@ -153,17 +174,24 @@ void ShaderPlugin::load(bool migrate) {
         for (Field& newField : newParams.getFields())
             for (const Field& oldField : params.getFields())
                 if (oldField.getId() == newField.getId() && oldField.getType() == newField.getType()) {
-                    oldField.dispatch([&](auto v) { newField.set(v); });
+                    if (oldField.getType() == FieldType::Entity)
+                        newField.set(oldField.get<ecs::Entity>());
+                    else
+                        oldField.dispatch([&](auto v) { newField.set(v); });
                     break;
                 }
     for (Field& newField : newParams.getFields()) {
-        const auto pendingValues = pending.find(newField.getId().generic_string());
+        const std::string id = newField.getId().generic_string();
+        if (const auto pendingEntity = pendingEntities.find(id); pendingEntity != pendingEntities.end())
+            newField.set(pendingEntity->second);
+        const auto pendingValues = pending.find(id);
         if (pendingValues == pending.end()) continue;
         Field::makeNumeric(newField.getType(), "", "", pendingValues->second).dispatch([&](auto v) {
             newField.set(v);
         });
     }
     pending.clear();
+    pendingEntities.clear();
     params = std::move(newParams);
 
     Core::requestGraphRebuild();
@@ -186,9 +214,14 @@ bool ShaderPlugin::parse(const std::filesystem::path& newPath, const ScriptKind&
     return error.empty();
 }
 
-std::vector<float> ShaderPlugin::packValues() const {
+std::vector<float> ShaderPlugin::packValues(const TextureSlots& textureSlots) const {
     std::vector<float> values;
     for (const Field& field : params.getFields()) {
+        if (field.getType() == FieldType::Entity) {
+            const auto slot = textureSlots.find(field.get<ecs::Entity>());
+            values.push_back(std::bit_cast<float>(slot != textureSlots.end() ? slot->second : 0));
+            continue;
+        }
         field.dispatch([&](auto v) {
             using V = std::decay_t<decltype(v)>;
             if constexpr (std::is_same_v<V, bool>)

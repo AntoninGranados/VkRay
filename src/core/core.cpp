@@ -14,7 +14,9 @@
 Core::Core(const std::optional<std::string>& windowTitle, uint32_t version)
     : window(windowTitle ? std::optional<VkSmol::Window>(std::in_place, *windowTitle, kWindowWidth, kWindowHeight)
                          : std::nullopt),
-      engine("VkRay", version, window ? std::optional<VkSmol::Window&>(*window) : std::nullopt), graph(engine) {}
+      engine("VkRay", version, window ? std::optional<VkSmol::Window&>(*window) : std::nullopt,
+             VkSmol::EngineFeatures{.imageArrays = true}),
+      graph(engine) {}
 
 void Core::init(const std::optional<std::string>& windowTitle, uint32_t version) {
     static Core core(windowTitle, version);

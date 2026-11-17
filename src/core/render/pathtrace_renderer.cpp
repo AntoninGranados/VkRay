@@ -1,6 +1,7 @@
 #include "pathtrace_renderer.hpp"
 
 #include <algorithm>
+#include <array>
 #include <string>
 
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
@@ -48,11 +49,17 @@ void PathtraceRenderer::init(VkExtent2D extent, const std::string& passTag, VkSm
     resources.sceneHandles.motion = engine.createBuffer(tag + "SceneMotionBuffer", 16 * sizeof(GpuMotionSample));
     resources.sceneHandles.liveMotion =
         engine.createBuffer(tag + "SceneLiveMotionBuffer", 16 * sizeof(GpuMotionSample));
+    const std::array<uint8_t, 4> white = {255, 255, 255, 255};
+    const VkSmol::ImageHandle blankTexture = engine.createImage(tag + "BlankTexture", VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+    engine.writeImage(blankTexture, white);
+    resources.sceneHandles.textures.assign(kMaxTextures, blankTexture);
     scene.init(resources.sceneHandles);
 }
 
 void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
-    const SceneGpuBuffers& sceneHandles = resources.sceneHandles;
+    SceneGpuBuffers& sceneHandles = resources.sceneHandles;
+    for (const VkSmol::ImageHandle texture : sceneHandles.retiredTextures) Core::getEngine().destroyImage(texture);
+    sceneHandles.retiredTextures.clear();
 
     graph.addComputePass(getPathtracingPassName())
         .pipeline("builtin:/shaders/core/pathtracing.slang",
@@ -70,6 +77,7 @@ void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {
         .read("scene.pluginParams", sceneHandles.pluginParams)
         .read("scene.objects", sceneHandles.object)
         .read("scene.motion", sceneHandles.motion)
+        .read("scene.textures", sceneHandles.textures)
         .read("lightBuffer", sceneHandles.light)
         .read("lensSampler", lensImageHandle)
         .read("blueNoiseBuffer", blueNoiseBufferHandle)

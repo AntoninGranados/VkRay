@@ -32,7 +32,13 @@ DielectricBsdf Dielectric(float3 albedo, float roughness, float ior, float trans
 
 // TODO: implement all parameters
 PrincipledBsdf Principled(float3 albedo, float roughness, float metalness, float ior, float alpha) {
-    return PrincipledBsdf(albedo, roughness, metalness, ior, 0.0, 0.0, 0.0, alpha, 0);
+    PrincipledBsdf bsdf = PrincipledBsdf();
+    bsdf.albedo = albedo;
+    bsdf.roughness = roughness;
+    bsdf.metalness = metalness;
+    bsdf.ior = ior;
+    bsdf.alpha = alpha;
+    return bsdf;
 }
 
 struct DefaultMaterial : IMaterial {

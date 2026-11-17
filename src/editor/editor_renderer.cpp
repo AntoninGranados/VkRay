@@ -113,6 +113,7 @@ void EditorRenderer::addPasses(VkSmol::RenderGraph& graph) {
         .read("scene.pluginParams", sceneHandles.pluginParams)
         .read("scene.objects", sceneHandles.object)
         .read("scene.motion", sceneHandles.liveMotion)
+        .read("scene.textures", sceneHandles.textures)
         .execute([](VkSmol::PassContext& context) { context.draw(3); });
 
     overlayDrawer.addPasses(graph, displayImageHandle, depthImageHandle);
