@@ -123,6 +123,7 @@ struct Vertex {
     float3 normal;
     float3 color;
     float2 uv;
+    float4 tangent;
 };
 
 struct BvhChild {
@@ -207,8 +208,10 @@ struct Hit {
     bool frontFace;
     Object object;
     float3 vertexColor;
+    float4 tangent;
+    float3 geometricNormal;
 };
-static const Hit NO_HIT = Hit(float3(0), float2(0), float3(0), INFINITY, true, OBJECT_NONE, float3(1.0));
+static const Hit NO_HIT = Hit(float3(0), float2(0), float3(0), INFINITY, true, OBJECT_NONE, float3(1.0), float4(0.0), float3(0));
 bool foundIntersection(Hit hit) {
     return hit.object.type != obj_None;
 }
@@ -220,10 +223,12 @@ struct SurfacePoint {
     float2 uv;
     bool frontFace;
     float3 vertexColor;
+    float4 tangent;
+    float3 geometricNormal;
 };
 
 SurfacePoint makeSurfacePoint(Hit hit) {
-    return SurfacePoint(hit.object, hit.p, hit.normal, hit.uv, hit.frontFace, hit.vertexColor);
+    return SurfacePoint(hit.object, hit.p, hit.normal, hit.uv, hit.frontFace, hit.vertexColor, hit.tangent, hit.geometricNormal);
 }
 
 // ============== LIGHTS ==============

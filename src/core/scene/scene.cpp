@@ -49,6 +49,15 @@ ecs::Entity Scene::createNamedEntity(std::string name, ecs::Entity parent) {
     return e;
 }
 
+ecs::Entity Scene::createDefaultCamera(std::string name, ecs::Entity parent) {
+    ecs::Entity camera = createNamedEntity(std::move(name), parent);
+    registry.add(camera, ecs::Camera);
+    registry.get(camera, ecs::Transform).set<glm::vec3>("position", glm::vec3(7.3589f, 4.9583f, 6.9258f));
+    registry.get(camera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(-26.441f, 46.692f, 0.0f));
+    registry.get(camera, ecs::Camera).set<float>("focal_length", 50.0f);
+    return camera;
+}
+
 void Scene::resetSceneState() {
     registry.clear();
     animationStore.clear();

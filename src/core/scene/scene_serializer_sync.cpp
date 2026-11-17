@@ -71,10 +71,8 @@ void applyDeferredPluginParams(ecs::Registry& registry, AnimationStore& animStor
 }
 
 void activateFirstCamera(ecs::Registry& registry, Scene& scene) {
-    for (const ecs::Entity& entity : registry.storage(ecs::Camera).entities()) {
-        scene.setActiveCamera(entity);
-        break;
-    }
+    if (registry.storage(ecs::Camera).entities().empty()) scene.createDefaultCamera("Camera", scene.getObjectsRoot());
+    scene.setActiveCamera(registry.storage(ecs::Camera).entities().front());
 }
 
 } // namespace

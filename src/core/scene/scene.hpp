@@ -75,6 +75,7 @@ public:
     void clear();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
+    ecs::Entity createDefaultCamera(std::string name, ecs::Entity parent);
     ecs::Entity loadMeshAsset(std::string name, const std::string& path, bool smooth = false);
 
     const std::vector<ecs::Entity>& getChildren(ecs::Entity parent) const;

@@ -142,6 +142,36 @@ void crossInterface(MediumEntry entry, SurfacePoint surface) {
     else removeMedium(surface.object);
 }
 
+// ============== SHADING NORMAL ==============
+float3 ensureValidReflection(float3 geometricNormal, float3 wo, float3 normal) {
+    float threshold = min(0.9 * dot(geometricNormal, wo), 0.01);
+    if (dot(geometricNormal, reflect(-wo, normal)) >= threshold) return normal;
+
+    float3 x = normalize(normal - dot(normal, geometricNormal) * geometricNormal);
+    float ix = dot(wo, x);
+    float iz = dot(wo, geometricNormal);
+    float a = ix * ix + iz * iz;
+    float b = sqrt(max(ix * ix * (a - threshold * threshold), 0.0));
+    float c = iz * threshold + a;
+
+    float3 best = geometricNormal;
+    float bestAlignment = -1.0;
+    for (int i = 0; i < 2; i++) {
+        float z2 = 0.5 / a * (i == 0 ? c + b : c - b);
+        if (z2 <= 0.0 || z2 > 1.0) continue;
+
+        float3 candidate = sqrt(1.0 - z2) * x + sqrt(z2) * geometricNormal;
+        if (abs(dot(geometricNormal, reflect(-wo, candidate)) - threshold) > 1e-3) continue;
+
+        float alignment = dot(candidate, normal);
+        if (alignment > bestAlignment) {
+            bestAlignment = alignment;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
 // ============== MIRROR ==============
 BSDFEval evalMirrorBSDF(in float3 albedo, in SurfacePoint surface, in float3 wo, in float3 wi) {
     float VoN = max(dot(wo, surface.normal), 0.0);

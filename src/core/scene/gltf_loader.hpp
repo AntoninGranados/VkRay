@@ -28,12 +28,11 @@ private:
 
     void loadTextures();
     std::vector<uint8_t> readImage(const fastgltf::Image& image) const;
-    ecs::Entity textureEntity(const fastgltf::optional<fastgltf::TextureInfo>& info, bool srgb);
+    template <typename Optional> ecs::Entity textureEntity(const Optional& info, bool srgb);
     void loadMaterials();
     void loadNode(size_t index, const glm::mat4& parent);
     void addMesh(const fastgltf::Node& node, const std::string& name, const glm::mat4& world);
     void addCamera(const fastgltf::Node& camera, const std::string& name, const glm::mat4& world);
-    void addDefaultCamera();
     ecs::Entity loadPrimitive(size_t meshIndex, size_t primitiveIndex);
     void setScript(ecs::Entity material, const ecs::ComponentType& type,
                    std::initializer_list<std::pair<const char*, std::vector<float>>> parameters);

@@ -29,7 +29,7 @@ struct MetalBsdf : IBsdf {
         GgxTerms t = computeGgxTerms(alpha, surface, wo, wi, h);
         float3 F = schlickAlbedo(t.VoH, albedo);
 
-        return BSDFSample(F * t.G * t.VoH / (t.cosWo * t.NoH), wi, ggxPDF(t), false, NO_MEDIUM);
+        return BSDFSample(F * t.G / max(t.G1Wo, EPS), wi, ggxPDF(t), false, NO_MEDIUM);
     }
 
     BsdfProperties properties() {

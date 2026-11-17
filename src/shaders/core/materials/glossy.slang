@@ -14,30 +14,28 @@ struct GlossyBsdf : IBsdf {
     [Range(1, 3)] [Animatable] float ior = 1.5;
 
     BSDFEval eval(SurfacePoint surface, float3 wo, float3 wi) {
-        if (dot(surface.normal, wi) <= 0.0) return BSDFEval(float3(0.0), 0.0);
+        float diffuseCos = max(dot(surface.normal, wi), 0.0);
 
         float alpha = max(roughness * roughness, EPS_HIGH);
         float3 m = normalize(wo + wi);
         GgxTerms t = computeGgxTerms(alpha, surface, wo, wi, m);
 
-        float F_VoH = fresnelDielectric(t.VoH,  1.0, ior);
-        float F_NoL = fresnelDielectric(t.cosWi, 1.0, ior);
-        float F_NoV = fresnelDielectric(t.cosWo, 1.0, ior);
+        float F_VoH = fresnelDielectric(t.VoH, 1.0, ior);
+        float specularAlbedo = ggxDirectionalAlbedo(roughness, max(dot(surface.normal, wo), 0.0), ior);
 
         float3 fSpec = F_VoH * ggxBRDF(t);
-        float3 fDiff = (1.0 - F_NoL) * (1.0 - F_NoV) * albedo / PI;
+        float3 fDiff = (1.0 - specularAlbedo) * albedo / PI;
 
         return BSDFEval(
-            fSpec + fDiff,
-            F_NoV * ggxPDF(t) + (1.0 - F_NoV) * (t.cosWi / PI)
+            fSpec + (diffuseCos > 0.0 ? fDiff : float3(0.0)),
+            specularAlbedo * ggxPDF(t) + (1.0 - specularAlbedo) * (diffuseCos / PI)
         );
     }
 
     BSDFSample sample(SurfacePoint surface, float3 wo, inout RngState rng) {
         float alpha = max(roughness * roughness, EPS_HIGH);
 
-        float NoV = max(dot(surface.normal, wo), 0.0);
-        float pSpec = fresnelDielectric(NoV, 1.0, ior);
+        float pSpec = ggxDirectionalAlbedo(roughness, max(dot(surface.normal, wo), 0.0), ior);
 
         float xi = rand(rng);
 

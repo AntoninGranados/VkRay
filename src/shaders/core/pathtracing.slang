@@ -112,7 +112,7 @@ void initMediumStack(in Ray ray, inout RngState rng) {
     resetMediumStack();
     for (int i = 0; i < ubo.render.cameraMediumCount; i++) {
         Object object = loadObject(ubo.render.cameraMedia[i / 4][i % 4]);
-        SurfacePoint surfacePoint = SurfacePoint(object, ray.origin, -ray.dir, float2(0.0), true, float3(1.0));
+        SurfacePoint surfacePoint = SurfacePoint(object, ray.origin, -ray.dir, float2(0.0), true, float3(1.0), float4(0.0), -ray.dir);
         IMaterial material = makeMaterial(getMaterial(object));
         Optional<MediumEntry> mediumEntry = material.evaluate(surfacePoint, -ray.dir, rng).medium(object);
         if (mediumEntry.hasValue) pushMedium(mediumEntry.value);
@@ -170,7 +170,7 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
                 throughput *= pow(max(medium.absorption, float3(1e-4)), float3(sigma_a * t_scatter));
 
                 if (ubo.render.importanceSampling == 1) {
-                    Hit scatterHit = Hit(ray.origin, float2(0), float3(0.0), t_scatter, true, OBJECT_NONE, float3(1.0));
+                    Hit scatterHit = Hit(ray.origin, float2(0), float3(0.0), t_scatter, true, OBJECT_NONE, float3(1.0), float4(0.0), float3(0.0));
                     LightSample volLight = sampleLight(scatterHit, rng);
                     prevIsSkipped = volLight.skip;
                     if (volLight.pdf > EPS) {
@@ -214,20 +214,13 @@ float3 traceRay(in Ray ray, inout RngState rng, inout PixelInfo pixelInfo) {
         }
 
         if (any(properties.emission > 0.0)) {
-            if (i == 0) {
-                radiance = properties.emission;
-                break;
-            }
-
-            float3 Le = properties.emission;
             float w = 1.0;
-            if (ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
+            if (i > 0 && ubo.render.importanceSampling == 1 && !prevBsdf.isDelta && !prevIsSkipped) {
                 float pdfL = lightPDF(hit.object.lightId, length(hit.p - prevHit.p), hit.normal, ray.dir);
                 w = powerHeuristic(prevBsdf.pdf, pdfL);
             }
 
-            radiance += clampIndirect(throughput * w * Le, i - 1);
-            break;
+            radiance += clampIndirect(throughput * w * properties.emission, i - 1);
         }
 
         bsdf = surface.sample(surfacePoint, -ray.dir, rng);

@@ -27,8 +27,12 @@ Hit rayObjectIntersection(in Ray ray, in Object obj, bool anyHit, float tMax, in
     float3 worldP = mul(float4(localHit.p, 1.0), mt.modelMatrix).xyz;
     float tWorld = dot(worldP - ray.origin, ray.dir);
 
-    Hit hit = makeHit(ray, obj, tWorld, localHit.uv, worldNormal);
+    float3 localOutwardGeometricNormal = localHit.frontFace ? localHit.geometricNormal : -localHit.geometricNormal;
+    float3 worldGeometricNormal = normalize(mul(localOutwardGeometricNormal, normalMat));
+
+    Hit hit = makeHit(ray, obj, tWorld, localHit.uv, worldNormal, worldGeometricNormal);
     hit.vertexColor = localHit.vertexColor;
+    hit.tangent = float4(mul(float4(localHit.tangent.xyz, 0.0), mt.modelMatrix).xyz, localHit.tangent.w);
     return hit;
 }
 

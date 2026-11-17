@@ -14,6 +14,7 @@ struct Vertex {
     alignas(16) glm::vec3 normal;
     alignas(16) glm::vec3 color = glm::vec3(1.0f);
     alignas(8) glm::vec2 uv = glm::vec2(0.0f);
+    alignas(16) glm::vec4 tangent = glm::vec4(0.0f);
 };
 
 class MeshAsset {

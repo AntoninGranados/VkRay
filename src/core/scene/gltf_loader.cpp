@@ -14,7 +14,6 @@
 #include "core/scene/scene.hpp"
 #include "core/scene/scene_serializer_internal.hpp"
 #include "utils/log.hpp"
-#include "utils/resources.hpp"
 #include "utils/transform_utils.hpp"
 
 bool GltfLoader::load(Scene& scene, const std::filesystem::path& path) {
@@ -49,7 +48,6 @@ bool GltfLoader::load(Scene& scene, const std::filesystem::path& path) {
     loader.loadMaterials();
     for (const size_t node : loader.asset.scenes[loader.asset.defaultScene.value_or(0)].nodeIndices)
         loader.loadNode(node, glm::mat4(1.0f));
-    if (scene.getRegistry().storage(ecs::Camera).entities().empty()) loader.addDefaultCamera();
     return true;
 }
 
@@ -99,13 +97,13 @@ void GltfLoader::loadTextures() {
     }
 }
 
-ecs::Entity GltfLoader::textureEntity(const fastgltf::optional<fastgltf::TextureInfo>& info, bool srgb) {
+template <typename Optional> ecs::Entity GltfLoader::textureEntity(const Optional& info, bool srgb) {
     if (!info) return {};
     if (info->texCoordIndex != 0) Log::warn("GltfLoader", "Only TEXCOORD_0 is supported for textures");
 
     const auto image = asset.textures[info->textureIndex].imageIndex;
     if (!image) return {};
-    if (srgb) scene.getRegistry().get(images[*image], ecs::Texture).set<bool>("srgb", true);
+    if (srgb) scene.getRegistry().get(images[*image], ecs::Texture).template set<bool>("srgb", true);
     return images[*image];
 }
 
@@ -117,7 +115,8 @@ void GltfLoader::loadMaterials() {
         materials.push_back(entity);
 
         const auto& emissive = material.emissiveFactor;
-        if (emissive[0] + emissive[1] + emissive[2] > 0.0f) {
+        const bool emits = emissive[0] + emissive[1] + emissive[2] > 0.0f;
+        if (emits && !material.emissiveTexture && !material.pbrData.baseColorTexture) {
             setScript(entity, ecs::Emissive,
                       {{"albedo", {emissive[0], emissive[1], emissive[2]}},
                        {"emissionStrength", {material.emissiveStrength}}});
@@ -138,6 +137,12 @@ void GltfLoader::loadMaterials() {
         plugin.setParameter("albedoTexture", textureEntity(material.pbrData.baseColorTexture, true));
         plugin.setParameter("roughnessTexture", metallicRoughness);
         plugin.setParameter("metalnessTexture", metallicRoughness);
+        plugin.setParameter("normalTexture", textureEntity(material.normalTexture, false));
+        if (emits) {
+            plugin.setParameter("emission", {emissive[0], emissive[1], emissive[2]});
+            plugin.setParameter("emissionStrength", {material.emissiveStrength});
+            plugin.setParameter("emissionTexture", textureEntity(material.emissiveTexture, true));
+        }
     }
 }
 
@@ -182,6 +187,12 @@ ecs::Entity GltfLoader::loadPrimitive(size_t meshIndex, size_t primitiveIndex) {
             asset, asset.accessors[uv->accessorIndex],
             [&](glm::vec2 value, size_t index) { vertices[index].uv = value; });
 
+    const auto tangent = primitive.findAttribute("TANGENT");
+    if (tangent != primitive.attributes.end())
+        fastgltf::iterateAccessorWithIndex<glm::vec4>(
+            asset, asset.accessors[tangent->accessorIndex],
+            [&](glm::vec4 value, size_t index) { vertices[index].tangent = value; });
+
     std::vector<uint32_t> indices;
     const fastgltf::Accessor& indexAccessor = asset.accessors[*primitive.indicesAccessor];
     indices.reserve(indexAccessor.count);
@@ -221,15 +232,6 @@ void GltfLoader::addMesh(const fastgltf::Node& node, const std::string& name, co
 
         applyTransform(registry.get(object, ecs::Transform), world);
     }
-}
-
-void GltfLoader::addDefaultCamera() {
-    ecs::Registry& registry = scene.getRegistry();
-    const ecs::Entity entity = scene.createNamedEntity("Camera", scene.getObjectsRoot());
-    registry.add(entity, ecs::Camera);
-    ecs::Component& transform = registry.get(entity, ecs::Transform);
-    transform.set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
-    transform.set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
 }
 
 void GltfLoader::addCamera(const fastgltf::Node& node, const std::string& name, const glm::mat4& world) {

@@ -2,14 +2,19 @@ import "scene.slang";
 import "random/utils.slang";
 import "motion.slang";
 
-Hit makeHit(in Ray ray, in Object obj, float t, float2 uv, float3 normal) {
+Hit makeHit(in Ray ray, in Object obj, float t, float2 uv, float3 normal, float3 geometricNormal) {
     float3 p = ray.origin + ray.dir * t;
     bool frontFace = true;
-    if (dot(ray.dir, normal) > 0.0) {
+    if (dot(ray.dir, geometricNormal) > 0.0) {
         normal = -normal;
+        geometricNormal = -geometricNormal;
         frontFace = false;
     }
-    return Hit(p, uv, normal, t, frontFace, obj, float3(1.0));
+    return Hit(p, uv, normal, t, frontFace, obj, float3(1.0), float4(0.0), geometricNormal);
+}
+
+Hit makeHit(in Ray ray, in Object obj, float t, float2 uv, float3 normal) {
+    return makeHit(ray, obj, t, uv, normal, normal);
 }
 
 // ================ UV ================
@@ -222,29 +227,35 @@ Hit rayMeshIntersection(in Ray ray, in Mesh mesh, bool anyHit, float tMax, inout
 
     if (!foundHit) return NO_HIT;
 
-    float3 normal;
+    float3 v0 = scene.vertices[bestI0].position;
+    float3 v1 = scene.vertices[bestI1].position;
+    float3 v2 = scene.vertices[bestI2].position;
+    float3 geometricNormal = normalize(cross(v1 - v0, v2 - v0));
+
+    float3 normal = geometricNormal;
     if (mesh.smoothShading == 1u) {
         float3 n0 = scene.vertices[bestI0].normal;
         float3 n1 = scene.vertices[bestI1].normal;
         float3 n2 = scene.vertices[bestI2].normal;
         normal = normalize((1.0 - bestU - bestV) * n0 + bestU * n1 + bestV * n2);
-    } else {
-        float3 v0 = scene.vertices[bestI0].position;
-        float3 v1 = scene.vertices[bestI1].position;
-        float3 v2 = scene.vertices[bestI2].position;
-        normal = normalize(cross(v1 - v0, v2 - v0));
+        if (dot(normal, geometricNormal) < 0.0) normal = -normal;
     }
 
     float2 uv0 = scene.vertices[bestI0].uv;
     float2 uv1 = scene.vertices[bestI1].uv;
     float2 uv2 = scene.vertices[bestI2].uv;
-    Hit meshHit = makeHit(ray, OBJECT_AABB, tClosest, (1.0 - bestU - bestV) * uv0 + bestU * uv1 + bestV * uv2, normal);
+    Hit meshHit = makeHit(ray, OBJECT_AABB, tClosest, (1.0 - bestU - bestV) * uv0 + bestU * uv1 + bestV * uv2, normal, geometricNormal);
     if (mesh.hasVertexColor == 1u) {
         float3 c0 = scene.vertices[bestI0].color;
         float3 c1 = scene.vertices[bestI1].color;
         float3 c2 = scene.vertices[bestI2].color;
         meshHit.vertexColor = (1.0 - bestU - bestV) * c0 + bestU * c1 + bestV * c2;
     }
+
+    float4 t0 = scene.vertices[bestI0].tangent;
+    float4 t1 = scene.vertices[bestI1].tangent;
+    float4 t2 = scene.vertices[bestI2].tangent;
+    meshHit.tangent = float4((1.0 - bestU - bestV) * t0.xyz + bestU * t1.xyz + bestV * t2.xyz, t0.w);
     return meshHit;
 }
 

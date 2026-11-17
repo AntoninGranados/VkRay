@@ -17,6 +17,10 @@ struct PrincipledBsdf : IBsdf {
     [Texture] int roughnessTexture = 0;
     [Range(0, 1)] [Animatable] float metalness = 0.0;
     [Texture] int metalnessTexture = 0;
+    [Texture] int normalTexture = 0;
+    [Min(0)] [Color] [Animatable] float3 emission = float3(0.0);
+    [Texture] int emissionTexture = 0;
+    [Min(0)] [Animatable] float emissionStrength = 1.0;
     [Range(1, 3)] [Animatable] float ior = 1.5;
     [Range(0, 1)] [Animatable] float transmission = 0.0;
     [Min(0)] [Animatable] float density = 0.0;
@@ -24,7 +28,7 @@ struct PrincipledBsdf : IBsdf {
     [Range(0, 1)] [Animatable] float alpha = 1.0;
     [Min(0)] int priority = 0;
 
-    [mutating] override void shade(SurfacePoint surface) {
+    [mutating] override void shade(inout SurfacePoint surface) {
         if (albedoTexture != 0) {
             float4 base = sampleTexture(albedoTexture, surface.uv);
             albedo = base.rgb;
@@ -32,6 +36,19 @@ struct PrincipledBsdf : IBsdf {
         }
         if (roughnessTexture != 0) roughness = sampleTexture(roughnessTexture, surface.uv).g;
         if (metalnessTexture != 0) metalness = sampleTexture(metalnessTexture, surface.uv).b;
+        if (emissionTexture != 0) emission = sampleTexture(emissionTexture, surface.uv).rgb;
+        if (normalTexture != 0 && surface.tangent.w != 0.0) {
+            float3 normal = surface.frontFace ? surface.normal : -surface.normal;
+            float3 tangent = surface.tangent.xyz - normal * dot(normal, surface.tangent.xyz);
+            float tangentLength = length(tangent);
+            if (!(tangentLength > EPS)) return;
+            tangent /= tangentLength;
+            float3 bitangent = cross(normal, tangent) * surface.tangent.w;
+            float3 local = sampleTexture(normalTexture, surface.uv).xyz * 2.0 - 1.0;
+            normal = normalize(local.x * tangent + local.y * bitangent + local.z * normal);
+            normal = surface.frontFace ? normal : -normal;
+            surface.normal = normal;
+        }
     }
 
     MetalBsdf metalProxy() {
@@ -102,7 +119,7 @@ struct PrincipledBsdf : IBsdf {
     }
 
     BsdfProperties properties() {
-        return BsdfProperties(mat_Principled, albedo, roughness);
+        return BsdfProperties(mat_Principled, albedo, roughness, emission * emissionStrength);
     }
 
     override Optional<MediumEntry> medium(Object object) {

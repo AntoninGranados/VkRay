@@ -19,14 +19,6 @@
     ],
     "Objects": [
         {
-            "camera": {},
-            "name": "Camera",
-            "transform": {
-                "position": [0, 0, -10],
-                "rotation": [0, 180, 0]
-            }
-        },
-        {
             "plane": {},
             "material_ref": {
                 "handle": "Floor"

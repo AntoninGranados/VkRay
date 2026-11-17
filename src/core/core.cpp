@@ -79,11 +79,11 @@ void Core::renderFrame(std::function<void()> onPrepare) {
     Scene& scene = c.coreRenderer.getScene();
     c.fileWatcher.poll();
 
-    rebuildGraphIfRequested(c);
-
     updateAnimationDirty(c);
     scene.runPreRender();
     scene.runOnRender();
+
+    rebuildGraphIfRequested(c);
 
     c.coreRenderer.setTargetSampleCount(getTargetSampleCount(c));
     c.coreRenderer.prepare();

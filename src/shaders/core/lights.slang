@@ -80,7 +80,7 @@ LightSample sampleLight(in Hit hit, inout RngState rng) {
     }
 
     light.pdf = lightPDF(lightId, dist, surfaceSample.normal, light.wi);
-    SurfacePoint lightSurface = SurfacePoint(lightObj, surfaceSample.p, surfaceSample.normal, float2(0.0), true, float3(1.0));
+    SurfacePoint lightSurface = SurfacePoint(lightObj, surfaceSample.p, surfaceSample.normal, float2(0.0), true, float3(1.0), float4(0.0), surfaceSample.normal);
     RngState lightRng = rng;
     light.Le = makeMaterial(getMaterial(lightObj)).evaluate(lightSurface, -light.wi, lightRng).properties().emission;
     return light;

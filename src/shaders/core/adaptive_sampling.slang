@@ -38,7 +38,7 @@ float computeSampleProbability(inout PixelInfo pixelInfo, Sampler2D previousFram
 
     float sigma = lerp(sqrt(max(temporalVariance, 0.0)), spatialSigma, 0.5);
     float minAdaptiveSamples = max(float(warmupSamples), 0.0);
-    float proba = clamp(sigma * 4.0, 0.1, 1.0);
+    float proba = clamp(sigma / max(pixelInfo.mean, 0.01), 0.1, 1.0);
     pixelInfo.varianceProba = proba;
     return (pixelInfo.count < minAdaptiveSamples) ? 1.0 : proba;
 }

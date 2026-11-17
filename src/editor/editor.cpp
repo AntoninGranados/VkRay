@@ -60,10 +60,7 @@ void Editor::createViewportCamera() {
     ecs::Registry& registry = scene.getRegistry();
 
     ecs::Entity& camera = get().viewportCamera;
-    camera = scene.createNamedEntity("Viewport Camera", scene.getInternalsRoot());
-    registry.add(camera, ecs::Camera);
-    registry.get(camera, ecs::Transform).set<glm::vec3>("position", glm::vec3(0.0f, 0.0f, -10.0f));
-    registry.get(camera, ecs::Transform).set<glm::vec3>("rotation", glm::vec3(0.0f, 180.0f, 0.0f));
+    camera = scene.createDefaultCamera("Viewport Camera", scene.getInternalsRoot());
     registry.add(camera, ecs::Locked);
 }
 
