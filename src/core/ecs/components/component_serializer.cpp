@@ -99,7 +99,7 @@ void ComponentSerializer::saveDocumentation(std::filesystem::path path) {
     file << "Components are defined in `src/core/ecs/components/`.\n";
 
     std::map<std::string, std::vector<const ecs::ComponentType*>> groups;
-    for (const auto& type : ecs::ComponentType::all()) groups[type.getGroup()].push_back(&type);
+    for (const ecs::ComponentType* type : ecs::ComponentType::all()) groups[type->getGroup()].push_back(type);
 
     for (const auto& [group, types] : groups) {
         file << "\n## " << snakeCaseToLabel(group) << "\n";

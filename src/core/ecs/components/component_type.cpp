@@ -26,26 +26,35 @@ ComponentType::Builder& ComponentType::Builder::group(std::string group) {
     return *this;
 }
 
-std::vector<ComponentType> ComponentType::storage;
+std::deque<ComponentType>& ComponentType::storage() {
+    static std::deque<ComponentType> types;
+    return types;
+}
 
-const std::vector<ComponentType>& ComponentType::all() { return storage; }
+std::vector<const ComponentType*>& ComponentType::registered() {
+    static std::vector<const ComponentType*> types;
+    return types;
+}
+
+const std::vector<const ComponentType*>& ComponentType::all() { return registered(); }
 
 std::optional<std::reference_wrapper<const ComponentType>> ComponentType::find(const std::string& id) {
-    for (const auto& t : storage)
-        if (t.getId() == id) return t;
+    for (const ComponentType* type : registered())
+        if (type->getId() == id) return *type;
     return std::nullopt;
 }
 
 std::vector<const ComponentType*> ComponentType::inGroup(const std::string& group) {
     std::vector<const ComponentType*> types;
-    for (const ComponentType& type : storage)
-        if (type.getGroup() == group) types.push_back(&type);
+    for (const ComponentType* type : registered())
+        if (type->getGroup() == group) types.push_back(type);
     return types;
 }
 
-ComponentType& ComponentType::Builder::build() {
-    ComponentType::storage.push_back(std::move(type));
-    return ComponentType::storage.back();
+const ComponentType& ComponentType::Builder::build() {
+    storage().push_back(std::move(type));
+    registered().push_back(&storage().back());
+    return storage().back();
 }
 
 ComponentType ComponentType::Builder::buildDetached() { return std::move(type); }

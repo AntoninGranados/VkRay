@@ -234,7 +234,8 @@ void AnimationPanel::draw() {
                 };
 
                 bool firstGroup = true;
-                for (const ecs::ComponentType& ct : ecs::ComponentType::all()) {
+                for (const ecs::ComponentType* typePointer : ecs::ComponentType::all()) {
+                    const ecs::ComponentType& ct = *typePointer;
                     if (!registry.has(entity, ct)) continue;
 
                     std::vector<Field*> animatable;

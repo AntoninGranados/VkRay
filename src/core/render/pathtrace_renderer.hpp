@@ -7,7 +7,9 @@
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/render_graph.hpp"
 
+#include "core/ecs/system_scheduler.hpp"
 #include "core/ecs/systems/gpu_packing_system.hpp"
+#include "core/render/render_stage.hpp"
 #include "core/render/sample_accumulator.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"
@@ -18,17 +20,18 @@ struct RenderResources {
     SceneGpuBuffers sceneHandles = {};
 };
 
-class PathtraceRenderer {
+class PathtraceRenderer : public RenderStage {
 public:
     void init(VkExtent2D extent, const std::string& passTag, VkSmol::ImageHandle lensImageHandle,
               VkSmol::BufferHandle blueNoiseBufferHandle);
-    void addPasses(VkSmol::RenderGraph& graph);
+    void update() override;
+    void addPasses(VkSmol::RenderGraph& graph) override;
 
     uint32_t getSampleCount() { return accumulator.getSampleCount(); }
     void setTargetSampleCount(int n) { accumulator.setTargetSampleCount(n); }
     void restartAccumulation() { accumulator.restart(); }
     bool isRenderFinished() { return accumulator.isRenderFinished(); }
-    void prepare();
+    void prepare() override;
     void resize(uint32_t width, uint32_t height);
 
     VkExtent2D getRenderExtent() const { return renderExtent; }
@@ -65,6 +68,7 @@ private:
     float frustumScale = 1.0f;
     bool dispatchPathtracing = false;
 
+    ecs::SystemScheduler packingScheduler;
     SampleAccumulator accumulator;
     uint64_t seenChangeTick = 0;
 };

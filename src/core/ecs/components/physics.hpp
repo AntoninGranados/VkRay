@@ -11,7 +11,7 @@ namespace ecs {
 
 // clang-format off
 
-inline const ComponentType Collider = ComponentType::builder("collider")
+inline const ComponentType& Collider = ComponentType::builder("collider")
     .description("Physics collider shape.")
     .icon(ICON_FA_SQUARE)
     .group("physics")
@@ -21,7 +21,7 @@ inline const ComponentType Collider = ComponentType::builder("collider")
     .payload<physics_detail::ColliderState>("prev_transform")
     .build();
 
-inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
+inline const ComponentType& RigidBody = ComponentType::builder("rigid_body")
     .description("Physics rigid body.")
     .icon(ICON_FA_CUBES_STACKED)
     .group("physics")
@@ -31,7 +31,7 @@ inline const ComponentType RigidBody = ComponentType::builder("rigid_body")
     .payload<physics_detail::BodyState>("state")
     .build();
 
-inline const ComponentType Physics = ComponentType::builder("physics")
+inline const ComponentType& Physics = ComponentType::builder("physics")
     .description("Scene-wide physics settings.")
     .icon(ICON_FA_ATOM)
     .group("internal")

@@ -25,7 +25,7 @@ struct MeshAreaCache {
 
 // clang-format off
 
-inline const ComponentType Sphere = ComponentType::builder("sphere")
+inline const ComponentType& Sphere = ComponentType::builder("sphere")
     .description("Sphere primitive.")
     .icon(ICON_FA_CIRCLE)
     .group("object")
@@ -33,7 +33,7 @@ inline const ComponentType Sphere = ComponentType::builder("sphere")
     .slot("shape")
     .build();
 
-inline const ComponentType Plane = ComponentType::builder("plane")
+inline const ComponentType& Plane = ComponentType::builder("plane")
     .description("Infinite plane primitive.")
     .icon(ICON_FA_SQUARE)
     .group("object")
@@ -41,7 +41,7 @@ inline const ComponentType Plane = ComponentType::builder("plane")
     .slot("shape")
     .build();
 
-inline const ComponentType Box = ComponentType::builder("box")
+inline const ComponentType& Box = ComponentType::builder("box")
     .description("Box primitive.")
     .icon(ICON_FA_BOX)
     .group("object")
@@ -49,7 +49,7 @@ inline const ComponentType Box = ComponentType::builder("box")
     .slot("shape")
     .build();
 
-inline const ComponentType Quad = ComponentType::builder("quad")
+inline const ComponentType& Quad = ComponentType::builder("quad")
     .description("Single face quad primitive.")
     .icon(ICON_FA_SQUARE)
     .group("object")
@@ -57,7 +57,7 @@ inline const ComponentType Quad = ComponentType::builder("quad")
     .slot("shape")
     .build();
 
-inline const ComponentType Mesh = ComponentType::builder("mesh")
+inline const ComponentType& Mesh = ComponentType::builder("mesh")
     .description("Mesh geometry asset loaded from file.")
     .icon(ICON_FA_CUBE)
     .group("asset")
@@ -68,7 +68,7 @@ inline const ComponentType Mesh = ComponentType::builder("mesh")
     .payload<MeshAsset>("geometry")
     .build();
 
-inline const ComponentType Texture = ComponentType::builder("texture")
+inline const ComponentType& Texture = ComponentType::builder("texture")
     .description("Image texture asset sampled by materials.")
     .icon(ICON_FA_IMAGE)
     .group("asset")
@@ -79,7 +79,7 @@ inline const ComponentType Texture = ComponentType::builder("texture")
     .payload<TextureAsset>("data")
     .build();
 
-inline const ComponentType MeshSimplify = ComponentType::builder("mesh_simplify")
+inline const ComponentType& MeshSimplify = ComponentType::builder("mesh_simplify")
     .description("Simplifies the mesh asset to a target ratio.")
     .icon(ICON_FA_CUBE)
     .group("asset")
@@ -88,7 +88,7 @@ inline const ComponentType MeshSimplify = ComponentType::builder("mesh_simplify"
     .payload<MeshAsset>("original")
     .build();
 
-inline const ComponentType MeshRef = ComponentType::builder("mesh_ref")
+inline const ComponentType& MeshRef = ComponentType::builder("mesh_ref")
     .description("Reference to a mesh asset.")
     .icon(ICON_FA_CUBE)
     .group("object")

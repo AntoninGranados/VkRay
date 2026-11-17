@@ -3,13 +3,14 @@
 #include "VkSmol/graph/builder_resource.hpp"
 #include "VkSmol/graph/render_graph.hpp"
 
+#include "core/render/render_stage.hpp"
 #include "editor/imgui_texture.hpp"
 #include "editor/overlay_drawer.hpp"
 #include "editor/raster_renderer.hpp"
 #include "editor/render_structures.hpp"
 #include "imgui/imgui.h"
 
-class EditorRenderer {
+class EditorRenderer : public RenderStage {
 public:
     static constexpr const char* kDisplayPassName = "DisplayPass";
     static constexpr const char* kDebugPassName = "DebugPass";
@@ -17,10 +18,10 @@ public:
     static constexpr float kOverlayLineWidth = 2.0f;
 
     void init();
-    void addPasses(VkSmol::RenderGraph& graph);
+    void addPasses(VkSmol::RenderGraph& graph) override;
     void registerImGuiTextures();
     void resize(VkExtent2D renderExtent, VkExtent2D viewportExtent);
-    void prepare();
+    void prepare() override;
 
     ImTextureID getDisplayTexId() const { return displayTex; }
     ImTextureID getDebugTexId() const { return debugTex; }

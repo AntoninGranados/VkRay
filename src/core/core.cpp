@@ -1,6 +1,5 @@
 #include "core.hpp"
 
-#include <cassert>
 #include <memory>
 #include <string_view>
 
@@ -32,6 +31,7 @@ void Core::init(const std::optional<std::string>& windowTitle, uint32_t version)
     const glm::ivec2 renderSize = core.parameters.get<glm::ivec2>("renderer/output/render_size");
     const VkExtent2D extent = {static_cast<uint32_t>(renderSize.x), static_cast<uint32_t>(renderSize.y)};
     core.coreRenderer.init(extent, "", core.lensImageHandle, core.blueNoiseBufferHandle);
+    core.stages.push_back(&core.coreRenderer);
 }
 
 void Core::loadParameters() { get().parameters = ParameterSerializer::load("builtin:/config/parameters.json"); }
@@ -59,12 +59,12 @@ void Core::updateAnimationDirty(Core& c) {
     consumeRenderDirty();
 }
 
-void Core::rebuildGraphIfRequested(Core& c) {
-    if (!c.graphRebuildRequested) return;
+void Core::buildGraph() {
+    Core& c = get();
     c.graphRebuildRequested = false;
-    assert(c.graphBuilder);
-
-    c.graphBuilder();
+    c.graph.reset();
+    for (RenderStage* stage : c.stages) stage->addPasses(c.graph);
+    c.graph.bake();
 }
 
 int Core::getTargetSampleCount(Core& c) {
@@ -74,20 +74,19 @@ int Core::getTargetSampleCount(Core& c) {
     return maxSamples > 0 ? maxSamples : SampleAccumulator::kUnboundedSamples;
 }
 
-void Core::renderFrame(std::function<void()> onPrepare) {
+void Core::renderFrame() {
     Core& c = get();
     Scene& scene = c.coreRenderer.getScene();
     c.fileWatcher.poll();
 
     updateAnimationDirty(c);
     scene.runPreRender();
-    scene.runOnRender();
+    for (RenderStage* stage : c.stages) stage->update();
 
-    rebuildGraphIfRequested(c);
+    if (c.graphRebuildRequested) buildGraph();
 
     c.coreRenderer.setTargetSampleCount(getTargetSampleCount(c));
-    c.coreRenderer.prepare();
-    if (onPrepare) onPrepare();
+    for (RenderStage* stage : c.stages) stage->prepare();
     c.graph.execute();
 }
 

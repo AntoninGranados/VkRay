@@ -20,8 +20,6 @@
 #include "core/scene/asset/mesh.hpp"
 #include "core/scene/gpu_structs.hpp"
 
-struct SceneGpuBuffers;
-
 struct CameraMediaInfo {
     int count = 0;
     std::array<int32_t, kMediumStackSize> objects{};
@@ -71,7 +69,7 @@ public:
     Scene(const Scene&) = delete;
     Scene& operator=(const Scene&) = delete;
 
-    void init(SceneGpuBuffers& buffers);
+    void init();
     void clear();
 
     ecs::Entity createNamedEntity(std::string name, ecs::Entity parent = {});
@@ -94,7 +92,6 @@ public:
     void setActiveCamera(ecs::Entity newActiveCamera);
 
     void runPreRender() { preUpdateScheduler.run(registry); }
-    void runOnRender() { onRenderScheduler.run(registry); }
 
     ecs::Registry& getRegistry() { return registry; }
     const ecs::Registry& getRegistry() const { return registry; }
@@ -111,7 +108,6 @@ public:
 private:
     ecs::Registry registry;
     ecs::SystemScheduler preUpdateScheduler;
-    ecs::SystemScheduler onRenderScheduler;
 
     SceneRoots roots;
     ecs::Entity defaultMaterial;

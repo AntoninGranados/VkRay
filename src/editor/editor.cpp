@@ -25,6 +25,8 @@ void Editor::init() {
     get().inputHandler.initCallbacks();
     get().materialPreview.init();
     get().editorRenderer.init();
+    Core::addStage(get().materialPreview);
+    Core::addStage(get().editorRenderer);
 }
 
 EditorUi& Editor::getUi() { return get().ui; }
@@ -151,10 +153,7 @@ void Editor::run() {
             get().editorRenderer.getShading())
             Core::requestGraphRebuild();
 
-        Core::renderFrame([] {
-            get().editorRenderer.prepare();
-            get().materialPreview.tick();
-        });
+        Core::renderFrame();
     }
     Core::getEngine().waitIdle();
 }

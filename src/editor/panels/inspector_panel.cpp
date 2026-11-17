@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "FontAwesome/IconsFontAwesome7.h"
 #include "imgui/imgui.h"
 
 #include "core/core.hpp"
@@ -13,6 +14,7 @@
 #include "editor/ecs/component_ui.hpp"
 #include "editor/editor.hpp"
 #include "editor/ui_utils.hpp"
+#include "utils/string_utils.hpp"
 
 void InspectorPanel::draw() {
     const std::optional<ecs::Entity> selectedEntity = Editor::getSelectedEntity();
@@ -36,15 +38,17 @@ void InspectorPanel::draw() {
 
     if (!selectedEntity.has_value()) return;
 
-    if (openNewComponentPopup) ImGui::OpenPopup("Add Component");
+    if (openNewComponentPopup) {
+        componentSearch.clear();
+        ImGui::OpenPopup("Add Component");
+    }
     drawAddComponentPopup(Core::getScene(), *selectedEntity);
 }
 
 void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
     if (!ui::beginCenteredModal("Add Component")) return;
 
-    std::vector<const ecs::ComponentType*> sortedTypes;
-    for (const ecs::ComponentType& ct : ecs::ComponentType::all()) sortedTypes.push_back(&ct);
+    std::vector<const ecs::ComponentType*> sortedTypes = ecs::ComponentType::all();
     std::stable_sort(
         sortedTypes.begin(), sortedTypes.end(),
         [](const ecs::ComponentType* a, const ecs::ComponentType* b) { return a->getGroup() < b->getGroup(); });
@@ -54,18 +58,26 @@ void InspectorPanel::drawAddComponentPopup(Scene& scene, ecs::Entity entity) {
 
     auto& registry = scene.getRegistry();
 
+    if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+    ui::drawSearchBar(componentSearch, ICON_FA_MAGNIFYING_GLASS " Search");
+
+    std::vector<const ecs::ComponentType*> visibleTypes;
+    for (const ecs::ComponentType* type : sortedTypes)
+        if (type->getGroup() != "internal" && (containsIgnoreCase(type->getLabel(), componentSearch) ||
+                                               containsIgnoreCase(type->getId(), componentSearch)))
+            visibleTypes.push_back(type);
+
     ImGui::BeginChild("AddComponentList", ImVec2(ui::kButtonSize.x + 40.0f, 450.0f), ImGuiChildFlags_Borders);
 
     std::string currentGroup;
     bool groupOpen = false;
-    for (const ecs::ComponentType* type : sortedTypes) {
-        if (type->getGroup() == "internal") continue;
-
+    for (const ecs::ComponentType* type : visibleTypes) {
         if (type->getGroup() != currentGroup) {
             currentGroup = type->getGroup();
             std::string groupLabel = currentGroup;
             if (!groupLabel.empty()) groupLabel[0] = static_cast<char>(std::toupper(groupLabel[0]));
             ImGui::Spacing();
+            if (!componentSearch.empty()) ImGui::SetNextItemOpen(true, ImGuiCond_Always);
             groupOpen = ImGui::CollapsingHeader(groupLabel.c_str());
         }
         if (!groupOpen) continue;

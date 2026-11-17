@@ -338,7 +338,8 @@ void resolveDeferredEntityFields(ecs::Registry& registry, const std::vector<Defe
 }
 
 void resolveScenePaths(ecs::Registry& registry, const std::filesystem::path& sceneDirectory) {
-    for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
+    for (const ecs::ComponentType* typePointer : ecs::ComponentType::all()) {
+        const ecs::ComponentType& type = *typePointer;
         for (const ecs::Entity entity : registry.storage(type).entities()) {
             ecs::Component& comp = registry.get(entity, type);
             comp.forEachField([&](Field& f) {
@@ -441,7 +442,8 @@ bool SceneSerializer::save(Scene& scene, const std::string& path) {
 
         if (reg.has(e, ecs::Name)) node["name"] = reg.get(e, ecs::Name).get<std::string>("value");
 
-        for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
+        for (const ecs::ComponentType* typePointer : ecs::ComponentType::all()) {
+            const ecs::ComponentType& type = *typePointer;
             if (!reg.has(e, type)) continue;
             if (type.getId() == "name") continue;
             if (type.getId() == "material") continue;

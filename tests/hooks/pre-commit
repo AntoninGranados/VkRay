@@ -35,4 +35,4 @@ if ! git diff --quiet -- docs/parameters.md docs/components.md; then
     exit 1
 fi
 printf "${GREEN}[OK]${RESET} Docs Check\n"
-ctest --test-dir build --output-on-failure
+ctest --test-dir build --output-on-failure --stop-on-failure

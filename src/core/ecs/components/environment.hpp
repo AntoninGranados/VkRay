@@ -11,7 +11,7 @@ namespace ecs {
 
 // clang-format off
 
-inline const ComponentType Environment = ComponentType::builder("environment")
+inline const ComponentType& Environment = ComponentType::builder("environment")
     .description("Environment marker.")
     .icon(ICON_FA_CLOUD_SUN)
     .group("environment")
@@ -19,7 +19,7 @@ inline const ComponentType Environment = ComponentType::builder("environment")
     .permanent()
     .build();
 
-inline const ComponentType SkyPlugin = ComponentType::builder("programmable_sky")
+inline const ComponentType& SkyPlugin = ComponentType::builder("programmable_sky")
     .description("Programmable custom sky, defined by a Slang script implementing ISky.")
     .icon(ICON_FA_CODE)
     .group("environment")

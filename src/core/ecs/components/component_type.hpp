@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <deque>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -54,7 +55,7 @@ public:
     const std::vector<ComponentPayload>& getPayloads() const { return payloads; }
     size_t getPayloadIndex(const std::string& id) const { return payloadIndex.at(id); }
 
-    static const std::vector<ComponentType>& all();
+    static const std::vector<const ComponentType*>& all();
     static std::optional<std::reference_wrapper<const ComponentType>> find(const std::string& id);
     static std::vector<const ComponentType*> inGroup(const std::string& group);
 
@@ -63,7 +64,8 @@ public:
 private:
     friend class ComponentType::Builder;
 
-    static std::vector<ComponentType> storage;
+    static std::deque<ComponentType>& storage();
+    static std::vector<const ComponentType*>& registered();
 
     std::string id;
     std::string label;
@@ -151,7 +153,7 @@ public:
         return *this;
     }
 
-    ComponentType& build();
+    const ComponentType& build();
     ComponentType buildDetached();
 
 private:

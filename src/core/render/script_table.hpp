@@ -26,7 +26,6 @@ extern const ScriptKind kLens;
 extern const ScriptKind kCompositing;
 
 const std::array<const ScriptKind*, 3>& componentKinds();
-const ScriptKind* kindOf(const ecs::ComponentType& type);
 
 ecs::Component* findScript(ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind);
 const ecs::Component* findScript(const ecs::Registry& registry, ecs::Entity entity, const ScriptKind& kind);

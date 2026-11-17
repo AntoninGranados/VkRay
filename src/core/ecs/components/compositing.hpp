@@ -25,7 +25,7 @@ public:
 
 // clang-format off
 
-inline const ComponentType Compositing = ComponentType::builder("compositing")
+inline const ComponentType& Compositing = ComponentType::builder("compositing")
     .description("Compositing chain, an ordered list of programmable passes.")
     .icon(ICON_FA_LAYER_GROUP)
     .group("compositing")

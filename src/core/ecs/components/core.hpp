@@ -12,7 +12,7 @@ namespace ecs {
 
 // clang-format off
 
-inline const ComponentType Name = ComponentType::builder("name")
+inline const ComponentType& Name = ComponentType::builder("name")
     .description("Display name.")
     .icon(ICON_FA_TAG)
     .group("other")
@@ -20,13 +20,13 @@ inline const ComponentType Name = ComponentType::builder("name")
     .field<std::string>("value")
     .build();
 
-inline const ComponentType Locked = ComponentType::builder("locked")
+inline const ComponentType& Locked = ComponentType::builder("locked")
     .description("Prevents the entity from being deleted in the editor.")
     .icon(ICON_FA_LOCK)
     .group("internal")
     .build();
 
-inline const ComponentType Transform = ComponentType::builder("transform")
+inline const ComponentType& Transform = ComponentType::builder("transform")
     .description("World-space transform.")
     .icon(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT)
     .group("movement")

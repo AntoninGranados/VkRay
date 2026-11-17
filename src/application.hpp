@@ -16,7 +16,4 @@ private:
     void initOfflineMode(const std::string& jobFile);
 
     static constexpr const char* kDefaultScene = "builtin:/scenes/default.json";
-
-    // TODO: make it non blocking (compile/build in the background and replace when finished)
-    void buildRenderGraph(bool offline);
 };

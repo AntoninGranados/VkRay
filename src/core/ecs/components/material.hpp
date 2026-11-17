@@ -29,7 +29,7 @@ inline ComponentType::Builder builtinMaterial(const std::string& id, const std::
 
 // clang-format off
 
-inline const ComponentType Material = ComponentType::builder("material")
+inline const ComponentType& Material = ComponentType::builder("material")
     .description("Material marker.")
     .icon(ICON_FA_PALETTE)
     .group("material")
@@ -37,7 +37,7 @@ inline const ComponentType Material = ComponentType::builder("material")
     .permanent()
     .build();
 
-inline const ComponentType MaterialRef = ComponentType::builder("material_ref")
+inline const ComponentType& MaterialRef = ComponentType::builder("material_ref")
     .description("Material reference.")
     .icon(ICON_FA_PALETTE)
     .group("material")
@@ -45,15 +45,15 @@ inline const ComponentType MaterialRef = ComponentType::builder("material_ref")
     .field<ecs::Entity>("handle", ecs::Entity{}, EntityMeta{ .needs = {"material"} })
     .build();
 
-inline const ComponentType Diffuse = builtinMaterial("diffuse", "Diffuse BSDF.", ICON_FA_CIRCLE).build();
-inline const ComponentType Emissive = builtinMaterial("emissive", "Emissive light source BSDF.", ICON_FA_LIGHTBULB).build();
-inline const ComponentType Metal = builtinMaterial("metal", "GGX metallic BSDF.", ICON_FA_CIRCLE).build();
-inline const ComponentType Glossy = builtinMaterial("glossy", "GGX glossy dielectric BSDF.", ICON_FA_CIRCLE).build();
-inline const ComponentType Dielectric = builtinMaterial("dielectric", "Dielectric refractive BSDF.", ICON_FA_CIRCLE).build();
-inline const ComponentType Volume = builtinMaterial("volume", "Homogeneous participating media BSDF.", ICON_FA_CIRCLE).build();
-inline const ComponentType Principled = builtinMaterial("principled", "PBR principled BSDF.", ICON_FA_STAR).build();
+inline const ComponentType& Diffuse = builtinMaterial("diffuse", "Diffuse BSDF.", ICON_FA_CIRCLE).build();
+inline const ComponentType& Emissive = builtinMaterial("emissive", "Emissive light source BSDF.", ICON_FA_LIGHTBULB).build();
+inline const ComponentType& Metal = builtinMaterial("metal", "GGX metallic BSDF.", ICON_FA_CIRCLE).build();
+inline const ComponentType& Glossy = builtinMaterial("glossy", "GGX glossy dielectric BSDF.", ICON_FA_CIRCLE).build();
+inline const ComponentType& Dielectric = builtinMaterial("dielectric", "Dielectric refractive BSDF.", ICON_FA_CIRCLE).build();
+inline const ComponentType& Volume = builtinMaterial("volume", "Homogeneous participating media BSDF.", ICON_FA_CIRCLE).build();
+inline const ComponentType& Principled = builtinMaterial("principled", "PBR principled BSDF.", ICON_FA_STAR).build();
 
-inline const ComponentType MaterialPlugin = ComponentType::builder("programmable")
+inline const ComponentType& MaterialPlugin = ComponentType::builder("programmable")
     .description("Programmable material, defined by a Slang script implementing IBsdf or IMaterial.")
     .icon(ICON_FA_CODE)
     .group("material")

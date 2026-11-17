@@ -21,7 +21,7 @@ inline constexpr const char* kTiltShiftPath = "builtin:/camera/tilt_shift.slang"
 
 // clang-format off
 
-inline const ComponentType Camera = ComponentType::builder("camera")
+inline const ComponentType& Camera = ComponentType::builder("camera")
     .description("Perspective or orthographic camera with native depth of field.")
     .icon(ICON_FA_VIDEO)
     .group("camera")
@@ -79,7 +79,7 @@ inline const ComponentType Camera = ComponentType::builder("camera")
     } })
     .build();
 
-inline const ComponentType GeometricAperture = ComponentType::builder("geometric_aperture")
+inline const ComponentType& GeometricAperture = ComponentType::builder("geometric_aperture")
     .description("Polygon aperture blade shape.")
     .icon(ICON_FA_STAR)
     .group("camera")
@@ -89,7 +89,7 @@ inline const ComponentType GeometricAperture = ComponentType::builder("geometric
     .field<float>("rotation", 0.0f, NumericMeta{ .min = 0.0f, .max = 360.0f, .step = 1.0f })
     .build();
 
-inline const ComponentType ImageAperture = ComponentType::builder("image_aperture")
+inline const ComponentType& ImageAperture = ComponentType::builder("image_aperture")
     .description("Custom image mask as aperture shape.")
     .icon(ICON_FA_IMAGE)
     .group("camera")
@@ -103,7 +103,7 @@ inline const ComponentType ImageAperture = ComponentType::builder("image_apertur
     } })
     .build();
 
-inline const ComponentType CameraLensPlugin = ComponentType::builder("programmable_lens")
+inline const ComponentType& CameraLensPlugin = ComponentType::builder("programmable_lens")
     .description("Programmable custom lens, defined by a Slang script implementing ILens.")
     .icon(ICON_FA_CODE)
     .group("camera")

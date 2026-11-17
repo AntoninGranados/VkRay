@@ -1,5 +1,6 @@
 #include "string_utils.hpp"
 
+#include <algorithm>
 #include <cctype>
 
 std::string snakeCaseToLabel(const std::string& id) {
@@ -26,4 +27,11 @@ std::string camelCaseToLabel(const std::string& id) {
         result += i == 0 ? static_cast<char>(std::toupper(id[i])) : id[i];
     }
     return result;
+}
+
+bool containsIgnoreCase(std::string_view text, std::string_view query) {
+    const auto equal = [](char a, char b) {
+        return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+    };
+    return query.empty() || !std::ranges::search(text, query, equal).empty();
 }

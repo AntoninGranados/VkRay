@@ -22,7 +22,7 @@ struct CameraNavigationState {
     glm::vec3 anchor = glm::vec3(0.0f);
 };
 
-inline const ComponentType CameraNavigation =
+inline const ComponentType& CameraNavigation =
     ComponentType::builder("camera_navigation")
         .description("Live interactive navigation state for the active camera.")
         .icon(ICON_FA_VIDEO)

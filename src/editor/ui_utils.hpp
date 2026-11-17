@@ -101,6 +101,7 @@ inline void setNextWindowFixed(bool noTabBar = false) {
 }
 
 bool beginCenteredModal(const char* name);
+bool drawSearchBar(std::string& query, const char* hint);
 void endCenteredModal();
 
 // Pairs ImGui::Begin/End and only runs body() when the window is visible; End() always runs.

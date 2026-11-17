@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <string>
 
 #include "VkSmol/graph/pass/compute_pass_builder.hpp"
@@ -53,7 +54,22 @@ void PathtraceRenderer::init(VkExtent2D extent, const std::string& passTag, VkSm
     const VkSmol::ImageHandle blankTexture = engine.createImage(tag + "BlankTexture", VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
     engine.writeImage(blankTexture, white);
     resources.sceneHandles.textures.assign(kMaxTextures, blankTexture);
-    scene.init(resources.sceneHandles);
+    scene.init();
+
+    packingScheduler.add(std::make_unique<ecs::TexturePackingSystem>(scene, resources.sceneHandles, engine));
+    packingScheduler.add(std::make_unique<ecs::MaterialPackingSystem>(scene, resources.sceneHandles, engine));
+    packingScheduler.add(std::make_unique<ecs::MeshPackingSystem>(scene, resources.sceneHandles, engine));
+    packingScheduler.add(std::make_unique<ecs::MeshInstancePackingSystem>(scene, resources.sceneHandles, engine));
+    packingScheduler.add(std::make_unique<ecs::ObjectPackingSystem>(scene, resources.sceneHandles, engine));
+    packingScheduler.add(std::make_unique<ecs::LightPackingSystem>(scene, resources.sceneHandles, engine));
+}
+
+void PathtraceRenderer::update() {
+    packingScheduler.run(scene.getRegistry());
+    if (!resources.sceneHandles.texturesChanged) return;
+
+    resources.sceneHandles.texturesChanged = false;
+    Core::requestGraphRebuild();
 }
 
 void PathtraceRenderer::addPasses(VkSmol::RenderGraph& graph) {

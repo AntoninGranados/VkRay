@@ -7,8 +7,6 @@
 #include <string_view>
 #include <vector>
 
-#include "VkSmol/graph/render_graph.hpp"
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -64,7 +62,7 @@ void Application::initEditorMode() {
     io.FontGlobalScale = 1.0f / xscale;
 
     Editor::loadScene(kDefaultScene);
-    Core::installGraphBuilder([this] { buildRenderGraph(false); });
+    Core::buildGraph();
     runFn = [] {
         Editor::run();
         return EXIT_SUCCESS;
@@ -85,17 +83,6 @@ void Application::initOfflineMode(const std::string& jobFile) {
     Core::init(std::nullopt, VK_RAY_VERSION);
 
     SceneSerializer::load(Core::getScene(), kDefaultScene);
-    Core::installGraphBuilder([this] { buildRenderGraph(true); });
+    Core::buildGraph();
     runFn = [jobs = std::move(jobs)] { return Offline::run(jobs); };
-}
-
-void Application::buildRenderGraph(bool offline) {
-    VkSmol::RenderGraph& graph = Core::getGraph();
-    graph.reset();
-    Core::getCoreRenderer().addPasses(graph);
-    if (!offline) {
-        Editor::getMaterialPreview().addPasses(graph);
-        Editor::getEditorRenderer().addPasses(graph);
-    }
-    graph.bake();
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <filesystem>
-#include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "VkSmol/engine.hpp"
 #include "VkSmol/graph/render_graph.hpp"
@@ -12,6 +12,7 @@
 #include "core/animation/animation_clock.hpp"
 #include "core/fields/parameters.hpp"
 #include "core/render/pathtrace_renderer.hpp"
+#include "core/render/render_stage.hpp"
 #include "core/render_structures.hpp"
 #include "core/scene/scene.hpp"
 #include "utils/file_watcher.hpp"
@@ -39,11 +40,9 @@ public:
     static bool isRenderDirty() { return get().renderDirty; }
     static bool consumeRenderDirty();
 
-    static void installGraphBuilder(std::function<void()> fn) {
-        Core& c = get();
-        c.graphBuilder = std::move(fn);
-        c.graphBuilder();
-    }
+    static void addStage(RenderStage& stage) { get().stages.push_back(&stage); }
+    // TODO: make it non blocking (compile/build in the background and replace when finished)
+    static void buildGraph();
     static void requestGraphRebuild() { get().graphRebuildRequested = true; }
 
     static void requestResize(int width, int height) {
@@ -51,7 +50,7 @@ public:
     }
     static bool consumeResize();
 
-    static void renderFrame(std::function<void()> onPrepare = {});
+    static void renderFrame();
 
     static const std::filesystem::path& getOutputPath() { return get().outputPath; }
     static void setOutputPath(std::filesystem::path p) { get().outputPath = std::move(p); }
@@ -67,7 +66,6 @@ private:
     static Core& get() { return *instance; }
 
     static void updateAnimationDirty(Core& c);
-    static void rebuildGraphIfRequested(Core& c);
     static int getTargetSampleCount(Core& c);
 
     inline static Core* instance = nullptr;
@@ -84,7 +82,7 @@ private:
     RenderMode renderMode = RenderMode::Preview;
     bool renderDirty = false;
     bool graphRebuildRequested = false;
-    std::function<void()> graphBuilder;
+    std::vector<RenderStage*> stages;
     VkExtent2D targetExtent = {};
     std::filesystem::path outputPath;
 };

@@ -1,6 +1,5 @@
 #include "script_table.hpp"
 
-#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <utility>
@@ -39,14 +38,6 @@ int packPlugin(ShaderPlugin& plugin, const std::filesystem::path& path, const Sc
 const std::array<const ScriptKind*, 3>& ScriptTable::componentKinds() {
     static const std::array<const ScriptKind*, 3> kinds = {&kMaterial, &kSky, &kLens};
     return kinds;
-}
-
-const ScriptKind* ScriptTable::kindOf(const ecs::ComponentType& type) {
-    for (const ScriptKind* kind : componentKinds())
-        if (std::ranges::any_of(kind->components,
-                                [&](const ecs::ComponentType* component) { return *component == type; }))
-            return kind;
-    return nullptr;
 }
 
 const ecs::Component* ScriptTable::findScript(const ecs::Registry& registry, ecs::Entity entity,

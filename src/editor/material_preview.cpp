@@ -187,7 +187,7 @@ void MaterialPreview::evictDeadEntries() {
     }
 }
 
-void MaterialPreview::tick() {
+void MaterialPreview::update() {
     evictDeadEntries();
 
     if (!inFlight.has_value() && !pendingMaterials.empty()) {
@@ -197,8 +197,10 @@ void MaterialPreview::tick() {
         startGeneration(inFlight->entity);
     }
 
-    Scene& scene = renderer.getScene();
-    scene.runOnRender();
+    renderer.update();
+}
+
+void MaterialPreview::prepare() {
     renderer.prepare();
 
     if (inFlight.has_value() && renderer.isRenderFinished()) finishGeneration();

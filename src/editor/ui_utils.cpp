@@ -85,6 +85,15 @@ bool beginCenteredModal(const char* name) {
     return ImGui::BeginPopupModal(name, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
 }
 
+bool drawSearchBar(std::string& query, const char* hint) {
+    std::string buffer = query;
+    buffer.resize(128, '\0');
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    const bool changed = ImGui::InputTextWithHint("##Search", hint, buffer.data(), buffer.size());
+    if (changed) query = buffer.c_str();
+    return changed;
+}
+
 void endCenteredModal() {
     PushCancelStyleColor();
     if (ImGui::Button(ICON_FA_BAN " Cancel", {-FLT_MIN, 0})) ImGui::CloseCurrentPopup();

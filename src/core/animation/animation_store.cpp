@@ -40,10 +40,10 @@ const std::map<int, Keyframe>& AnimationStore::keyframes(Field& field) const {
 }
 
 void AnimationStore::remove(ecs::Registry& registry, ecs::Entity& e) {
-    for (const ecs::ComponentType& type : ecs::ComponentType::all()) {
-        if (!registry.has(e, type)) continue;
+    for (const ecs::ComponentType* type : ecs::ComponentType::all()) {
+        if (!registry.has(e, *type)) continue;
 
-        for (Field& field : registry.get(e, type).getFields()) { tracks.erase(&field); }
+        for (Field& field : registry.get(e, *type).getFields()) { tracks.erase(&field); }
     }
 }
 

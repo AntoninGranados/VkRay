@@ -130,6 +130,7 @@ void ScenePanel::draw() {
                 reg.markChanged(ecs::MeshRef);
             }
             reg.destroyEntity(entityToDelete);
+            if (!reg.isAlive(*scene.getActiveCamera())) scene.setActiveCamera(Editor::getViewportCamera());
             Editor::selectEntity(std::nullopt);
         }
         if (!canDelete) ImGui::EndDisabled();

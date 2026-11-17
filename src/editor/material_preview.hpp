@@ -14,6 +14,7 @@
 #include "core/ecs/registry.hpp"
 #include "core/fields/field.hpp"
 #include "core/render/pathtrace_renderer.hpp"
+#include "core/render/render_stage.hpp"
 #include "core/scene/scene.hpp"
 #include "editor/imgui_texture.hpp"
 
@@ -26,15 +27,16 @@ struct MaterialFingerprint {
     bool operator==(const MaterialFingerprint&) const = default;
 };
 
-class MaterialPreview {
+class MaterialPreview : public RenderStage {
 public:
     static constexpr int kPreviewSize = 256;
     static constexpr int kPreviewSampleCount = 256;
     static constexpr uint32_t kThumbnailCapacity = 32;
 
     void init();
-    void addPasses(VkSmol::RenderGraph& graph);
-    void tick();
+    void update() override;
+    void addPasses(VkSmol::RenderGraph& graph) override;
+    void prepare() override;
 
     void drawPreview(ecs::Entity materialEntity);
 
